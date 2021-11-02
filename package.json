@@ -1,0 +1,23 @@
+{
+  "name": "automation-smartcontracts",
+  "version": "1.0.0",
+  "description": "Production Smart Contracts for automation (including stop loss)",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx hardhat test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OasisDEX/automation-smartcontracts.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/OasisDEX/automation-smartcontracts/issues"
+  },
+  "homepage": "https://github.com/OasisDEX/automation-smartcontracts#readme",
+  "devDependencies": {
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  }
+}
