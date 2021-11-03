@@ -6,9 +6,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
+    branches: [ dev, main ]
   pull_request:
-    branches: [ main ]
+    branches: [ dev, main ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -25,12 +25,34 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Cache YARN dependencies
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-yarn-cache-
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+      # Runs a single command using the runners shell
+      - name: install
+        run: yarn --no-progress --non-interactive --frozen-lockfile
+
+      # Runs a single command using the runners shell
+      - name: lint
+        run: npm run lint
+
+      # Runs a single command using the runners shell
+      - name: format
+        run: npm run format
+
+      # Runs a single command using the runners shell
+      - name: compile
+        run: npx hardhat compile
+
+      # Runs a single command using the runners shell
+      - name: test
+        run: npx hardhat test
+
+      # Runs a single command using the runners shell
+      - name: coverage
+        run: npx hardhat coverage
