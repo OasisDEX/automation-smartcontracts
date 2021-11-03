@@ -25,26 +25,28 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
+      - name: Cache YARN dependencies
+        uses: actions/cache@v1
+        with:
+          path: node_modules
+          key: ${{ runner.OS }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.OS }}-yarn-cache-
+
       - name: install
         run: npm install
 
-      # Runs a single command using the runners shell
       - name: lint
         run: npm run lint
 
-      # Runs a single command using the runners shell
       - name: format
         run: npm run format
 
-      # Runs a single command using the runners shell
       - name: compile
         run: npx hardhat compile
 
-      # Runs a single command using the runners shell
       - name: test
         run: npx hardhat test
 
-      # Runs a single command using the runners shell
       - name: coverage
         run: npx hardhat coverage
