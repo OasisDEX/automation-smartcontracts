@@ -1,4 +1,5 @@
 # Oasis Automation Smart Contracts
+Simple change
 ## Description
 
 This is typescript hardhat project containing Smart Contracts and Tests of Oasis StopLoss automation.
