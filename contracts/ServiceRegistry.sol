@@ -25,12 +25,12 @@ contract ServiceRegistry {
             emit ChangeScheduled(
                 msg.data,
                 operationHash,
-            // solhint-disable-next-line not-rely-on-time
+                // solhint-disable-next-line not-rely-on-time
                 block.timestamp + requiredDelay
             );
         } else {
             require(
-            // solhint-disable-next-line not-rely-on-time
+                // solhint-disable-next-line not-rely-on-time
                 block.timestamp - requiredDelay > lastExecuted[operationHash],
                 "delay-to-small"
             );
