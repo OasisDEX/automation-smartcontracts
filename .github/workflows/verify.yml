@@ -33,26 +33,20 @@ jobs:
           restore-keys: |
             ${{ runner.OS }}-yarn-cache-
 
-      # Runs a single command using the runners shell
       - name: install
-        run: yarn --no-progress --non-interactive --frozen-lockfile
+        run: npm install
 
-      # Runs a single command using the runners shell
       - name: lint
         run: npm run lint
 
-      # Runs a single command using the runners shell
       - name: format
         run: npm run format
 
-      # Runs a single command using the runners shell
       - name: compile
         run: npx hardhat compile
 
-      # Runs a single command using the runners shell
       - name: test
         run: npx hardhat test
 
-      # Runs a single command using the runners shell
       - name: coverage
         run: npx hardhat coverage
