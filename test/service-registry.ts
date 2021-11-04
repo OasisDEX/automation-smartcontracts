@@ -5,7 +5,6 @@
 
 import { Signer } from "@ethersproject/abstract-signer";
 import { ContractReceipt } from "@ethersproject/contracts";
-import { string } from "hardhat/internal/core/params/argumentTypes";
 import { ServiceRegistry } from "../typechain";
 const hre = require("hardhat");
 
