@@ -27,15 +27,16 @@ jobs:
 
       - name: Cache YARN dependencies
         uses: actions/cache@v1
+        
+        env:
+            PRIVATE_KEY_GOERLI:${{secrets.PRIVATE_KEY_GOERLI}}
+            PRIVATE_KEY:${{secrets.PRIVATE_KEY_GOERLI}}
         with:
-          env:
-            PRIVATE_KEY_GOERLI:secrets.PRIVATE_KEY_GOERLI
-            PRIVATE_KEY:secrets.PRIVATE_KEY_GOERLI
           path: node_modules
           key: ${{ runner.OS }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.OS }}-yarn-cache-
-
+            
       - name: install
         run: npm install
 
