@@ -56,6 +56,6 @@ jobs:
 
       - name: coverage
         env:
-            PRIVATE_KEY_GOERLI:${{ secrets.PRIVATE_KEY_GOERLI }}
-            PRIVATE_KEY:${{ secrets.PRIVATE_KEY_GOERLI }}
+            PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
+            PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
         run: npx hardhat coverage
