@@ -22,6 +22,8 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
+let blockNumber = process.env.BLOCK_NUMBER?process.env.BLOCK_NUMBER:"13559294";
+
 const config: HardhatUserConfig = {
   solidity: "0.8.4",
   networks: {
@@ -32,7 +34,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       forking: {
         url: process.env.ALCHEMY_NODE as string,
-        blockNumber: parseInt(process.env.BLOCK_NUMBER as string),
+        blockNumber: parseInt(blockNumber),
       },
       chainId: 2137,
       mining: {
