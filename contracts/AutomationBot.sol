@@ -20,6 +20,16 @@ contract AutomationBot {
         return retVal;
     }
 
+    function validatePermissions(
+        uint256 cdpId,
+        address operator,
+        address managerAddress) private {  
+        require(
+            cdpOwner(cdpId, address(this), managerAddress),
+            "no-permissions"
+        );
+    }
+
     function cdpAllowed(
         uint256 cdpId,
         address operator,
@@ -59,13 +69,11 @@ contract AutomationBot {
             serviceRegistry,
             AUTOMATION_BOT_KEY
         );
-        require(
-            cdpOwner(cdpId, address(this), managerAddress),
-            "no-permissions"
-        );
+        validatePermissions(cdpId, address(this), address(manager));
         if (cdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
+            console.log("ApprovalGranted",cdpId,automationBot);
         }
         emit TriggerAdded(counter, triggerType, cdpId);
         doesTriggerExist[keccak256(abi.encodePacked(cdpId, counter))] = true;
@@ -87,10 +95,7 @@ contract AutomationBot {
             serviceRegistry,
             AUTOMATION_BOT_KEY
         );
-        require(
-            cdpOwner(cdpId, address(this), managerAddress),
-            "no-permissions"
-        );
+        validatePermissions(cdpId, address(this), address(manager));
         bool doesExist = doesTriggerExist[
             keccak256(abi.encodePacked(cdpId, triggerId))
         ];
@@ -108,10 +113,7 @@ contract AutomationBot {
             CDP_MANAGER_KEY
         );
         ManagerLike manager = ManagerLike(managerAddress);
-        require(
-            cdpOwner(cdpId, address(this), managerAddress),
-            "no-permissions"
-        );
+        validatePermissions(cdpId, address(this), address(manager));
         address automationBot = getRegistredService(
             serviceRegistry,
             AUTOMATION_BOT_KEY
@@ -120,11 +122,11 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
-    event ApprovalRemoved(uint256 cdpId, address approvedEntity);
+    event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
 
-    event ApprovalGranted(uint256 cdpId, address approvedEntity);
+    event ApprovalGranted(uint256 indexed cdpId, address approvedEntity);
 
-    event TriggerRemoved(uint256 cdpId, uint256 triggerId);
+    event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId);
 
     event TriggerAdded(
         uint256 indexed triggerId,
