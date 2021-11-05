@@ -6,4 +6,10 @@ abstract contract ManagerLike {
         public cdpCan;
 
     mapping(uint256 => address) public owns; // CDPId => Owner
+
+    function cdpAllow(
+        uint256 cdp,
+        address usr,
+        uint256 ok
+    ) public virtual;
 }
