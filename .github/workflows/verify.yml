@@ -46,16 +46,22 @@ jobs:
         env:
             PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
             PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
+            ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
+            ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
         run: npx hardhat compile
 
       - name: test
         env:
             PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
             PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
+            ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
+            ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
         run: npx hardhat test
 
       - name: coverage
         env:
             PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
             PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
+            ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
+            ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
         run: npx hardhat coverage
