@@ -17,7 +17,9 @@ describe("AutomationBot", async function () {
     let AutomationBot = await ethers.getContractFactory("AutomationBot");
     AutomationBotInstance = await AutomationBot.deploy();
     let ServiceRegistry = await ethers.getContractFactory("ServiceRegistry");
-    ServiceRegistryInstance = (await ServiceRegistry.deploy(0)) as ServiceRegistry;
+    ServiceRegistryInstance = (await ServiceRegistry.deploy(
+      0
+    )) as ServiceRegistry;
     registryAddress = ServiceRegistryInstance.address;
     await ServiceRegistryInstance.addNamedService(
       await ServiceRegistryInstance.getServiceNameHash("CDP_MANAGER"),
@@ -72,16 +74,24 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
     });
-    it("should return false for bad operator address", async function() {
-      let status = await AutomationBotInstance.cdpAllowed(testCdpId, "0x1234123412341234123412341234123412341234", registryAddress );
-      expect(status).to.equal(false,'approval returned for random address');
-    })
-    it("should return true for correct operator address", async function() {
-      let status = await AutomationBotInstance.cdpAllowed(testCdpId, AutomationBotInstance.address, registryAddress );
-      expect(status).to.equal(true,'approval do not exist for AutomationBot');
-    })
-  })
-  
+    it("should return false for bad operator address", async function () {
+      let status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        "0x1234123412341234123412341234123412341234",
+        registryAddress
+      );
+      expect(status).to.equal(false, "approval returned for random address");
+    });
+    it("should return true for correct operator address", async function () {
+      let status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
+      expect(status).to.equal(true, "approval do not exist for AutomationBot");
+    });
+  });
+
   describe("removeApproval", async function () {
     this.beforeEach(async function () {
       await ethers.provider.send("hardhat_impersonateAccount", [
@@ -97,9 +107,12 @@ describe("AutomationBot", async function () {
         .execute(AutomationBotInstance.address, dataToSupply);
     });
 
-    it("allows to remove approval from cdp for which it was granted", async function(){
-      
-      let status = await AutomationBotInstance.cdpAllowed(testCdpId,AutomationBotInstance.address, registryAddress );
+    it("allows to remove approval from cdp for which it was granted", async function () {
+      let status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
       expect(status).to.equal(true);
 
       await ethers.provider.send("hardhat_impersonateAccount", [
@@ -115,17 +128,20 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
 
-      status = await AutomationBotInstance.cdpAllowed(testCdpId,AutomationBotInstance.address, registryAddress );
+      status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
       expect(status).to.equal(false);
-    })
+    });
 
-    it("throws if called not by proxy", async function(){
-      let tx = AutomationBotInstance.removeApproval(registryAddress,testCdpId);
-      await expect(tx).to.be.revertedWith('no-permissions');
-    })
+    it("throws if called not by proxy", async function () {
+      let tx = AutomationBotInstance.removeApproval(registryAddress, testCdpId);
+      await expect(tx).to.be.revertedWith("no-permissions");
+    });
 
-    it("emits ApprovalRemoved", async function(){
-      
+    it("emits ApprovalRemoved", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeApproval",
@@ -138,17 +154,17 @@ describe("AutomationBot", async function () {
       let txRes = await tx.wait();
 
       let abi = [
-        'event ApprovalRemoved(uint256 cdpId, address approvedEntity)',
-      ]
-      let iface = new ethers.utils.Interface(abi)
-      let events = txRes.events?txRes.events:[];
+        "event ApprovalRemoved(uint256 cdpId, address approvedEntity)",
+      ];
+      let iface = new ethers.utils.Interface(abi);
+      let events = txRes.events ? txRes.events : [];
 
       let filteredEvents = events.filter((x) => {
-          return x.topics[0] == iface.getEventTopic('ApprovalRemoved')
-        });
-      
+        return x.topics[0] == iface.getEventTopic("ApprovalRemoved");
+      });
+
       expect(filteredEvents.length).to.equal(1);
-    })
+    });
   });
 
   describe("removeTrigger", async function () {
@@ -176,8 +192,12 @@ describe("AutomationBot", async function () {
       let tx = usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
-        
-      let status = await AutomationBotInstance.cdpAllowed(testCdpId,  AutomationBotInstance.address, registryAddress );
+
+      let status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
       expect(status).to.equal(true);
 
       await expect(tx).to.be.reverted;
@@ -189,14 +209,22 @@ describe("AutomationBot", async function () {
         [testCdpId, 0, registryAddress, true]
       );
 
-      let status = await AutomationBotInstance.cdpAllowed(testCdpId, AutomationBotInstance.address, registryAddress );
+      let status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
       expect(status).to.equal(true);
 
       let tx = await usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
-      
-      status = await AutomationBotInstance.cdpAllowed(testCdpId,  AutomationBotInstance.address, registryAddress );
+
+      status = await AutomationBotInstance.cdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        registryAddress
+      );
       expect(status).to.equal(false);
     });
     it("should fail if called by not proxy owning Vault", async function () {
@@ -212,13 +240,13 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId+1, 0, registryAddress, true]
+        [testCdpId + 1, 0, registryAddress, true]
       );
 
       let tx = usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
-      
+
       await expect(tx).to.be.reverted;
     });
   });

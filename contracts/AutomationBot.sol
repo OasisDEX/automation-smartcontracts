@@ -23,7 +23,8 @@ contract AutomationBot {
     function validatePermissions(
         uint256 cdpId,
         address operator,
-        address managerAddress) private {  
+        address managerAddress
+    ) private {
         require(
             cdpOwner(cdpId, address(this), managerAddress),
             "no-permissions"
@@ -73,7 +74,7 @@ contract AutomationBot {
         if (cdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
-            console.log("ApprovalGranted",cdpId,automationBot);
+            console.log("ApprovalGranted", cdpId, automationBot);
         }
         emit TriggerAdded(counter, triggerType, cdpId);
         doesTriggerExist[keccak256(abi.encodePacked(cdpId, counter))] = true;
