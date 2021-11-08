@@ -205,11 +205,12 @@ const sendEther = async (signer: Signer, to: string, amount: string) => {
   await signer.sendTransaction(txObj);
 };
 
-const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventName : string){
-  
-  let abi = [
-    eventAbi,
-  ];
+const getEvents = function (
+  txResult: ContractReceipt,
+  eventAbi: string,
+  eventName: string
+) {
+  let abi = [eventAbi];
   let iface = new ethers.utils.Interface(abi);
   let events = txResult.events ? txResult.events : [];
 
@@ -217,7 +218,7 @@ const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventN
     return x.topics[0] == iface.getEventTopic(eventName);
   });
   return filteredEvents;
-}
+};
 
 const balanceOf = async (tokenAddr: string, addr: string) => {
   const tokenContract = await hre.ethers.getContractAt("IERC20", tokenAddr);

@@ -68,7 +68,9 @@ contract AutomationBot {
 
         validatePermissions(cdpId, msg.sender, address(managerAddress));
         triggersCounter = triggersCounter + 1;
-        existingTriggers[triggersCounter] = keccak256(triggerData);
+        existingTriggers[triggersCounter] = keccak256(
+            abi.encodePacked(cdpId, triggerData)
+        );
         emit TriggerAdded(triggersCounter, triggerType, cdpId, triggerData);
     }
 
@@ -86,7 +88,12 @@ contract AutomationBot {
         );
 
         validatePermissions(cdpId, msg.sender, address(managerAddress));
-        require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
+        require(existingTriggers[triggerId] != bytes(0), "no-trigger");
+        require(
+            existingTriggers[triggerId] ==
+                keccak256(abi.encodePacked(cdpId, triggerData)),
+            "invalid-trigger"
+        );
         existingTriggers[triggerId] = bytes32(0);
         emit TriggerRemoved(cdpId, triggerId);
     }

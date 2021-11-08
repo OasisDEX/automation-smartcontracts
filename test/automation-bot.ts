@@ -8,12 +8,12 @@ const { ethers } = require("hardhat");
 const CDP_MANAGER_ADDRESS = "0x5ef30b9986345249bc32d8928B7ee64DE9435E39";
 const testCdpId = parseInt((process.env.CDP_ID || "26125") as string);
 
-
-const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventName : string){
-  
-  let abi = [
-    eventAbi,
-  ];
+const getEvents = function (
+  txResult: ContractReceipt,
+  eventAbi: string,
+  eventName: string
+) {
+  let abi = [eventAbi];
   let iface = new ethers.utils.Interface(abi);
   let events = txResult.events ? txResult.events : [];
 
@@ -21,7 +21,7 @@ const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventN
     return x.topics[0] == iface.getEventTopic(eventName);
   });
   return filteredEvents;
-}
+};
 
 describe("AutomationBot", async function () {
   let ServiceRegistryInstance: ServiceRegistry;
@@ -75,7 +75,7 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
       let counterAfter = await AutomationBotInstance.triggersCounter();
-      expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber()+1);
+      expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1);
     });
     it("should emit TriggerAdded if called by user being an owner of Proxy", async function () {
       await ethers.provider.send("hardhat_impersonateAccount", [
@@ -90,9 +90,13 @@ describe("AutomationBot", async function () {
       let tx = await usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
-      
-      let txResult = await tx.wait(); 
-      let events = getEvents(txResult,  "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)","TriggerAdded");
+
+      let txResult = await tx.wait();
+      let events = getEvents(
+        txResult,
+        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "TriggerAdded"
+      );
       expect(events.length).to.be.equal(1);
     });
   });
@@ -190,7 +194,11 @@ describe("AutomationBot", async function () {
         .execute(AutomationBotInstance.address, dataToSupply);
       let txRes = await tx.wait();
 
-      let filteredEvents = getEvents(txRes, "event ApprovalRemoved(uint256 cdpId, address approvedEntity)","ApprovalRemoved");
+      let filteredEvents = getEvents(
+        txRes,
+        "event ApprovalRemoved(uint256 cdpId, address approvedEntity)",
+        "ApprovalRemoved"
+      );
 
       expect(filteredEvents.length).to.equal(1);
     });
@@ -212,7 +220,11 @@ describe("AutomationBot", async function () {
         .execute(AutomationBotInstance.address, dataToSupply);
       let txRes = await tx.wait();
 
-      let filteredEvents = getEvents(txRes, "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)","TriggerAdded");
+      let filteredEvents = getEvents(
+        txRes,
+        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "TriggerAdded"
+      );
 
       triggerId = parseInt(filteredEvents[0].topics[1], 16);
     });
