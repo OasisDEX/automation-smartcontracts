@@ -88,7 +88,7 @@ contract AutomationBot {
         );
 
         validatePermissions(cdpId, msg.sender, address(managerAddress));
-        require(existingTriggers[triggerId] != bytes(0), "no-trigger");
+        require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
         require(
             existingTriggers[triggerId] ==
                 keccak256(abi.encodePacked(cdpId, triggerData)),

@@ -25,7 +25,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 let blockNumber = process.env.BLOCK_NUMBER?process.env.BLOCK_NUMBER:"13559294";
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.4",
+  solidity: {
+    version: "0.8.4",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
+  },
   networks: {
     local: {
       url: 'http://127.0.0.1:8545',
@@ -59,6 +67,7 @@ const config: HardhatUserConfig = {
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
   },
+  
 };
 
 export default config;
