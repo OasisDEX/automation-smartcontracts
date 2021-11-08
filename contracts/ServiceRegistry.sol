@@ -137,6 +137,15 @@ contract ServiceRegistry {
         emit RemoveApplied(serviceNameHash);
     }
 
+    function getRegistredService(
+        string memory serviceName
+    ) public view returns (address) {
+        address retVal = getServiceAddress(
+            getServiceNameHash(serviceName)
+        );
+        return retVal;
+    }
+
     function getServiceAddress(bytes32 serviceNameHash)
         public
         view

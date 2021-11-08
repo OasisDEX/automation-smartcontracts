@@ -116,7 +116,7 @@ describe("AutomationBot", async function () {
         .execute(AutomationBotInstance.address, dataToSupply);
     });
     it("should return false for bad operator address", async function () {
-      let status = await AutomationBotInstance.cdpAllowed(
+      let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         "0x1234123412341234123412341234123412341234",
         registryAddress
@@ -124,7 +124,7 @@ describe("AutomationBot", async function () {
       expect(status).to.equal(false, "approval returned for random address");
     });
     it("should return true for correct operator address", async function () {
-      let status = await AutomationBotInstance.cdpAllowed(
+      let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress
@@ -149,7 +149,7 @@ describe("AutomationBot", async function () {
     });
 
     it("allows to remove approval from cdp for which it was granted", async function () {
-      let status = await AutomationBotInstance.cdpAllowed(
+      let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress
@@ -169,7 +169,7 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
 
-      status = await AutomationBotInstance.cdpAllowed(
+      status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress
@@ -239,7 +239,7 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
 
-      let status = await AutomationBotInstance.cdpAllowed(
+      let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress
@@ -255,7 +255,7 @@ describe("AutomationBot", async function () {
         [testCdpId, triggerId, registryAddress, true, "0x"]
       );
 
-      let status = await AutomationBotInstance.cdpAllowed(
+      let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress
@@ -266,7 +266,7 @@ describe("AutomationBot", async function () {
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
 
-      status = await AutomationBotInstance.cdpAllowed(
+      status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
         registryAddress

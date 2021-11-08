@@ -16,9 +16,7 @@ contract AutomationBot {
         string memory serviceName
     ) private view returns (address) {
         ServiceRegistry registry = ServiceRegistry(registryAddress);
-        address retVal = registry.getServiceAddress(
-            registry.getServiceNameHash(serviceName)
-        );
+        address retVal = registry.getRegistredService(serviceName);
         return retVal;
     }
 
