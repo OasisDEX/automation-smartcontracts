@@ -141,7 +141,7 @@ contract ServiceRegistry {
         string memory serviceName
     ) public view returns (address) {
         address retVal = getServiceAddress(
-            getServiceNameHash(serviceName)
+             keccak256(abi.encodePacked(serviceName))
         );
         return retVal;
     }
