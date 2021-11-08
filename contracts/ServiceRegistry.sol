@@ -137,11 +137,13 @@ contract ServiceRegistry {
         emit RemoveApplied(serviceNameHash);
     }
 
-    function getRegistredService(
-        string memory serviceName
-    ) public view returns (address) {
+    function getRegistredService(string memory serviceName)
+        public
+        view
+        returns (address)
+    {
         address retVal = getServiceAddress(
-             keccak256(abi.encodePacked(serviceName))
+            keccak256(abi.encodePacked(serviceName))
         );
         return retVal;
     }

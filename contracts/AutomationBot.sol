@@ -24,7 +24,8 @@ contract AutomationBot {
         address operator,
         address serviceRegistry
     ) public view returns (bool) {
-        address managerAddr = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddr = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddr);
         return (operator == manager.owns(cdpId) ||
             manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
@@ -47,7 +48,8 @@ contract AutomationBot {
         address serviceRegistry,
         bytes memory triggerData
     ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         validatePermissions(cdpId, msg.sender, address(managerAddress));
         triggersCounter = triggersCounter + 1;
         existingTriggers[triggersCounter] = keccak256(
@@ -64,7 +66,8 @@ contract AutomationBot {
         address serviceRegistry,
         bytes memory triggerData
     ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         validatePermissions(cdpId, msg.sender, address(managerAddress));
         require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
         require(
@@ -83,9 +86,11 @@ contract AutomationBot {
         // solhint-disable-next-line no-unused-vars
         bytes memory triggerData
     ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(serviceRegistry).getRegistredService(AUTOMATION_BOT_KEY);
+        address automationBot = ServiceRegistry(serviceRegistry)
+            .getRegistredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(
             cdpId,
             triggerType,
@@ -105,9 +110,11 @@ contract AutomationBot {
         bool removeAllowence,
         bytes memory triggerData
     ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(serviceRegistry).getRegistredService(AUTOMATION_BOT_KEY);
+        address automationBot = ServiceRegistry(serviceRegistry)
+            .getRegistredService(AUTOMATION_BOT_KEY);
 
         BotLike(automationBot).removeRecord(
             cdpId,
@@ -124,9 +131,11 @@ contract AutomationBot {
     }
 
     function removeApproval(address serviceRegistry, uint256 cdpId) public {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegistredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(serviceRegistry).getRegistredService(AUTOMATION_BOT_KEY);
+        address automationBot = ServiceRegistry(serviceRegistry)
+            .getRegistredService(AUTOMATION_BOT_KEY);
         validatePermissions(cdpId, address(this), address(manager));
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
