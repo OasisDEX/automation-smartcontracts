@@ -119,7 +119,7 @@ describe("AutomationBot", async function () {
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         "0x1234123412341234123412341234123412341234",
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(false, "approval returned for random address");
     });
@@ -127,7 +127,7 @@ describe("AutomationBot", async function () {
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(true, "approval do not exist for AutomationBot");
     });
@@ -152,7 +152,7 @@ describe("AutomationBot", async function () {
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(true);
 
@@ -172,7 +172,7 @@ describe("AutomationBot", async function () {
       status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(false);
     });
@@ -242,7 +242,7 @@ describe("AutomationBot", async function () {
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(true);
 
@@ -258,7 +258,7 @@ describe("AutomationBot", async function () {
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(true);
 
@@ -269,7 +269,7 @@ describe("AutomationBot", async function () {
       status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
         AutomationBotInstance.address,
-        registryAddress
+        CDP_MANAGER_ADDRESS
       );
       expect(status).to.equal(false);
     });

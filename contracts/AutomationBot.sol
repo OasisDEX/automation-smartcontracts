@@ -14,17 +14,16 @@ contract AutomationBot {
     function validatePermissions(
         uint256 cdpId,
         address operator,
-        address managerAddress
+        ManagerLike manager
     ) private {
-        require(isCdpOwner(cdpId, operator, managerAddress), "no-permissions");
+        require(isCdpOwner(cdpId, operator, manager), "no-permissions");
     }
 
     function isCdpAllowed(
         uint256 cdpId,
         address operator,
-        address mangerAddress
+        ManagerLike manager
     ) public view returns (bool) {
-        ManagerLike manager = ManagerLike(mangerAddress);
         return (operator == manager.owns(cdpId) ||
             manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
     }
@@ -32,10 +31,9 @@ contract AutomationBot {
     function isCdpOwner(
         uint256 cdpId,
         address operator,
-        address manager
+        ManagerLike manager
     ) private view returns (bool) {
-        ManagerLike instance = ManagerLike(manager);
-        return (operator == instance.owns(cdpId));
+        return (operator == manager.owns(cdpId));
     }
 
     function addRecord(
@@ -48,7 +46,7 @@ contract AutomationBot {
     ) public {
         address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegistredService(CDP_MANAGER_KEY);
-        validatePermissions(cdpId, msg.sender, address(managerAddress));
+        validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
         triggersCounter = triggersCounter + 1;
         existingTriggers[triggersCounter] = keccak256(
             abi.encodePacked(cdpId, triggerData)
@@ -66,7 +64,7 @@ contract AutomationBot {
     ) public {
         address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegistredService(CDP_MANAGER_KEY);
-        validatePermissions(cdpId, msg.sender, address(managerAddress));
+        validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
         require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
         require(
             existingTriggers[triggerId] ==
@@ -95,7 +93,7 @@ contract AutomationBot {
             serviceRegistry,
             triggerData
         );
-        if (isCdpAllowed(cdpId, automationBot, managerAddress) == false) {
+        if (isCdpAllowed(cdpId, automationBot, manager) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
@@ -134,7 +132,7 @@ contract AutomationBot {
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = ServiceRegistry(serviceRegistry)
             .getRegistredService(AUTOMATION_BOT_KEY);
-        validatePermissions(cdpId, address(this), address(manager));
+        validatePermissions(cdpId, address(this), manager);
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
     }
