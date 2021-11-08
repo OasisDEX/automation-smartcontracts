@@ -1,13 +1,15 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 import "./interfaces/ManagerLike.sol";
+import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 
 contract AutomationBot {
-    uint256 private counter = 1; //temporary, actual storage for triggers will be developed later
-    mapping(bytes32 => bool) private doesTriggerExist; //temporary, actual storage for triggers will be developed later, till then hash map to find out if it was already set
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+
+    mapping(uint256 => bytes32) public existingTriggers;
+    uint256 public triggersCounter = 0;
 
     function getRegistredService(
         address registryAddress,
@@ -25,10 +27,7 @@ contract AutomationBot {
         address operator,
         address managerAddress
     ) private {
-        require(
-            cdpOwner(cdpId, address(this), managerAddress),
-            "no-permissions"
-        );
+        require(cdpOwner(cdpId, operator, managerAddress), "no-permissions");
     }
 
     function cdpAllowed(
@@ -54,6 +53,44 @@ contract AutomationBot {
         return (operator == instance.owns(cdpId));
     }
 
+    function addRecord(
+        // This function should be executed allways in a context of AutomationBot address not DsProxy,
+        //msg.sender should be dsProxy
+        uint256 cdpId,
+        uint256 triggerType,
+        address serviceRegistry,
+        bytes memory triggerData
+    ) public {
+        address managerAddress = getRegistredService(
+            serviceRegistry,
+            CDP_MANAGER_KEY
+        );
+
+        validatePermissions(cdpId, msg.sender, address(managerAddress));
+        triggersCounter = triggersCounter + 1;
+        existingTriggers[triggersCounter] = keccak256(triggerData);
+        emit TriggerAdded(triggersCounter, triggerType, cdpId, triggerData);
+    }
+
+    function removeRecord(
+        // This function should be executed allways in a context of AutomationBot address not DsProxy,
+        //msg.sender should be dsProxy
+        uint256 cdpId,
+        uint256 triggerId,
+        address serviceRegistry,
+        bytes memory triggerData
+    ) public {
+        address managerAddress = getRegistredService(
+            serviceRegistry,
+            CDP_MANAGER_KEY
+        );
+
+        validatePermissions(cdpId, msg.sender, address(managerAddress));
+        require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
+        existingTriggers[triggerId] = bytes32(0);
+        emit TriggerRemoved(cdpId, triggerId);
+    }
+
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
@@ -70,22 +107,24 @@ contract AutomationBot {
             serviceRegistry,
             AUTOMATION_BOT_KEY
         );
-        validatePermissions(cdpId, address(this), address(manager));
+        BotLike(automationBot).addRecord(
+            cdpId,
+            triggerType,
+            serviceRegistry,
+            triggerData
+        );
         if (cdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
-            console.log("ApprovalGranted", cdpId, automationBot);
         }
-        emit TriggerAdded(counter, triggerType, cdpId);
-        doesTriggerExist[keccak256(abi.encodePacked(cdpId, counter))] = true;
-        counter = counter + 1;
     }
 
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
         address serviceRegistry,
-        bool removeAllowence
+        bool removeAllowence,
+        bytes memory triggerData
     ) public {
         address managerAddress = getRegistredService(
             serviceRegistry,
@@ -96,11 +135,14 @@ contract AutomationBot {
             serviceRegistry,
             AUTOMATION_BOT_KEY
         );
-        validatePermissions(cdpId, address(this), address(manager));
-        bool doesExist = doesTriggerExist[
-            keccak256(abi.encodePacked(cdpId, triggerId))
-        ];
-        require(doesExist, "no-trigger");
+
+        BotLike(automationBot).removeRecord(
+            cdpId,
+            triggerId,
+            serviceRegistry,
+            triggerData
+        );
+
         if (removeAllowence) {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
@@ -132,6 +174,7 @@ contract AutomationBot {
     event TriggerAdded(
         uint256 indexed triggerId,
         uint256 triggerType,
-        uint256 indexed cdpId
+        uint256 indexed cdpId,
+        bytes triggerData
     );
 }

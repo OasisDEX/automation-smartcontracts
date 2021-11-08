@@ -1,3 +1,4 @@
+import { ContractReceipt } from "@ethersproject/contracts";
 import { AutomationBot, ServiceRegistry, DsProxyLike } from "../typechain";
 const hre = require("hardhat");
 
@@ -6,6 +7,21 @@ const { ethers } = require("hardhat");
 
 const CDP_MANAGER_ADDRESS = "0x5ef30b9986345249bc32d8928B7ee64DE9435E39";
 const testCdpId = parseInt((process.env.CDP_ID || "26125") as string);
+
+
+const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventName : string){
+  
+  let abi = [
+    eventAbi,
+  ];
+  let iface = new ethers.utils.Interface(abi);
+  let events = txResult.events ? txResult.events : [];
+
+  let filteredEvents = events.filter((x) => {
+    return x.topics[0] == iface.getEventTopic(eventName);
+  });
+  return filteredEvents;
+}
 
 describe("AutomationBot", async function () {
   let ServiceRegistryInstance: ServiceRegistry;
@@ -49,6 +65,7 @@ describe("AutomationBot", async function () {
       await ethers.provider.send("hardhat_impersonateAccount", [
         proxyOwnerAddress,
       ]);
+      let counterBefore = await AutomationBotInstance.triggersCounter();
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
@@ -57,6 +74,26 @@ describe("AutomationBot", async function () {
       await usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
+      let counterAfter = await AutomationBotInstance.triggersCounter();
+      expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber()+1);
+    });
+    it("should emit TriggerAdded if called by user being an owner of Proxy", async function () {
+      await ethers.provider.send("hardhat_impersonateAccount", [
+        proxyOwnerAddress,
+      ]);
+      let counterBefore = await AutomationBotInstance.triggersCounter();
+      const newSigner = await ethers.getSigner(proxyOwnerAddress);
+      const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
+        "addTrigger",
+        [testCdpId, 1, registryAddress, "0x"]
+      );
+      let tx = await usersProxy
+        .connect(newSigner)
+        .execute(AutomationBotInstance.address, dataToSupply);
+      
+      let txResult = await tx.wait(); 
+      let events = getEvents(txResult,  "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)","TriggerAdded");
+      expect(events.length).to.be.equal(1);
     });
   });
 
@@ -153,21 +190,14 @@ describe("AutomationBot", async function () {
         .execute(AutomationBotInstance.address, dataToSupply);
       let txRes = await tx.wait();
 
-      let abi = [
-        "event ApprovalRemoved(uint256 cdpId, address approvedEntity)",
-      ];
-      let iface = new ethers.utils.Interface(abi);
-      let events = txRes.events ? txRes.events : [];
-
-      let filteredEvents = events.filter((x) => {
-        return x.topics[0] == iface.getEventTopic("ApprovalRemoved");
-      });
+      let filteredEvents = getEvents(txRes, "event ApprovalRemoved(uint256 cdpId, address approvedEntity)","ApprovalRemoved");
 
       expect(filteredEvents.length).to.equal(1);
     });
   });
 
   describe("removeTrigger", async function () {
+    let triggerId = 0;
     this.beforeAll(async function () {
       await ethers.provider.send("hardhat_impersonateAccount", [
         proxyOwnerAddress,
@@ -180,13 +210,17 @@ describe("AutomationBot", async function () {
       let tx = await usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
-      let ret = await tx.wait();
+      let txRes = await tx.wait();
+
+      let filteredEvents = getEvents(txRes, "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)","TriggerAdded");
+
+      triggerId = parseInt(filteredEvents[0].topics[1], 16);
     });
     it("should fail if trying to remove trigger that does not exist", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [123, 2, registryAddress, false]
+        [123, triggerId + 1, registryAddress, false, "0x"]
       );
 
       let tx = usersProxy
@@ -206,7 +240,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId, 0, registryAddress, true]
+        [testCdpId, triggerId, registryAddress, true, "0x"]
       );
 
       let status = await AutomationBotInstance.cdpAllowed(
@@ -232,7 +266,8 @@ describe("AutomationBot", async function () {
         testCdpId,
         0,
         registryAddress,
-        false
+        false,
+        "0x"
       );
       await expect(tx).to.revertedWith("no-permissions");
     });
@@ -240,7 +275,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId + 1, 0, registryAddress, true]
+        [testCdpId + 1, 0, registryAddress, true, "0x"]
       );
 
       let tx = usersProxy

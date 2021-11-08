@@ -1,4 +1,5 @@
 import { Signer } from "@ethersproject/abstract-signer";
+import { ContractReceipt } from "@ethersproject/contracts";
 
 const hre = require("hardhat");
 
@@ -204,6 +205,20 @@ const sendEther = async (signer: Signer, to: string, amount: string) => {
   await signer.sendTransaction(txObj);
 };
 
+const getEvents = function(txResult : ContractReceipt, eventAbi : string, eventName : string){
+  
+  let abi = [
+    eventAbi,
+  ];
+  let iface = new ethers.utils.Interface(abi);
+  let events = txResult.events ? txResult.events : [];
+
+  let filteredEvents = events.filter((x) => {
+    return x.topics[0] == iface.getEventTopic(eventName);
+  });
+  return filteredEvents;
+}
+
 const balanceOf = async (tokenAddr: string, addr: string) => {
   const tokenContract = await hre.ethers.getContractAt("IERC20", tokenAddr);
 
@@ -323,6 +338,7 @@ const timeTravel = async (timeIncrease: number) => {
 };
 
 module.exports = {
+  getEvents,
   getAddrFromRegistry,
   getProxy,
   getProxyWithSigner,
