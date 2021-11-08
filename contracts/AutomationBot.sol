@@ -22,11 +22,9 @@ contract AutomationBot {
     function isCdpAllowed(
         uint256 cdpId,
         address operator,
-        address serviceRegistry
+        address mangerAddress
     ) public view returns (bool) {
-        address managerAddr = ServiceRegistry(serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
-        ManagerLike manager = ManagerLike(managerAddr);
+        ManagerLike manager = ManagerLike(mangerAddress);
         return (operator == manager.owns(cdpId) ||
             manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
     }
@@ -97,7 +95,7 @@ contract AutomationBot {
             serviceRegistry,
             triggerData
         );
-        if (isCdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
+        if (isCdpAllowed(cdpId, automationBot, managerAddress) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
