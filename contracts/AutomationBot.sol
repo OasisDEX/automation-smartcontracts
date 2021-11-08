@@ -27,10 +27,10 @@ contract AutomationBot {
         address operator,
         address managerAddress
     ) private {
-        require(cdpOwner(cdpId, operator, managerAddress), "no-permissions");
+        require(isCdpOwner(cdpId, operator, managerAddress), "no-permissions");
     }
 
-    function cdpAllowed(
+    function isCdpAllowed(
         uint256 cdpId,
         address operator,
         address serviceRegistry
@@ -44,7 +44,7 @@ contract AutomationBot {
             manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
     }
 
-    function cdpOwner(
+    function isCdpOwner(
         uint256 cdpId,
         address operator,
         address manager
@@ -120,7 +120,7 @@ contract AutomationBot {
             serviceRegistry,
             triggerData
         );
-        if (cdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
+        if (isCdpAllowed(cdpId, automationBot, serviceRegistry) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
