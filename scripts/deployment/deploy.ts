@@ -36,13 +36,13 @@ async function main() {
   await sr.addNamedService(
     await sr.getServiceNameHash("CDP_MANAGER"),
     CDP_MANAGER_ADDRESS
-  );
+  ,{gasLimit:"100000"});
 
   console.log("Adding AUTOMATION_BOT to ServiceRegistry....");
   await sr.addNamedService(
     await sr.getServiceNameHash("AUTOMATION_BOT"),
     bot.address
-  );
+  ,{gasLimit:"100000"});
 
   console.log("ServiceRegistry deployed to:",sr.address);
   console.log("AutomationBot deployed to:",bot.address);
