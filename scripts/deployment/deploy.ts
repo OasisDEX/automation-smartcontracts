@@ -3,23 +3,49 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers } from "hardhat";
+const hre = require("hardhat");
 
 async function main() {
 
-  let serviceAddress : string;
-  if(ethers.provider._network.name == "goerli"){
-    serviceAddress  = process.env.PRIVATE_KEY_GOERLI as string;
+  let delay : number;
+  let CDP_MANAGER_ADDRESS : string;
+  
+  const provider = hre.ethers.provider;
+  const signer = await provider.getSigner(0);
+  console.log('Deployer address:',await signer.getAddress());
+
+  if(hre.hardhatArguments.network == "goerli"){
+    delay = 0;
+    CDP_MANAGER_ADDRESS = "0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032";
   }else{
-    serviceAddress  = process.env.PRIVATE_KEY as string;
+    delay = 1800;
+    CDP_MANAGER_ADDRESS = "0x5ef30b9986345249bc32d8928B7ee64DE9435E39";
   }
   
-  const ServiceRegistry = await ethers.getContractFactory("ServiceRegistry");
-  const instance = await ServiceRegistry.deploy(1800);
+  const ServiceRegistry = await hre.ethers.getContractFactory("ServiceRegistry");
+  const AutomationBot = await hre.ethers.getContractFactory("AutomationBot");
+  console.log("Deploying ServiceRegistry....");
+  const instance = await ServiceRegistry.deploy(delay);
+  console.log("Deploying AutomationBot....");
+  const automationBotDeployment = await AutomationBot.deploy();
 
-  await instance.deployed();
+  const sr = await instance.deployed();
+  const bot = await automationBotDeployment.deployed();
+  
+  console.log("Adding CDP_MANAGER to ServiceRegistry....");
+  await sr.addNamedService(
+    await sr.getServiceNameHash("CDP_MANAGER"),
+    CDP_MANAGER_ADDRESS
+  );
 
-  console.log("ServiceRegistry deployed to:");
+  console.log("Adding AUTOMATION_BOT to ServiceRegistry....");
+  await sr.addNamedService(
+    await sr.getServiceNameHash("AUTOMATION_BOT"),
+    bot.address
+  );
+
+  console.log("ServiceRegistry deployed to:",sr.address);
+  console.log("AutomationBot deployed to:",bot.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
