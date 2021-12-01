@@ -49,7 +49,7 @@ contract AutomationBot {
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
         triggersCounter = triggersCounter + 1;
         existingTriggers[triggersCounter] = keccak256(
-            abi.encodePacked(cdpId, triggerData)
+            abi.encodePacked(cdpId, triggerData/* TODO:,serviceRegistry, possibly triggerType*/ )
         );
         emit TriggerAdded(triggersCounter, triggerType, cdpId, triggerData);
     }
@@ -68,7 +68,7 @@ contract AutomationBot {
         require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
         require(
             existingTriggers[triggerId] ==
-                keccak256(abi.encodePacked(cdpId, triggerData)),
+                keccak256(abi.encodePacked(cdpId, triggerData /* TODO: ,serviceRegistry possibly triggerType*/)),
             "invalid-trigger"
         );
         existingTriggers[triggerId] = bytes32(0);
@@ -136,6 +136,19 @@ contract AutomationBot {
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
     }
+
+
+    function execute(bytes calldata executionData, address serviceRegistry, uint256 cdpId, bytes calldata triggersData, uint256 triggerType) public{
+        //Work in progress
+    //    bytes32 serviceHash = keccak256(abi.encode("Command",triggerType));
+
+    //   delegateCall(commandAddress,executionData);
+
+    //      validateConditions(cdpId,triggersData);
+
+    }
+
+
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
 
