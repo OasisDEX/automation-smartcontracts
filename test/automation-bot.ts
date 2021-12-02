@@ -299,7 +299,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId + 1, 0, 2, true, registryAddress, "0x"]
+        [testCdpId, 0, 2, false, registryAddress, "0x"]
       );
 
       let tx = usersProxy
