@@ -29,13 +29,16 @@ describe("AutomationBot", async function () {
   let registryAddress: string;
   let proxyOwnerAddress: string;
   let usersProxy: DsProxyLike;
+  let snapshotId: string;
   this.beforeAll(async function () {
-    let AutomationBot = await ethers.getContractFactory("AutomationBot");
-    AutomationBotInstance = await AutomationBot.deploy();
     let ServiceRegistry = await ethers.getContractFactory("ServiceRegistry");
     ServiceRegistryInstance = (await ServiceRegistry.deploy(
       0
     )) as ServiceRegistry;
+    let AutomationBot = await ethers.getContractFactory("AutomationBot");
+    AutomationBotInstance = await AutomationBot.deploy(
+      ServiceRegistryInstance.address
+    );
     registryAddress = ServiceRegistryInstance.address;
     await ServiceRegistryInstance.addNamedService(
       await ServiceRegistryInstance.getServiceNameHash("CDP_MANAGER"),
@@ -54,6 +57,14 @@ describe("AutomationBot", async function () {
     const proxyAddress = await cdpManagerInstance.owns(testCdpId);
     usersProxy = await ethers.getContractAt("DsProxyLike", proxyAddress);
     proxyOwnerAddress = await usersProxy.owner();
+  });
+
+  this.beforeEach(async function () {
+    snapshotId = await ethers.provider.send("evm_snapshot", []);
+  });
+
+  this.afterEach(async function () {
+    await ethers.provider.send("evm_revert", [snapshotId]);
   });
 
   describe("addTrigger", async function () {
@@ -94,7 +105,7 @@ describe("AutomationBot", async function () {
       let txResult = await tx.wait();
       let events = getEvents(
         txResult,
-        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)",
         "TriggerAdded"
       );
       expect(events.length).to.be.equal(1);
@@ -222,7 +233,7 @@ describe("AutomationBot", async function () {
 
       let filteredEvents = getEvents(
         txRes,
-        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)",
         "TriggerAdded"
       );
 
@@ -232,7 +243,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [123, triggerId + 1, registryAddress, false, "0x"]
+        [123, triggerId + 1, 2, false, registryAddress, "0x"]
       );
 
       let tx = usersProxy
@@ -248,11 +259,11 @@ describe("AutomationBot", async function () {
 
       await expect(tx).to.be.reverted;
     });
-    it("should additionally remove approval if last param set to true", async function () {
+    it.skip("should additionally remove approval if last param set to true", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId, triggerId, registryAddress, true, "0x"]
+        [testCdpId, triggerId, 2, true, registryAddress, "0x"]
       );
 
       let status = await AutomationBotInstance.isCdpAllowed(
@@ -277,8 +288,9 @@ describe("AutomationBot", async function () {
       let tx = AutomationBotInstance.removeTrigger(
         testCdpId,
         0,
-        registryAddress,
+        2,
         false,
+        registryAddress,
         "0x"
       );
       await expect(tx).to.revertedWith("no-permissions");
@@ -287,7 +299,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId + 1, 0, registryAddress, true, "0x"]
+        [testCdpId + 1, 0, 2, true, registryAddress, "0x"]
       );
 
       let tx = usersProxy
