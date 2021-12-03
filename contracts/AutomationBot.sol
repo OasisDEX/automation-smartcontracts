@@ -19,6 +19,7 @@ contract AutomationBot {
         serviceRegistry = _serviceRegistry;
     }
 
+    //works correctly in any context
     function validatePermissions(
         uint256 cdpId,
         address operator,
@@ -27,6 +28,7 @@ contract AutomationBot {
         require(isCdpOwner(cdpId, operator, manager), "no-permissions");
     }
 
+    //works correctly in any context
     function isCdpAllowed(
         uint256 cdpId,
         address operator,
@@ -36,6 +38,7 @@ contract AutomationBot {
             manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
     }
 
+    //works correctly in any context
     function isCdpOwner(
         uint256 cdpId,
         address operator,
@@ -44,6 +47,7 @@ contract AutomationBot {
         return (operator == manager.owns(cdpId));
     }
 
+    //works correctly in any context
     function getCommandAddress(uint256 triggerType, address _serviceRegistry)
         private
         view
@@ -57,6 +61,7 @@ contract AutomationBot {
         return commandAddress;
     }
 
+    //works correctly in any context
     function getTriggersHash(
         uint256 cdpId,
         bytes memory triggerData,
@@ -75,6 +80,7 @@ contract AutomationBot {
         return triggersHash;
     }
 
+    //works correctly in context of Automation Bot
     function checkTriggersExistenceAndCorrectness(
         uint256 cdpId,
         uint256 triggerId,
@@ -95,6 +101,7 @@ contract AutomationBot {
         );
     }
 
+    //works correctly in context of automationBot
     function addRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         //msg.sender should be dsProxy
@@ -127,6 +134,7 @@ contract AutomationBot {
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
     }
 
+    //works correctly in context of automationBot
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         //msg.sender should be dsProxy
@@ -158,6 +166,7 @@ contract AutomationBot {
         emit TriggerRemoved(cdpId, triggerId);
     }
 
+    //works correctly in context of dsProxy
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
@@ -182,6 +191,7 @@ contract AutomationBot {
         }
     }
 
+    //works correctly in context of dsProxy
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
@@ -217,6 +227,7 @@ contract AutomationBot {
         emit TriggerRemoved(cdpId, triggerId);
     }
 
+    //works correctly in context of dsProxy
     function removeApproval(address _serviceRegistry, uint256 cdpId) public {
         address managerAddress = ServiceRegistry(_serviceRegistry)
             .getRegistredService(CDP_MANAGER_KEY);
@@ -228,6 +239,7 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
+    //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
         uint256 cdpId,
