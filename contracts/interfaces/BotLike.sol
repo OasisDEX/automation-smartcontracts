@@ -14,6 +14,7 @@ abstract contract BotLike {
         //msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerId,
+        address commandAddress,
         address serviceRegistry,
         bytes memory triggerData
     ) public virtual;

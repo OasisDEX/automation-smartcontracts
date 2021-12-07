@@ -6,6 +6,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 const CDP_MANAGER_ADDRESS = "0x5ef30b9986345249bc32d8928B7ee64DE9435E39";
+const SOME_FAKE_COMMAND_ADDRESS = "0x12e74262c35bb5d3f9b77d67950982c1f675b06e";
 const testCdpId = parseInt((process.env.CDP_ID || "26125") as string);
 
 const getEvents = function (
@@ -29,13 +30,16 @@ describe("AutomationBot", async function () {
   let registryAddress: string;
   let proxyOwnerAddress: string;
   let usersProxy: DsProxyLike;
+  let snapshotId: string;
   this.beforeAll(async function () {
-    let AutomationBot = await ethers.getContractFactory("AutomationBot");
-    AutomationBotInstance = await AutomationBot.deploy();
     let ServiceRegistry = await ethers.getContractFactory("ServiceRegistry");
     ServiceRegistryInstance = (await ServiceRegistry.deploy(
       0
     )) as ServiceRegistry;
+    let AutomationBot = await ethers.getContractFactory("AutomationBot");
+    AutomationBotInstance = await AutomationBot.deploy(
+      ServiceRegistryInstance.address
+    );
     registryAddress = ServiceRegistryInstance.address;
     await ServiceRegistryInstance.addNamedService(
       await ServiceRegistryInstance.getServiceNameHash("CDP_MANAGER"),
@@ -46,6 +50,13 @@ describe("AutomationBot", async function () {
       AutomationBotInstance.address
     );
 
+    const hash =
+      "0xc3edb84e7a635270d74f001f53ecf022573c985bcfc30f834ed693c515075539"; // keccak256(abi.encode("Command", 2));
+    await ServiceRegistryInstance.addNamedService(
+      hash,
+      SOME_FAKE_COMMAND_ADDRESS
+    );
+
     const cdpManagerInstance = await ethers.getContractAt(
       "ManagerLike",
       CDP_MANAGER_ADDRESS
@@ -54,6 +65,35 @@ describe("AutomationBot", async function () {
     const proxyAddress = await cdpManagerInstance.owns(testCdpId);
     usersProxy = await ethers.getContractAt("DsProxyLike", proxyAddress);
     proxyOwnerAddress = await usersProxy.owner();
+  });
+
+  this.beforeEach(async function () {
+    snapshotId = await ethers.provider.send("evm_snapshot", []);
+  });
+
+  this.afterEach(async function () {
+    await ethers.provider.send("evm_revert", [snapshotId]);
+  });
+
+  describe("getCommandAddress", async function () {
+    it("should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2", async function () {
+      let address = await AutomationBotInstance.getCommandAddress(
+        2,
+        ServiceRegistryInstance.address
+      );
+      await expect(address.toLowerCase()).to.equal(
+        SOME_FAKE_COMMAND_ADDRESS.toLowerCase()
+      );
+    });
+    it("should return 0x0 for triggerType 1", async function () {
+      let address = await AutomationBotInstance.getCommandAddress(
+        1,
+        ServiceRegistryInstance.address
+      );
+      await expect(address.toLowerCase()).to.equal(
+        "0x0000000000000000000000000000000000000000".toLowerCase()
+      );
+    });
   });
 
   describe("addTrigger", async function () {
@@ -94,7 +134,7 @@ describe("AutomationBot", async function () {
       let txResult = await tx.wait();
       let events = getEvents(
         txResult,
-        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)",
         "TriggerAdded"
       );
       expect(events.length).to.be.equal(1);
@@ -222,7 +262,7 @@ describe("AutomationBot", async function () {
 
       let filteredEvents = getEvents(
         txRes,
-        "event TriggerAdded(uint256 indexed triggerId, uint256 triggerType, uint256 indexed cdpId, bytes triggerData)",
+        "event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)",
         "TriggerAdded"
       );
 
@@ -232,12 +272,42 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [123, triggerId + 1, registryAddress, false, "0x"]
+        [
+          123,
+          triggerId + 1,
+          SOME_FAKE_COMMAND_ADDRESS,
+          false,
+          registryAddress,
+          "0x",
+        ]
       );
 
       let tx = usersProxy
         .connect(newSigner)
         .execute(AutomationBotInstance.address, dataToSupply);
+
+      await expect(tx).to.be.reverted;
+
+      let status = await AutomationBotInstance.isCdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        CDP_MANAGER_ADDRESS
+      );
+      expect(status).to.equal(true);
+    });
+    it("should just remove approval if last param set to false", async function () {
+      const newSigner = await ethers.getSigner(proxyOwnerAddress);
+      const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
+        "removeTrigger",
+        [
+          testCdpId,
+          triggerId,
+          SOME_FAKE_COMMAND_ADDRESS,
+          false,
+          registryAddress,
+          "0x",
+        ]
+      );
 
       let status = await AutomationBotInstance.isCdpAllowed(
         testCdpId,
@@ -246,13 +316,29 @@ describe("AutomationBot", async function () {
       );
       expect(status).to.equal(true);
 
-      await expect(tx).to.be.reverted;
+      let tx = await usersProxy
+        .connect(newSigner)
+        .execute(AutomationBotInstance.address, dataToSupply);
+
+      status = await AutomationBotInstance.isCdpAllowed(
+        testCdpId,
+        AutomationBotInstance.address,
+        CDP_MANAGER_ADDRESS
+      );
+      expect(status).to.equal(true);
     });
     it("should additionally remove approval if last param set to true", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId, triggerId, registryAddress, true, "0x"]
+        [
+          testCdpId,
+          triggerId,
+          SOME_FAKE_COMMAND_ADDRESS,
+          true,
+          registryAddress,
+          "0x",
+        ]
       );
 
       let status = await AutomationBotInstance.isCdpAllowed(
@@ -277,8 +363,9 @@ describe("AutomationBot", async function () {
       let tx = AutomationBotInstance.removeTrigger(
         testCdpId,
         0,
-        registryAddress,
+        SOME_FAKE_COMMAND_ADDRESS,
         false,
+        registryAddress,
         "0x"
       );
       await expect(tx).to.revertedWith("no-permissions");
@@ -287,7 +374,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId + 1, 0, registryAddress, true, "0x"]
+        [testCdpId, 0, SOME_FAKE_COMMAND_ADDRESS, false, registryAddress, "0x"]
       );
 
       let tx = usersProxy
