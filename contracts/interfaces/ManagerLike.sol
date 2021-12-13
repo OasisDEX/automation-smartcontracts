@@ -4,8 +4,12 @@ pragma solidity ^0.8.0;
 abstract contract ManagerLike {
     mapping(address => mapping(uint256 => mapping(address => uint256)))
         public cdpCan;
+        
+    function ilks(uint256) public view virtual returns (bytes32);
 
-    mapping(uint256 => address) public owns; // CDPId => Owner
+    function owns(uint256) public view virtual returns (address);
+
+    function urns(uint256) public view virtual returns (address);
 
     function cdpAllow(
         uint256 cdp,
