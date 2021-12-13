@@ -260,15 +260,20 @@ contract AutomationBot {
             triggerData
         );
         ICommand command = ICommand(commandAddress);
+
         require(
             command.isExecutionLegal(cdpId, triggerData),
             "trigger-execution-illegal"
         );
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, ) = commandAddress.delegatecall(
-            abi.encodeWithSignature("execute(bytes)", executionData)
-        );
-        require(success, "trigger-execution-failed");
+        
+        address managerAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(CDP_MANAGER_KEY);
+        ManagerLike manager = ManagerLike(managerAddress);
+        manager.cdpAllow(cdpId, address(command), 1);
+        command.execute(executionData);
+        manager.cdpAllow(cdpId, address(command), 0);
+
         require(
             command.isExecutionCorrect(cdpId, triggerData),
             "trigger-execution-wrong-result"
