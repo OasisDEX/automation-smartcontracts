@@ -12,6 +12,7 @@ contract CloseCommand is ICommand {
     address public serviceRegistry;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
+    string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
 
     constructor(address _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -66,6 +67,11 @@ contract CloseCommand is ICommand {
         }
 
     function execute(bytes calldata executionData) public override{
+        address mpaAddress = ServiceRegistry(serviceRegistry)
+            .getRegistredService(MPA_KEY);
+        (bool status,) = mpaAddress.delegatecall(executionData);
+
+        require(status, "execution failed");
         
     }
 }

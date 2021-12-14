@@ -271,7 +271,7 @@ contract AutomationBot {
             .getRegistredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
-        command.execute(executionData);
+        command.execute(executionData, cdpId, triggerData);
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(
