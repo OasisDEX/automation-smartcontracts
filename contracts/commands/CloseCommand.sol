@@ -24,7 +24,7 @@ contract CloseCommand is ICommand {
         override
         returns (bool){
             address viewAddress = ServiceRegistry(serviceRegistry)
-                .getRegistredService(MCD_VIEW_KEY);
+                .getRegisteredService(MCD_VIEW_KEY);
             McdView viewerContract = McdView(viewAddress);
              (uint256 collateral, uint debt) = viewerContract.getVaultInfo(cdpId);
              if(collateral>0){
@@ -50,13 +50,13 @@ contract CloseCommand is ICommand {
                 return false;
             }
             address managerAddress = ServiceRegistry(serviceRegistry)
-                .getRegistredService(CDP_MANAGER_KEY);
+                .getRegisteredService(CDP_MANAGER_KEY);
             ManagerLike manager = ManagerLike(managerAddress);
             if(manager.owns(cdpdId) == address(0)){
                 return false;
             }
             address viewAddress = ServiceRegistry(serviceRegistry)
-                .getRegistredService(MCD_VIEW_KEY);
+                .getRegisteredService(MCD_VIEW_KEY);
             McdView viewerContract = McdView(viewAddress);
             uint256 collRatio = viewerContract.getRatio(cdpdId);
             if(collRatio>slLevel*(10**16)){
@@ -66,9 +66,9 @@ contract CloseCommand is ICommand {
             return true;
         }
 
-    function execute(bytes calldata executionData) public override{
+    function execute(bytes calldata executionData, uint256 cdpId, bytes memory triggerData) public override{
         address mpaAddress = ServiceRegistry(serviceRegistry)
-            .getRegistredService(MPA_KEY);
+            .getRegisteredService(MPA_KEY);
         (bool status,) = mpaAddress.delegatecall(executionData);
 
         require(status, "execution failed");

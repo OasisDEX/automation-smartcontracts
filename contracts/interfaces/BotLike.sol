@@ -5,7 +5,6 @@ abstract contract BotLike {
     function addRecord(
         uint256 cdpId,
         uint256 triggerType,
-        address serviceRegistry,
         bytes memory triggerData
     ) public virtual;
 
@@ -15,7 +14,6 @@ abstract contract BotLike {
         uint256 cdpId,
         uint256 triggerId,
         address commandAddress,
-        address serviceRegistry,
         bytes memory triggerData
     ) public virtual;
 }

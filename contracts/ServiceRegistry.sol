@@ -17,8 +17,9 @@ contract ServiceRegistry {
 
     modifier delayedExecution() {
         bytes32 operationHash = keccak256(msg.data);
+        uint reqDelay = requiredDelay;
 
-        if (lastExecuted[operationHash] == 0 && requiredDelay > 0) {
+        if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
             //not called before, scheduled for execution
             // solhint-disable-next-line not-rely-on-time
             lastExecuted[operationHash] = block.timestamp;
@@ -26,12 +27,12 @@ contract ServiceRegistry {
                 msg.data,
                 operationHash,
                 // solhint-disable-next-line not-rely-on-time
-                block.timestamp + requiredDelay
+                block.timestamp + reqDelay
             );
         } else {
             require(
                 // solhint-disable-next-line not-rely-on-time
-                block.timestamp - requiredDelay > lastExecuted[operationHash],
+                block.timestamp - reqDelay > lastExecuted[operationHash],
                 "delay-to-small"
             );
             // solhint-disable-next-line not-rely-on-time
@@ -47,6 +48,7 @@ contract ServiceRegistry {
     }
 
     constructor(uint256 initialDelay) {
+        require(initialDelay<2**255,"risk-of-overflow");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
@@ -137,7 +139,7 @@ contract ServiceRegistry {
         emit RemoveApplied(serviceNameHash);
     }
 
-    function getRegistredService(string memory serviceName)
+    function getRegisteredService(string memory serviceName)
         public
         view
         returns (address)
@@ -153,6 +155,7 @@ contract ServiceRegistry {
         view
         returns (address)
     {
+        //TODO: add require breaking if address is zero
         return namedService[serviceNameHash];
     }
 
