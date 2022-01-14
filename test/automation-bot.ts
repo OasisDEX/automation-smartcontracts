@@ -138,15 +138,21 @@ describe("AutomationBot", async function () {
         "TriggerAdded"
       );
       expect(events.length).to.be.equal(1);
-      expect(events[0].address).to.be.equal(AutomationBotInstance.address,"TriggerAdded event address is not automationBot");
-      
+      expect(events[0].address).to.be.equal(
+        AutomationBotInstance.address,
+        "TriggerAdded event address is not automationBot"
+      );
+
       events = getEvents(
         txResult,
         "event ApprovalGranted(uint256 indexed cdpId, address approvedEntity)",
         "ApprovalGranted"
       );
       expect(events.length).to.be.equal(1);
-      expect(events[0].address).to.be.equal(usersProxy.address,"ApprovalGranted event address is not dsProxy");
+      expect(events[0].address).to.be.equal(
+        usersProxy.address,
+        "ApprovalGranted event address is not dsProxy"
+      );
     });
   });
 
@@ -250,8 +256,10 @@ describe("AutomationBot", async function () {
       );
 
       expect(filteredEvents.length).to.equal(1);
-      expect(filteredEvents[0].address).to.be.equal(usersProxy.address,"ApprovalRemoved event address is not dsProxy");
-
+      expect(filteredEvents[0].address).to.be.equal(
+        usersProxy.address,
+        "ApprovalRemoved event address is not dsProxy"
+      );
     });
   });
 
@@ -278,9 +286,12 @@ describe("AutomationBot", async function () {
       );
 
       triggerId = parseInt(filteredEvents[0].topics[1], 16);
-      expect(filteredEvents[0].address).to.be.equal(AutomationBotInstance.address,"TriggerAdded event address is not automationBot");
+      expect(filteredEvents[0].address).to.be.equal(
+        AutomationBotInstance.address,
+        "TriggerAdded event address is not automationBot"
+      );
     });
-    
+
     it("should fail if trying to remove trigger that does not exist", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
