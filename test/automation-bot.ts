@@ -99,8 +99,7 @@ describe("AutomationBot", async function () {
   describe("getCommandAddress", async function () {
     it("should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2", async function () {
       let address = await AutomationBotInstance.getCommandAddress(
-        2,
-        ServiceRegistryInstance.address
+        2
       );
       await expect(address.toLowerCase()).to.equal(
         DummyCommandInstance.address.toLowerCase()
@@ -108,8 +107,7 @@ describe("AutomationBot", async function () {
     });
     it("should return 0x0 for triggerType 1", async function () {
       let address = await AutomationBotInstance.getCommandAddress(
-        1,
-        ServiceRegistryInstance.address
+        1
       );
       await expect(address.toLowerCase()).to.equal(
         "0x0000000000000000000000000000000000000000".toLowerCase()
@@ -119,7 +117,7 @@ describe("AutomationBot", async function () {
 
   describe("addTrigger", async function () {
     it("should fail if called from address not being an owner", async function () {
-      let tx = AutomationBotInstance.addTrigger(1, 1, registryAddress, "0x");
+      let tx = AutomationBotInstance.addTrigger(1, 1, "0x");
       await expect(tx).to.revertedWith("no-permissions");
     });
     it("should pass if called by user being an owner of Proxy", async function () {
@@ -130,7 +128,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 1, registryAddress, "0x"]
+        [testCdpId, 1, "0x"]
       );
       await usersProxy
         .connect(newSigner)
@@ -146,7 +144,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 1, registryAddress, "0x"]
+        [testCdpId, 1, "0x"]
       );
       let tx = await usersProxy
         .connect(newSigner)
@@ -170,7 +168,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 2, registryAddress, "0x"]
+        [testCdpId, 2, "0x"]
       );
       let tx = await usersProxy
         .connect(newSigner)
@@ -202,7 +200,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 2, registryAddress, "0x"]
+        [testCdpId, 2, "0x"]
       );
       let tx = await usersProxy
         .connect(newSigner)
@@ -274,7 +272,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 2, registryAddress, "0x"]
+        [testCdpId, 2, "0x"]
       );
       let tx = await usersProxy
         .connect(newSigner)
@@ -298,7 +296,6 @@ describe("AutomationBot", async function () {
           triggerId + 1,
           DummyCommandInstance.address,
           false,
-          registryAddress,
           "0x",
         ]
       );
@@ -325,7 +322,6 @@ describe("AutomationBot", async function () {
           triggerId,
           DummyCommandInstance.address,
           false,
-          registryAddress,
           "0x",
         ]
       );
@@ -357,7 +353,6 @@ describe("AutomationBot", async function () {
           triggerId,
           DummyCommandInstance.address,
           true,
-          registryAddress,
           "0x",
         ]
       );
@@ -386,7 +381,6 @@ describe("AutomationBot", async function () {
         0,
         DummyCommandInstance.address,
         false,
-        registryAddress,
         "0x"
       );
       await expect(tx).to.revertedWith("no-permissions");
@@ -395,14 +389,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [
-          testCdpId,
-          0,
-          DummyCommandInstance.address,
-          false,
-          registryAddress,
-          "0x",
-        ]
+        [testCdpId, 0, DummyCommandInstance.address, false, "0x"]
       );
 
       let tx = usersProxy
@@ -423,7 +410,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "addTrigger",
-        [testCdpId, 2, registryAddress, triggerData]
+        [testCdpId, 2, triggerData]
       );
       let tx = await usersProxy
         .connect(newSigner)

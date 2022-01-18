@@ -14,5 +14,5 @@ abstract contract ICommand {
         virtual
         returns (bool);
 
-    function execute(bytes calldata executionData, uint256 cdpId, bytes calldata triggerData) public virtual;
+    function execute(bytes calldata executionData, uint256 cdpId, bytes memory triggerData) public virtual;
 }

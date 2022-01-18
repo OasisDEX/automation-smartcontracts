@@ -13,7 +13,7 @@ contract AutomationBot {
 
     uint256 public triggersCounter = 0;
 
-    address public serviceRegistry;
+    address public immutable serviceRegistry;
 
     constructor(address _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -34,8 +34,9 @@ contract AutomationBot {
         address operator,
         ManagerLike manager
     ) public view returns (bool) {
-        return (operator == manager.owns(cdpId) ||
-            manager.cdpCan(manager.owns(cdpId), cdpId, operator) == 1);
+        address cdpOwner = manager.owns(cdpId);
+        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1
+        || operator == cdpOwner);
     }
 
     //works correctly in any context
@@ -48,14 +49,14 @@ contract AutomationBot {
     }
 
     //works correctly in any context
-    function getCommandAddress(uint256 triggerType, address _serviceRegistry)
+    function getCommandAddress(uint256 triggerType)
         public
         view
         returns (address)
     {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
 
-        address commandAddress = ServiceRegistry(_serviceRegistry)
+        address commandAddress = ServiceRegistry(serviceRegistry)
             .getServiceAddress(commandHash);
 
         return commandAddress;
@@ -65,14 +66,13 @@ contract AutomationBot {
     function getTriggersHash(
         uint256 cdpId,
         bytes memory triggerData,
-        address commandAddress,
-        address _serviceRegistry
-    ) private pure returns (bytes32) {
+        address commandAddress
+    ) private view returns (bytes32) {
         bytes32 triggersHash = keccak256(
             abi.encodePacked(
                 cdpId,
                 triggerData,
-                _serviceRegistry,
+                serviceRegistry,
                 commandAddress
             )
         );
@@ -85,17 +85,16 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId,
         address commandAddress,
-        address _serviceRegistry,
         bytes memory triggerData
     ) private view {
-        require(existingTriggers[triggerId] != bytes32(0), "no-trigger");
+        bytes32 triggersHash = existingTriggers[triggerId];
 
         require(
-            existingTriggers[triggerId] ==
+            triggersHash != bytes32(0) &&
+            triggersHash ==
                 getTriggersHash(
                     cdpId,
                     triggerData,
-                    _serviceRegistry,
                     commandAddress
                 ),
             "invalid-trigger"
@@ -108,20 +107,13 @@ contract AutomationBot {
         //msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerType,
-        address _serviceRegistry,
         bytes memory triggerData
     ) public {
-        require(
-            _serviceRegistry == serviceRegistry,
-            "service-registry-invalid"
-        );
-
         address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegisteredService(CDP_MANAGER_KEY);
 
         address commandAddress = getCommandAddress(
-            triggerType,
-            serviceRegistry
+            triggerType
         );
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
@@ -130,8 +122,7 @@ contract AutomationBot {
         existingTriggers[triggersCounter] = getTriggersHash(
             cdpId,
             triggerData,
-            commandAddress,
-            serviceRegistry
+            commandAddress
         );
 
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
@@ -144,13 +135,8 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId,
         address commandAddress,
-        address _serviceRegistry,
         bytes memory triggerData
     ) public {
-        require(
-            _serviceRegistry == serviceRegistry,
-            "service-registry-invalid"
-        );
 
         address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegisteredService(CDP_MANAGER_KEY);
@@ -160,7 +146,6 @@ contract AutomationBot {
         checkTriggersExistenceAndCorrectness(
             cdpId,
             triggerId,
-            serviceRegistry,
             commandAddress,
             triggerData
         );
@@ -173,19 +158,18 @@ contract AutomationBot {
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
-        address _serviceRegistry,
         // solhint-disable-next-line no-unused-vars
         bytes memory triggerData
+        // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
     ) public {
-        address managerAddress = ServiceRegistry(_serviceRegistry)
+        address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(_serviceRegistry)
+        address automationBot = ServiceRegistry(serviceRegistry)
             .getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(
             cdpId,
             triggerType,
-            _serviceRegistry,
             triggerData
         );
         if (isCdpAllowed(cdpId, automationBot, manager) == false) {
@@ -206,21 +190,19 @@ contract AutomationBot {
         uint256 triggerId,
         address commandAddress,
         bool removeAllowence,
-        address _serviceRegistry,
         bytes memory triggerData
     ) public {
-        address managerAddress = ServiceRegistry(_serviceRegistry)
+        address managerAddress = ServiceRegistry(serviceRegistry)
             .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
 
-        address automationBot = ServiceRegistry(_serviceRegistry)
+        address automationBot = ServiceRegistry(serviceRegistry)
             .getRegisteredService(AUTOMATION_BOT_KEY);
 
         BotLike(automationBot).removeRecord(
             cdpId,
             triggerId,
             commandAddress,
-            _serviceRegistry,
             triggerData
         );
 
@@ -255,7 +237,6 @@ contract AutomationBot {
         checkTriggersExistenceAndCorrectness(
             cdpId,
             triggerId,
-            serviceRegistry,
             commandAddress,
             triggerData
         );

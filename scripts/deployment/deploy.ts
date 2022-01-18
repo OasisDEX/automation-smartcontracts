@@ -13,6 +13,7 @@ async function main() {
   const provider = hre.ethers.provider;
   const signer = await provider.getSigner(0);
   console.log('Deployer address:',await signer.getAddress());
+  console.log('Network :',hre.hardhatArguments.network);
 
   if(hre.hardhatArguments.network == "goerli"){
     delay = 0;
@@ -26,10 +27,10 @@ async function main() {
   const AutomationBot = await hre.ethers.getContractFactory("AutomationBot");
   console.log("Deploying ServiceRegistry....");
   const instance = await ServiceRegistry.deploy(delay);
-  console.log("Deploying AutomationBot....");
-  const automationBotDeployment = await AutomationBot.deploy();
-
   const sr = await instance.deployed();
+  console.log("Deploying AutomationBot....");
+  const automationBotDeployment = await AutomationBot.deploy(sr.address);
+
   const bot = await automationBotDeployment.deployed();
   
   console.log("Adding CDP_MANAGER to ServiceRegistry....");
