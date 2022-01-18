@@ -117,7 +117,7 @@ contract AutomationBot {
         );
 
         address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
 
         address commandAddress = getCommandAddress(
             triggerType,
@@ -153,7 +153,7 @@ contract AutomationBot {
         );
 
         address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
@@ -178,10 +178,10 @@ contract AutomationBot {
         bytes memory triggerData
     ) public {
         address managerAddress = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(AUTOMATION_BOT_KEY);
+            .getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(
             cdpId,
             triggerType,
@@ -210,11 +210,11 @@ contract AutomationBot {
         bytes memory triggerData
     ) public {
         address managerAddress = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
 
         address automationBot = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(AUTOMATION_BOT_KEY);
+            .getRegisteredService(AUTOMATION_BOT_KEY);
 
         BotLike(automationBot).removeRecord(
             cdpId,
@@ -235,10 +235,10 @@ contract AutomationBot {
     //works correctly in context of dsProxy
     function removeApproval(address _serviceRegistry, uint256 cdpId) public {
         address managerAddress = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = ServiceRegistry(_serviceRegistry)
-            .getRegistredService(AUTOMATION_BOT_KEY);
+            .getRegisteredService(AUTOMATION_BOT_KEY);
         validatePermissions(cdpId, address(this), manager);
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
@@ -268,10 +268,10 @@ contract AutomationBot {
         // solhint-disable-next-line avoid-low-level-calls
         
         address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegistredService(CDP_MANAGER_KEY);
+            .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
-        command.execute(executionData);
+        command.execute(executionData, cdpId, triggerData);
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(

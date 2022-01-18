@@ -11,13 +11,16 @@ import "./external/DSMath.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdView is DSMath {
-  address public constant MANAGER_ADDRESS = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
-  address public constant VAT_ADDRESS = 0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B;
-  address public constant SPOTTER_ADDRESS = 0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3;
+  ManagerLike public manager ;
+  VatLike public vat ;
+  SpotterLike public spotter;
 
-  ManagerLike public constant manager = ManagerLike(MANAGER_ADDRESS);
-  VatLike public constant vat = VatLike(VAT_ADDRESS);
-  SpotterLike public constant spotter = SpotterLike(SPOTTER_ADDRESS);
+
+  constructor(address _vat, address _manager, address _spotter){
+    manager = ManagerLike(_manager);
+    vat = VatLike(_vat);
+    spotter = SpotterLike(_spotter);
+  }
 
   /// @notice Gets Vault info (collateral, debt)
   /// @param vaultId Id of the Vault

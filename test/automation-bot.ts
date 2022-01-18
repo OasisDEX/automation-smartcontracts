@@ -1,5 +1,10 @@
 import { ContractReceipt } from "@ethersproject/contracts";
-import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand } from "../typechain";
+import {
+  AutomationBot,
+  ServiceRegistry,
+  DsProxyLike,
+  DummyCommand,
+} from "../typechain";
 const hre = require("hardhat");
 
 const { expect } = require("chai");
@@ -33,10 +38,11 @@ describe("AutomationBot", async function () {
   let snapshotId: string;
   this.beforeAll(async function () {
     let ServiceRegistry = await ethers.getContractFactory("ServiceRegistry");
-    
+
     ServiceRegistryInstance = (await ServiceRegistry.deploy(
       0
     )) as ServiceRegistry;
+    ServiceRegistryInstance = await ServiceRegistryInstance.deployed();
 
     let DummyCommand = await ethers.getContractFactory("DummyCommand");
 
@@ -46,11 +52,13 @@ describe("AutomationBot", async function () {
       true,
       false
     )) as DummyCommand;
+    DummyCommandInstance = await DummyCommandInstance.deployed();
 
     let AutomationBot = await ethers.getContractFactory("AutomationBot");
     AutomationBotInstance = await AutomationBot.deploy(
       ServiceRegistryInstance.address
     );
+    AutomationBotInstance = await AutomationBotInstance.deployed();
 
     registryAddress = ServiceRegistryInstance.address;
     await ServiceRegistryInstance.addNamedService(
@@ -387,7 +395,14 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [testCdpId, 0, DummyCommandInstance.address, false, registryAddress, "0x"]
+        [
+          testCdpId,
+          0,
+          DummyCommandInstance.address,
+          false,
+          registryAddress,
+          "0x",
+        ]
       );
 
       let tx = usersProxy
@@ -434,26 +449,49 @@ describe("AutomationBot", async function () {
 
     it("should not revert if only 3rd flag is false", async function () {
       await DummyCommandInstance.changeFlags(true, true, false);
-      await AutomationBotInstance.execute("0x", testCdpId, triggerData, DummyCommandInstance.address, triggerId);
-    })
+      await AutomationBotInstance.execute(
+        "0x",
+        testCdpId,
+        triggerData,
+        DummyCommandInstance.address,
+        triggerId
+      );
+    });
 
     it("should revert with trigger-execution-illegal if initialCheckReturn is false", async function () {
       await DummyCommandInstance.changeFlags(false, true, false);
-      let result = AutomationBotInstance.execute("0x", testCdpId, triggerData, DummyCommandInstance.address, triggerId);
+      let result = AutomationBotInstance.execute(
+        "0x",
+        testCdpId,
+        triggerData,
+        DummyCommandInstance.address,
+        triggerId
+      );
       await expect(result).to.be.revertedWith("trigger-execution-illegal");
-    })
+    });
 
     it("should revert with trigger-execution-wrong-result if finalCheckReturn is false", async function () {
       await DummyCommandInstance.changeFlags(true, false, false);
-      let result = AutomationBotInstance.execute("0x", testCdpId, triggerData, DummyCommandInstance.address, triggerId);
+      let result = AutomationBotInstance.execute(
+        "0x",
+        testCdpId,
+        triggerData,
+        DummyCommandInstance.address,
+        triggerId
+      );
       await expect(result).to.be.revertedWith("trigger-execution-wrong-result");
-    })
+    });
 
     it("should revert with command failed if revertsInExecute is true", async function () {
       await DummyCommandInstance.changeFlags(false, true, false);
-      let result = AutomationBotInstance.execute("0x", testCdpId, triggerData, DummyCommandInstance.address, triggerId);
+      let result = AutomationBotInstance.execute(
+        "0x",
+        testCdpId,
+        triggerData,
+        DummyCommandInstance.address,
+        triggerId
+      );
       await expect(result).to.be.revertedWith("trigger-execution-illegal");
-    })
-
-  })
+    });
+  });
 });

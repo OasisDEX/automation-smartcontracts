@@ -4,27 +4,29 @@ import "./../interfaces/ICommand.sol";
 import "./../interfaces/BotLike.sol";
 import "./../ServiceRegistry.sol";
 
-
 contract DummyCommand is ICommand {
-
     address public serviceRegistry;
-    bool public initialCheckReturn ;
-    bool public finalCheckReturn; 
+    bool public initialCheckReturn;
+    bool public finalCheckReturn;
     bool public revertsInExecute;
 
-    constructor(address _serviceRegistry, 
+    constructor(
+        address _serviceRegistry,
         bool _initialCheckReturn,
         bool _finalCheckReturn,
-        bool _revertsInExecute) {
+        bool _revertsInExecute
+    ) {
         serviceRegistry = _serviceRegistry;
         initialCheckReturn = _initialCheckReturn;
         finalCheckReturn = _finalCheckReturn;
         revertsInExecute = _revertsInExecute;
     }
 
-    function changeFlags(bool _initialCheckReturn,
+    function changeFlags(
+        bool _initialCheckReturn,
         bool _finalCheckReturn,
-        bool _revertsInExecute) public {
+        bool _revertsInExecute
+    ) public {
         initialCheckReturn = _initialCheckReturn;
         finalCheckReturn = _finalCheckReturn;
         revertsInExecute = _revertsInExecute;
@@ -34,19 +36,21 @@ contract DummyCommand is ICommand {
         public
         view
         override
-        returns (bool){
-            return finalCheckReturn;
-        }
+        returns (bool)
+    {
+        return finalCheckReturn;
+    }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
         public
         view
         override
-        returns (bool){
-            return initialCheckReturn;
-        }
+        returns (bool)
+    {
+        return initialCheckReturn;
+    }
 
-    function execute(bytes calldata executionData) public override{
-        require(!revertsInExecute,"command failed");
+    function execute(bytes calldata, uint256, bytes memory) public override {
+        require(!revertsInExecute, "command failed");
     }
 }

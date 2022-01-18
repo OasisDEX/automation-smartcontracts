@@ -137,7 +137,7 @@ contract ServiceRegistry {
         emit RemoveApplied(serviceNameHash);
     }
 
-    function getRegistredService(string memory serviceName)
+    function getRegisteredService(string memory serviceName)
         public
         view
         returns (address)
