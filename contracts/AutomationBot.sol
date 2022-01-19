@@ -116,6 +116,8 @@ contract AutomationBot {
             triggerType
         );
 
+        address commandAddress = getCommandAddress(triggerType, serviceRegistry);
+
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         triggersCounter = triggersCounter + 1;
@@ -172,6 +174,7 @@ contract AutomationBot {
             triggerType,
             triggerData
         );
+        BotLike(automationBot).addRecord(cdpId, triggerType, _serviceRegistry, triggerData);
         if (isCdpAllowed(cdpId, automationBot, manager) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
