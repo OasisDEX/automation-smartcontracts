@@ -157,16 +157,6 @@ export async function send(tokenAddr: string, to: string, amount: number) {
     await tokenContract.transfer(to, amount)
 }
 
-export async function approve(tokenAddr: string, to: string) {
-    const tokenContract = await hre.ethers.getContractAt('IERC20', tokenAddr)
-
-    const allowance: EthersBN = await tokenContract.allowance(await tokenContract.signer.getAddress(), to)
-
-    if (allowance.eq(0)) {
-        await tokenContract.approve(to, MAX_UINT, { gasLimit: 1000000 })
-    }
-}
-
 export async function sendEther(signer: Signer, to: string, amount: string) {
     const value = utils.parseUnits(amount, 18)
     const txObj = await signer.populateTransaction({
