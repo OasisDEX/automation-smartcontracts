@@ -17,14 +17,8 @@ contract CloseCommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory)
-        public
-        view
-        override
-        returns (bool)
-    {
-        address viewAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(MCD_VIEW_KEY);
+    function isExecutionCorrect(uint256 cdpId, bytes memory) public view override returns (bool) {
+        address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
         return !(collateral > 0 || debt > 0);
@@ -36,10 +30,7 @@ contract CloseCommand is ICommand {
         override
         returns (bool)
     {
-        (uint256 cdpdId, , uint256 slLevel) = abi.decode(
-            triggerData,
-            (uint256, bool, uint256)
-        );
+        (uint256 cdpdId, , uint256 slLevel) = abi.decode(triggerData, (uint256, bool, uint256));
         if (slLevel <= 100) {
             //completely invalid value
             return false;
@@ -48,14 +39,14 @@ contract CloseCommand is ICommand {
             //inconsistence of trigger data and declared cdp
             return false;
         }
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
         ManagerLike manager = ManagerLike(managerAddress);
         if (manager.owns(cdpdId) == address(0)) {
             return false;
         }
-        address viewAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(MCD_VIEW_KEY);
+        address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         uint256 collRatio = viewerContract.getRatio(cdpdId);
         if (collRatio > slLevel * (10**16)) {
@@ -70,26 +61,16 @@ contract CloseCommand is ICommand {
         uint256,
         bytes memory triggerData
     ) public override {
-        (, bool toCollateral, ) = abi.decode(
-            triggerData,
-            (uint256, bool, uint256)
-        );
+        (, bool toCollateral, ) = abi.decode(triggerData, (uint256, bool, uint256));
 
-        address mpaAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(MPA_KEY);
+        address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
 
         bytes4 prefix = abi.decode(executionData, (bytes4));
 
         if (toCollateral) {
-            require(
-                prefix == MPALike.closeVaultExitCollateral.selector,
-                "wrong-payload"
-            );
+            require(prefix == MPALike.closeVaultExitCollateral.selector, "wrong-payload");
         } else {
-            require(
-                prefix == MPALike.closeVaultExitDai.selector,
-                "wrong-payload"
-            );
+            require(prefix == MPALike.closeVaultExitDai.selector, "wrong-payload");
         }
 
         //since all global values in this contract are either const or immutable, this delegate call do not break any storage
