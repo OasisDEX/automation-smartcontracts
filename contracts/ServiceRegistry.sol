@@ -17,7 +17,7 @@ contract ServiceRegistry {
 
     modifier delayedExecution() {
         bytes32 operationHash = keccak256(msg.data);
-        uint reqDelay = requiredDelay;
+        uint256 reqDelay = requiredDelay;
 
         if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
             //not called before, scheduled for execution
@@ -48,7 +48,7 @@ contract ServiceRegistry {
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay<2**255,"risk-of-overflow");
+        require(initialDelay < type(uint256).max,"risk-of-overflow");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
@@ -155,7 +155,6 @@ contract ServiceRegistry {
         view
         returns (address)
     {
-        //TODO: add require breaking if address is zero
         return namedService[serviceNameHash];
     }
 

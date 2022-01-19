@@ -27,13 +27,7 @@ contract CloseCommand is ICommand {
             .getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
-        if (collateral > 0) {
-            return false;
-        }
-        if (debt > 0) {
-            return false;
-        }
-        return true;
+        return !(collateral > 0 || debt > 0);
     }
 
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
