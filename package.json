@@ -5,11 +5,17 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
+    "solhint": "solhint contracts/**/*.sol",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/**/*.sol",
     "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
     "format:fix": "./node_modules/.bin/prettier --write contracts/**/*.sol test/**/*.ts",
     "format": "./node_modules/.bin/prettier --check contracts/**/*.sol test/**/*.ts"
   },
+  "pre-commit": [
+    "lint",
+    "format",
+    "solhint"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OasisDEX/automation-smartcontracts.git"
@@ -21,6 +27,8 @@
   },
   "homepage": "https://github.com/OasisDEX/automation-smartcontracts#readme",
   "devDependencies": {
+    "@ethersproject/abstract-signer": "^5.5.0",
+    "@ethersproject/contracts": "^5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -29,6 +37,7 @@
     "@types/chai": "^4.2.22",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.11.6",
+    "@types/ramda": "^0.27.64",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
     "bignumber.js": "^9.0.1",
@@ -48,6 +57,7 @@
     "hardhat": "^2.6.7",
     "hardhat-gas-reporter": "^1.0.4",
     "hardhat-tenderly": "^1.0.1",
+    "pre-commit": "^1.2.2",
     "prettier": "^2.4.1",
     "prettier-plugin-solidity": "^1.0.0-beta.18",
     "ramda": "^0.27.1",
