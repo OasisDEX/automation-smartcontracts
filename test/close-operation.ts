@@ -1,6 +1,6 @@
 import { ContractReceipt } from "@ethersproject/contracts";
 import { TransactionReceipt } from "@ethersproject/providers";
-import { BigNumber } from "ethers";
+import { BigNumber, BytesLike, Signer } from "ethers";
 import {
   AutomationBot,
   ServiceRegistry,
@@ -39,6 +39,25 @@ const getEvents = function (
   });
   return filteredEvents;
 };
+
+const impersonate = async (user : string) : Promise<Signer> =>{
+  await ethers.provider.send("hardhat_impersonateAccount", [
+    user,
+  ]);
+  const newSigner = await ethers.getSigner(user);
+  return newSigner;
+};
+
+const generateExecutionData = (toCollateral:boolean, cdpData:any, exchangeData:any, slLevel:any) : BytesLike => {
+  return "";
+}
+
+const generateTriggerData = (id:number, isCloseToCollateral: boolean, slLevel : number) : BytesLike=>{
+  return ethers.utils.defaultAbiCoder.encode(
+    ['uint256', 'bool', 'uint256'],
+    [id, isCloseToCollateral, Math.round(slLevel)],
+  )
+}
 
 async function findBlockEthPrice(amountOfDai: BigNumber): Promise<BigNumber> {
   return BigNumber.from(0);
@@ -170,7 +189,7 @@ describe.skip("AutomationBot", async function () {
     usersProxy = await ethers.getContractAt("DsProxyLike", proxyAddress);
     proxyOwnerAddress = await usersProxy.owner();
   });
-  /*  
+  
   describe("execute", async function () {
     let currentCollRatioAsPercentage: number;
 
@@ -293,13 +312,19 @@ describe.skip("AutomationBot", async function () {
       });
 
       describe("when Trigger is below current col ratio", async function () {
-        let triggerId : any;
+        let triggerId : number;
+        let triggersData : BytesLike;
+        let executionData : BytesLike;
         this.beforeEach(async function(){
           //makeSnapshot
           snapshotId = await ethers.provider.send("evm_snapshot", []);
 
+          triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage-1);
+
+          executionData = generateExecutionData(false,cdpData,exchangeData, serviceRegistry)
+
           //addTrigger
-          await AutomationBotInstance.addTrigger(testCdpId, 2, generateTriggerData() )
+          let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData )
 
         })
         this.afterEach(async function(){
@@ -308,8 +333,9 @@ describe.skip("AutomationBot", async function () {
         })
 
         it("should revert trigger execution", async function () {
-          let tx = AutomationBotInstance.execute(, testCdpId, )
-          await expect(tx).to.be.revertedWith('');
+          
+          let tx = AutomationBotInstance.execute(executionData, testCdpId, triggersData, CloseCommandInstance.address, triggerId)
+          await expect(tx).to.be.revertedWith('trigger-execution-illegal');
         });
       });
       describe("when Trigger is above current col ratio", async function () {
@@ -331,5 +357,5 @@ describe.skip("AutomationBot", async function () {
       });
     });
   });
-  */
+  
 });

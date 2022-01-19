@@ -63,7 +63,7 @@ const standardAmounts = {
   YFI: "0.05",
 };
 
-declare let ethers: any;
+const { ethers } = require("hardhat");
 
 const zero = new BigNumber(0);
 const one = new BigNumber(1);
@@ -337,6 +337,7 @@ const timeTravel = async (timeIncrease: number) => {
     id: new Date().getTime(),
   });
 };
+
 
 module.exports = {
   getEvents,
