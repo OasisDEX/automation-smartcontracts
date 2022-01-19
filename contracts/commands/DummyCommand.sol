@@ -50,7 +50,11 @@ contract DummyCommand is ICommand {
         return initialCheckReturn;
     }
 
-    function execute(bytes calldata, uint256, bytes memory) public override {
+    function execute(
+        bytes calldata,
+        uint256,
+        bytes memory
+    ) public override {
         require(!revertsInExecute, "command failed");
     }
 }

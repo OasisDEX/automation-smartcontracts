@@ -98,17 +98,13 @@ describe("AutomationBot", async function () {
 
   describe("getCommandAddress", async function () {
     it("should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2", async function () {
-      let address = await AutomationBotInstance.getCommandAddress(
-        2
-      );
+      let address = await AutomationBotInstance.getCommandAddress(2);
       await expect(address.toLowerCase()).to.equal(
         DummyCommandInstance.address.toLowerCase()
       );
     });
     it("should return 0x0 for triggerType 1", async function () {
-      let address = await AutomationBotInstance.getCommandAddress(
-        1
-      );
+      let address = await AutomationBotInstance.getCommandAddress(1);
       await expect(address.toLowerCase()).to.equal(
         "0x0000000000000000000000000000000000000000".toLowerCase()
       );
@@ -291,13 +287,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [
-          123,
-          triggerId + 1,
-          DummyCommandInstance.address,
-          false,
-          "0x",
-        ]
+        [123, triggerId + 1, DummyCommandInstance.address, false, "0x"]
       );
 
       let tx = usersProxy
@@ -317,13 +307,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [
-          testCdpId,
-          triggerId,
-          DummyCommandInstance.address,
-          false,
-          "0x",
-        ]
+        [testCdpId, triggerId, DummyCommandInstance.address, false, "0x"]
       );
 
       let status = await AutomationBotInstance.isCdpAllowed(
@@ -348,13 +332,7 @@ describe("AutomationBot", async function () {
       const newSigner = await ethers.getSigner(proxyOwnerAddress);
       const dataToSupply = AutomationBotInstance.interface.encodeFunctionData(
         "removeTrigger",
-        [
-          testCdpId,
-          triggerId,
-          DummyCommandInstance.address,
-          true,
-          "0x",
-        ]
+        [testCdpId, triggerId, DummyCommandInstance.address, true, "0x"]
       );
 
       let status = await AutomationBotInstance.isCdpAllowed(
