@@ -1,6 +1,5 @@
-import { ContractReceipt } from '@ethersproject/contracts'
-import { Signer } from 'ethers'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand } from '../typechain'
+import { getEvents, impersonate } from './utils'
 
 const hre = require('hardhat')
 
@@ -9,23 +8,6 @@ const { ethers } = require('hardhat')
 
 const CDP_MANAGER_ADDRESS = '0x5ef30b9986345249bc32d8928B7ee64DE9435E39'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
-
-const getEvents = function (txResult: ContractReceipt, eventAbi: string, eventName: string) {
-    let abi = [eventAbi]
-    let iface = new ethers.utils.Interface(abi)
-    let events = txResult.events ? txResult.events : []
-
-    let filteredEvents = events.filter(x => {
-        return x.topics[0] == iface.getEventTopic(eventName)
-    })
-    return filteredEvents
-}
-
-const impersonate = async (user: string): Promise<Signer> => {
-    await ethers.provider.send('hardhat_impersonateAccount', [user])
-    const newSigner = await ethers.getSigner(user)
-    return newSigner
-}
 
 describe('AutomationBot', async function () {
     let ServiceRegistryInstance: ServiceRegistry

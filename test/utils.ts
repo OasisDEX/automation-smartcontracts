@@ -168,6 +168,12 @@ export async function sendEther(signer: Signer, to: string, amount: string) {
     await signer.sendTransaction(txObj)
 }
 
+export async function impersonate(user: string): Promise<Signer> {
+    await ethers.provider.send('hardhat_impersonateAccount', [user])
+    const newSigner = await ethers.getSigner(user)
+    return newSigner
+}
+
 export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName: string) {
     const abi = [eventAbi]
     const iface = new utils.Interface(abi)

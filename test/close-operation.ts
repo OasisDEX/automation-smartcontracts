@@ -1,7 +1,7 @@
-import { ContractReceipt } from '@ethersproject/contracts'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber, BytesLike, Signer } from 'ethers'
 import { AutomationBot, ServiceRegistry, DsProxyLike, CloseCommand, McdView } from '../typechain'
+import { getEvents, impersonate } from './utils'
 const hre = require('hardhat')
 
 const { expect } = require('chai')
@@ -17,23 +17,6 @@ const MCD_JOIN_ETH_A = '0x2F0b23f53734252Bda2277357e97e1517d6B042A'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
-
-const getEvents = function (txResult: ContractReceipt, eventAbi: string, eventName: string) {
-    let abi = [eventAbi]
-    let iface = new ethers.utils.Interface(abi)
-    let events = txResult.events ? txResult.events : []
-
-    let filteredEvents = events.filter(x => {
-        return x.topics[0] == iface.getEventTopic(eventName)
-    })
-    return filteredEvents
-}
-
-const impersonate = async (user: string): Promise<Signer> => {
-    await ethers.provider.send('hardhat_impersonateAccount', [user])
-    const newSigner = await ethers.getSigner(user)
-    return newSigner
-}
 
 const generateExecutionData = (toCollateral: boolean, cdpData: any, exchangeData: any, slLevel: any): BytesLike => {
     return ''
@@ -224,28 +207,95 @@ describe.skip('AutomationBot', async function () {
             })
 
             describe('when Trigger is below current col ratio', async function () {
+                let triggerId: number
+                let triggersData: BytesLike
+                let executionData: BytesLike
+                let signer: Signer
                 this.beforeEach(async function () {
                     //makeSnapshot
+
+                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    signer = await impersonate(proxyOwnerAddress)
                     //addTrigger
+                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
+
+                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+
+                    //addTrigger
+                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    let txRes = await tx.wait()
+                    let filteredEvents = getEvents(
+                        txRes,
+                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                        'TriggerAdded',
+                    )
+
+                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
                 })
                 this.afterEach(async function () {
                     //revertSnapshot
+                    await ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it('should revert trigger execution', async function () {})
+                it('should revert trigger execution', async function () {
+                    let tx = AutomationBotInstance.connect(signer).execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                    )
+                    await expect(tx).to.be.revertedWith('trigger-execution-illegal')
+                })
             })
             describe('when Trigger is above current col ratio', async function () {
-                let receipt: TransactionReceipt
+                let triggerId: number
+                let triggersData: BytesLike
+                let executionData: BytesLike
+                let signer: Signer
                 this.beforeAll(async function () {
                     //makeSnapshot
+
+                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    signer = await impersonate(proxyOwnerAddress)
                     //addTrigger
-                    //execute
+                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage + 1)
+
+                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+
+                    //addTrigger
+                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    let txRes = await tx.wait()
+                    let filteredEvents = getEvents(
+                        txRes,
+                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                        'TriggerAdded',
+                    )
+
+                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
                 })
                 this.afterAll(async function () {
                     //revertSnapshot
+                    await ethers.provider.send('evm_revert', [snapshotId])
                 })
-                it('it should whipe all debt and collateral', async function () {})
-                it('should send dai To reciverAddress', async function () {})
+                it('it should whipe all debt and collateral', async function () {
+                    let tx = await AutomationBotInstance.connect(signer).execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                    )
+                })
+                it('should send dai To reciverAddress', async function () {
+                    let tx = await AutomationBotInstance.connect(signer).execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                    )
+                })
             })
         })
 
@@ -270,9 +320,11 @@ describe.skip('AutomationBot', async function () {
                 let triggerId: number
                 let triggersData: BytesLike
                 let executionData: BytesLike
+                let signer: Signer
                 this.beforeEach(async function () {
                     //makeSnapshot
                     snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    signer = await impersonate(proxyOwnerAddress)
 
                     triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
 
@@ -280,6 +332,14 @@ describe.skip('AutomationBot', async function () {
 
                     //addTrigger
                     let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    let txRes = await tx.wait()
+                    let filteredEvents = getEvents(
+                        txRes,
+                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                        'TriggerAdded',
+                    )
+
+                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
                 })
                 this.afterEach(async function () {
                     //revertSnapshot
@@ -287,7 +347,7 @@ describe.skip('AutomationBot', async function () {
                 })
 
                 it('should revert trigger execution', async function () {
-                    let tx = AutomationBotInstance.execute(
+                    let tx = AutomationBotInstance.connect(signer).execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -298,17 +358,52 @@ describe.skip('AutomationBot', async function () {
                 })
             })
             describe('when Trigger is above current col ratio', async function () {
-                let receipt: TransactionReceipt
+                let triggerId: number
+                let triggersData: BytesLike
+                let executionData: BytesLike
+                let signer: Signer
                 this.beforeAll(async function () {
                     //makeSnapshot
+                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    signer = await impersonate(proxyOwnerAddress)
+
+                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
+
+                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+
                     //addTrigger
-                    //execute
+                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    let txRes = await tx.wait()
+                    let filteredEvents = getEvents(
+                        txRes,
+                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                        'TriggerAdded',
+                    )
+
+                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
                 })
                 this.afterAll(async function () {
                     //revertSnapshot
+                    await ethers.provider.send('evm_revert', [snapshotId])
                 })
-                it('it should whipe all debt and collateral', async function () {})
-                it('should send dai To reciverAddress', async function () {})
+                it('it should whipe all debt and collateral', async function () {
+                    let tx = await AutomationBotInstance.connect(signer).execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                    )
+                })
+                it('should send dai To reciverAddress', async function () {
+                    let tx = await AutomationBotInstance.connect(signer).execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                    )
+                })
             })
         })
     })
