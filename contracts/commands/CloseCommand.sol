@@ -70,7 +70,7 @@ contract CloseCommand is ICommand {
 
         if (triggerType == 1) {
             expectedSelector = MPALike.closeVaultExitCollateral.selector;
-        } else if (triggerType == 1) {
+        } else if (triggerType == 2) {
             expectedSelector = MPALike.closeVaultExitDai.selector;
         } else revert("unsupported-triggerType");
 
