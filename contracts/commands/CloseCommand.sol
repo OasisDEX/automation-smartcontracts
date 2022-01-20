@@ -30,7 +30,7 @@ contract CloseCommand is ICommand {
         override
         returns (bool)
     {
-        (uint256 cdpdId, , uint256 slLevel) = abi.decode(triggerData, (uint256, bool, uint256));
+        (uint256 cdpdId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
         if (slLevel <= 100) {
             //completely invalid value
             return false;
@@ -61,18 +61,20 @@ contract CloseCommand is ICommand {
         uint256,
         bytes memory triggerData
     ) public override {
-        (, bool toCollateral, ) = abi.decode(triggerData, (uint256, bool, uint256));
+        (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
 
         bytes4 prefix = abi.decode(executionData, (bytes4));
+        bytes4 expectedSelector;
 
-        if (toCollateral) {
-            require(prefix == MPALike.closeVaultExitCollateral.selector, "wrong-payload");
-        } else {
-            require(prefix == MPALike.closeVaultExitDai.selector, "wrong-payload");
-        }
+        if (triggerType == 1) {
+            expectedSelector = MPALike.closeVaultExitCollateral.selector;
+        } else if (triggerType == 1) {
+            expectedSelector = MPALike.closeVaultExitDai.selector;
+        } else revert("unsupported-triggerType");
 
+        require(prefix == expectedSelector, "wrong-payload");
         //since all global values in this contract are either const or immutable, this delegate call do not break any storage
         //this is simplest approach, most similar to way we currently call dsProxy
         (bool status, ) = mpaAddress.delegatecall(executionData);

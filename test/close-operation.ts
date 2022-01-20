@@ -1,6 +1,5 @@
-import { TransactionReceipt } from '@ethersproject/providers'
-import { BigNumber, BytesLike, Signer } from 'ethers'
-import { AutomationBot, ServiceRegistry, DsProxyLike, CloseCommand, McdView } from '../typechain'
+import { BigNumber, BytesLike, ContractTransaction, Signer } from 'ethers'
+import { AutomationBot, ServiceRegistry, DsProxyLike, CloseCommand, McdView, MPALike } from '../typechain'
 import { getEvents, impersonate } from './utils'
 const hre = require('hardhat')
 
@@ -18,8 +17,21 @@ const MCD_JOIN_ETH_A = '0x2F0b23f53734252Bda2277357e97e1517d6B042A'
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
 
-const generateExecutionData = (toCollateral: boolean, cdpData: any, exchangeData: any, slLevel: any): BytesLike => {
-    return ''
+const generateExecutionData = (
+    mpa: MPALike,
+    toCollateral: boolean,
+    cdpData: any,
+    exchangeData: any,
+    serviceRegistry: any,
+): BytesLike => {
+    console.log('exchangeData', exchangeData)
+    console.log('cdpData', cdpData)
+    console.log('serviceRegistry', serviceRegistry)
+    if (toCollateral) {
+        return mpa.interface.encodeFunctionData('closeVaultExitCollateral', [exchangeData, cdpData, serviceRegistry])
+    } else {
+        return mpa.interface.encodeFunctionData('closeVaultExitDai', [exchangeData, cdpData, serviceRegistry])
+    }
 }
 
 const generateTriggerData = (id: number, isCloseToCollateral: boolean, slLevel: number): BytesLike => {
@@ -41,13 +53,14 @@ function padTo64WithLeadingZeros(src: string): string {
 function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string): string {
     const magicPostfix =
         '0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11b03a8694'
-    const fromAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(fromAmount).toHexString())
-    const toAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(toAmount).toHexString())
+    const fromAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(fromAmount).toHexString().substring(2))
+    const toAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(toAmount).toHexString().substring(2))
     const fromTokenPadded = padTo64WithLeadingZeros(fromToken.substring(2))
-    return fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
+    console.log(fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix)
+    return '0x2e95b6c8' + fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
 }
 
-describe.skip('AutomationBot', async function () {
+describe('AutomationBot', async function () {
     /* TODO: Make it work */
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -58,9 +71,12 @@ describe.skip('AutomationBot', async function () {
     let usersProxy: DsProxyLike
     let snapshotId: string
     let reciverAddress: string
+    let mpaInstance: MPALike
     this.beforeAll(async function () {
         let ServiceRegistry = await ethers.getContractFactory('ServiceRegistry')
         let McdView = await ethers.getContractFactory('McdView')
+
+        mpaInstance = await ethers.getContractAt('MPALike', MULTIPLY_PROXY_ACTIONS_ADDRESS)
 
         let signer = await ethers.provider.getSigner(1)
 
@@ -122,6 +138,8 @@ describe.skip('AutomationBot', async function () {
         const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
+        console.log('Proxy address', proxyAddress)
+        console.log('cdpId', testCdpId)
         usersProxy = await ethers.getContractAt('DsProxyLike', proxyAddress)
         proxyOwnerAddress = await usersProxy.owner()
     })
@@ -163,14 +181,14 @@ describe.skip('AutomationBot', async function () {
                 fundsReceiver: reciverAddress,
                 cdpId: testCdpId,
                 ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
-                requiredDebt: undefined,
-                borrowCollateral: undefined,
-                withdrawCollateral: undefined,
-                withdrawDai: undefined,
-                depositDai: undefined,
-                depositCollateral: undefined,
-                skipFL: undefined,
-                methodName: undefined,
+                requiredDebt: 0, //can stay 0 overriden in SC anyway
+                borrowCollateral: collateralAmount,
+                withdrawCollateral: 0,
+                withdrawDai: 0,
+                depositDai: 0, //simple case no additional dai
+                depositCollateral: 0,
+                skipFL: false,
+                methodName: '',
             }
 
             exchangeData = {
@@ -187,7 +205,7 @@ describe.skip('AutomationBot', async function () {
         describe('closeToCollateral operation', async function () {
             this.beforeAll(async function () {
                 const debt = BigNumber.from(debtAmount)
-                const tradeSize = debt //value of collateral
+                const tradeSize = debt.mul(10020).div(10000) // + our fee 0.2%
                 ethPrice = await findBlockEthPrice(tradeSize)
 
                 exchangeData.fromTokenAmount = tradeSize
@@ -197,7 +215,7 @@ describe.skip('AutomationBot', async function () {
                     )
                     .toString()
                 exchangeData.minToTokenAmount = tradeSize.toString()
-                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100) //slippage 2%
+                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() //slippage 2%
                 ;(exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'),
                     (exchangeData._exchangeCalldata = forgeUnoswapCallData(
                         WETH_ADDRESS,
@@ -217,12 +235,19 @@ describe.skip('AutomationBot', async function () {
                     snapshotId = await ethers.provider.send('evm_snapshot', [])
                     signer = await impersonate(proxyOwnerAddress)
                     //addTrigger
-                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
+                    triggersData = generateTriggerData(testCdpId, true, currentCollRatioAsPercentage - 1)
 
-                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     //addTrigger
-                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                        testCdpId,
+                        2,
+                        triggersData,
+                    ])
+                    let tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+
                     let txRes = await tx.wait()
                     let filteredEvents = getEvents(
                         txRes,
@@ -259,12 +284,18 @@ describe.skip('AutomationBot', async function () {
                     snapshotId = await ethers.provider.send('evm_snapshot', [])
                     signer = await impersonate(proxyOwnerAddress)
                     //addTrigger
-                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage + 1)
+                    triggersData = generateTriggerData(testCdpId, true, currentCollRatioAsPercentage + 1)
 
-                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     //addTrigger
-                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                        testCdpId,
+                        2,
+                        triggersData,
+                    ])
+                    let tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+
                     let txRes = await tx.wait()
                     let filteredEvents = getEvents(
                         txRes,
@@ -303,11 +334,15 @@ describe.skip('AutomationBot', async function () {
             this.beforeAll(async function () {
                 const debt = BigNumber.from(debtAmount)
                 const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) //value of collateral
-                ethPrice = await findBlockEthPrice(tradeSize)
+
+                console.log('oracle collateral value', tradeSize.toString())
+                console.log('amount of collateral', collateralAmount.toString())
+
+                tradeSize.div(collateralAmount)
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.toString()
-                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100) //slippage 2%
+                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() //slippage 2%
                 ;(exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'),
                     (exchangeData._exchangeCalldata = forgeUnoswapCallData(
                         WETH_ADDRESS,
@@ -328,10 +363,16 @@ describe.skip('AutomationBot', async function () {
 
                     triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
 
-                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     //addTrigger
-                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                        testCdpId,
+                        2,
+                        triggersData,
+                    ])
+                    let tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+
                     let txRes = await tx.wait()
                     let filteredEvents = getEvents(
                         txRes,
@@ -364,15 +405,22 @@ describe.skip('AutomationBot', async function () {
                 let signer: Signer
                 this.beforeAll(async function () {
                     //makeSnapshot
-                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    //     snapshotId = await ethers.provider.send('evm_snapshot', [])
                     signer = await impersonate(proxyOwnerAddress)
 
-                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage - 1)
+                    triggersData = generateTriggerData(testCdpId, false, currentCollRatioAsPercentage + 1)
 
-                    executionData = generateExecutionData(false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     //addTrigger
-                    let tx = await AutomationBotInstance.addTrigger(testCdpId, 2, triggersData)
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                        testCdpId,
+                        2,
+                        triggersData,
+                    ])
+                    let tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+                    console.log('trigger added')
+
                     let txRes = await tx.wait()
                     let filteredEvents = getEvents(
                         txRes,
@@ -384,16 +432,29 @@ describe.skip('AutomationBot', async function () {
                 })
                 this.afterAll(async function () {
                     //revertSnapshot
-                    await ethers.provider.send('evm_revert', [snapshotId])
+                    //   console.log('reverting snapshot')
+                    //   await ethers.provider.send('evm_revert', [snapshotId])
                 })
-                it('it should whipe all debt and collateral', async function () {
-                    let tx = await AutomationBotInstance.connect(signer).execute(
+                it.only('it should whipe all debt and collateral', async function () {
+                    let tx: Promise<ContractTransaction> = AutomationBotInstance.connect(signer).execute(
                         executionData,
                         testCdpId,
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        {
+                            gasLimit: '5000000',
+                            gasPrice: '66029842',
+                        },
                     )
+                    console.log(Object.keys(tx))
+                    await tx
+                        .then(x => {
+                            console.log('OK', x)
+                        })
+                        .catch(err => {
+                            console.log('ERROR', err)
+                        })
                 })
                 it('should send dai To reciverAddress', async function () {
                     let tx = await AutomationBotInstance.connect(signer).execute(
