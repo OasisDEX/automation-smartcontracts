@@ -21,7 +21,7 @@ function createHardhatNetwork(
     key: string | undefined,
     gasPrice: number,
   ) {
-    if (!node) {
+    if (!node || !key) {
       return null
     }
   
@@ -79,16 +79,6 @@ const config: HardhatUserConfig = {
             40000000000,
           )
         ].filter(Boolean) as [string, HardhatNetworkConfig][]),
-        mainnet: {
-            url: process.env.ALCHEMY_NODE,
-            accounts: [process.env.PRIVATE_KEY!],
-            gasPrice: 40000000000,
-        },
-        goerli: {
-            url: process.env.ALCHEMY_NODE_GOERLI,
-            accounts: [process.env.PRIVATE_KEY_GOERLI!],
-            gasPrice: 40000000000,
-        },
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
