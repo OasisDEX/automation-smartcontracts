@@ -1,12 +1,11 @@
 import * as dotenv from 'dotenv'
-
 import { HardhatUserConfig } from 'hardhat/config'
 import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
-import "@tenderly/hardhat-tenderly"
+import '@tenderly/hardhat-tenderly'
 
 dotenv.config()
 
@@ -59,9 +58,9 @@ const config: HardhatUserConfig = {
         apiKey: process.env.ETHERSCAN_API_KEY,
     },
     tenderly: {
-        project: process.env.TENDERLY_PROJECT as string,
-        username: process.env.TENDERLY_USERNAME as string,
-    }
+        project: process.env.TENDERLY_PROJECT!,
+        username: process.env.TENDERLY_USERNAME!,
+    },
 }
 
 export default config
