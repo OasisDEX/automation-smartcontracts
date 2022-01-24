@@ -45,6 +45,9 @@ const config: HardhatUserConfig = {
             },
         },
     },
+    mocha: {
+      timeout: 60000
+    },
     networks: {
         local: {
             url: 'http://127.0.0.1:8545',

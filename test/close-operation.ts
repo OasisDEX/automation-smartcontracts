@@ -284,6 +284,7 @@ describe('AutomationBot', async () => {
 
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
+                    return true;
                 })
             })
         })
@@ -411,6 +412,7 @@ describe('AutomationBot', async () => {
 
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
+                    return true;
                 })
 
                 it('should send dai To reciverAddress', async () => {
@@ -431,6 +433,7 @@ describe('AutomationBot', async () => {
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()
                     expect(valueRecovered).to.be.below(1000)
                     expect(valueRecovered).to.be.above(950)
+                    return true;
                 })
             })
         })
