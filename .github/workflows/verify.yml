@@ -27,6 +27,7 @@ jobs:
 
       - name: Cache YARN dependencies
         uses: actions/cache@v1
+        
         with:
           path: node_modules
           key: ${{ runner.OS }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
@@ -44,8 +45,6 @@ jobs:
 
       - name: compile
         env:
-            PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
-            PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
             ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
             ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
             ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
@@ -53,8 +52,6 @@ jobs:
 
       - name: test
         env:
-            PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
-            PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
             ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
             ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
             ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
@@ -62,8 +59,6 @@ jobs:
 
       - name: coverage
         env:
-            PRIVATE_KEY_GOERLI: ${{ secrets.PRIVATE_KEY_GOERLI }}
-            PRIVATE_KEY: ${{ secrets.PRIVATE_KEY_GOERLI }}
             ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
             ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
             ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}

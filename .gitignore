@@ -9,3 +9,4 @@ typechain
 cache
 artifacts
 dist/
+tenderly.yaml

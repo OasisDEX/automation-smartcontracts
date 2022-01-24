@@ -1,21 +1,23 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractReceipt } from '@ethersproject/contracts'
-import { constants, BigNumber as EthersBN, utils } from 'ethers'
-import hre from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import R from 'ramda'
 import fs from 'fs'
+import { constants, utils } from 'ethers'
 import chalk from 'chalk'
-import { BigNumber } from 'bignumber.js'
+import BigNumber from 'bignumber.js'
 
 export const REGISTRY_ADDR = '0xB0e1682D17A96E8551191c089673346dF7e1D467'
+
+export const CDP_MANAGER_ADDRESS = '0x5ef30b9986345249bc32d8928B7ee64DE9435E39'
 
 export const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 export const KYBER_WRAPPER = '0x71C8dc1d6315a48850E88530d18d3a97505d2065'
 export const UNISWAP_WRAPPER = '0x6403BD92589F825FfeF6b62177FCe9149947cb9f'
 export const OASIS_WRAPPER = '0x2aD7D86C56b7a09742213e1e649C727cB4991A54'
 export const ETH_ADDR = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-export const DAI_ADDR = '0x6b175474e89094c44da98b954eedeac495271d0f'
-export const USDC_ADDR = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
+export const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f'
+export const USDC_ADDRESS = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 
 export const AAVE_MARKET = '0xB53C1a33016B2DC2fF3653530bfF1848a515c8c5'
 
@@ -24,11 +26,11 @@ export const MIN_VAULT_DAI_AMOUNT = '2010'
 export const OWNER_ACC = '0x0528A32fda5beDf89Ba9ad67296db83c9452F28C'
 export const ADMIN_ACC = '0x25eFA336886C74eA8E282ac466BdCd0199f85BB9'
 
-export const MAX_UINT = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+// const MAX_UINT = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
 export const AAVE_FL_FEE = 0.09
 
-export const standardAmounts = {
+const standardAmounts = {
     ETH: '2',
     WETH: '2',
     AAVE: '8',
@@ -66,13 +68,6 @@ export async function fetchStandardAmounts() {
     return standardAmounts
 }
 
-export async function getAddrFromRegistry(name: string) {
-    const registryInstance = await hre.ethers.getContractFactory('DFSRegistry')
-    const registry = await registryInstance.attach(REGISTRY_ADDR)
-
-    return await registry.getAddr(utils.keccak256(utils.toUtf8Bytes(name)))
-}
-
 export async function getProxyWithSigner(signer: Signer, addr: string) {
     const proxyRegistry = await hre.ethers.getContractAt('IProxyRegistry', '0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4')
 
@@ -103,7 +98,7 @@ export async function getProxy(acc: string) {
     return dsProxy
 }
 
-const abiEncodeArgs = (deployed: any, contractArgs: any[]) => {
+export function abiEncodeArgs(deployed: any, contractArgs: any[]) {
     // not writing abi encoded args if this does not pass
     if (!contractArgs || !deployed || !R.hasPath(['interface', 'deploy'], deployed)) {
         return ''
@@ -152,16 +147,6 @@ export async function send(tokenAddr: string, to: string, amount: number) {
     await tokenContract.transfer(to, amount)
 }
 
-export async function approve(tokenAddr: string, to: string) {
-    const tokenContract = await hre.ethers.getContractAt('IERC20', tokenAddr)
-
-    const allowance: EthersBN = await tokenContract.allowance(await tokenContract.signer.getAddress(), to)
-
-    if (allowance.eq(0)) {
-        await tokenContract.approve(to, MAX_UINT, { gasLimit: 1000000 })
-    }
-}
-
 export async function sendEther(signer: Signer, to: string, amount: string) {
     const value = utils.parseUnits(amount, 18)
     const txObj = await signer.populateTransaction({
@@ -171,6 +156,12 @@ export async function sendEther(signer: Signer, to: string, amount: string) {
     })
 
     await signer.sendTransaction(txObj)
+}
+
+export async function impersonate(user: string): Promise<Signer> {
+    await ethers.provider.send('hardhat_impersonateAccount', [user])
+    const newSigner = await ethers.getSigner(user)
+    return newSigner
 }
 
 export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName: string) {
@@ -190,14 +181,8 @@ export async function balanceOf(tokenAddr: string, addr: string) {
         : await tokenContract.balanceOf(addr)
 }
 
-export async function formatExchangeObj(
-    srcAddr: string,
-    destAddr: string,
-    amount: number,
-    wrapper: any,
-    destAmount = 0,
-) {
-    const abiCoder = new utils.AbiCoder()
+export function formatExchangeObj(srcAddr: string, destAddr: string, amount: number, wrapper: any, destAmount = 0) {
+    const abiCoder = new ethers.utils.AbiCoder()
 
     let firstPath = srcAddr
     let secondPath = destAddr
@@ -222,11 +207,11 @@ export async function formatExchangeObj(
         constants.AddressZero,
         wrapper,
         path,
-        [constants.AddressZero, constants.AddressZero, constants.AddressZero, 0, 0, utils.toUtf8Bytes('')],
+        [constants.AddressZero, constants.AddressZero, constants.AddressZero, 0, 0, ethers.utils.toUtf8Bytes('')],
     ]
 }
 
-export function isEth(tokenAddr: string) {
+function isEth(tokenAddr: string) {
     return tokenAddr.toLowerCase() === ETH_ADDR.toLowerCase() || tokenAddr.toLowerCase() === WETH_ADDRESS.toLowerCase()
 }
 
@@ -255,14 +240,14 @@ export async function depositToWeth(amount: number) {
     await weth.deposit({ value: amount })
 }
 
-export async function impersonateAccount(account: string) {
+async function impersonateAccount(account: string) {
     await hre.network.provider.request({
         method: 'hardhat_impersonateAccount',
         params: [account],
     })
 }
 
-export async function stopImpersonatingAccount(account: string) {
+async function stopImpersonatingAccount(account: string) {
     await hre.network.provider.request({
         method: 'hardhat_stopImpersonatingAccount',
         params: [account],

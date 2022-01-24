@@ -1,11 +1,12 @@
 import * as dotenv from 'dotenv'
-
 import { HardhatUserConfig } from 'hardhat/config'
 import '@nomiclabs/hardhat-etherscan'
 import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
+import '@tenderly/hardhat-tenderly'
+import { HardhatNetworkConfig } from 'hardhat/types'
 
 dotenv.config()
 
@@ -13,6 +14,26 @@ dotenv.config()
 // Go to https://hardhat.org/config/ to learn more
 
 const blockNumber = process.env.BLOCK_NUMBER ? process.env.BLOCK_NUMBER : '13559294'
+
+function createHardhatNetwork(
+    network: string,
+    node: string | undefined,
+    key: string | undefined,
+    gasPrice: number,
+  ) {
+    if (!node || !key) {
+      return null
+    }
+  
+    return [
+      network,
+      {
+        url: node,
+        accounts: [key],
+        gasPrice,
+      },
+    ]
+  }
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -23,6 +44,9 @@ const config: HardhatUserConfig = {
                 runs: 1000,
             },
         },
+    },
+    mocha: {
+      timeout: 60000
     },
     networks: {
         local: {
@@ -43,19 +67,28 @@ const config: HardhatUserConfig = {
             initialBaseFeePerGas: 1000000000,
             allowUnlimitedContractSize: true,
         },
-        mainnet: {
-            url: process.env.ALCHEMY_NODE,
-            accounts: [process.env.PRIVATE_KEY!],
-            gasPrice: 40000000000,
-        },
-        goerli: {
-            url: process.env.ALCHEMY_NODE_GOERLI,
-            accounts: [process.env.PRIVATE_KEY_GOERLI!],
-            gasPrice: 40000000000,
-        },
+        ...Object.fromEntries(
+            [
+        createHardhatNetwork(
+            'mainnet',
+            process.env.ALCHEMY_NODE,
+            process.env.PRIV_KEY_MAINNET!,
+            40000000000,
+          ),
+          createHardhatNetwork(
+            'goerli',
+            process.env.ALCHEMY_NODE_GOERLI,
+            process.env.PRIV_KEY_MAINNET!,
+            40000000000,
+          )
+        ].filter(Boolean) as [string, HardhatNetworkConfig][]),
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,
+    },
+    tenderly: {
+        project: process.env.TENDERLY_PROJECT!,
+        username: process.env.TENDERLY_USERNAME!,
     },
 }
 
