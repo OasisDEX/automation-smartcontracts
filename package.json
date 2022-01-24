@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
+    "build": "npx hardhat compile",
     "solhint": "solhint contracts/**/*.sol",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/**/*.sol",
     "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
