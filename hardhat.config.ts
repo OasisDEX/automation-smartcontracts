@@ -15,25 +15,20 @@ dotenv.config()
 
 const blockNumber = process.env.BLOCK_NUMBER ? process.env.BLOCK_NUMBER : '13559294'
 
-function createHardhatNetwork(
-    network: string,
-    node: string | undefined,
-    key: string | undefined,
-    gasPrice: number,
-  ) {
+function createHardhatNetwork(network: string, node: string | undefined, key: string | undefined, gasPrice: number) {
     if (!node || !key) {
-      return null
+        return null
     }
-  
+
     return [
-      network,
-      {
-        url: node,
-        accounts: [key],
-        gasPrice,
-      },
+        network,
+        {
+            url: node,
+            accounts: [key],
+            gasPrice,
+        },
     ]
-  }
+}
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -46,7 +41,7 @@ const config: HardhatUserConfig = {
         },
     },
     mocha: {
-      timeout: 60000
+        timeout: 60000,
     },
     networks: {
         local: {
@@ -69,19 +64,15 @@ const config: HardhatUserConfig = {
         },
         ...Object.fromEntries(
             [
-        createHardhatNetwork(
-            'mainnet',
-            process.env.ALCHEMY_NODE,
-            process.env.PRIV_KEY_MAINNET!,
-            40000000000,
-          ),
-          createHardhatNetwork(
-            'goerli',
-            process.env.ALCHEMY_NODE_GOERLI,
-            process.env.PRIV_KEY_MAINNET!,
-            40000000000,
-          )
-        ].filter(Boolean) as [string, HardhatNetworkConfig][]),
+                createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIVATE_KEY!, 40000000000),
+                createHardhatNetwork(
+                    'goerli',
+                    process.env.ALCHEMY_NODE_GOERLI,
+                    process.env.PRIVATE_KEY_GOERLI!,
+                    40000000000,
+                ),
+            ].filter(Boolean) as [string, HardhatNetworkConfig][],
+        ),
     },
     etherscan: {
         apiKey: process.env.ETHERSCAN_API_KEY,

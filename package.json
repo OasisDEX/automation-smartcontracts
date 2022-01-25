@@ -17,6 +17,9 @@
     "format",
     "solhint"
   ],
+  "engines": {
+    "node": ">12"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/OasisDEX/automation-smartcontracts.git"
