@@ -193,6 +193,7 @@ describe('AutomationExecutor', async () => {
         it('should successfully execute swap token for dai', async () => {
             await MockERC20Instance.mock.balanceOf.returns(100)
             await MockERC20Instance.mock.approve.returns(true)
+            await MockERC20Instance.mock.allowance.returns(0)
             const tx = AutomationExecutorInstance.swapTokenForDai(
                 MockERC20Instance.address,
                 99,
