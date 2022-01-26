@@ -64,11 +64,11 @@ const config: HardhatUserConfig = {
         },
         ...Object.fromEntries(
             [
-                createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIV_KEY_MAINNET!, 40000000000),
+                createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIVATE_KEY!, 40000000000),
                 createHardhatNetwork(
                     'goerli',
                     process.env.ALCHEMY_NODE_GOERLI,
-                    process.env.PRIV_KEY_MAINNET!,
+                    process.env.PRIVATE_KEY_GOERLI!,
                     40000000000,
                 ),
             ].filter(Boolean) as [string, HardhatNetworkConfig][],
