@@ -1,18 +1,22 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-abstract contract ManagerLike {
-    mapping(address => mapping(uint256 => mapping(address => uint256))) public cdpCan;
+interface ManagerLike {
+    function cdpCan(
+        address owner,
+        uint256 cdpId,
+        address allowedAddr
+    ) external view returns (uint256);
 
-    function ilks(uint256) public view virtual returns (bytes32);
+    function ilks(uint256) external view returns (bytes32);
 
-    function owns(uint256) public view virtual returns (address);
+    function owns(uint256) external view returns (address);
 
-    function urns(uint256) public view virtual returns (address);
+    function urns(uint256) external view returns (address);
 
     function cdpAllow(
         uint256 cdp,
         address usr,
         uint256 ok
-    ) public virtual;
+    ) external;
 }

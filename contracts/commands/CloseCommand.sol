@@ -17,7 +17,7 @@ contract CloseCommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory) public view override returns (bool) {
+    function isExecutionCorrect(uint256 cdpId, bytes memory) external view override returns (bool) {
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
@@ -25,7 +25,7 @@ contract CloseCommand is ICommand {
     }
 
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
-        public
+        external
         view
         override
         returns (bool)
@@ -60,7 +60,7 @@ contract CloseCommand is ICommand {
         bytes calldata executionData,
         uint256,
         bytes memory triggerData
-    ) public override {
+    ) external override {
         (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
@@ -77,6 +77,7 @@ contract CloseCommand is ICommand {
         require(prefix == expectedSelector, "wrong-payload");
         //since all global values in this contract are either const or immutable, this delegate call do not break any storage
         //this is simplest approach, most similar to way we currently call dsProxy
+        // solhint-disable-next-line avoid-low-level-calls
         (bool status, ) = mpaAddress.delegatecall(executionData);
 
         require(status, "execution failed");

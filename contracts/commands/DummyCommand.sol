@@ -32,21 +32,17 @@ contract DummyCommand is ICommand {
         revertsInExecute = _revertsInExecute;
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isExecutionCorrect(
+        uint256, // cdpId
+        bytes memory // triggerData
+    ) external view override returns (bool) {
         return finalCheckReturn;
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        public
-        view
-        override
-        returns (bool)
-    {
+    function isExecutionLegal(
+        uint256, // cdpId
+        bytes memory // triggerData
+    ) external view override returns (bool) {
         return initialCheckReturn;
     }
 
@@ -54,7 +50,7 @@ contract DummyCommand is ICommand {
         bytes calldata,
         uint256,
         bytes memory
-    ) public override {
+    ) external override {
         require(!revertsInExecute, "command failed");
     }
 }

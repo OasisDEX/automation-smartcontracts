@@ -1,22 +1,17 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-abstract contract ICommand {
+interface ICommand {
     function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        public
+        external
         view
-        virtual
         returns (bool);
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        public
-        view
-        virtual
-        returns (bool);
+    function isExecutionLegal(uint256 cdpId, bytes memory triggerData) external view returns (bool);
 
     function execute(
         bytes calldata executionData,
         uint256 cdpId,
         bytes memory triggerData
-    ) public virtual;
+    ) external;
 }
