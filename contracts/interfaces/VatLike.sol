@@ -1,27 +1,25 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-abstract contract VatLike {
-    struct Urn {
-        uint256 ink; // Locked Collateral  [wad]
-        uint256 art; // Normalised Debt    [wad]
-    }
+interface VatLike {
+    function urns(bytes32, address) external view returns (uint256 ink, uint256 art);
 
-    struct Ilk {
-        uint256 Art; // Total Normalised Debt     [wad]
-        uint256 rate; // Accumulated Rates         [ray]
-        uint256 spot; // Price with Safety Margin  [ray]
-        uint256 line; // Debt Ceiling              [rad]
-        uint256 dust; // Urn Debt Floor            [rad]
-    }
+    function ilks(bytes32)
+        external
+        view
+        returns (
+            uint256 art, // Total Normalised Debt      [wad]
+            uint256 rate, // Accumulated Rates         [ray]
+            uint256 spot, // Price with Safety Margin  [ray]
+            uint256 line, // Debt Ceiling              [rad]
+            uint256 dust // Urn Debt Floor             [rad]
+        );
 
-    mapping(bytes32 => mapping(address => Urn)) public urns;
-    mapping(bytes32 => Ilk) public ilks;
-    mapping(bytes32 => mapping(address => uint256)) public gem; // [wad]
+    function gem(bytes32, address) external view returns (uint256); // [wad]
 
-    function can(address, address) public view virtual returns (uint256);
+    function can(address, address) external view returns (uint256);
 
-    function dai(address) public view virtual returns (uint256);
+    function dai(address) external view returns (uint256);
 
     function frob(
         bytes32,
@@ -30,15 +28,15 @@ abstract contract VatLike {
         address,
         int256,
         int256
-    ) public virtual;
+    ) external;
 
-    function hope(address) public virtual;
+    function hope(address) external;
 
     function move(
         address,
         address,
         uint256
-    ) public virtual;
+    ) external;
 
     function fork(
         bytes32,
@@ -46,5 +44,5 @@ abstract contract VatLike {
         address,
         int256,
         int256
-    ) public virtual;
+    ) external;
 }

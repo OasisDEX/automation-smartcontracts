@@ -1,17 +1,12 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-abstract contract IPipInterface {
-    function read() public virtual returns (bytes32);
+interface IPipInterface {
+    function read() external returns (bytes32);
 }
 
-abstract contract SpotterLike {
-    struct Ilk {
-        IPipInterface pip;
-        uint256 mat;
-    }
+interface SpotterLike {
+    function ilks(bytes32) external view returns (IPipInterface pip, uint256 mat);
 
-    mapping(bytes32 => Ilk) public ilks;
-
-    uint256 public par;
+    function par() external view returns (uint256);
 }

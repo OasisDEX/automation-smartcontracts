@@ -54,7 +54,7 @@ contract ServiceRegistry {
     }
 
     function transferOwnership(address newOwner)
-        public
+        external
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -63,7 +63,7 @@ contract ServiceRegistry {
     }
 
     function changeRequiredDelay(uint256 newDelay)
-        public
+        external
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -72,7 +72,7 @@ contract ServiceRegistry {
     }
 
     function addTrustedAddress(address trustedAddress)
-        public
+        external
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -80,20 +80,20 @@ contract ServiceRegistry {
         trustedAddresses[trustedAddress] = true;
     }
 
-    function removeTrustedAddress(address trustedAddress) public onlyOwner validateInput(36) {
+    function removeTrustedAddress(address trustedAddress) external onlyOwner validateInput(36) {
         trustedAddresses[trustedAddress] = false;
     }
 
-    function isTrusted(address testedAddress) public view returns (bool) {
+    function isTrusted(address testedAddress) external view returns (bool) {
         return trustedAddresses[testedAddress];
     }
 
-    function getServiceNameHash(string memory name) public pure returns (bytes32) {
+    function getServiceNameHash(string memory name) external pure returns (bytes32) {
         return keccak256(abi.encodePacked(name));
     }
 
     function addNamedService(bytes32 serviceNameHash, address serviceAddress)
-        public
+        external
         onlyOwner
         validateInput(68)
         delayedExecution
@@ -103,7 +103,7 @@ contract ServiceRegistry {
     }
 
     function updateNamedService(bytes32 serviceNameHash, address serviceAddress)
-        public
+        external
         onlyOwner
         validateInput(68)
         delayedExecution
@@ -112,23 +112,22 @@ contract ServiceRegistry {
         namedService[serviceNameHash] = serviceAddress;
     }
 
-    function removeNamedService(bytes32 serviceNameHash) public onlyOwner validateInput(36) {
+    function removeNamedService(bytes32 serviceNameHash) external onlyOwner validateInput(36) {
         require(namedService[serviceNameHash] != address(0), "service-does-not-exist");
         namedService[serviceNameHash] = address(0);
         emit RemoveApplied(serviceNameHash);
     }
 
-    function getRegisteredService(string memory serviceName) public view returns (address) {
-        address retVal = getServiceAddress(keccak256(abi.encodePacked(serviceName)));
-        return retVal;
+    function getRegisteredService(string memory serviceName) external view returns (address) {
+        return namedService[keccak256(abi.encodePacked(serviceName))];
     }
 
-    function getServiceAddress(bytes32 serviceNameHash) public view returns (address) {
+    function getServiceAddress(bytes32 serviceNameHash) external view returns (address) {
         return namedService[serviceNameHash];
     }
 
     function clearScheduledExecution(bytes32 scheduledExecution)
-        public
+        external
         onlyOwner
         validateInput(36)
     {

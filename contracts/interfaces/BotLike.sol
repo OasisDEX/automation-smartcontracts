@@ -1,12 +1,12 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-abstract contract BotLike {
+interface BotLike {
     function addRecord(
         uint256 cdpId,
         uint256 triggerType,
         bytes memory triggerData
-    ) public virtual;
+    ) external;
 
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
@@ -15,5 +15,5 @@ abstract contract BotLike {
         uint256 triggerId,
         address commandAddress,
         bytes memory triggerData
-    ) public virtual;
+    ) external;
 }

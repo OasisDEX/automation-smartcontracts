@@ -18,7 +18,7 @@
     "solhint"
   ],
   "engines": {
-    "node": ">12"
+    "node": ">=12"
   },
   "repository": {
     "type": "git",

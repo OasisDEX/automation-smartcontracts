@@ -19,7 +19,7 @@ contract AutomationBot {
         serviceRegistry = _serviceRegistry;
     }
 
-    //works correctly in any context
+    // works correctly in any context
     function validatePermissions(
         uint256 cdpId,
         address operator,
@@ -28,18 +28,17 @@ contract AutomationBot {
         require(isCdpOwner(cdpId, operator, manager), "no-permissions");
     }
 
-    //works correctly in any context
+    // works correctly in any context
     function isCdpAllowed(
         uint256 cdpId,
         address operator,
         ManagerLike manager
     ) public view returns (bool) {
         address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1
-        || operator == cdpOwner);
+        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1 || operator == cdpOwner);
     }
 
-    //works correctly in any context
+    // works correctly in any context
     function isCdpOwner(
         uint256 cdpId,
         address operator,
@@ -48,39 +47,29 @@ contract AutomationBot {
         return (operator == manager.owns(cdpId));
     }
 
-    //works correctly in any context
-    function getCommandAddress(uint256 triggerType)
-        public
-        view
-        returns (address)
-    {
+    // works correctly in any context
+    function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
 
-        address commandAddress = ServiceRegistry(serviceRegistry)
-            .getServiceAddress(commandHash);
+        address commandAddress = ServiceRegistry(serviceRegistry).getServiceAddress(commandHash);
 
         return commandAddress;
     }
 
-    //works correctly in any context
+    // works correctly in any context
     function getTriggersHash(
         uint256 cdpId,
         bytes memory triggerData,
         address commandAddress
     ) private view returns (bytes32) {
         bytes32 triggersHash = keccak256(
-            abi.encodePacked(
-                cdpId,
-                triggerData,
-                serviceRegistry,
-                commandAddress
-            )
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
         );
 
         return triggersHash;
     }
 
-    //works correctly in context of Automation Bot
+    // works correctly in context of Automation Bot
     function checkTriggersExistenceAndCorrectness(
         uint256 cdpId,
         uint256 triggerId,
@@ -91,64 +80,49 @@ contract AutomationBot {
 
         require(
             triggersHash != bytes32(0) &&
-            triggersHash ==
-                getTriggersHash(
-                    cdpId,
-                    triggerData,
-                    commandAddress
-                ),
+                triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
             "invalid-trigger"
         );
     }
 
-    //works correctly in context of automationBot
+    // works correctly in context of automationBot
     function addRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
-        //msg.sender should be dsProxy
+        // msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerType,
         bytes memory triggerData
-    ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
-
-        address commandAddress = getCommandAddress(
-            triggerType
+    ) external {
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
         );
+
+        address commandAddress = getCommandAddress(triggerType);
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         triggersCounter = triggersCounter + 1;
-        existingTriggers[triggersCounter] = getTriggersHash(
-            cdpId,
-            triggerData,
-            commandAddress
-        );
+        existingTriggers[triggersCounter] = getTriggersHash(cdpId, triggerData, commandAddress);
 
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
     }
 
-    //works correctly in context of automationBot
+    // works correctly in context of automationBot
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
-        //msg.sender should be dsProxy
+        // msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerId,
         address commandAddress,
         bytes memory triggerData
-    ) public {
-
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
+    ) external {
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
-        checkTriggersExistenceAndCorrectness(
-            cdpId,
-            triggerId,
-            commandAddress,
-            triggerData
-        );
+        checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
 
         existingTriggers[triggerId] = bytes32(0);
         emit TriggerRemoved(cdpId, triggerId);
@@ -160,18 +134,16 @@ contract AutomationBot {
         uint256 triggerType,
         // solhint-disable-next-line no-unused-vars
         bytes memory triggerData
+    ) external {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-    ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
-        ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(AUTOMATION_BOT_KEY);
-        BotLike(automationBot).addRecord(
-            cdpId,
-            triggerType,
-            triggerData
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
         );
+        ManagerLike manager = ManagerLike(managerAddress);
+        address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
+            AUTOMATION_BOT_KEY
+        );
+        BotLike(automationBot).addRecord(cdpId, triggerType, triggerData);
         if (isCdpAllowed(cdpId, automationBot, manager) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
@@ -191,20 +163,17 @@ contract AutomationBot {
         address commandAddress,
         bool removeAllowence,
         bytes memory triggerData
-    ) public {
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
+    ) external {
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
         ManagerLike manager = ManagerLike(managerAddress);
 
-        address automationBot = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(AUTOMATION_BOT_KEY);
-
-        BotLike(automationBot).removeRecord(
-            cdpId,
-            triggerId,
-            commandAddress,
-            triggerData
+        address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
+            AUTOMATION_BOT_KEY
         );
+
+        BotLike(automationBot).removeRecord(cdpId, triggerId, commandAddress, triggerData);
 
         if (removeAllowence) {
             manager.cdpAllow(cdpId, automationBot, 0);
@@ -215,12 +184,14 @@ contract AutomationBot {
     }
 
     //works correctly in context of dsProxy
-    function removeApproval(address _serviceRegistry, uint256 cdpId) public {
-        address managerAddress = ServiceRegistry(_serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
+    function removeApproval(address _serviceRegistry, uint256 cdpId) external {
+        address managerAddress = ServiceRegistry(_serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(_serviceRegistry)
-            .getRegisteredService(AUTOMATION_BOT_KEY);
+        address automationBot = ServiceRegistry(_serviceRegistry).getRegisteredService(
+            AUTOMATION_BOT_KEY
+        );
         validatePermissions(cdpId, address(this), manager);
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
@@ -233,32 +204,21 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId
-    ) public {
-        checkTriggersExistenceAndCorrectness(
-            cdpId,
-            triggerId,
-            commandAddress,
-            triggerData
-        );
+    ) external {
+        checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
 
-        require(
-            command.isExecutionLegal(cdpId, triggerData),
-            "trigger-execution-illegal"
+        require(command.isExecutionLegal(cdpId, triggerData), "trigger-execution-illegal");
+
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
         );
-        // solhint-disable-next-line avoid-low-level-calls
-        
-        address managerAddress = ServiceRegistry(serviceRegistry)
-            .getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
         command.execute(executionData, cdpId, triggerData);
         manager.cdpAllow(cdpId, address(command), 0);
 
-        require(
-            command.isExecutionCorrect(cdpId, triggerData),
-            "trigger-execution-wrong-result"
-        );
+        require(command.isExecutionCorrect(cdpId, triggerData), "trigger-execution-wrong-result");
     }
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
