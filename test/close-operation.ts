@@ -227,7 +227,7 @@ describe('AutomationBot', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                     )
-                    await expect(tx).to.be.revertedWith('trigger-execution-illegal')
+                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
             describe('when Trigger is above current col ratio', async () => {
@@ -354,7 +354,7 @@ describe('AutomationBot', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                     )
-                    await expect(tx).to.be.revertedWith('trigger-execution-illegal')
+                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
             describe('when Trigger is above current col ratio', async () => {
@@ -415,7 +415,7 @@ describe('AutomationBot', async () => {
                     return true
                 })
 
-                it('should send dai To reciverAddress', async () => {
+                it('should send dai To receiverAddress', async () => {
                     await AutomationBotInstance.connect(signer).execute(
                         executionData,
                         testCdpId,

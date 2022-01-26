@@ -78,7 +78,7 @@ describe('AutomationBot', async () => {
     describe('addTrigger', async () => {
         it('should fail if called from address not being an owner', async () => {
             const tx = AutomationBotInstance.addTrigger(1, 1, '0x')
-            await expect(tx).to.revertedWith('no-permissions')
+            await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should pass if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
@@ -164,7 +164,7 @@ describe('AutomationBot', async () => {
 
         it('throws if called not by proxy', async () => {
             const tx = AutomationBotInstance.removeApproval(registryAddress, testCdpId)
-            await expect(tx).to.be.revertedWith('no-permissions')
+            await expect(tx).to.be.revertedWith('bot/no-permissions')
         })
 
         it('emits ApprovalRemoved', async () => {
@@ -281,7 +281,7 @@ describe('AutomationBot', async () => {
         })
         it('should fail if called by not proxy owning Vault', async () => {
             const tx = AutomationBotInstance.removeTrigger(testCdpId, 0, DummyCommandInstance.address, false, '0x')
-            await expect(tx).to.revertedWith('no-permissions')
+            await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should fail if called by not proxy owning Vault', async () => {
             const newSigner = await ethers.getSigner(proxyOwnerAddress)
@@ -305,6 +305,9 @@ describe('AutomationBot', async () => {
 
         before(async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
+
+            // console.log(await newSigner.getAddress())
+            // await ServiceRegistryInstance.addTrustedAddress(await ethers.getSigners().then(addr => addr[0].address))
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -336,7 +339,7 @@ describe('AutomationBot', async () => {
             await AutomationBotInstance.execute('0x', testCdpId, triggerData, DummyCommandInstance.address, triggerId)
         })
 
-        it('should revert with trigger-execution-illegal if initialCheckReturn is false', async () => {
+        it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationBotInstance.execute(
                 '0x',
@@ -345,10 +348,10 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-illegal')
+            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
 
-        it('should revert with trigger-execution-wrong-result if finalCheckReturn is false', async () => {
+        it('should revert with bot/trigger-execution-wrong if finalCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(true, false, false)
             const result = AutomationBotInstance.execute(
                 '0x',
@@ -357,10 +360,10 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-wrong-result')
+            await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
 
-        it('should revert with command failed if revertsInExecute is true', async () => {
+        it('should revert with bot/trigger-execution-illegal if revertsInExecute is true', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationBotInstance.execute(
                 '0x',
@@ -369,7 +372,7 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-illegal')
+            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
     })
 })

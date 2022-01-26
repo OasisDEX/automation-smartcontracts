@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
 
 contract ServiceRegistry {
     mapping(bytes32 => uint256) public lastExecuted;
@@ -11,7 +10,7 @@ contract ServiceRegistry {
     uint256 public requiredDelay = 1800; // big enough that any power of miner over timestamp does not matter
 
     modifier validateInput(uint256 len) {
-        require(msg.data.length == len, "illegal-padding");
+        require(msg.data.length == len, "registry/illegal-padding");
         _;
     }
 
@@ -20,22 +19,14 @@ contract ServiceRegistry {
         uint256 reqDelay = requiredDelay;
 
         if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
-            //not called before, scheduled for execution
-            // solhint-disable-next-line not-rely-on-time
+            // not called before, scheduled for execution
             lastExecuted[operationHash] = block.timestamp;
-            emit ChangeScheduled(
-                msg.data,
-                operationHash,
-                // solhint-disable-next-line not-rely-on-time
-                block.timestamp + reqDelay
-            );
+            emit ChangeScheduled(msg.data, operationHash, block.timestamp + reqDelay);
         } else {
             require(
-                // solhint-disable-next-line not-rely-on-time
                 block.timestamp - reqDelay > lastExecuted[operationHash],
-                "delay-to-small"
+                "registry/delay-too-small"
             );
-            // solhint-disable-next-line not-rely-on-time
             emit ChangeApplied(msg.data, block.timestamp);
             _;
             lastExecuted[operationHash] = 0;
@@ -43,18 +34,18 @@ contract ServiceRegistry {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "only-owner");
+        require(msg.sender == owner, "registry/only-owner");
         _;
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay < type(uint256).max, "risk-of-overflow");
+        require(initialDelay < type(uint256).max, "registry/risk-of-overflow");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
 
     function transferOwnership(address newOwner)
-        external
+        public
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -63,7 +54,7 @@ contract ServiceRegistry {
     }
 
     function changeRequiredDelay(uint256 newDelay)
-        external
+        public
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -72,7 +63,7 @@ contract ServiceRegistry {
     }
 
     function addTrustedAddress(address trustedAddress)
-        external
+        public
         onlyOwner
         validateInput(36)
         delayedExecution
@@ -80,58 +71,59 @@ contract ServiceRegistry {
         trustedAddresses[trustedAddress] = true;
     }
 
-    function removeTrustedAddress(address trustedAddress) external onlyOwner validateInput(36) {
+    function removeTrustedAddress(address trustedAddress) public onlyOwner validateInput(36) {
         trustedAddresses[trustedAddress] = false;
     }
 
-    function isTrusted(address testedAddress) external view returns (bool) {
+    function isTrusted(address testedAddress) public view returns (bool) {
         return trustedAddresses[testedAddress];
     }
 
-    function getServiceNameHash(string memory name) external pure returns (bytes32) {
+    function getServiceNameHash(string memory name) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(name));
     }
 
     function addNamedService(bytes32 serviceNameHash, address serviceAddress)
-        external
+        public
         onlyOwner
         validateInput(68)
         delayedExecution
     {
-        require(namedService[serviceNameHash] == address(0), "service-override");
+        require(namedService[serviceNameHash] == address(0), "registry/service-override");
         namedService[serviceNameHash] = serviceAddress;
     }
 
     function updateNamedService(bytes32 serviceNameHash, address serviceAddress)
-        external
+        public
         onlyOwner
         validateInput(68)
         delayedExecution
     {
-        require(namedService[serviceNameHash] != address(0), "service-does-not-exist");
+        require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = serviceAddress;
     }
 
-    function removeNamedService(bytes32 serviceNameHash) external onlyOwner validateInput(36) {
-        require(namedService[serviceNameHash] != address(0), "service-does-not-exist");
+    function removeNamedService(bytes32 serviceNameHash) public onlyOwner validateInput(36) {
+        require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = address(0);
         emit RemoveApplied(serviceNameHash);
     }
 
-    function getRegisteredService(string memory serviceName) external view returns (address) {
-        return namedService[keccak256(abi.encodePacked(serviceName))];
+    function getRegisteredService(string memory serviceName) public view returns (address) {
+        address retVal = getServiceAddress(keccak256(abi.encodePacked(serviceName)));
+        return retVal;
     }
 
-    function getServiceAddress(bytes32 serviceNameHash) external view returns (address) {
+    function getServiceAddress(bytes32 serviceNameHash) public view returns (address) {
         return namedService[serviceNameHash];
     }
 
     function clearScheduledExecution(bytes32 scheduledExecution)
-        external
+        public
         onlyOwner
         validateInput(36)
     {
-        require(lastExecuted[scheduledExecution] > 0, "execution-not-sheduled");
+        require(lastExecuted[scheduledExecution] > 0, "registry/execution-not-scheduled");
         lastExecuted[scheduledExecution] = 0;
         emit ChangeCancelled(scheduledExecution);
     }

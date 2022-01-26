@@ -20,7 +20,7 @@ contract AutomationBot {
     }
 
     modifier auth(address caller) {
-        require(ServiceRegistry(serviceRegistry).isTrusted(caller), "not-authorized");
+        require(ServiceRegistry(serviceRegistry).isTrusted(caller), "bot/not-authorized");
         _;
     }
 
@@ -30,7 +30,7 @@ contract AutomationBot {
         address operator,
         ManagerLike manager
     ) private view {
-        require(isCdpOwner(cdpId, operator, manager), "no-permissions");
+        require(isCdpOwner(cdpId, operator, manager), "bot/no-permissions");
     }
 
     // works correctly in any context
@@ -86,7 +86,7 @@ contract AutomationBot {
         require(
             triggersHash != bytes32(0) &&
                 triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
-            "invalid-trigger"
+            "bot/invalid-trigger"
         );
     }
 
@@ -213,7 +213,7 @@ contract AutomationBot {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
 
-        require(command.isExecutionLegal(cdpId, triggerData), "trigger-execution-illegal");
+        require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
@@ -223,7 +223,7 @@ contract AutomationBot {
         command.execute(executionData, cdpId, triggerData);
         manager.cdpAllow(cdpId, address(command), 0);
 
-        require(command.isExecutionCorrect(cdpId, triggerData), "trigger-execution-wrong-result");
+        require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
     }
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
