@@ -8,13 +8,16 @@ import { IExchange } from "./interfaces/IExchange.sol";
 contract AutomationExecutor {
     BotLike public immutable bot;
 
-    IExchange private exchange;
+    address public exchange;
     address public owner;
 
-    constructor(BotLike _bot, IExchange _exchange) {
+    mapping(address => bool) public callers;
+
+    constructor(BotLike _bot, address _exchange) {
         bot = _bot;
         exchange = _exchange;
         owner = msg.sender;
+        callers[owner] = true;
     }
 
     modifier onlyOwner() {
@@ -22,12 +25,26 @@ contract AutomationExecutor {
         _;
     }
 
+    modifier auth(address caller) {
+        require(callers[caller], "executor/not-authorized");
+        _;
+    }
+
     function transferOwnership(address newOwner) external onlyOwner {
         owner = newOwner;
     }
 
-    function setExchange(IExchange newExchange) external onlyOwner {
+    function setExchange(address newExchange) external onlyOwner {
         exchange = newExchange;
+    }
+
+    function addCaller(address caller) external onlyOwner {
+        callers[caller] = true;
+    }
+
+    function removeCaller(address caller) external onlyOwner {
+        require(caller != msg.sender, "executor/cannot-remove-owner");
+        callers[caller] = false;
     }
 
     function execute(
@@ -36,8 +53,7 @@ contract AutomationExecutor {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId
-    ) external {
-        /** onlyOwner ??? */
+    ) external auth(msg.sender) {
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId);
     }
 
@@ -47,8 +63,17 @@ contract AutomationExecutor {
         uint256 receiveAtLeast,
         address callee,
         bytes calldata withData
-    ) external onlyOwner {
-        require(amount <= IERC20(asset).balanceOf(address(this)), "executor/insufficient-balance");
-        exchange.swapTokenForDai(asset, amount, receiveAtLeast, callee, withData);
+    ) external auth(msg.sender) {
+        // amount has to be strictly less than the balance save at least 1 wei at the storage slot to save gas
+        require(
+            amount > 0 && amount < IERC20(asset).balanceOf(address(this)),
+            "executor/invalid-amount"
+        );
+
+        uint256 allowance = IERC20(asset).allowance(address(this), exchange);
+        if (amount > allowance) {
+            require(IERC20(asset).approve(exchange, type(uint256).max), "executor/approval-failed");
+        }
+        IExchange(exchange).swapTokenForDai(asset, amount, receiveAtLeast, callee, withData);
     }
 }

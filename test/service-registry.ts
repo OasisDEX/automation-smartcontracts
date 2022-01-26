@@ -22,7 +22,7 @@ describe('ServiceRegistry', async () => {
     })
 
     describe('getServiceNameHash', async () => {
-        const testedName: string = 'fooBar'
+        const testedName = 'fooBar'
         let hash: string
 
         beforeEach(async () => {

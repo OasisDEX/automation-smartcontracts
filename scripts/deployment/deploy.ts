@@ -20,19 +20,25 @@ async function main() {
     const AutomationBot = await hre.ethers.getContractFactory('AutomationBot')
     console.log('Deploying ServiceRegistry....')
     const instance = await ServiceRegistry.deploy(delay)
-    const sr = await instance.deployed()
+    const serviceRegistry = await instance.deployed()
     console.log('Deploying AutomationBot....')
-    const automationBotDeployment = await AutomationBot.deploy(sr.address)
+    const automationBotDeployment = await AutomationBot.deploy(serviceRegistry.address)
 
     const bot = await automationBotDeployment.deployed()
 
     console.log('Adding CDP_MANAGER to ServiceRegistry....')
-    await sr.addNamedService(await sr.getServiceNameHash('CDP_MANAGER'), CDP_MANAGER_ADDRESS, { gasLimit: '100000' })
+    await serviceRegistry.addNamedService(
+        await serviceRegistry.getServiceNameHash('CDP_MANAGER'),
+        CDP_MANAGER_ADDRESS,
+        { gasLimit: '100000' },
+    )
 
     console.log('Adding AUTOMATION_BOT to ServiceRegistry....')
-    await sr.addNamedService(await sr.getServiceNameHash('AUTOMATION_BOT'), bot.address, { gasLimit: '100000' })
+    await serviceRegistry.addNamedService(await serviceRegistry.getServiceNameHash('AUTOMATION_BOT'), bot.address, {
+        gasLimit: '100000',
+    })
 
-    console.log(`ServiceRegistry deployed to: ${sr.address}`)
+    console.log(`ServiceRegistry deployed to: ${serviceRegistry.address}`)
     console.log(`AutomationBot deployed to: ${bot.address}`)
 }
 

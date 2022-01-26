@@ -224,6 +224,8 @@ contract AutomationBot {
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
+
+        emit TriggerExecuted(triggerId, executionData);
     }
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
@@ -238,4 +240,6 @@ contract AutomationBot {
         uint256 indexed cdpId,
         bytes triggerData
     );
+
+    event TriggerExecuted(uint256 indexed triggerId, bytes executionData);
 }
