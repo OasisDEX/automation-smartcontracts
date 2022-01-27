@@ -92,13 +92,18 @@ describe('AutomationBot', async () => {
 
     describe('addTrigger', async () => {
         it('should fail if called from address not being an owner', async () => {
-            const tx = AutomationBotInstance.addTrigger(1, 1, '0x')
+            const tx = AutomationBotInstance.addTrigger(1, 1, 0, '0x')
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should pass if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
             const counterBefore = await AutomationBotInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [testCdpId, 1, '0x'])
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                1,
+                0,
+                '0x',
+            ])
             await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
@@ -106,7 +111,12 @@ describe('AutomationBot', async () => {
         it('should emit TriggerAdded if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [testCdpId, 1, '0x'])
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                1,
+                0,
+                '0x',
+            ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
 
             const txResult = await tx.wait()
@@ -117,12 +127,37 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
+        it('should emit TriggerRemoved with replacedTriggerId if called by user being an owner of Proxy', async () => {
+            const newSigner = await impersonate(proxyOwnerAddress)
+            await AutomationBotInstance.triggersCounter()
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                1,
+                7,
+                '0x',
+            ])
+            const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+
+            const txResult = await tx.wait()
+            const events = getEvents(
+                txResult,
+                'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
+                'TriggerRemoved',
+            )
+            expect(events.length).to.be.equal(1)
+            expect(events[0].args.triggerId).to.be.equal(7)
+        })
     })
 
     describe('cdpAllowed', async () => {
         before(async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [testCdpId, 2, '0x'])
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                2,
+                0,
+                '0x',
+            ])
             await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
         })
 
@@ -148,7 +183,12 @@ describe('AutomationBot', async () => {
     describe('removeApproval', async () => {
         beforeEach(async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [testCdpId, 2, '0x'])
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                2,
+                0,
+                '0x',
+            ])
             await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
         })
 
@@ -194,11 +234,12 @@ describe('AutomationBot', async () => {
 
             const filteredEvents = getEvents(
                 txRes,
-                'event ApprovalRemoved(uint256 cdpId, address approvedEntity)',
+                'event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity)',
                 'ApprovalRemoved',
             )
 
             expect(filteredEvents.length).to.equal(1)
+            expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
         })
     })
 
@@ -208,7 +249,12 @@ describe('AutomationBot', async () => {
         before(async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
 
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [testCdpId, 2, '0x'])
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                2,
+                0,
+                '0x',
+            ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
@@ -218,7 +264,7 @@ describe('AutomationBot', async () => {
                 'TriggerAdded',
             )
 
-            triggerId = parseInt(filteredEvents[0].topics[1], 16)
+            triggerId = filteredEvents[0].args.triggerId.toNumber()
         })
 
         it('should fail if trying to remove trigger that does not exist', async () => {
@@ -324,6 +370,7 @@ describe('AutomationBot', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 2,
+                0,
                 triggerData,
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
@@ -335,7 +382,7 @@ describe('AutomationBot', async () => {
                 'TriggerAdded',
             )
 
-            triggerId = parseInt(filteredEvents[0].topics[1], 16)
+            triggerId = filteredEvents[0].args.triggerId.toNumber()
         })
 
         beforeEach(async () => {
