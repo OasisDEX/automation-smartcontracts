@@ -6,6 +6,7 @@ import fs from 'fs'
 import { constants, utils } from 'ethers'
 import chalk from 'chalk'
 import BigNumber from 'bignumber.js'
+import { TriggerType } from './util.types'
 
 export const REGISTRY_ADDR = '0xB0e1682D17A96E8551191c089673346dF7e1D467'
 
@@ -25,8 +26,6 @@ export const MIN_VAULT_DAI_AMOUNT = '2010'
 
 export const OWNER_ACC = '0x0528A32fda5beDf89Ba9ad67296db83c9452F28C'
 export const ADMIN_ACC = '0x25eFA336886C74eA8E282ac466BdCd0199f85BB9'
-
-// const MAX_UINT = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
 export const AAVE_FL_FEE = 0.09
 
@@ -259,4 +258,12 @@ export async function timeTravel(timeIncrease: number) {
         method: 'evm_increaseTime',
         params: [timeIncrease],
     })
+}
+
+export function getCommandHash(triggerType: TriggerType) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Command', triggerType]))
+}
+
+export function generateRandomAddress() {
+    return utils.hexlify(utils.randomBytes(20))
 }

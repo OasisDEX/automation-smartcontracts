@@ -16,4 +16,12 @@ interface BotLike {
         address commandAddress,
         bytes memory triggerData
     ) external;
+
+    function execute(
+        bytes calldata executionData,
+        uint256 cdpId,
+        bytes calldata triggerData,
+        address commandAddress,
+        uint256 triggerId
+    ) external;
 }

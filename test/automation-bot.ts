@@ -1,29 +1,32 @@
-import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand } from '../typechain'
-import { getEvents, impersonate, CDP_MANAGER_ADDRESS } from './utils'
+import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
+import { getEvents, impersonate, CDP_MANAGER_ADDRESS, getCommandHash } from './utils'
 
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { AutomationServiceName, TriggerType } from './util.types'
+import { constants } from 'ethers'
 
-const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
+const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 describe('AutomationBot', async () => {
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
+    let AutomationExecutorInstance: AutomationExecutor
     let DummyCommandInstance: DummyCommand
-    let registryAddress: string
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
     let snapshotId: string
 
     before(async () => {
-        const ServiceRegistry = await ethers.getContractFactory('ServiceRegistry')
+        const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
+        const dummyCommandFactory = await ethers.getContractFactory('DummyCommand')
+        const automationBotFactory = await ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
 
-        ServiceRegistryInstance = (await ServiceRegistry.deploy(0)) as ServiceRegistry
+        ServiceRegistryInstance = (await serviceRegistryFactory.deploy(0)) as ServiceRegistry
         ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
 
-        const DummyCommand = await ethers.getContractFactory('DummyCommand')
-
-        DummyCommandInstance = (await DummyCommand.deploy(
+        DummyCommandInstance = (await dummyCommandFactory.deploy(
             ServiceRegistryInstance.address,
             true,
             true,
@@ -31,23 +34,35 @@ describe('AutomationBot', async () => {
         )) as DummyCommand
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        const AutomationBot = await ethers.getContractFactory('AutomationBot')
-        AutomationBotInstance = await AutomationBot.deploy(ServiceRegistryInstance.address)
+        AutomationBotInstance = await automationBotFactory.deploy(ServiceRegistryInstance.address)
         AutomationBotInstance = await AutomationBotInstance.deployed()
 
-        registryAddress = ServiceRegistryInstance.address
+        AutomationExecutorInstance = await automationExecutorFactory.deploy(
+            AutomationBotInstance.address,
+            constants.AddressZero,
+        )
+        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
+
         await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash('CDP_MANAGER'),
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
             CDP_MANAGER_ADDRESS,
         )
 
         await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash('AUTOMATION_BOT'),
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
             AutomationBotInstance.address,
         )
 
-        const hash = '0xc3edb84e7a635270d74f001f53ecf022573c985bcfc30f834ed693c515075539' // keccak256(abi.encode("Command", 2));
+        await ServiceRegistryInstance.addNamedService(
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            AutomationExecutorInstance.address,
+        )
+
+        const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+
+        const [owner] = await ethers.getSigners()
+        await ServiceRegistryInstance.addTrustedAddress(owner.address)
 
         const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
 
@@ -78,7 +93,7 @@ describe('AutomationBot', async () => {
     describe('addTrigger', async () => {
         it('should fail if called from address not being an owner', async () => {
             const tx = AutomationBotInstance.addTrigger(1, 1, '0x')
-            await expect(tx).to.revertedWith('no-permissions')
+            await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should pass if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
@@ -148,7 +163,7 @@ describe('AutomationBot', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                registryAddress,
+                ServiceRegistryInstance.address,
                 testCdpId,
             ])
 
@@ -163,14 +178,14 @@ describe('AutomationBot', async () => {
         })
 
         it('throws if called not by proxy', async () => {
-            const tx = AutomationBotInstance.removeApproval(registryAddress, testCdpId)
-            await expect(tx).to.be.revertedWith('no-permissions')
+            const tx = AutomationBotInstance.removeApproval(ServiceRegistryInstance.address, testCdpId)
+            await expect(tx).to.be.revertedWith('bot/no-permissions')
         })
 
         it('emits ApprovalRemoved', async () => {
             const newSigner = await ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                registryAddress,
+                ServiceRegistryInstance.address,
                 testCdpId,
             ])
 
@@ -281,7 +296,7 @@ describe('AutomationBot', async () => {
         })
         it('should fail if called by not proxy owning Vault', async () => {
             const tx = AutomationBotInstance.removeTrigger(testCdpId, 0, DummyCommandInstance.address, false, '0x')
-            await expect(tx).to.revertedWith('no-permissions')
+            await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should fail if called by not proxy owning Vault', async () => {
             const newSigner = await ethers.getSigner(proxyOwnerAddress)
@@ -333,43 +348,62 @@ describe('AutomationBot', async () => {
 
         it('should not revert if only 3rd flag is false', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
-            await AutomationBotInstance.execute('0x', testCdpId, triggerData, DummyCommandInstance.address, triggerId)
-        })
-
-        it('should revert with trigger-execution-illegal if initialCheckReturn is false', async () => {
-            await DummyCommandInstance.changeFlags(false, true, false)
-            const result = AutomationBotInstance.execute(
+            const tx = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-illegal')
+            await expect(tx).not.to.be.reverted
         })
 
-        it('should revert with trigger-execution-wrong-result if finalCheckReturn is false', async () => {
+        it('should emit TriggerExecuted event on successful execution', async () => {
+            await DummyCommandInstance.changeFlags(true, true, false)
+            const tx = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+            )
+            await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, '0x')
+        })
+
+        it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
+            await DummyCommandInstance.changeFlags(false, true, false)
+            const result = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+            )
+            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
+        })
+
+        it('should revert with bot/trigger-execution-wrong if finalCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(true, false, false)
-            const result = AutomationBotInstance.execute(
+            const result = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-wrong-result')
+            await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
 
-        it('should revert with command failed if revertsInExecute is true', async () => {
+        it('should revert with bot/trigger-execution-illegal if revertsInExecute is true', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
-            const result = AutomationBotInstance.execute(
+            const result = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
             )
-            await expect(result).to.be.revertedWith('trigger-execution-illegal')
+            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
     })
 })

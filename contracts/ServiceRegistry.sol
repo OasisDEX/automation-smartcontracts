@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
 
 contract ServiceRegistry {
     mapping(bytes32 => uint256) public lastExecuted;
@@ -11,7 +10,7 @@ contract ServiceRegistry {
     uint256 public requiredDelay = 1800; // big enough that any power of miner over timestamp does not matter
 
     modifier validateInput(uint256 len) {
-        require(msg.data.length == len, "illegal-padding");
+        require(msg.data.length == len, "registry/illegal-padding");
         _;
     }
 
@@ -19,36 +18,30 @@ contract ServiceRegistry {
         bytes32 operationHash = keccak256(msg.data);
         uint256 reqDelay = requiredDelay;
 
+        /* solhint-disable not-rely-on-time */
         if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
-            //not called before, scheduled for execution
-            // solhint-disable-next-line not-rely-on-time
+            // not called before, scheduled for execution
             lastExecuted[operationHash] = block.timestamp;
-            emit ChangeScheduled(
-                msg.data,
-                operationHash,
-                // solhint-disable-next-line not-rely-on-time
-                block.timestamp + reqDelay
-            );
+            emit ChangeScheduled(msg.data, operationHash, block.timestamp + reqDelay);
         } else {
             require(
-                // solhint-disable-next-line not-rely-on-time
                 block.timestamp - reqDelay > lastExecuted[operationHash],
-                "delay-to-small"
+                "registry/delay-too-small"
             );
-            // solhint-disable-next-line not-rely-on-time
             emit ChangeApplied(msg.data, block.timestamp);
             _;
             lastExecuted[operationHash] = 0;
         }
+        /* solhint-enable not-rely-on-time */
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "only-owner");
+        require(msg.sender == owner, "registry/only-owner");
         _;
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay < type(uint256).max, "risk-of-overflow");
+        require(initialDelay < type(uint256).max, "registry/risk-of-overflow");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
@@ -98,7 +91,7 @@ contract ServiceRegistry {
         validateInput(68)
         delayedExecution
     {
-        require(namedService[serviceNameHash] == address(0), "service-override");
+        require(namedService[serviceNameHash] == address(0), "registry/service-override");
         namedService[serviceNameHash] = serviceAddress;
     }
 
@@ -108,12 +101,12 @@ contract ServiceRegistry {
         validateInput(68)
         delayedExecution
     {
-        require(namedService[serviceNameHash] != address(0), "service-does-not-exist");
+        require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = serviceAddress;
     }
 
     function removeNamedService(bytes32 serviceNameHash) external onlyOwner validateInput(36) {
-        require(namedService[serviceNameHash] != address(0), "service-does-not-exist");
+        require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = address(0);
         emit RemoveApplied(serviceNameHash);
     }
@@ -131,7 +124,7 @@ contract ServiceRegistry {
         onlyOwner
         validateInput(36)
     {
-        require(lastExecuted[scheduledExecution] > 0, "execution-not-sheduled");
+        require(lastExecuted[scheduledExecution] > 0, "registry/execution-not-scheduled");
         lastExecuted[scheduledExecution] = 0;
         emit ChangeCancelled(scheduledExecution);
     }

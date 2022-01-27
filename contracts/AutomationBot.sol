@@ -8,6 +8,7 @@ import "./ServiceRegistry.sol";
 contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
 
     mapping(uint256 => bytes32) public existingTriggers;
 
@@ -19,13 +20,22 @@ contract AutomationBot {
         serviceRegistry = _serviceRegistry;
     }
 
+    modifier auth(address caller) {
+        require(
+            ServiceRegistry(serviceRegistry).getRegisteredService(AUTOMATION_EXECUTOR_KEY) ==
+                caller,
+            "bot/not-executor"
+        );
+        _;
+    }
+
     // works correctly in any context
     function validatePermissions(
         uint256 cdpId,
         address operator,
         ManagerLike manager
     ) private view {
-        require(isCdpOwner(cdpId, operator, manager), "no-permissions");
+        require(isCdpOwner(cdpId, operator, manager), "bot/no-permissions");
     }
 
     // works correctly in any context
@@ -81,7 +91,7 @@ contract AutomationBot {
         require(
             triggersHash != bytes32(0) &&
                 triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
-            "invalid-trigger"
+            "bot/invalid-trigger"
         );
     }
 
@@ -204,11 +214,11 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId
-    ) external {
+    ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
 
-        require(command.isExecutionLegal(cdpId, triggerData), "trigger-execution-illegal");
+        require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
@@ -218,7 +228,9 @@ contract AutomationBot {
         command.execute(executionData, cdpId, triggerData);
         manager.cdpAllow(cdpId, address(command), 0);
 
-        require(command.isExecutionCorrect(cdpId, triggerData), "trigger-execution-wrong-result");
+        require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
+
+        emit TriggerExecuted(triggerId, executionData);
     }
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
@@ -233,4 +245,6 @@ contract AutomationBot {
         uint256 indexed cdpId,
         bytes triggerData
     );
+
+    event TriggerExecuted(uint256 indexed triggerId, bytes executionData);
 }
