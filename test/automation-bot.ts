@@ -1,15 +1,17 @@
-import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand } from '../typechain'
+import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { getEvents, impersonate, CDP_MANAGER_ADDRESS, getCommandHash } from './utils'
 
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { AutomationServiceName, TriggerType } from './util.types'
+import { constants } from 'ethers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 describe('AutomationBot', async () => {
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
+    let AutomationExecutorInstance: AutomationExecutor
     let DummyCommandInstance: DummyCommand
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
@@ -19,6 +21,7 @@ describe('AutomationBot', async () => {
         const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
         const dummyCommandFactory = await ethers.getContractFactory('DummyCommand')
         const automationBotFactory = await ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
 
         ServiceRegistryInstance = (await serviceRegistryFactory.deploy(0)) as ServiceRegistry
         ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
@@ -34,6 +37,12 @@ describe('AutomationBot', async () => {
         AutomationBotInstance = await automationBotFactory.deploy(ServiceRegistryInstance.address)
         AutomationBotInstance = await AutomationBotInstance.deployed()
 
+        AutomationExecutorInstance = await automationExecutorFactory.deploy(
+            AutomationBotInstance.address,
+            constants.AddressZero,
+        )
+        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
+
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
             CDP_MANAGER_ADDRESS,
@@ -42,6 +51,11 @@ describe('AutomationBot', async () => {
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
             AutomationBotInstance.address,
+        )
+
+        await ServiceRegistryInstance.addNamedService(
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            AutomationExecutorInstance.address,
         )
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
@@ -334,7 +348,7 @@ describe('AutomationBot', async () => {
 
         it('should not revert if only 3rd flag is false', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
-            const tx = AutomationBotInstance.execute(
+            const tx = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
@@ -346,7 +360,7 @@ describe('AutomationBot', async () => {
 
         it('should emit TriggerExecuted event on successful execution', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
-            const tx = AutomationBotInstance.execute(
+            const tx = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
@@ -358,7 +372,7 @@ describe('AutomationBot', async () => {
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
-            const result = AutomationBotInstance.execute(
+            const result = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
@@ -370,7 +384,7 @@ describe('AutomationBot', async () => {
 
         it('should revert with bot/trigger-execution-wrong if finalCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(true, false, false)
-            const result = AutomationBotInstance.execute(
+            const result = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,
@@ -382,7 +396,7 @@ describe('AutomationBot', async () => {
 
         it('should revert with bot/trigger-execution-illegal if revertsInExecute is true', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
-            const result = AutomationBotInstance.execute(
+            const result = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
                 triggerData,

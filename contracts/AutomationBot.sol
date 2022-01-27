@@ -8,6 +8,7 @@ import "./ServiceRegistry.sol";
 contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
 
     mapping(uint256 => bytes32) public existingTriggers;
 
@@ -20,7 +21,11 @@ contract AutomationBot {
     }
 
     modifier auth(address caller) {
-        require(ServiceRegistry(serviceRegistry).isTrusted(caller), "bot/not-authorized");
+        require(
+            ServiceRegistry(serviceRegistry).getRegisteredService(AUTOMATION_EXECUTOR_KEY) ==
+                caller,
+            "bot/not-executor"
+        );
         _;
     }
 

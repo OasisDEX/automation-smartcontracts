@@ -18,6 +18,7 @@ contract ServiceRegistry {
         bytes32 operationHash = keccak256(msg.data);
         uint256 reqDelay = requiredDelay;
 
+        /* solhint-disable not-rely-on-time */
         if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
             // not called before, scheduled for execution
             lastExecuted[operationHash] = block.timestamp;
@@ -31,6 +32,7 @@ contract ServiceRegistry {
             _;
             lastExecuted[operationHash] = 0;
         }
+        /* solhint-enable not-rely-on-time */
     }
 
     modifier onlyOwner() {

@@ -1,7 +1,15 @@
-import { BigNumber, BytesLike, Contract, Signer } from 'ethers'
+import { BigNumber, BytesLike, constants, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
-import { AutomationBot, ServiceRegistry, DsProxyLike, CloseCommand, McdView, MPALike } from '../typechain'
+import {
+    AutomationBot,
+    ServiceRegistry,
+    DsProxyLike,
+    CloseCommand,
+    McdView,
+    MPALike,
+    AutomationExecutor,
+} from '../typechain'
 import { getEvents, impersonate, WETH_ADDRESS, DAI_ADDRESS, CDP_MANAGER_ADDRESS, getCommandHash } from './utils'
 import { AutomationServiceName, TriggerType } from './util.types'
 
@@ -45,10 +53,11 @@ function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: s
     return '0x2e95b6c8' + fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
 }
 
-describe('AutomationBot', async () => {
+describe('CloseCommand', async () => {
     /* TODO: Make it work */
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
+    let AutomationExecutorInstance: AutomationExecutor
     let CloseCommandInstance: CloseCommand
     let McdViewInstance: McdView
     let DAIInstance: Contract
@@ -63,6 +72,7 @@ describe('AutomationBot', async () => {
         const mcdViewFactory = await ethers.getContractFactory('McdView')
         const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
         const automationBotFactory = await ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
 
         receiverAddress = await ethers.provider.getSigner(1).getAddress()
 
@@ -78,6 +88,12 @@ describe('AutomationBot', async () => {
         CloseCommandInstance = await (await closeCommandFactory.deploy(ServiceRegistryInstance.address)).deployed()
 
         AutomationBotInstance = await (await automationBotFactory.deploy(ServiceRegistryInstance.address)).deployed()
+
+        AutomationExecutorInstance = await automationExecutorFactory.deploy(
+            AutomationBotInstance.address,
+            constants.AddressZero,
+        )
+        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
 
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
@@ -100,6 +116,11 @@ describe('AutomationBot', async () => {
         )
 
         await ServiceRegistryInstance.addNamedService(
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            AutomationExecutorInstance.address,
+        )
+
+        await ServiceRegistryInstance.addNamedService(
             getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
             CloseCommandInstance.address,
         )
@@ -108,9 +129,6 @@ describe('AutomationBot', async () => {
             getCommandHash(TriggerType.CLOSE_TO_DAI),
             CloseCommandInstance.address,
         )
-
-        const [owner] = await ethers.getSigners()
-        await ServiceRegistryInstance.addTrustedAddress(owner.address)
 
         const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
 
@@ -227,7 +245,7 @@ describe('AutomationBot', async () => {
                 })
 
                 it('should revert trigger execution', async () => {
-                    const tx = AutomationBotInstance.execute(
+                    const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -279,7 +297,7 @@ describe('AutomationBot', async () => {
                 })
 
                 it('it should whipe all debt and collateral', async () => {
-                    await AutomationBotInstance.execute(
+                    await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -354,7 +372,7 @@ describe('AutomationBot', async () => {
                 })
 
                 it('should revert trigger execution', async () => {
-                    const tx = AutomationBotInstance.execute(
+                    const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -407,7 +425,7 @@ describe('AutomationBot', async () => {
                 })
 
                 it('it should whipe all debt and collateral', async () => {
-                    await AutomationBotInstance.execute(
+                    await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -423,7 +441,7 @@ describe('AutomationBot', async () => {
                 })
 
                 it('should send dai To receiverAddress', async () => {
-                    await AutomationBotInstance.execute(
+                    await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,

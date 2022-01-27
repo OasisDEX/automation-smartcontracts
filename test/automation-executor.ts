@@ -69,7 +69,12 @@ describe('AutomationExecutor', async () => {
             AutomationBotInstance.address,
         )
 
-        await (await ServiceRegistryInstance.addTrustedAddress(AutomationExecutorInstance.address)).wait()
+        await ServiceRegistryInstance.addNamedService(
+            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            AutomationExecutorInstance.address,
+        )
+
+        // await (await ServiceRegistryInstance.addTrustedAddress(AutomationExecutorInstance.address)).wait()
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)

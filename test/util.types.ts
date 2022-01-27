@@ -6,6 +6,7 @@ export enum TriggerType {
 export enum AutomationServiceName {
     CDP_MANAGER = 'CDP_MANAGER',
     AUTOMATION_BOT = 'AUTOMATION_BOT',
+    AUTOMATION_EXECUTOR = 'AUTOMATION_EXECUTOR',
     MCD_VIEW = 'MCD_VIEW',
     MULTIPLY_PROXY_ACTIONS = 'MULTIPLY_PROXY_ACTIONS',
 }
