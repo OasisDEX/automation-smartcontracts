@@ -101,6 +101,7 @@ contract AutomationBot {
         // msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerType,
+        uint replacedTriggerId,
         bytes memory triggerData
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
@@ -113,8 +114,11 @@ contract AutomationBot {
 
         triggersCounter = triggersCounter + 1;
         existingTriggers[triggersCounter] = getTriggersHash(cdpId, triggerData, commandAddress);
-
+        if(replacedTriggerId!=0){
+            emit TriggerRemoved(cdpId, replacedTriggerId);
+        }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
+        
     }
 
     // works correctly in context of automationBot
@@ -142,7 +146,7 @@ contract AutomationBot {
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
-        // solhint-disable-next-line no-unused-vars
+        uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
@@ -153,7 +157,7 @@ contract AutomationBot {
         address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
             AUTOMATION_BOT_KEY
         );
-        BotLike(automationBot).addRecord(cdpId, triggerType, triggerData);
+        BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
         if (isCdpAllowed(cdpId, automationBot, manager) == false) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
