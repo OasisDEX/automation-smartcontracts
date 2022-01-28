@@ -416,8 +416,6 @@ describe('CloseCommand', async () => {
                         'TriggerAdded',
                     )
 
-                    console.log(filteredEvents)
-
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
