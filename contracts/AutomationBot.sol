@@ -101,7 +101,7 @@ contract AutomationBot {
         // msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerType,
-        uint replacedTriggerId,
+        uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
