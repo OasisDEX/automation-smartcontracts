@@ -626,6 +626,11 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
+"@openzeppelin/contracts@^4.4.2":
+  version "4.4.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.4.2.tgz#4e889c9c66e736f7de189a53f8ba5b8d789425c2"
+  integrity sha512-NyJV7sJgoGYqbtNUWgzzOGW4T6rR19FmX1IJgXGdapGPWsuMelGJn9h03nos0iqfforCbCB0iYIR0MtIuIFLLw==
+
 "@resolver-engine/core@^0.3.3":
   version "0.3.3"
   resolved "https://registry.yarnpkg.com/@resolver-engine/core/-/core-0.3.3.tgz#590f77d85d45bc7ecc4e06c654f41345db6ca967"
@@ -9105,6 +9110,11 @@ ts-toolbelt@^6.15.1:
   version "6.15.5"
   resolved "https://registry.yarnpkg.com/ts-toolbelt/-/ts-toolbelt-6.15.5.tgz#cb3b43ed725cb63644782c64fbcad7d8f28c0a83"
   integrity sha512-FZIXf1ksVyLcfr7M317jbB67XFJhOO1YqdTcuGaq9q5jLUoTikukZ+98TPjKiP2jC5CgmYdWWYs0s2nLSU0/1A==
+
+ts-try@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/ts-try/-/ts-try-0.2.0.tgz#ebf3cf243c85221cb8144321f5a86d5a73170def"
+  integrity sha512-fdm7aSzV/UGoEYKPupBvcNey4huqwDhv06XahfbchNbSVxxyZfz1vfkVw4YUWWzSbatQ9V8meha80uQ+p3zWJA==
 
 tsconfig-paths@^3.12.0:
   version "3.12.0"

@@ -1,14 +1,21 @@
-import { ethers } from 'hardhat'
+import hre from 'hardhat'
 import { expect } from 'chai'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
-import { CDP_MANAGER_ADDRESS, getCommandHash, generateRandomAddress, impersonate, getEvents } from './utils'
-import { AutomationServiceName, TriggerType } from './util.types'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    AutomationServiceName,
+    TriggerType,
+    HardhatUtils,
+} from '../scripts/common'
 import { constants, Signer } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 describe('AutomationExecutor', async () => {
+    const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
@@ -22,12 +29,12 @@ describe('AutomationExecutor', async () => {
     let snapshotId: string
 
     before(async () => {
-        ;[owner, notOwner] = await ethers.getSigners()
+        ;[owner, notOwner] = await hre.ethers.getSigners()
 
-        const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
-        const dummyCommandFactory = await ethers.getContractFactory('DummyCommand')
-        const automationBotFactory = await ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
+        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
+        const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
+        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
 
         ServiceRegistryInstance = await serviceRegistryFactory.deploy(0)
         ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
@@ -61,7 +68,7 @@ describe('AutomationExecutor', async () => {
 
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            CDP_MANAGER_ADDRESS,
+            hardhatUtils.addresses.CDP_MANAGER,
         )
 
         await ServiceRegistryInstance.addNamedService(
@@ -79,19 +86,19 @@ describe('AutomationExecutor', async () => {
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
-        const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
+        const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
-        usersProxy = await ethers.getContractAt('DsProxyLike', proxyAddress)
+        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         proxyOwnerAddress = await usersProxy.owner()
     })
 
     beforeEach(async () => {
-        snapshotId = await ethers.provider.send('evm_snapshot', [])
+        snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        await ethers.provider.send('evm_revert', [snapshotId])
+        await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('setExchange', async () => {
@@ -150,7 +157,7 @@ describe('AutomationExecutor', async () => {
         let triggerId = 0
 
         before(async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,

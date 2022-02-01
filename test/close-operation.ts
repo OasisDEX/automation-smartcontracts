@@ -1,6 +1,6 @@
-import { BigNumber, BytesLike, constants, Contract, Signer } from 'ethers'
+import hre from 'hardhat'
+import { BigNumber as EthersBN, BytesLike, constants, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
-import { ethers } from 'hardhat'
 import {
     AutomationBot,
     ServiceRegistry,
@@ -10,50 +10,22 @@ import {
     MPALike,
     AutomationExecutor,
 } from '../typechain'
-import { getEvents, impersonate, WETH_ADDRESS, DAI_ADDRESS, CDP_MANAGER_ADDRESS, getCommandHash } from './utils'
-import { AutomationServiceName, TriggerType } from './util.types'
-
-const VAT_ADDRESS = '0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B'
-const SPOTTER_ADDRESS = '0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3'
-const MULTIPLY_PROXY_ACTIONS_ADDRESS = '0x2a49eae5cca3f050ebec729cf90cc910fadaf7a2'
-const MCD_JOIN_ETH_A = '0x2F0b23f53734252Bda2277357e97e1517d6B042A'
+import {
+    getEvents,
+    getCommandHash,
+    AutomationServiceName,
+    TriggerType,
+    HardhatUtils,
+    encodeTriggerData,
+    forgeUnoswapCallData,
+    generateExecutionData,
+} from '../scripts/common'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
 
-const generateExecutionData = (
-    mpa: MPALike,
-    toCollateral: boolean,
-    cdpData: any,
-    exchangeData: any,
-    serviceRegistry: any,
-): BytesLike => {
-    if (toCollateral) {
-        return mpa.interface.encodeFunctionData('closeVaultExitCollateral', [exchangeData, cdpData, serviceRegistry])
-    } else {
-        return mpa.interface.encodeFunctionData('closeVaultExitDai', [exchangeData, cdpData, serviceRegistry])
-    }
-}
-
-const generateTriggerData = (id: number, triggerType: number, slLevel: number): BytesLike => {
-    return ethers.utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [id, triggerType, Math.round(slLevel)])
-}
-
-function padTo64WithLeadingZeros(src: string): string {
-    const init = '0'.repeat(64) + src
-    return init.substring(init.length - 64)
-}
-
-function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string): string {
-    const magicPostfix =
-        '0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11b03a8694'
-    const fromAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(fromAmount).toHexString().substring(2))
-    const toAmountHexPadded = padTo64WithLeadingZeros(BigNumber.from(toAmount).toHexString().substring(2))
-    const fromTokenPadded = padTo64WithLeadingZeros(fromToken.substring(2))
-    return '0x2e95b6c8' + fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
-}
-
 describe('CloseCommand', async () => {
+    const hardhatUtils = new HardhatUtils(hre)
     /* TODO: Make it work */
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -68,21 +40,25 @@ describe('CloseCommand', async () => {
     let mpaInstance: MPALike
 
     before(async () => {
-        const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
-        const mcdViewFactory = await ethers.getContractFactory('McdView')
-        const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
-        const automationBotFactory = await ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
+        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
+        const mcdViewFactory = await hre.ethers.getContractFactory('McdView')
+        const closeCommandFactory = await hre.ethers.getContractFactory('CloseCommand')
+        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
 
-        receiverAddress = await ethers.provider.getSigner(1).getAddress()
+        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
-        DAIInstance = await ethers.getContractAt('IERC20', DAI_ADDRESS)
-        mpaInstance = await ethers.getContractAt('MPALike', MULTIPLY_PROXY_ACTIONS_ADDRESS)
+        DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
+        mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
         ServiceRegistryInstance = await (await serviceRegistryFactory.deploy(0)).deployed()
 
         McdViewInstance = await (
-            await mcdViewFactory.deploy(VAT_ADDRESS, CDP_MANAGER_ADDRESS, SPOTTER_ADDRESS)
+            await mcdViewFactory.deploy(
+                hardhatUtils.addresses.MCD_VAT,
+                hardhatUtils.addresses.CDP_MANAGER,
+                hardhatUtils.addresses.MCD_SPOT,
+            )
         ).deployed()
 
         CloseCommandInstance = await (await closeCommandFactory.deploy(ServiceRegistryInstance.address)).deployed()
@@ -97,7 +73,7 @@ describe('CloseCommand', async () => {
 
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            CDP_MANAGER_ADDRESS,
+            hardhatUtils.addresses.CDP_MANAGER,
         )
 
         await ServiceRegistryInstance.addNamedService(
@@ -112,7 +88,7 @@ describe('CloseCommand', async () => {
 
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
-            MULTIPLY_PROXY_ACTIONS_ADDRESS,
+            hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
         )
 
         await ServiceRegistryInstance.addNamedService(
@@ -130,10 +106,10 @@ describe('CloseCommand', async () => {
             CloseCommandInstance.address,
         )
 
-        const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
+        const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
-        usersProxy = await ethers.getContractAt('DsProxyLike', proxyAddress)
+        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         proxyOwnerAddress = await usersProxy.owner()
     })
 
@@ -147,23 +123,23 @@ describe('CloseCommand', async () => {
 
         before(async () => {
             const collRatioRaw = await McdViewInstance.getRatio(testCdpId)
-            const collRatio18 = ethers.utils.formatEther(collRatioRaw)
+            const collRatio18 = hre.ethers.utils.formatEther(collRatioRaw)
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
             currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
 
             serviceRegistry = {
-                jug: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
-                manager: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
-                multiplyProxyActions: MULTIPLY_PROXY_ACTIONS_ADDRESS,
-                lender: '0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853',
+                jug: hardhatUtils.addresses.MCD_JUG,
+                manager: hardhatUtils.addresses.CDP_MANAGER,
+                multiplyProxyActions: hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
+                lender: hardhatUtils.addresses.MCD_FLASH,
                 feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
                 exchange: EXCHANGE_ADDRESS,
             }
 
             cdpData = {
-                gemJoin: MCD_JOIN_ETH_A,
+                gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
                 fundsReceiver: receiverAddress,
                 cdpId: testCdpId,
                 ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -178,8 +154,8 @@ describe('CloseCommand', async () => {
             }
 
             exchangeData = {
-                fromTokenAddress: WETH_ADDRESS,
-                toTokenAddress: DAI_ADDRESS,
+                fromTokenAddress: hardhatUtils.addresses.WETH,
+                toTokenAddress: hardhatUtils.addresses.DAI,
                 fromTokenAmount: '',
                 toTokenAmount: '',
                 minToTokenAmount: '',
@@ -190,16 +166,16 @@ describe('CloseCommand', async () => {
 
         describe('closeToCollateral operation', async () => {
             before(async () => {
-                const debt = BigNumber.from(debtAmount)
+                const debt = EthersBN.from(debtAmount)
                 const tradeSize = debt.mul(10020).div(10000) // + our fee 0.2%
                 // const collateralValue = debt.mul(currentCollRatioAsPercentage).div(100)
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.toString()
-                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
+                exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'
                 exchangeData._exchangeCalldata = forgeUnoswapCallData(
-                    WETH_ADDRESS,
+                    hardhatUtils.addresses.WETH,
                     exchangeData.fromTokenAmount,
                     exchangeData.minToTokenAmount,
                 )
@@ -213,15 +189,14 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     // makeSnapshot
-                    snapshotId = await ethers.provider.send('evm_snapshot', [])
-                    signer = await impersonate(proxyOwnerAddress)
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = generateTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
+                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
 
                     executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
-
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
@@ -241,7 +216,7 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    await ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
@@ -262,19 +237,19 @@ describe('CloseCommand', async () => {
                 let signer: Signer
 
                 beforeEach(async () => {
-                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                 })
 
                 afterEach(async () => {
-                    await ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 before(async () => {
                     // makeSnapshot
 
-                    signer = await impersonate(proxyOwnerAddress)
+                    signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = generateTriggerData(testCdpId, 1, currentCollRatioAsPercentage + 1)
+                    triggersData = encodeTriggerData(testCdpId, 1, currentCollRatioAsPercentage + 1)
 
                     executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
@@ -316,7 +291,7 @@ describe('CloseCommand', async () => {
 
         describe('closeToDai operation', async () => {
             before(async () => {
-                const debt = BigNumber.from(debtAmount)
+                const debt = EthersBN.from(debtAmount)
                 const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) // value of collateral
 
                 tradeSize.div(collateralAmount)
@@ -324,10 +299,10 @@ describe('CloseCommand', async () => {
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
                 // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000)/* 2% slippage */.toString()
-                exchangeData.toTokenAmount = BigNumber.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
+                exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'
                 exchangeData._exchangeCalldata = forgeUnoswapCallData(
-                    WETH_ADDRESS,
+                    hardhatUtils.addresses.WETH,
                     exchangeData.fromTokenAmount,
                     exchangeData.minToTokenAmount,
                 )
@@ -341,10 +316,10 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     // makeSnapshot
-                    snapshotId = await ethers.provider.send('evm_snapshot', [])
-                    signer = await impersonate(proxyOwnerAddress)
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = generateTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
+                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
 
                     executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
@@ -368,7 +343,7 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    await ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
@@ -390,10 +365,10 @@ describe('CloseCommand', async () => {
 
                 before(async () => {
                     // makeSnapshot
-                    //     snapshotId = await ethers.provider.send('evm_snapshot', [])
-                    signer = await impersonate(proxyOwnerAddress)
+                    //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = generateTriggerData(testCdpId, 2, currentCollRatioAsPercentage + 1)
+                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage + 1)
 
                     executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
@@ -416,12 +391,12 @@ describe('CloseCommand', async () => {
                 })
 
                 beforeEach(async () => {
-                    snapshotId = await ethers.provider.send('evm_snapshot', [])
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
-                    await ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('it should whipe all debt and collateral', async () => {
@@ -451,7 +426,7 @@ describe('CloseCommand', async () => {
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
 
-                    const debt = BigNumber.from(debtAmount)
+                    const debt = EthersBN.from(debtAmount)
                     const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100)
                     const valueLocked = tradeSize.sub(debt)
 
