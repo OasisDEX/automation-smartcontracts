@@ -114,11 +114,12 @@ contract AutomationBot {
 
         triggersCounter = triggersCounter + 1;
         existingTriggers[triggersCounter] = getTriggersHash(cdpId, triggerData, commandAddress);
-        if(replacedTriggerId!=0){
+
+        if (replacedTriggerId != 0) {
             emit TriggerRemoved(cdpId, replacedTriggerId);
+            existingTriggers[replacedTriggerId] = 0;
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
-        
     }
 
     // works correctly in context of automationBot
