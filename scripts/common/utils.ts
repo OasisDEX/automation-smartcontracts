@@ -1,8 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
-import { BigNumber as EthersBN, BytesLike, utils } from 'ethers'
+import { BigNumber as EthersBN, BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import { TriggerType } from './types'
-import { MPALike } from '../../typechain'
 
 const standardAmounts = {
     ETH: '2',
@@ -85,7 +84,7 @@ export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAm
 }
 
 export function generateExecutionData(
-    mpa: MPALike,
+    mpa: Contract,
     toCollateral: boolean,
     cdpData: any,
     exchangeData: any,
