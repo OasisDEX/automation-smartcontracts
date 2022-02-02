@@ -5,12 +5,13 @@ import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 
-struct TriggerRecord{
-    bytes32 triggerHash;
-    uint256 cdpId;
-}
-
 contract AutomationBot {
+    
+    struct TriggerRecord{
+        bytes32 triggerHash;
+        uint256 cdpId;
+    }
+
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
