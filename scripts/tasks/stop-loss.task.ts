@@ -5,9 +5,11 @@ import {
     coalesceNetwork,
     decodeTriggerData,
     generateExecutionData,
+    getEvents,
     HardhatUtils,
     Network,
     triggerIdToTopic,
+    TriggerType,
 } from '../common'
 import { params } from './params'
 
@@ -46,9 +48,9 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             event.data,
             event.topics,
         )
-        const { vaultId, type, stopLossLevel } = decodeTriggerData(triggerData)
+        const { vaultId, type: triggerType, stopLossLevel } = decodeTriggerData(triggerData)
         console.log(
-            `Found trigger information. Command Address: ${commandAddress}. Vault ID: ${vaultId.toString()}. Trigger Type: ${type.toString()}. Stop Loss Level: ${stopLossLevel.toString()}`,
+            `Found trigger information. Command Address: ${commandAddress}. Vault ID: ${vaultId.toString()}. Trigger Type: ${triggerType.toString()}. Stop Loss Level: ${stopLossLevel.toString()}`,
         )
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -69,15 +71,32 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const signerAddress = await signer.getAddress()
 
+        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        const ilkRegistry = new hre.ethers.Contract(
+            hardhatUtils.addresses.ILK_REGISTRY,
+            ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
+            hre.ethers.provider,
+        )
+
+        const ilk = await cdpManager.ilks(vaultId.toString())
+        const gem = await ilkRegistry.gem(ilk)
+        const gemJoin = await ilkRegistry.join(ilk)
+
+        console.log('Join Address: ', gemJoin)
+
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral] = await mcdView.getVaultInfo(vaultId.toString())
 
-        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        if (triggerType.gt(2)) {
+            throw new Error(`Trigger type \`${triggerType.toString()}\` is currently not supported`)
+        }
+
+        const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
         const cdpData = {
-            gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
+            ilk,
+            gemJoin, // TODO:
             fundsReceiver: signerAddress,
             cdpId: vaultId.toString(),
-            ilk: await cdpManager.ilks(vaultId.toString()),
             requiredDebt: 0, // can stay 0 overriden in SC anyway
             borrowCollateral: collateral.toString(),
             withdrawCollateral: 0,
@@ -98,19 +117,33 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
 
         const exchangeData = {
-            fromTokenAddress: hardhatUtils.addresses.WETH,
-            toTokenAddress: hardhatUtils.addresses.DAI,
-            fromTokenAmount: '',
-            toTokenAmount: '',
-            minToTokenAmount: '',
-            exchangeAddress: '',
-            _exchangeCalldata: '',
+            fromTokenAddress: isToCollateral ? hardhatUtils.addresses.DAI : gem,
+            toTokenAddress: isToCollateral ? gem : hardhatUtils.addresses.DAI,
+            fromTokenAmount: 0,
+            toTokenAmount: 0,
+            minToTokenAmount: 0,
+            exchangeAddress: hardhatUtils.addresses.EXCHANGE,
+            _exchangeCalldata: '0x',
         }
 
         const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
-        const executionData = generateExecutionData(mpa, true /** TODO: */, cdpData, exchangeData, serviceRegistry)
+        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
+        console.log(`Starting trigger execution...`)
         const tx = await executor
             .connect(signer)
             .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString())
+        const receipt = await tx.wait()
+
+        const triggerExecutedEvent = getEvents(
+            receipt,
+            'event TriggerExecuted(uint256 indexed triggerId, bytes executionData)',
+            'TriggerExecuted',
+        )?.[0]
+
+        if (!triggerExecutedEvent) {
+            throw new Error(`Failed to execute the trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
+        }
+
+        console.log('Successfully executed the trigger.')
     })

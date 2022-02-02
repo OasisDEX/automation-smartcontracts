@@ -35,6 +35,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
                     `Signer is not an owner of the proxy. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${currentProxyOwner}`,
                 )
             }
+            console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
 
@@ -56,7 +57,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         )?.[0]
 
         if (!triggerAddedEvent) {
-            throw new Error(`Failed to create trigger. Contract Receipt ${JSON.stringify(receipt)}`)
+            throw new Error(`Failed to create trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
         const triggerId = parseInt(triggerAddedEvent.topics[1], 16)

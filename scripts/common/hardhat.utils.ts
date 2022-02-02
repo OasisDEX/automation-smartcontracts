@@ -101,35 +101,6 @@ export class HardhatUtils {
             : await tokenContract.balanceOf(addr)
     }
 
-    public formatExchangeObj(srcAddr: string, destAddr: string, amount: number, wrapper: any, destAmount = 0) {
-        const abiCoder = new utils.AbiCoder()
-
-        const firstPath = srcAddr.toLowerCase() === ETH_ADDRESS.toLowerCase() ? this.addresses.WETH : srcAddr
-        const secondPath = destAddr.toLowerCase() === ETH_ADDRESS.toLowerCase() ? this.addresses.WETH : destAddr
-
-        const path = abiCoder.encode(['address[]'], [[firstPath, secondPath]])
-
-        return [
-            srcAddr,
-            destAddr,
-            amount,
-            destAmount,
-            0,
-            0,
-            constants.AddressZero,
-            wrapper,
-            path,
-            [
-                constants.AddressZero,
-                constants.AddressZero,
-                constants.AddressZero,
-                0,
-                0,
-                this._hre.ethers.utils.toUtf8Bytes(''),
-            ],
-        ]
-    }
-
     public async setNewExchangeWrapper(acc: Signer, newAddr: string) {
         const exchangeOwnerAddr = '0xBc841B0dE0b93205e912CFBBd1D0c160A1ec6F00' // TODO:
         await this.sendEther(acc, exchangeOwnerAddr, '1')
