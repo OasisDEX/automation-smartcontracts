@@ -44,6 +44,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
             args.vault.toString(),
             args.type,
+            0,
             triggerData,
         ])
 
