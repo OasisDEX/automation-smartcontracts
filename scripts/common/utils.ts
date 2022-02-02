@@ -47,7 +47,7 @@ export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName
     const events = txResult.events ? txResult.events : []
 
     const filteredEvents = events.filter(x => x.topics[0] === iface.getEventTopic(eventName))
-    return filteredEvents.map(x => ({ ...iface.parseLog(x), topics: x.topics }))
+    return filteredEvents.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data }))
 }
 
 export function getCommandHash(triggerType: TriggerType) {

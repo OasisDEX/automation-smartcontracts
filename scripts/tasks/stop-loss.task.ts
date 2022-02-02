@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { Signer } from 'ethers'
+import { constants, Signer, utils } from 'ethers'
 import { task } from 'hardhat/config'
 import {
     coalesceNetwork,
@@ -112,7 +112,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             manager: hardhatUtils.addresses.CDP_MANAGER,
             multiplyProxyActions: hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
             lender: hardhatUtils.addresses.MCD_FLASH,
-            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce', // TODO:
+            feeRecepient: constants.AddressZero, // TODO:
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
@@ -145,5 +145,9 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             throw new Error(`Failed to execute the trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log('Successfully executed the trigger.')
+        console.log(
+            `Successfully executed the trigger ${triggerExecutedEvent.args.triggerId.toString()}. Execution Data: ${
+                triggerExecutedEvent.args.executionData
+            }`,
+        )
     })
