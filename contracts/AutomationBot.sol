@@ -100,6 +100,18 @@ contract AutomationBot {
             "bot/invalid-trigger"
         );
     }
+    
+    function checkTriggersExistenceAndCorrectness(
+        uint256 cdpId,
+        uint256 triggerId
+    ) private view {
+        
+        require(
+            activeTriggers[triggerId].cdpId == cdpId,
+            "bot/invalid-trigger"
+        );
+    }
+
 
     // works correctly in context of automationBot
     function addRecord(
@@ -135,9 +147,7 @@ contract AutomationBot {
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
         uint256 cdpId,
-        uint256 triggerId,
-        address commandAddress,
-        bytes memory triggerData
+        uint256 triggerId
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
@@ -145,7 +155,7 @@ contract AutomationBot {
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
-        checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
+        checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
         activeTriggers[triggerId] = TriggerRecord(0,0);
         emit TriggerRemoved(cdpId, triggerId);
