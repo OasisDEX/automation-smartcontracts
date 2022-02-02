@@ -117,7 +117,7 @@ contract AutomationBot {
 
         if (replacedTriggerId != 0) {
             emit TriggerRemoved(cdpId, replacedTriggerId);
-            existingTriggers[replacedTriggerId] = 0;
+            existingTriggers[replacedTriggerId] = bytes32(0);
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
     }
@@ -159,7 +159,7 @@ contract AutomationBot {
             AUTOMATION_BOT_KEY
         );
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
-        if (isCdpAllowed(cdpId, automationBot, manager) == false) {
+        if (!isCdpAllowed(cdpId, automationBot, manager)) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
@@ -176,7 +176,7 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId,
         address commandAddress,
-        bool removeAllowence,
+        bool removeAllowance,
         bytes memory triggerData
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
@@ -190,7 +190,7 @@ contract AutomationBot {
 
         BotLike(automationBot).removeRecord(cdpId, triggerId, commandAddress, triggerData);
 
-        if (removeAllowence) {
+        if (removeAllowance) {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
         }
