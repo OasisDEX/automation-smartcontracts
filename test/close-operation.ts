@@ -225,6 +225,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
+                        0,
                         triggersData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -236,7 +237,7 @@ describe('CloseCommand', async () => {
                         'TriggerAdded',
                     )
 
-                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
+                    triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
                 afterEach(async () => {
@@ -282,6 +283,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
+                        0,
                         triggersData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -293,7 +295,7 @@ describe('CloseCommand', async () => {
                         'TriggerAdded',
                     )
 
-                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
+                    triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
                 it('it should whipe all debt and collateral', async () => {
@@ -352,6 +354,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
+                        0,
                         triggersData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -363,7 +366,7 @@ describe('CloseCommand', async () => {
                         'TriggerAdded',
                     )
 
-                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
+                    triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
                 afterEach(async () => {
@@ -401,6 +404,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
+                        0,
                         triggersData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -412,7 +416,7 @@ describe('CloseCommand', async () => {
                         'TriggerAdded',
                     )
 
-                    triggerId = parseInt(filteredEvents[0].topics[1], 16)
+                    triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
                 beforeEach(async () => {

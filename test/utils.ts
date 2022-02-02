@@ -169,7 +169,7 @@ export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName
     const events = txResult.events ? txResult.events : []
 
     const filteredEvents = events.filter(x => x.topics[0] === iface.getEventTopic(eventName))
-    return filteredEvents
+    return filteredEvents.map(x => iface.parseLog(x))
 }
 
 export async function balanceOf(tokenAddr: string, addr: string) {

@@ -155,6 +155,7 @@ describe('AutomationExecutor', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 2,
+                0,
                 triggerData,
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
@@ -166,7 +167,7 @@ describe('AutomationExecutor', async () => {
                 'TriggerAdded',
             )
 
-            triggerId = parseInt(filteredEvents[0].topics[1], 16)
+            triggerId = filteredEvents[0].args.triggerId.toNumber()
         })
 
         it('should not revert on successful execution', async () => {
