@@ -13,9 +13,7 @@ interface BotLike {
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         //msg.sender should be dsProxy
         uint256 cdpId,
-        uint256 triggerId,
-        address commandAddress,
-        bytes memory triggerData
+        uint256 triggerId
     ) external;
 
     function execute(

@@ -105,7 +105,7 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId
     ) private view {
-        
+
         require(
             activeTriggers[triggerId].cdpId == cdpId,
             "bot/invalid-trigger"
@@ -206,7 +206,7 @@ contract AutomationBot {
             AUTOMATION_BOT_KEY
         );
 
-        BotLike(automationBot).removeRecord(cdpId, triggerId, commandAddress, triggerData);
+        BotLike(automationBot).removeRecord(cdpId, triggerId);
 
         if (removeAllowence) {
             manager.cdpAllow(cdpId, automationBot, 0);
