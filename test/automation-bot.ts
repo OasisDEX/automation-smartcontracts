@@ -127,7 +127,7 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
-        it.only('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
+        it('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
