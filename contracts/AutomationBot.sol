@@ -122,7 +122,7 @@ contract AutomationBot {
 
 
         if (replacedTriggerId != 0) {
-            require(activeTriggers[replacedTriggerId].cdpId == cdpId, "");
+            require(activeTriggers[replacedTriggerId].cdpId == cdpId, "bot/trigger-removal-illegal");
             emit TriggerRemoved(cdpId, replacedTriggerId);
             activeTriggers[replacedTriggerId] = TriggerRecord(0,0);
         }

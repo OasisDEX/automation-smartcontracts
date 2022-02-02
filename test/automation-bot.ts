@@ -127,7 +127,7 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
-        it.only('should emit TriggerRemoved with replacedTriggerId if called by user being an owner of Proxy', async () => {
+        it.only('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
             const newSigner = await impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -136,16 +136,8 @@ describe('AutomationBot', async () => {
                 7,
                 '0x',
             ])
-            const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
-
-            const txResult = await tx.wait()
-            const events = getEvents(
-                txResult,
-                'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
-                'TriggerRemoved',
-            )
-            expect(events.length).to.be.equal(1)
-            expect(events[0].args.triggerId).to.be.equal(7)
+            const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.revertedWith("");
         })
     })
 
