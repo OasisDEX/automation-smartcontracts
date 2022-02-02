@@ -94,14 +94,14 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
         const cdpData = {
             ilk,
-            gemJoin, // TODO:
+            gemJoin,
             fundsReceiver: signerAddress,
             cdpId: vaultId.toString(),
-            requiredDebt: 0, // can stay 0 overriden in SC anyway
+            requiredDebt: 0,
             borrowCollateral: collateral.toString(),
             withdrawCollateral: 0,
             withdrawDai: 0,
-            depositDai: 0, // simple case no additional dai
+            depositDai: 0,
             depositCollateral: 0,
             skipFL: false,
             methodName: '',
