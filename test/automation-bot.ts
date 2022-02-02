@@ -137,7 +137,7 @@ describe('AutomationBot', async () => {
                 '0x',
             ])
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.revertedWith("");
+            await expect(tx).to.be.revertedWith('')
         })
     })
 
