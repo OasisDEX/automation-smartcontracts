@@ -5,12 +5,17 @@ import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 
+struct TriggerRecord{
+    bytes32 triggerHash;
+    uint256 cdpId;
+}
+
 contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
 
-    mapping(uint256 => bytes32) public existingTriggers;
+    mapping(uint256 => TriggerRecord) public activeTriggers;
 
     uint256 public triggersCounter = 0;
 
@@ -86,7 +91,7 @@ contract AutomationBot {
         address commandAddress,
         bytes memory triggerData
     ) private view {
-        bytes32 triggersHash = existingTriggers[triggerId];
+        bytes32 triggersHash = activeTriggers[triggerId].triggerHash;
 
         require(
             triggersHash != bytes32(0) &&
@@ -113,11 +118,13 @@ contract AutomationBot {
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         triggersCounter = triggersCounter + 1;
-        existingTriggers[triggersCounter] = getTriggersHash(cdpId, triggerData, commandAddress);
+        activeTriggers[triggersCounter] = TriggerRecord(getTriggersHash(cdpId, triggerData, commandAddress), cdpId);
+
 
         if (replacedTriggerId != 0) {
+            require(activeTriggers[replacedTriggerId].cdpId == cdpId, "");
             emit TriggerRemoved(cdpId, replacedTriggerId);
-            existingTriggers[replacedTriggerId] = 0;
+            activeTriggers[replacedTriggerId] = TriggerRecord(0,0);
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
     }
@@ -139,7 +146,7 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
 
-        existingTriggers[triggerId] = bytes32(0);
+        activeTriggers[triggerId] = TriggerRecord(0,0);
         emit TriggerRemoved(cdpId, triggerId);
     }
 
@@ -231,6 +238,7 @@ contract AutomationBot {
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
         command.execute(executionData, cdpId, triggerData);
+        activeTriggers[triggerId] = TriggerRecord(0,0);
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
