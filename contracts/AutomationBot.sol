@@ -5,6 +5,7 @@ import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
 import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
+import "./McdUtils.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -15,8 +16,7 @@ contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
-    string private constant DAI_TOKEN_KEY = "DAI_TOKEN";
-    IERC20 private immutable DAI;
+    string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
 
@@ -24,9 +24,8 @@ contract AutomationBot {
 
     address public immutable serviceRegistry;
 
-    constructor(address _serviceRegistry, address _dai) {
+    constructor(address _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        DAI = IERC20(_dai);
     }
 
     modifier auth(address caller) {
@@ -227,11 +226,20 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
-    function drawDaiFromVault(uint256 cdpId, uint256 thCostDaiCoverage) internal {
+    function drawDaiFromVault(uint256 cdpId, uint256 txCostDaiCoverage) internal {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
         );
-        ManagerLike manager = ManagerLike(managerAddress);
+        address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            MCD_UTILS_KEY
+        );
+
+        McdUtils utils = McdUtils(utilsAddress);
+        utils.drawDebt(
+            txCostDaiCoverage,
+            cdpId,
+            managerAddress,
+            msg.sender);
     }
 
     //works correctly in context of automationBot
@@ -245,7 +253,6 @@ contract AutomationBot {
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         drawDaiFromVault(cdpId, txCostsDaiCoverage);
-        DAI.transfer(msg.sender, txCostsDaiCoverage);
 
         ICommand command = ICommand(commandAddress);
 

@@ -1,16 +1,10 @@
 {
 	"folders": [
 		{
-			"path": "../../multiply-proxy-actions"
-		},
-		{
 			"path": "../../oasis-borrow"
 		},
 		{
 			"path": ".."
-		},
-		{
-			"path": "../../knox-contracts"
 		}
 	],
 	"settings": {}

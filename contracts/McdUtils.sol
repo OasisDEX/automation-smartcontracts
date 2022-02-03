@@ -16,15 +16,18 @@ contract McdUtils is DSMath {
     address public immutable serviceRegistry;
     IERC20 private immutable DAI;
     address private immutable daiJoin;
+    address public immutable jug;
 
     constructor(
         address _serviceRegistry,
         address _dai,
-        address _daiJoin
+        address _daiJoin,
+        address _jug
     ) {
         serviceRegistry = _serviceRegistry;
         DAI = IERC20(_dai);
         daiJoin = _daiJoin;
+        jug = _jug;
     }
 
     function toInt256(uint256 x) internal pure returns (int256 y) {
@@ -40,7 +43,6 @@ contract McdUtils is DSMath {
 
     function _getDrawDart(
         address vat,
-        address jug,
         address urn,
         bytes32 ilk,
         uint256 wad
@@ -64,16 +66,15 @@ contract McdUtils is DSMath {
         uint256 borrowedDai,
         uint256 cdpId,
         address manager,
-        address jug,
         address sendTo
-    ) private {
+    ) external {
         address urn = ManagerLike(manager).urns(cdpId);
         address vat = ManagerLike(manager).vat();
 
         ManagerLike(manager).frob(
             cdpId,
             0,
-            _getDrawDart(vat, jug, urn, ManagerLike(manager).ilks(cdpId), borrowedDai)
+            _getDrawDart(vat, urn, ManagerLike(manager).ilks(cdpId), borrowedDai)
         );
         ManagerLike(manager).move(cdpId, address(this), mul(borrowedDai, RAY));
 
