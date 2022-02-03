@@ -38,46 +38,47 @@ contract McdUtils is DSMath {
         wad = mul(amt, 10**(18 - IJoin(gemJoin).dec()));
     }
 
-    function _getWipeDart(
+    function _getDrawDart(
         address vat,
-        uint256 dai,
+        address jug,
         address urn,
-        bytes32 ilk
-    ) internal view returns (int256 dart) {
-        // Gets actual rate from the vat
-        (, uint256 rate, , , ) = IVat(vat).ilks(ilk);
-        // Gets actual art value of the urn
-        (, uint256 art) = IVat(vat).urns(ilk, urn);
+        bytes32 ilk,
+        uint256 wad
+    ) internal returns (int256 dart) {
+        // Updates stability fee rate
+        uint256 rate = IJug(jug).drip(ilk);
 
-        // Uses the whole dai balance in the vat to reduce the debt
-        dart = toInt256(dai / rate);
-        // Checks the calculated dart is not higher than urn.art (total debt), otherwise uses its value
-        dart = uint256(dart) <= art ? -dart : -toInt256(art);
+        // Gets DAI balance of the urn in the vat
+        uint256 dai = IVat(vat).dai(urn);
+
+        // If there was already enough DAI in the vat balance, just exits it without adding more debt
+        if (dai < mul(wad, RAY)) {
+            // Calculates the needed dart so together with the existing dai in the vat is enough to exit wad amount of DAI tokens
+            dart = toInt256(sub(mul(wad, RAY), dai) / rate);
+            // This is neeeded due lack of precision. It might need to sum an extra dart wei (for the given DAI wad amount)
+            dart = mul(uint256(dart), rate) < mul(wad, RAY) ? dart + 1 : dart;
+        }
     }
 
-    function wipeAndFreeGem(
-        address manager,
-        address gemJoin,
-        uint256 cdp,
+    function drawDebt(
         uint256 borrowedDai,
-        uint256 collateralDraw
-    ) internal {
+        uint256 cdpId,
+        address manager,
+        address jug,
+        address sendTo
+    ) private {
+        address urn = ManagerLike(manager).urns(cdpId);
         address vat = ManagerLike(manager).vat();
-        address urn = ManagerLike(manager).urns(cdp);
-        bytes32 ilk = ManagerLike(manager).ilks(cdp);
-
-        IERC20(DAI).approve(daiJoin, borrowedDai);
-        IDaiJoin(daiJoin).join(urn, borrowedDai);
-
-        uint256 wadC = convertTo18(gemJoin, collateralDraw);
 
         ManagerLike(manager).frob(
-            cdp,
-            -toInt256(wadC),
-            _getWipeDart(vat, IVat(vat).dai(urn), urn, ilk)
+            cdpId,
+            0,
+            _getDrawDart(vat, jug, urn, ManagerLike(manager).ilks(cdpId), borrowedDai)
         );
+        ManagerLike(manager).move(cdpId, address(this), mul(borrowedDai, RAY));
 
-        ManagerLike(manager).flux(cdp, address(this), wadC);
-        IJoin(gemJoin).exit(address(this), collateralDraw);
+        IVat(vat).hope(daiJoin);
+
+        IJoin(daiJoin).exit(sendTo, borrowedDai);
     }
 }

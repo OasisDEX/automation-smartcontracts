@@ -96,3 +96,14 @@ abstract contract IDaiJoin {
 
     function exit(address, uint256) public virtual;
 }
+
+abstract contract IJug {
+    struct Ilk {
+        uint256 duty;
+        uint256 rho;
+    }
+
+    mapping(bytes32 => Ilk) public ilks;
+
+    function drip(bytes32) public virtual returns (uint256);
+}
