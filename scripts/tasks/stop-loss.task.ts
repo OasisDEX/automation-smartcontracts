@@ -127,10 +127,10 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             fromTokenAddress: gem,
             toTokenAddress: hardhatUtils.addresses.DAI,
             fromTokenAmount: collateral.toString(),
-            toTokenAmount: minToTokenAmount.times(102).div(100).toString(),
-            minToTokenAmount: minToTokenAmount.toString(),
+            toTokenAmount: minToTokenAmount.times(102).div(100).toFixed(0),
+            minToTokenAmount: minToTokenAmount.toFixed(0),
             exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: if network is mainnet real 1inch call should be made and calldata from it's result used
-            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toString()),
+            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toFixed(0)),
         }
 
         const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
