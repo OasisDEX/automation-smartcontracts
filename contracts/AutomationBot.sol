@@ -177,7 +177,7 @@ contract AutomationBot {
             AUTOMATION_BOT_KEY
         );
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
-        if (isCdpAllowed(cdpId, automationBot, manager) == false) {
+        if (!isCdpAllowed(cdpId, automationBot, manager)) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
@@ -189,13 +189,10 @@ contract AutomationBot {
     // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
     // despite there still be some active triggers which will be disables by this call.
     // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
-
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
-        address commandAddress,
-        bool removeAllowence,
-        bytes memory triggerData
+        bool removeAllowance
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
@@ -208,7 +205,7 @@ contract AutomationBot {
 
         BotLike(automationBot).removeRecord(cdpId, triggerId);
 
-        if (removeAllowence) {
+        if (removeAllowance) {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
         }
