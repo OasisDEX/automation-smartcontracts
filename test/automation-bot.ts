@@ -264,9 +264,7 @@ describe('AutomationBot', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 123,
                 triggerId + 1,
-                DummyCommandInstance.address,
                 false,
-                '0x',
             ])
 
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
@@ -285,9 +283,7 @@ describe('AutomationBot', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 triggerId,
-                DummyCommandInstance.address,
                 false,
-                '0x',
             ])
 
             let status = await AutomationBotInstance.isCdpAllowed(
@@ -311,9 +307,7 @@ describe('AutomationBot', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 triggerId,
-                DummyCommandInstance.address,
                 true,
-                '0x',
             ])
 
             let status = await AutomationBotInstance.isCdpAllowed(
@@ -333,7 +327,7 @@ describe('AutomationBot', async () => {
             expect(status).to.equal(false)
         })
         it('should fail if called by not proxy owning Vault', async () => {
-            const tx = AutomationBotInstance.removeTrigger(testCdpId, 0, DummyCommandInstance.address, false, '0x')
+            const tx = AutomationBotInstance.removeTrigger(testCdpId, 0, false)
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should fail if called by not proxy owning Vault', async () => {
@@ -341,9 +335,7 @@ describe('AutomationBot', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 0,
-                DummyCommandInstance.address,
                 false,
-                '0x',
             ])
 
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
