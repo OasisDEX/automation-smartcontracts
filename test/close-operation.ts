@@ -296,11 +296,9 @@ describe('CloseCommand', async () => {
                 const debt = EthersBN.from(debtAmount)
                 const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) // value of collateral
 
-                tradeSize.div(collateralAmount)
-
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
-                // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000)/* 2% slippage */.toString()
+                // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000) /* 2% slippage */.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'
                 exchangeData._exchangeCalldata = forgeUnoswapCallData(

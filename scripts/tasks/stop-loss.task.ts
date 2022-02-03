@@ -4,6 +4,7 @@ import { task } from 'hardhat/config'
 import {
     coalesceNetwork,
     decodeTriggerData,
+    forgeUnoswapCallData,
     generateExecutionData,
     getEvents,
     HardhatUtils,
@@ -53,6 +54,11 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             `Found trigger information. Command Address: ${commandAddress}. Vault ID: ${vaultId.toString()}. Trigger Type: ${triggerType.toString()}. Stop Loss Level: ${stopLossLevel.toString()}`,
         )
 
+        if (triggerType.gt(2)) {
+            throw new Error(`Trigger type \`${triggerType.toString()}\` is currently not supported`)
+        }
+        const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
+
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
         const executor = await hre.ethers.getContractAt(
@@ -85,21 +91,18 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         console.log('Join Address: ', gemJoin)
 
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
-        const [collateral] = await mcdView.getVaultInfo(vaultId.toString())
+        const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
+        const ratio = await mcdView.getRatio(vaultId.toString())
+        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-18).times(100).decimalPlaces(0)
 
-        if (triggerType.gt(2)) {
-            throw new Error(`Trigger type \`${triggerType.toString()}\` is currently not supported`)
-        }
-
-        const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
         const cdpData = {
             ilk,
             gemJoin,
             fundsReceiver: signerAddress,
             cdpId: vaultId.toString(),
             requiredDebt: 0,
-            borrowCollateral: collateral.toString(),
-            withdrawCollateral: 0,
+            borrowCollateral: 0,
+            withdrawCollateral: collateral.toString(),
             withdrawDai: 0,
             depositDai: 0,
             depositCollateral: 0,
@@ -116,14 +119,16 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
+        const tradeSize = new BigNumber(debt.toString()).times(collRatioPct).div(100) // value of collateral
+        const minToTokenAmount = isToCollateral ? tradeSize : tradeSize.times(95).div(100)
         const exchangeData = {
-            fromTokenAddress: isToCollateral ? hardhatUtils.addresses.DAI : gem,
-            toTokenAddress: isToCollateral ? gem : hardhatUtils.addresses.DAI,
-            fromTokenAmount: 0,
-            toTokenAmount: 0,
-            minToTokenAmount: 0,
-            exchangeAddress: hardhatUtils.addresses.EXCHANGE,
-            _exchangeCalldata: '0x',
+            fromTokenAddress: gem,
+            toTokenAddress: hardhatUtils.addresses.DAI,
+            fromTokenAmount: collateral.toString(),
+            toTokenAmount: minToTokenAmount.times(102).div(100).toString(),
+            minToTokenAmount: minToTokenAmount.toString(),
+            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: hardhatUtils.addresses.EXCHANGE,
+            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toString()),
         }
 
         const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
