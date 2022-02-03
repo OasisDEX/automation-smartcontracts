@@ -9,7 +9,7 @@
     "solhint": "solhint contracts/**/*.sol",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/**/*.sol",
     "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
-    "format:fix": "./node_modules/.bin/prettier --write contracts/**/*.sol test/**/*.ts",
+    "format:fix": "./node_modules/.bin/prettier --write contracts/**/*.sol contracts/*.sol test/**/*.ts",
     "format": "./node_modules/.bin/prettier --check contracts/**/*.sol test/**/*.ts"
   },
   "pre-commit": [

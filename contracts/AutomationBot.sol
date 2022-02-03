@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.1;
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
@@ -7,8 +7,7 @@ import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
 
 contract AutomationBot {
-    
-    struct TriggerRecord{
+    struct TriggerRecord {
         bytes32 triggerHash;
         uint256 cdpId;
     }
@@ -25,9 +24,8 @@ contract AutomationBot {
 
     address public immutable serviceRegistry;
 
-    constructor(address _serviceRegistry) {
+    constructor(address _serviceRegistry, address _dai) {
         serviceRegistry = _serviceRegistry;
-        address _dai = serviceRegistry.getRegisteredService("DAI_TOKEN");
         DAI = IERC20(_dai);
     }
 
@@ -105,18 +103,10 @@ contract AutomationBot {
             "bot/invalid-trigger"
         );
     }
-    
-    function checkTriggersExistenceAndCorrectness(
-        uint256 cdpId,
-        uint256 triggerId
-    ) private view {
 
-        require(
-            activeTriggers[triggerId].cdpId == cdpId,
-            "bot/invalid-trigger"
-        );
+    function checkTriggersExistenceAndCorrectness(uint256 cdpId, uint256 triggerId) private view {
+        require(activeTriggers[triggerId].cdpId == cdpId, "bot/invalid-trigger");
     }
-
 
     // works correctly in context of automationBot
     function addRecord(
@@ -136,12 +126,17 @@ contract AutomationBot {
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         triggersCounter = triggersCounter + 1;
-        activeTriggers[triggersCounter] = TriggerRecord(getTriggersHash(cdpId, triggerData, commandAddress), cdpId);
-
+        activeTriggers[triggersCounter] = TriggerRecord(
+            getTriggersHash(cdpId, triggerData, commandAddress),
+            cdpId
+        );
 
         if (replacedTriggerId != 0) {
-            require(activeTriggers[replacedTriggerId].cdpId == cdpId, "bot/trigger-removal-illegal");
-            activeTriggers[replacedTriggerId] = TriggerRecord(0,0);
+            require(
+                activeTriggers[replacedTriggerId].cdpId == cdpId,
+                "bot/trigger-removal-illegal"
+            );
+            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
@@ -162,7 +157,7 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0,0);
+        activeTriggers[triggerId] = TriggerRecord(0, 0);
         emit TriggerRemoved(cdpId, triggerId);
     }
 
@@ -235,6 +230,13 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
+    function drawDaiFromVault(uint256 cdpId, uint256 thCostDaiCoverage) internal {
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
+        ManagerLike manager = ManagerLike(managerAddress);
+    }
+
     //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
@@ -245,7 +247,7 @@ contract AutomationBot {
         uint256 txCostsDaiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
-        drawDaiFromVault(cdpId,txCostsDaiCoverage);
+        drawDaiFromVault(cdpId, txCostsDaiCoverage);
         DAI.transfer(msg.sender, txCostsDaiCoverage);
 
         ICommand command = ICommand(commandAddress);
@@ -258,7 +260,7 @@ contract AutomationBot {
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
         command.execute(executionData, cdpId, triggerData);
-        activeTriggers[triggerId] = TriggerRecord(0,0);
+        activeTriggers[triggerId] = TriggerRecord(0, 0);
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
