@@ -20,6 +20,10 @@ const configuration = {
         SPOTTER: '0xACe2A9106ec175bd56ec05C9E38FE1FDa8a1d758',
         EXCHANGE: '0x84564e7D57Ee18D646b32b645AFACE140B19083d',
         MPA: '0x24E54706B100e2061Ed67fAe6894791ec421B421',
+        JUG: '0xC90C99FE9B5d5207A03b9F28A6E8A19C0e558916',
+        DAI: '0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844',
+        DAI_JOIN: '0x6a60b7070befb2bfc964F646efDF70388320f4E0'
+
     },
     [Network.MAINNET]: {
         delay: 1800,
@@ -28,6 +32,9 @@ const configuration = {
         SPOTTER: '0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3',
         EXCHANGE: '0x99e4484dac819aa74b347208752306615213d324', // no fees
         MPA: '0x2a49eae5cca3f050ebec729cf90cc910fadaf7a2',
+        JUG: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
+        DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+        DAI_JOIN: '0x9759A6Ac90977b93B58547b4A71c78317f391A28'
     },
 }
 
@@ -49,10 +56,14 @@ async function main() {
     const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
     const closeCommandFactory = await hre.ethers.getContractFactory('CloseCommand')
     const mcdViewFactory = await hre.ethers.getContractFactory('McdView')
+    const mcdUtilsFactory = await hre.ethers.getContractFactory('McdUtils')
 
     console.log('Deploying ServiceRegistry....')
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(params.delay)
     const serviceRegistry = await serviceRegistryDeployment.deployed()
+    console.log('Deploying McdUtils.....')
+    const mcdUtilsDeployment = await mcdUtilsFactory.deploy(serviceRegistry.address, params.DAI, params.DAI_JOIN, params.JUG)
+    const mcdUtils = await mcdUtilsDeployment.deployed()
     console.log('Deploying AutomationBot....')
     const automationBotDeployment = await automationBotFactory.deploy(serviceRegistry.address)
     const bot = await automationBotDeployment.deployed()
@@ -111,10 +122,16 @@ async function main() {
         gasLimit: '100000',
     })
 
+    console.log('Adding MCD_UTILS command to ServiceRegistry....')
+    await serviceRegistry.addNamedService(AutomationServiceName.MCD_UTILS, closeCommand.address, {
+        gasLimit: '100000',
+    })
+
     console.log(`ServiceRegistry deployed to: ${serviceRegistry.address}`)
     console.log(`AutomationBot deployed to: ${bot.address}`)
     console.log(`AutomationExecutor deployed to: ${executor.address}`)
     console.log(`MCDView deployed to: ${mcdView.address}`)
+    console.log(`MCDUtils deployed to: ${mcdUtils.address}`)
     console.log(`CloseCommand deployed to: ${closeCommand.address}`)
 
     // McdViewInstance = await (
