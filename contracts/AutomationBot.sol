@@ -185,13 +185,10 @@ contract AutomationBot {
     // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
     // despite there still be some active triggers which will be disables by this call.
     // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
-
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
-        address commandAddress,
-        bool removeAllowance,
-        bytes memory triggerData
+        bool removeAllowance
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
