@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
+import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
 
 contract AutomationBot {
@@ -15,6 +16,8 @@ contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
+    string private constant DAI_TOKEN_KEY = "DAI_TOKEN";
+    IERC20 private immutable DAI;
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
 
@@ -24,6 +27,8 @@ contract AutomationBot {
 
     constructor(address _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        address _dai = serviceRegistry.getRegisteredService("DAI_TOKEN");
+        DAI = IERC20(_dai);
     }
 
     modifier auth(address caller) {
@@ -236,9 +241,13 @@ contract AutomationBot {
         uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
-        uint256 triggerId
+        uint256 triggerId,
+        uint256 txCostsDaiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
+        drawDaiFromVault(cdpId,txCostsDaiCoverage);
+        DAI.transfer(msg.sender, txCostsDaiCoverage);
+
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
