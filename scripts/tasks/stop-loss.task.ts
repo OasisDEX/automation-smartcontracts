@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { constants, Signer, utils } from 'ethers'
+import { constants, Signer } from 'ethers'
 import { task } from 'hardhat/config'
 import {
     coalesceNetwork,
@@ -127,7 +127,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             fromTokenAmount: collateral.toString(),
             toTokenAmount: minToTokenAmount.times(102).div(100).toString(),
             minToTokenAmount: minToTokenAmount.toString(),
-            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: hardhatUtils.addresses.EXCHANGE,
+            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: if network is mainnet real 1inch call should be made and calldata from it's result used
             _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toString()),
         }
 
