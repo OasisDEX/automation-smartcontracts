@@ -48,9 +48,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             triggerData,
         ])
 
-        const tx = await proxy
-            .connect(signer)
-            .execute(hardhatUtils.addresses.AUTOMATION_BOT, addTriggerData, { gasLimit: 10000000 })
+        const tx = await proxy.connect(signer).execute(hardhatUtils.addresses.AUTOMATION_BOT, addTriggerData)
         const receipt = await tx.wait()
 
         const triggerAddedEvent = getEvents(
