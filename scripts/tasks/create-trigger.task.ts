@@ -14,7 +14,7 @@ interface CreateTriggerParams {
 task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', '', params.bignumber)
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
-    .addParam('ratio', 'The collateralization ratio for stop loss', '', params.bignumber)
+    .addParam('ratio', 'The collateralization ratio for stop loss (i.e. 170)', '', params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: CreateTriggerParams, hre) => {
         const { name: network } = hre.network
