@@ -6,8 +6,7 @@ import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 
 contract AutomationBot {
-    
-    struct TriggerRecord{
+    struct TriggerRecord {
         bytes32 triggerHash;
         uint256 cdpId;
     }
@@ -100,18 +99,10 @@ contract AutomationBot {
             "bot/invalid-trigger"
         );
     }
-    
-    function checkTriggersExistenceAndCorrectness(
-        uint256 cdpId,
-        uint256 triggerId
-    ) private view {
 
-        require(
-            activeTriggers[triggerId].cdpId == cdpId,
-            "bot/invalid-trigger"
-        );
+    function checkTriggersExistenceAndCorrectness(uint256 cdpId, uint256 triggerId) private view {
+        require(activeTriggers[triggerId].cdpId == cdpId, "bot/invalid-trigger");
     }
-
 
     // works correctly in context of automationBot
     function addRecord(
@@ -131,12 +122,17 @@ contract AutomationBot {
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         triggersCounter = triggersCounter + 1;
-        activeTriggers[triggersCounter] = TriggerRecord(getTriggersHash(cdpId, triggerData, commandAddress), cdpId);
-
+        activeTriggers[triggersCounter] = TriggerRecord(
+            getTriggersHash(cdpId, triggerData, commandAddress),
+            cdpId
+        );
 
         if (replacedTriggerId != 0) {
-            require(activeTriggers[replacedTriggerId].cdpId == cdpId, "bot/trigger-removal-illegal");
-            activeTriggers[replacedTriggerId] = TriggerRecord(0,0);
+            require(
+                activeTriggers[replacedTriggerId].cdpId == cdpId,
+                "bot/trigger-removal-illegal"
+            );
+            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
@@ -157,7 +153,7 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0,0);
+        activeTriggers[triggerId] = TriggerRecord(0, 0);
         emit TriggerRemoved(cdpId, triggerId);
     }
 
@@ -177,7 +173,7 @@ contract AutomationBot {
             AUTOMATION_BOT_KEY
         );
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
-        if (isCdpAllowed(cdpId, automationBot, manager) == false) {
+        if (!isCdpAllowed(cdpId, automationBot, manager)) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
@@ -189,13 +185,10 @@ contract AutomationBot {
     // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
     // despite there still be some active triggers which will be disables by this call.
     // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
-
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
-        address commandAddress,
-        bool removeAllowence,
-        bytes memory triggerData
+        bool removeAllowance
     ) external {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
@@ -208,7 +201,7 @@ contract AutomationBot {
 
         BotLike(automationBot).removeRecord(cdpId, triggerId);
 
-        if (removeAllowence) {
+        if (removeAllowance) {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
         }
@@ -249,7 +242,7 @@ contract AutomationBot {
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
         command.execute(executionData, cdpId, triggerData);
-        activeTriggers[triggerId] = TriggerRecord(0,0);
+        activeTriggers[triggerId] = TriggerRecord(0, 0);
         manager.cdpAllow(cdpId, address(command), 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
