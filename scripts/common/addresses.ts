@@ -2,6 +2,15 @@ import { isSupportedNetwork, Network } from './types'
 
 export const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
+const startBlocks = {
+    [Network.MAINNET]: {
+        AUTOMATION_BOT: null,
+    },
+    [Network.GOERLI]: {
+        AUTOMATION_BOT: 6313029,
+    },
+}
+
 const addresses = {
     [Network.MAINNET]: {
         CDP_MANAGER: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
@@ -64,4 +73,16 @@ export function getAddressesFor(network: string | Network) {
     }
 
     return addresses[coalesceNetwork(network)]
+}
+
+export function getStartBlocksFor(network: string | Network) {
+    if (!isSupportedNetwork(network)) {
+        throw new Error(
+            `Unsupported network provided. Received: ${network}. Expected one of: [${Object.values(Network).join(
+                ', ',
+            )}}`,
+        )
+    }
+
+    return startBlocks[coalesceNetwork(network)]
 }

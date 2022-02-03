@@ -7,6 +7,7 @@ import {
     forgeUnoswapCallData,
     generateExecutionData,
     getEvents,
+    getStartBlocksFor,
     HardhatUtils,
     Network,
     triggerIdToTopic,
@@ -28,13 +29,14 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
+        const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
         const events = await hre.ethers.provider.getLogs({
             address: hardhatUtils.addresses.AUTOMATION_BOT,
             topics: [bot.interface.getEventTopic('TriggerAdded'), triggerIdToTopic(args.trigger)],
-            fromBlock: 'earliest', // TODO:
+            fromBlock: startBlocks.AUTOMATION_BOT!,
         })
 
         if (events.length !== 1) {
