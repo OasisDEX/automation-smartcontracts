@@ -139,7 +139,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         console.log(`Starting trigger execution...`)
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString())
+            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0)
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(

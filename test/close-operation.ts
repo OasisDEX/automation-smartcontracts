@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { BigNumber as EthersBN, BytesLike, constants, Contract, Signer } from 'ethers'
+import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
 import {
     AutomationBot,
@@ -12,22 +12,18 @@ import {
 } from '../typechain'
 import {
     getEvents,
-    getCommandHash,
-    AutomationServiceName,
-    TriggerType,
     HardhatUtils,
     encodeTriggerData,
     forgeUnoswapCallData,
     generateExecutionData,
 } from '../scripts/common'
+import { deploySystem } from '../scripts/common/deploySystem'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
 
 describe('CloseCommand', async () => {
     const hardhatUtils = new HardhatUtils(hre)
-    /* TODO: Make it work */
-    let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
     let CloseCommandInstance: CloseCommand
@@ -40,71 +36,20 @@ describe('CloseCommand', async () => {
     let mpaInstance: MPALike
 
     before(async () => {
-        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
-        const mcdViewFactory = await hre.ethers.getContractFactory('McdView')
-        const closeCommandFactory = await hre.ethers.getContractFactory('CloseCommand')
-        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
+        const network = hre.network.name || ''
+        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        ServiceRegistryInstance = await (await serviceRegistryFactory.deploy(0)).deployed()
+        let instances = await deploySystem(hre.ethers, network, utils, true, false)
 
-        McdViewInstance = await (
-            await mcdViewFactory.deploy(
-                hardhatUtils.addresses.MCD_VAT,
-                hardhatUtils.addresses.CDP_MANAGER,
-                hardhatUtils.addresses.MCD_SPOT,
-            )
-        ).deployed()
-
-        CloseCommandInstance = await (await closeCommandFactory.deploy(ServiceRegistryInstance.address)).deployed()
-
-        AutomationBotInstance = await (await automationBotFactory.deploy(ServiceRegistryInstance.address)).deployed()
-
-        AutomationExecutorInstance = await automationExecutorFactory.deploy(
-            AutomationBotInstance.address,
-            constants.AddressZero,
-        )
-        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            hardhatUtils.addresses.CDP_MANAGER,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-            AutomationBotInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_VIEW),
-            McdViewInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
-            hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-            AutomationExecutorInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
-            CloseCommandInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            getCommandHash(TriggerType.CLOSE_TO_DAI),
-            CloseCommandInstance.address,
-        )
+        AutomationBotInstance = instances.automationBot
+        AutomationExecutorInstance = instances.automationExecutor
+        CloseCommandInstance = instances.closeCommand!
+        McdViewInstance = instances.mcdView
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -227,6 +172,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -280,6 +226,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -354,6 +301,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -408,6 +356,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -424,6 +373,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

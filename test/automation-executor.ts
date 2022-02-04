@@ -11,6 +11,7 @@ import {
 } from '../scripts/common'
 import { constants, Signer } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
+import { deploySystem } from '../scripts/common/deploySystem'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -31,19 +32,21 @@ describe('AutomationExecutor', async () => {
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
 
-        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
+        const network = hre.network.name || ''
+        const instances = await deploySystem(hre.ethers, network, hardhatUtils, false, false)
+
+        ServiceRegistryInstance = instances.serviceRegistry
+        AutomationBotInstance = instances.automationBot
+        AutomationExecutorInstance = instances.automationExecutor
+
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
-        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
-
-        ServiceRegistryInstance = await serviceRegistryFactory.deploy(0)
-        ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
-
         DummyCommandInstance = await dummyCommandFactory.deploy(ServiceRegistryInstance.address, true, true, false)
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        AutomationBotInstance = await automationBotFactory.deploy(ServiceRegistryInstance.address)
-        AutomationBotInstance = await AutomationBotInstance.deployed()
+        let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         ExchangeInstance = await deployMockContract(owner, [
             'function swapTokenForDai(address,uint256,uint256,address,bytes)',
@@ -59,32 +62,6 @@ describe('AutomationExecutor', async () => {
         await MockERC20Instance.mock.balanceOf.returns(0)
         await MockERC20Instance.mock.allowance.returns(0)
         await MockERC20Instance.mock.approve.returns(true)
-
-        AutomationExecutorInstance = await automationExecutorFactory.deploy(
-            AutomationBotInstance.address,
-            ExchangeInstance.address,
-        )
-        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            hardhatUtils.addresses.CDP_MANAGER,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-            AutomationBotInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-            AutomationExecutorInstance.address,
-        )
-
-        // await (await ServiceRegistryInstance.addTrustedAddress(AutomationExecutorInstance.address)).wait()
-
-        const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
-        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -185,6 +162,7 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -197,6 +175,7 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })

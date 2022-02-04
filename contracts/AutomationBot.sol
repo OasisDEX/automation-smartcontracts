@@ -226,17 +226,17 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
-    function drawDaiFromVault(uint256 cdpId, address managerAddress, uint256 txCostDaiCoverage) internal {
-        address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            MCD_UTILS_KEY
-        );
+    function drawDaiFromVault(
+        uint256 cdpId,
+        address managerAddress,
+        uint256 txCostDaiCoverage
+    ) internal {
+        address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
 
         McdUtils utils = McdUtils(utilsAddress);
-        utils.drawDebt(
-            txCostDaiCoverage,
-            cdpId,
-            managerAddress,
-            msg.sender);
+        ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 1);
+        utils.drawDebt(txCostDaiCoverage, cdpId, managerAddress, msg.sender);
+        ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 0);
     }
 
     //works correctly in context of automationBot
