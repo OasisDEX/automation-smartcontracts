@@ -1,14 +1,13 @@
-import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
-import { getEvents, impersonate, CDP_MANAGER_ADDRESS, getCommandHash } from './utils'
-
+import hre from 'hardhat'
 import { expect } from 'chai'
-import { ethers } from 'hardhat'
-import { AutomationServiceName, TriggerType } from './util.types'
 import { constants } from 'ethers'
+import { getEvents, getCommandHash, AutomationServiceName, TriggerType, HardhatUtils } from '../scripts/common'
+import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 describe('AutomationBot', async () => {
+    const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
@@ -18,10 +17,10 @@ describe('AutomationBot', async () => {
     let snapshotId: string
 
     before(async () => {
-        const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
-        const dummyCommandFactory = await ethers.getContractFactory('DummyCommand')
-        const automationBotFactory = await ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
+        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
+        const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
+        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
+        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
 
         ServiceRegistryInstance = (await serviceRegistryFactory.deploy(0)) as ServiceRegistry
         ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
@@ -45,7 +44,7 @@ describe('AutomationBot', async () => {
 
         await ServiceRegistryInstance.addNamedService(
             await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            CDP_MANAGER_ADDRESS,
+            hardhatUtils.addresses.CDP_MANAGER,
         )
 
         await ServiceRegistryInstance.addNamedService(
@@ -61,22 +60,22 @@ describe('AutomationBot', async () => {
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
-        const [owner] = await ethers.getSigners()
+        const [owner] = await hre.ethers.getSigners()
         await ServiceRegistryInstance.addTrustedAddress(owner.address)
 
-        const cdpManagerInstance = await ethers.getContractAt('ManagerLike', CDP_MANAGER_ADDRESS)
+        const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
-        usersProxy = await ethers.getContractAt('DsProxyLike', proxyAddress)
+        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         proxyOwnerAddress = await usersProxy.owner()
     })
 
     beforeEach(async () => {
-        snapshotId = await ethers.provider.send('evm_snapshot', [])
+        snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        await ethers.provider.send('evm_revert', [snapshotId])
+        await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('getCommandAddress', async () => {
@@ -96,7 +95,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should pass if called by user being an owner of Proxy', async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -109,7 +108,7 @@ describe('AutomationBot', async () => {
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
         it('should emit TriggerAdded if called by user being an owner of Proxy', async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -128,7 +127,7 @@ describe('AutomationBot', async () => {
             expect(events.length).to.be.equal(1)
         })
         it('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -143,7 +142,7 @@ describe('AutomationBot', async () => {
 
     describe('cdpAllowed', async () => {
         before(async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 2,
@@ -157,7 +156,7 @@ describe('AutomationBot', async () => {
             const status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 '0x1234123412341234123412341234123412341234',
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(false, 'approval returned for random address')
         })
@@ -166,7 +165,7 @@ describe('AutomationBot', async () => {
             const status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true, 'approval do not exist for AutomationBot')
         })
@@ -174,7 +173,7 @@ describe('AutomationBot', async () => {
 
     describe('removeApproval', async () => {
         beforeEach(async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 2,
@@ -188,11 +187,11 @@ describe('AutomationBot', async () => {
             let status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true)
 
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
                 ServiceRegistryInstance.address,
@@ -204,7 +203,7 @@ describe('AutomationBot', async () => {
             status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(false)
         })
@@ -215,7 +214,7 @@ describe('AutomationBot', async () => {
         })
 
         it('emits ApprovalRemoved', async () => {
-            const newSigner = await ethers.getSigner(proxyOwnerAddress)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
                 ServiceRegistryInstance.address,
                 testCdpId,
@@ -239,7 +238,7 @@ describe('AutomationBot', async () => {
         let triggerId = 0
 
         before(async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -260,7 +259,7 @@ describe('AutomationBot', async () => {
         })
 
         it('should fail if trying to remove trigger that does not exist', async () => {
-            const newSigner = await ethers.getSigner(proxyOwnerAddress)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 123,
                 triggerId + 1,
@@ -274,12 +273,12 @@ describe('AutomationBot', async () => {
             const status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true)
         })
         it('should just remove approval if last param set to false', async () => {
-            const newSigner = await ethers.getSigner(proxyOwnerAddress)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 triggerId,
@@ -289,7 +288,7 @@ describe('AutomationBot', async () => {
             let status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true)
 
@@ -298,12 +297,12 @@ describe('AutomationBot', async () => {
             status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true)
         })
         it('should additionally remove approval if last param set to true', async () => {
-            const newSigner = await ethers.getSigner(proxyOwnerAddress)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 triggerId,
@@ -313,7 +312,7 @@ describe('AutomationBot', async () => {
             let status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true)
 
@@ -322,7 +321,7 @@ describe('AutomationBot', async () => {
             status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
-                CDP_MANAGER_ADDRESS,
+                hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(false)
         })
@@ -331,7 +330,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should fail if called by not proxy owning Vault', async () => {
-            const newSigner = await ethers.getSigner(proxyOwnerAddress)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
                 testCdpId,
                 0,
@@ -349,7 +348,7 @@ describe('AutomationBot', async () => {
         const triggerData = '0x'
 
         before(async () => {
-            const newSigner = await impersonate(proxyOwnerAddress)
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -370,11 +369,11 @@ describe('AutomationBot', async () => {
         })
 
         beforeEach(async () => {
-            snapshotId = await ethers.provider.send('evm_snapshot', [])
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
         })
 
         afterEach(async () => {
-            await ethers.provider.send('evm_revert', [snapshotId])
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
         it('should not revert if only 3rd flag is false', async () => {

@@ -2,23 +2,23 @@
 // first start network in another terminal
 // npx hardhat node
 // then run tests
-
+import hre from 'hardhat'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractReceipt } from '@ethersproject/contracts'
-import hre, { ethers } from 'hardhat'
 import { expect } from 'chai'
-import { timeTravel, deploy } from './utils'
 import { ServiceRegistry } from '../typechain'
+import { HardhatUtils } from '../scripts/common'
 
 // npx hardhat test test\service-registry.js --network local
 
 describe('ServiceRegistry', async () => {
+    const hardhatUtils = new HardhatUtils(hre)
     let trustedRegistryInstance: ServiceRegistry
 
     let owner: Signer
     let notOwner: Signer
     before(async () => {
-        ;[owner, notOwner] = await ethers.getSigners()
+        ;[owner, notOwner] = await hre.ethers.getSigners()
     })
 
     describe('getServiceNameHash', async () => {
@@ -27,7 +27,13 @@ describe('ServiceRegistry', async () => {
 
         beforeEach(async () => {
             hash = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(testedName))
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
         })
         it('should return correct hash of a name', async () => {
             const computedHash = await trustedRegistryInstance.getServiceNameHash(testedName)
@@ -40,9 +46,15 @@ describe('ServiceRegistry', async () => {
         const notTrustedAddress = '0x811f65f60e189d6d4e196a0b265e0630549953b9'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
             await (await trustedRegistryInstance.addTrustedAddress(trustedAddress)).wait()
-            timeTravel(2000)
+            hardhatUtils.timeTravel(2000)
             await (await trustedRegistryInstance.addTrustedAddress(trustedAddress)).wait()
         })
 
@@ -59,7 +71,13 @@ describe('ServiceRegistry', async () => {
 
     describe('transferOwnership', async () => {
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
         })
 
         it('should fail if called not by owner', async () => {
@@ -98,7 +116,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after too short delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.transferOwnership(await notOwner.getAddress())
-            await timeTravel(900)
+            await hardhatUtils.timeTravel(900)
             const tx2 = instance.transferOwnership(await notOwner.getAddress())
             await expect(tx2).to.be.revertedWith('delay-too-small')
         })
@@ -106,7 +124,7 @@ describe('ServiceRegistry', async () => {
         it('should update if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.transferOwnership(await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.transferOwnership(await notOwner.getAddress())
             const newOwnerAddress = await instance.owner()
             expect(newOwnerAddress).to.be.equal(await notOwner.getAddress())
@@ -115,7 +133,7 @@ describe('ServiceRegistry', async () => {
         it('should emit ChangeApplied if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             let tx = await instance.transferOwnership(await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             tx = await instance.transferOwnership(await notOwner.getAddress())
             const txResult: ContractReceipt = await tx.wait()
 
@@ -137,7 +155,13 @@ describe('ServiceRegistry', async () => {
 
     describe('changeRequiredDelay', async () => {
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
         })
 
         it('should fail if called not by owner', async () => {
@@ -170,7 +194,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after too short delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.changeRequiredDelay(5000)
-            await timeTravel(900)
+            await hardhatUtils.timeTravel(900)
             const tx2 = instance.changeRequiredDelay(5000)
             await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
@@ -178,7 +202,7 @@ describe('ServiceRegistry', async () => {
         it('should update if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.changeRequiredDelay(5000)
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.changeRequiredDelay(5000)
             const newDelay = await instance.requiredDelay()
             expect(newDelay).to.be.equal(5000)
@@ -187,7 +211,7 @@ describe('ServiceRegistry', async () => {
         it('should emit ChangeApplied if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             let tx = await instance.changeRequiredDelay(5000)
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             tx = await instance.changeRequiredDelay(5000)
             const txResult = await tx.wait()
             expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeApplied')
@@ -208,7 +232,13 @@ describe('ServiceRegistry', async () => {
 
     describe('addTrustedAddress', async () => {
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
         })
 
         it('should fail if called not by owner', async () => {
@@ -241,7 +271,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after too short delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addTrustedAddress(await notOwner.getAddress())
-            await timeTravel(900)
+            await hardhatUtils.timeTravel(900)
             const tx2 = instance.addTrustedAddress(await notOwner.getAddress())
             await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
@@ -249,7 +279,7 @@ describe('ServiceRegistry', async () => {
         it('should update if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addTrustedAddress(await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addTrustedAddress(await notOwner.getAddress())
             const status = await instance.isTrusted(await notOwner.getAddress())
             expect(status).to.be.equal(true)
@@ -258,7 +288,7 @@ describe('ServiceRegistry', async () => {
         it('should emit ChangeApplied if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             let tx = await instance.addTrustedAddress(await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             tx = await instance.addTrustedAddress(await notOwner.getAddress())
             const txResult = await tx.wait()
             expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeApplied')
@@ -279,9 +309,9 @@ describe('ServiceRegistry', async () => {
 
     describe('removeTrustedAddress', async () => {
         beforeEach(async () => {
-            const instance = await deploy('ServiceRegistry', [1000], {}, {}, true)
+            const instance = await hardhatUtils.deploy('ServiceRegistry', [1000], {}, {}, true)
             await instance.addTrustedAddress(await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addTrustedAddress(await notOwner.getAddress())
         })
 
@@ -315,7 +345,13 @@ describe('ServiceRegistry', async () => {
         const supposedHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6209'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
         })
 
         it('should fail if called not by owner', async () => {
@@ -348,7 +384,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after too short delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(900)
+            await hardhatUtils.timeTravel(900)
             const tx2 = instance.addNamedService(supposedHash, await notOwner.getAddress())
             await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
@@ -356,7 +392,7 @@ describe('ServiceRegistry', async () => {
         it('should work if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
             const newOwnerAddress = await instance.getServiceAddress(supposedHash)
             expect(newOwnerAddress).to.be.equal(await notOwner.getAddress())
@@ -365,10 +401,10 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after proper delay, when some address already exists', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             const tx2 = instance.addNamedService(supposedHash, await notOwner.getAddress())
             await expect(tx2).to.be.revertedWith('registry/service-override')
         })
@@ -376,7 +412,7 @@ describe('ServiceRegistry', async () => {
         it('should emit ChangeApplied if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             let tx = await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             tx = await instance.addNamedService(supposedHash, await notOwner.getAddress())
             const txResult = await tx.wait()
             expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeApplied')
@@ -401,10 +437,16 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await owner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addNamedService(supposedHash, await owner.getAddress())
         })
 
@@ -438,7 +480,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after too short delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(900)
+            await hardhatUtils.timeTravel(900)
             const tx = instance.updateNamedService(supposedHash, await notOwner.getAddress())
             await expect(tx).to.be.revertedWith('registry/delay-too-small')
         })
@@ -446,7 +488,7 @@ describe('ServiceRegistry', async () => {
         it('should work if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.updateNamedService(supposedHash, await notOwner.getAddress())
             const newOwnerAddress = await instance.getServiceAddress(supposedHash)
             expect(newOwnerAddress).to.be.equal(await notOwner.getAddress())
@@ -455,7 +497,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called for a second time after proper delay, when updated key do not exists', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.updateNamedService(notExistingHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             const tx = instance.updateNamedService(notExistingHash, await notOwner.getAddress())
             await expect(tx).to.be.revertedWith('registry/service-does-not-exist')
         })
@@ -463,7 +505,7 @@ describe('ServiceRegistry', async () => {
         it('should emit ChangeApplied if called for a second time after proper delay', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             let tx = await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             tx = await instance.updateNamedService(supposedHash, await notOwner.getAddress())
             const txResult = await tx.wait()
             expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeApplied')
@@ -488,10 +530,16 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await owner.getAddress())
-            await timeTravel(3000)
+            await hardhatUtils.timeTravel(3000)
             await instance.addNamedService(supposedHash, await owner.getAddress())
         })
 
@@ -533,7 +581,13 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await deploy('ServiceRegistry', [1000], {}, {}, true)) as ServiceRegistry
+            trustedRegistryInstance = (await hardhatUtils.deploy(
+                'ServiceRegistry',
+                [1000],
+                {},
+                {},
+                true,
+            )) as ServiceRegistry
             const instance = trustedRegistryInstance.connect(owner)
             const tx = await instance.addNamedService(someExistingHash, await owner.getAddress())
             const txResult = await tx.wait()
