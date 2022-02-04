@@ -8,6 +8,8 @@ import 'solidity-coverage'
 import '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
+import './scripts/tasks'
+
 dotenv.config()
 
 // You need to export an object to set up your config

@@ -4,52 +4,16 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import hre from 'hardhat'
-import { AutomationServiceName, TriggerType } from '../../test/util.types'
-import { getCommandHash } from '../../test/utils'
-
-export enum Network {
-    GOERLI = 'goerli',
-    MAINNET = 'mainnet',
-}
-
-const configuration = {
-    [Network.GOERLI]: {
-        delay: 0,
-        CDP_MANAGER: '0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032',
-        VAT: '0xB966002DDAa2Baf48369f5015329750019736031',
-        SPOTTER: '0xACe2A9106ec175bd56ec05C9E38FE1FDa8a1d758',
-        EXCHANGE: '0x84564e7D57Ee18D646b32b645AFACE140B19083d',
-        MPA: '0x24E54706B100e2061Ed67fAe6894791ec421B421',
-        JUG: '0xC90C99FE9B5d5207A03b9F28A6E8A19C0e558916',
-        DAI: '0x11fE4B6AE13d2a6055C8D9cF65c55bac32B5d844',
-        DAI_JOIN: '0x6a60b7070befb2bfc964F646efDF70388320f4E0'
-
-    },
-    [Network.MAINNET]: {
-        delay: 1800,
-        CDP_MANAGER: '0x5ef30b9986345249bc32d8928B7ee64DE9435E39',
-        VAT: '0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B',
-        SPOTTER: '0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3',
-        EXCHANGE: '0x99e4484dac819aa74b347208752306615213d324', // no fees
-        MPA: '0x2a49eae5cca3f050ebec729cf90cc910fadaf7a2',
-        JUG: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
-        DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
-        DAI_JOIN: '0x9759A6Ac90977b93B58547b4A71c78317f391A28'
-    },
-}
+import { AutomationServiceName, TriggerType, getCommandHash, HardhatUtils, Network } from '../common'
 
 async function main() {
-    const provider = hre.ethers.provider
-    const signer = provider.getSigner(0)
-    const network = hre.hardhatArguments.network || ''
+    const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
+    const signer = hre.ethers.provider.getSigner(0)
+    const network = hre.network.name || ''
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    if (!(network in configuration)) {
-        throw new Error(`Configuration for ${network} network not found`)
-    }
-
-    const params = configuration[network as Network]
+    const delay = network === Network.MAINNET ? 1800 : 0
 
     const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
     const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
@@ -59,19 +23,23 @@ async function main() {
     const mcdUtilsFactory = await hre.ethers.getContractFactory('McdUtils')
 
     console.log('Deploying ServiceRegistry....')
-    const serviceRegistryDeployment = await serviceRegistryFactory.deploy(params.delay)
+    const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
     const serviceRegistry = await serviceRegistryDeployment.deployed()
     console.log('Deploying McdUtils.....')
-    const mcdUtilsDeployment = await mcdUtilsFactory.deploy(serviceRegistry.address, params.DAI, params.DAI_JOIN, params.JUG)
+    const mcdUtilsDeployment = await mcdUtilsFactory.deploy(serviceRegistry.address, utils.addresses.DAI, utils.addresses.DAI_JOIN, utils.addresses.JUG)
     const mcdUtils = await mcdUtilsDeployment.deployed()
     console.log('Deploying AutomationBot....')
     const automationBotDeployment = await automationBotFactory.deploy(serviceRegistry.address)
     const bot = await automationBotDeployment.deployed()
     console.log('Deploying AutomationExecutor.....')
-    const automationExecutorDeployment = await automationExecutorFactory.deploy(bot.address, params.EXCHANGE)
+    const automationExecutorDeployment = await automationExecutorFactory.deploy(bot.address, utils.addresses.EXCHANGE)
     const executor = await automationExecutorDeployment.deployed()
     console.log('Deploying McdView.....')
-    const mcdViewDeployment = await mcdViewFactory.deploy(params.VAT, params.CDP_MANAGER, params.SPOTTER)
+    const mcdViewDeployment = await mcdViewFactory.deploy(
+        utils.addresses.MCD_VAT,
+        utils.addresses.CDP_MANAGER,
+        utils.addresses.MCD_SPOT,
+    )
     const mcdView = await mcdViewDeployment.deployed()
     console.log('Deploying CloseCommand.....')
     const closeCommandDeployment = await closeCommandFactory.deploy(serviceRegistry.address)
@@ -80,7 +48,7 @@ async function main() {
     console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await serviceRegistry.addNamedService(
         await serviceRegistry.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-        params.CDP_MANAGER,
+        utils.addresses.CDP_MANAGER,
         { gasLimit: '100000' },
     )
 
@@ -101,7 +69,7 @@ async function main() {
     console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
     await serviceRegistry.addNamedService(
         await serviceRegistry.getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
-        params.MPA,
+        utils.addresses.MULTIPLY_PROXY_ACTIONS,
         { gasLimit: '100000' },
     )
 
@@ -133,10 +101,6 @@ async function main() {
     console.log(`MCDView deployed to: ${mcdView.address}`)
     console.log(`MCDUtils deployed to: ${mcdUtils.address}`)
     console.log(`CloseCommand deployed to: ${closeCommand.address}`)
-
-    // McdViewInstance = await (
-    //     await mcdViewFactory.deploy(VAT_ADDRESS, CDP_MANAGER_ADDRESS, SPOTTER_ADDRESS)
-    // ).deployed()
 }
 
 // We recommend this pattern to be able to use async/await everywhere
