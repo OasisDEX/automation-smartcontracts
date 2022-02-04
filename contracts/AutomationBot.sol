@@ -226,10 +226,7 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
-    function drawDaiFromVault(uint256 cdpId, uint256 txCostDaiCoverage) internal {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
+    function drawDaiFromVault(uint256 cdpId, address managerAddress, uint256 txCostDaiCoverage) internal {
         address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             MCD_UTILS_KEY
         );
@@ -252,15 +249,15 @@ contract AutomationBot {
         uint256 txCostsDaiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
-        drawDaiFromVault(cdpId, txCostsDaiCoverage);
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
+        drawDaiFromVault(cdpId, managerAddress, txCostsDaiCoverage);
 
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
         ManagerLike manager = ManagerLike(managerAddress);
         manager.cdpAllow(cdpId, address(command), 1);
         command.execute(executionData, cdpId, triggerData);
