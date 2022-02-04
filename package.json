@@ -15,8 +15,7 @@
   },
   "pre-commit": [
     "lint",
-    "format",
-    "solhint"
+    "format"
   ],
   "engines": {
     "node": ">=12"
