@@ -1,15 +1,7 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
-import {
-    AutomationBot,
-    ServiceRegistry,
-    DsProxyLike,
-    CloseCommand,
-    McdView,
-    MPALike,
-    AutomationExecutor,
-} from '../typechain'
+import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -36,7 +28,6 @@ describe('CloseCommand', async () => {
     let mpaInstance: MPALike
 
     before(async () => {
-        const network = hre.network.name || ''
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
@@ -44,12 +35,12 @@ describe('CloseCommand', async () => {
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        let instances = await deploySystem(hre.ethers, network, utils, true, false)
+        const system = await deploySystem({ utils, addCommands: true })
 
-        AutomationBotInstance = instances.automationBot
-        AutomationExecutorInstance = instances.automationExecutor
-        CloseCommandInstance = instances.closeCommand!
-        McdViewInstance = instances.mcdView
+        AutomationBotInstance = system.automationBot
+        AutomationExecutorInstance = system.automationExecutor
+        CloseCommandInstance = system.closeCommand!
+        McdViewInstance = system.mcdView
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 

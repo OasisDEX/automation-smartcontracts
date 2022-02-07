@@ -1,7 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { constants } from 'ethers'
-import { getEvents, getCommandHash, AutomationServiceName, TriggerType, HardhatUtils } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { deploySystem } from '../scripts/common/deploySystem'
 
@@ -19,22 +18,21 @@ describe('AutomationBot', async () => {
 
     before(async () => {
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
-        const network = hre.network.name || ''
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
-        const instances = await deploySystem(hre.ethers, network, utils, false, false)
+        const system = await deploySystem({ utils, addCommands: false })
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
-            instances.serviceRegistry.address,
+            system.serviceRegistry.address,
             true,
             true,
             false,
         )) as DummyCommand
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        ServiceRegistryInstance = instances.serviceRegistry
-        AutomationBotInstance = instances.automationBot
-        AutomationExecutorInstance = instances.automationExecutor
+        ServiceRegistryInstance = system.serviceRegistry
+        AutomationBotInstance = system.automationBot
+        AutomationExecutorInstance = system.automationExecutor
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)

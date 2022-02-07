@@ -1,14 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
-import {
-    getCommandHash,
-    generateRandomAddress,
-    getEvents,
-    AutomationServiceName,
-    TriggerType,
-    HardhatUtils,
-} from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { constants, Signer } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
 import { deploySystem } from '../scripts/common/deploySystem'
@@ -32,12 +25,20 @@ describe('AutomationExecutor', async () => {
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
 
-        const network = hre.network.name || ''
-        const instances = await deploySystem(hre.ethers, network, hardhatUtils, false, false)
+        ExchangeInstance = await deployMockContract(owner, [
+            'function swapTokenForDai(address,uint256,uint256,address,bytes)',
+        ])
+        await ExchangeInstance.mock.swapTokenForDai.returns()
 
-        ServiceRegistryInstance = instances.serviceRegistry
-        AutomationBotInstance = instances.automationBot
-        AutomationExecutorInstance = instances.automationExecutor
+        const system = await deploySystem({
+            utils: hardhatUtils,
+            addCommands: false,
+            addressOverrides: { EXCHANGE: ExchangeInstance.address },
+        })
+
+        ServiceRegistryInstance = system.serviceRegistry
+        AutomationBotInstance = system.automationBot
+        AutomationExecutorInstance = system.automationExecutor
 
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
         DummyCommandInstance = await dummyCommandFactory.deploy(ServiceRegistryInstance.address, true, true, false)
@@ -47,11 +48,6 @@ describe('AutomationExecutor', async () => {
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
         hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
-
-        ExchangeInstance = await deployMockContract(owner, [
-            'function swapTokenForDai(address,uint256,uint256,address,bytes)',
-        ])
-        await ExchangeInstance.mock.swapTokenForDai.returns()
 
         MockERC20Instance = await deployMockContract(owner, [
             'function balanceOf(address) returns (uint256)',
