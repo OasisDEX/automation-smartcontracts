@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { deploySystem } from '../scripts/common/deploySystem'
 
