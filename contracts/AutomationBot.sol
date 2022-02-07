@@ -233,9 +233,8 @@ contract AutomationBot {
     ) internal {
         address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
 
-        McdUtils utils = McdUtils(utilsAddress);
         ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 1);
-        utils.drawDebt(txCostDaiCoverage, cdpId, managerAddress, msg.sender);
+        McdUtils(utilsAddress).drawDebt(txCostDaiCoverage, cdpId, managerAddress, msg.sender);
         ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 0);
     }
 
