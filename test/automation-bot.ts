@@ -371,9 +371,9 @@ describe('AutomationBot', async () => {
         it('should revert despite only 3rd flag is false when AUTOMATION_EXECUTOR is set to 0x address', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
 
-            const key = 'AUTOMATION_EXECUTOR'
-
-            await ServiceRegistryInstance.removeNamedService(await ServiceRegistryInstance.getServiceNameHash(key))
+            await ServiceRegistryInstance.removeNamedService(
+                await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            )
 
             const tx = AutomationExecutorInstance.execute(
                 '0x',
