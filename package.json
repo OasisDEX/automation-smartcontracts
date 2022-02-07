@@ -6,12 +6,12 @@
   "scripts": {
     "test": "npx hardhat test",
     "build": "npx hardhat compile",
-    "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
-    "lint:contracts": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
+    "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/*.sol contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
+    "lint:contracts": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol",
     "lint:typescript": "./node_modules/.bin/eslint test/**/*.ts scripts/**/*.ts",
     "lint": "yarn lint:contracts && yarn lint:typescript",
-    "format:fix": "./node_modules/.bin/prettier --write contracts/**/*.sol test/**/*.ts",
-    "format": "./node_modules/.bin/prettier --check contracts/**/*.sol test/**/*.ts"
+    "format:fix": "./node_modules/.bin/prettier --write contracts/*.sol contracts/**/*.sol test/**/*.ts",
+    "format": "./node_modules/.bin/prettier --check contracts/*.sol contracts/**/*.sol test/**/*.ts"
   },
   "pre-commit": [
     "lint",
