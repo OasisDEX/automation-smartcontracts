@@ -20,18 +20,13 @@ export interface DeploySystemArgs {
     addressOverrides?: Partial<AddressRegistry>
 }
 
-const createServiceRegistry = function( serviceRegistryInstance: ServiceRegistry) {
-  return async function (hash:string, address:string) {
-       await serviceRegistryInstance.addNamedService(
-            hash,
-            address,
-            {
-                gasLimit: '100000',
-            },
-        )
-  }
+const createServiceRegistry = function (serviceRegistryInstance: ServiceRegistry) {
+    return async function (hash: string, address: string) {
+        await serviceRegistryInstance.addNamedService(hash, address, {
+            gasLimit: '100000',
+        })
+    }
 }
-
 
 export async function deploySystem({
     utils,
@@ -57,8 +52,8 @@ export async function deploySystem({
 
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
     const ServiceRegistryInstance = await serviceRegistryDeployment.deployed()
-    
-    const addServiceRegistryEntry = createServiceRegistry(ServiceRegistryInstance);
+
+    const addServiceRegistryEntry = createServiceRegistry(ServiceRegistryInstance)
 
     if (logDebug) console.log('Deploying McdUtils.....')
 
@@ -97,14 +92,14 @@ export async function deploySystem({
 
         await addServiceRegistryEntry(
             getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
-            (CloseCommandInstance as CloseCommand).address
+            (CloseCommandInstance as CloseCommand).address,
         )
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
 
         await addServiceRegistryEntry(
             getCommandHash(TriggerType.CLOSE_TO_DAI),
-            (CloseCommandInstance as CloseCommand).address
+            (CloseCommandInstance as CloseCommand).address,
         )
     }
 
@@ -119,35 +114,35 @@ export async function deploySystem({
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-        AutomationBotInstance.address
+        AutomationBotInstance.address,
     )
 
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_VIEW),
-        McdViewInstance.address
+        McdViewInstance.address,
     )
 
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
-        addresses.MULTIPLY_PROXY_ACTIONS
+        addresses.MULTIPLY_PROXY_ACTIONS,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-        AutomationExecutorInstance.address
+        AutomationExecutorInstance.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_UTILS),
-        McdUtilsInstance.address
+        McdUtilsInstance.address,
     )
 
     if (logDebug) {
@@ -165,6 +160,6 @@ export async function deploySystem({
         automationBot: AutomationBotInstance,
         automationExecutor: AutomationExecutorInstance,
         mcdView: McdViewInstance,
-        closeCommand: CloseCommandInstance
+        closeCommand: CloseCommandInstance,
     }
 }
