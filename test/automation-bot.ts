@@ -35,7 +35,7 @@ describe('AutomationBot', async () => {
         AutomationExecutorInstance = system.automationExecutor
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
-        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
         const [owner] = await hre.ethers.getSigners()
         await ServiceRegistryInstance.addTrustedAddress(owner.address)
