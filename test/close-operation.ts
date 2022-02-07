@@ -1,4 +1,4 @@
-import hre from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
 import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
@@ -210,8 +210,28 @@ describe('CloseCommand', async () => {
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
                 })
 
-                it('it should pay DAI to executor to cover gas costs', async () => {
-                    console.log('TODO')
+                it('it should pay instructed amount of DAI to executor to cover gas costs', async () => {
+                    const balanceBefore = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
+
+                    await AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
+                    )
+
+                    const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
+
+                    const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
+
+                    expect(debt.toNumber()).to.be.equal(0)
+                    expect(collateral.toNumber()).to.be.equal(0)
+                    expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(
+                        hre.ethers.utils.parseUnits('100', 18).toString(),
+                    )
+                    return true
                 })
 
                 it('it should whipe all debt and collateral', async () => {
