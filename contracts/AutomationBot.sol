@@ -6,6 +6,7 @@ import "./interfaces/BotLike.sol";
 import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -116,6 +117,7 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
+        console.log("   1.addRecord gasLeft", gasleft());
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
         );
@@ -123,12 +125,14 @@ contract AutomationBot {
         address commandAddress = getCommandAddress(triggerType);
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
+        console.log("   2.addRecord gasLeft", gasleft());
 
         triggersCounter = triggersCounter + 1;
         activeTriggers[triggersCounter] = TriggerRecord(
             getTriggersHash(cdpId, triggerData, commandAddress),
             cdpId
         );
+        console.log("   3.addRecord gasLeft", gasleft());
 
         if (replacedTriggerId != 0) {
             require(
@@ -139,6 +143,7 @@ contract AutomationBot {
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
+        console.log("   4.addRecord gasLeft", gasleft());
     }
 
     // works correctly in context of automationBot
@@ -167,19 +172,25 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
+        console.log("1.addTrigger gasLeft", gasleft());
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
         );
+        console.log("2.addTrigger gasLeft", gasleft());
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
             AUTOMATION_BOT_KEY
         );
+        console.log("3.addTrigger gasLeft", gasleft());
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
+        console.log("4.addTrigger gasLeft", gasleft());
         if (!isCdpAllowed(cdpId, automationBot, manager)) {
+            console.log("5.addTrigger gasLeft", gasleft());
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
         }
+        console.log("6.addTrigger gasLeft", gasleft());
     }
 
     //works correctly in context of dsProxy
