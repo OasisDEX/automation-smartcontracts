@@ -39,7 +39,7 @@ describe('CloseCommand', async () => {
 
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        CloseCommandInstance = system.closeCommand!
+        CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -208,6 +208,10 @@ describe('CloseCommand', async () => {
                     )
 
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
+                })
+
+                it('it should pay DAI to executor to cover gas costs', async () => {
+                    console.log('TODO')
                 })
 
                 it('it should whipe all debt and collateral', async () => {

@@ -82,7 +82,7 @@ export async function deploySystem({
 
         await ServiceRegistryInstance.addNamedService(
             getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
-            CloseCommandInstance!.address,
+            (CloseCommandInstance as CloseCommand).address,
             {
                 gasLimit: '100000',
             },
@@ -92,7 +92,7 @@ export async function deploySystem({
 
         await ServiceRegistryInstance.addNamedService(
             getCommandHash(TriggerType.CLOSE_TO_DAI),
-            CloseCommandInstance!.address,
+            (CloseCommandInstance as CloseCommand).address,
             {
                 gasLimit: '100000',
             },

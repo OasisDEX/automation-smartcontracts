@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { constants, Signer, utils } from 'ethers'
+import { BigNumber, constants, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
@@ -46,7 +46,9 @@ export class HardhatUtils {
         if (!silent) {
             let extraGasInfo = ''
             if (deployed?.deployTransaction) {
-                const gasUsed = deployed.deployTransaction.gasLimit.mul(deployed.deployTransaction.gasPrice!)
+                const gasUsed = deployed.deployTransaction.gasLimit.mul(
+                    deployed.deployTransaction.gasPrice as BigNumber,
+                )
                 extraGasInfo = '(' + utils.formatEther(gasUsed) + ' ETH)'
             }
 

@@ -333,6 +333,7 @@ describe('AutomationBot', async () => {
                 0,
                 triggerData,
             ])
+
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
@@ -364,6 +365,26 @@ describe('AutomationBot', async () => {
                 0,
             )
             await expect(tx).not.to.be.reverted
+        })
+
+        //killswitch test
+        it('should revert despite only 3rd flag is false when AUTOMATION_EXECUTOR is set to 0x address', async () => {
+            await DummyCommandInstance.changeFlags(true, true, false)
+
+            const key = 'AUTOMATION_EXECUTOR'
+
+            await ServiceRegistryInstance.removeNamedService(await ServiceRegistryInstance.getServiceNameHash(key))
+
+            const tx = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+            )
+
+            await expect(tx).to.be.reverted
         })
 
         it('should emit TriggerExecuted event on successful execution', async () => {
