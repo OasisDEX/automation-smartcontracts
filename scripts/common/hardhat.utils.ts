@@ -9,12 +9,12 @@ import { Network } from './types'
 
 export class HardhatUtils {
     public readonly addresses
-    constructor(private readonly _hre: HardhatRuntimeEnvironment, forked?: Network) {
-        this.addresses = getAddressesFor(forked || this._hre.network.name)
+    constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
+        this.addresses = getAddressesFor(forked || this.hre.network.name)
     }
 
     public async getOrCreateProxy(address: string, signer?: Signer) {
-        const proxyRegistry = await this._hre.ethers.getContractAt('IProxyRegistry', this.addresses.PROXY_REGISTRY)
+        const proxyRegistry = await this.hre.ethers.getContractAt('IProxyRegistry', this.addresses.PROXY_REGISTRY)
 
         let proxyAddr = await proxyRegistry.proxies(address)
         if (proxyAddr === constants.AddressZero) {
@@ -22,11 +22,11 @@ export class HardhatUtils {
             proxyAddr = await proxyRegistry.proxies(address)
         }
 
-        return await this._hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
+        return await this.hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
     }
 
     public async depositToWeth(amount: number) {
-        const weth = await this._hre.ethers.getContractAt('IWETH', this.addresses.WETH)
+        const weth = await this.hre.ethers.getContractAt('IWETH', this.addresses.WETH)
         await weth.deposit({ value: amount })
     }
 
@@ -36,7 +36,7 @@ export class HardhatUtils {
         }
 
         const contractArgs = _args || []
-        const contractArtifacts = await this._hre.ethers.getContractFactory(contractName, {
+        const contractArtifacts = await this.hre.ethers.getContractFactory(contractName, {
             libraries: libraries,
         })
         const deployed = await contractArtifacts.deploy(...contractArgs, overrides)
@@ -65,7 +65,7 @@ export class HardhatUtils {
     }
 
     public async send(tokenAddr: string, to: string, amount: number) {
-        const tokenContract = await this._hre.ethers.getContractAt('IERC20', tokenAddr)
+        const tokenContract = await this.hre.ethers.getContractAt('IERC20', tokenAddr)
         await tokenContract.transfer(to, amount)
     }
 
@@ -82,22 +82,22 @@ export class HardhatUtils {
 
     public async impersonate(user: string): Promise<Signer> {
         await this.impersonateAccount(user)
-        const newSigner = await this._hre.ethers.getSigner(user)
+        const newSigner = await this.hre.ethers.getSigner(user)
         return newSigner
     }
 
     public async timeTravel(timeIncrease: number) {
-        await this._hre.network.provider.request({
+        await this.hre.network.provider.request({
             method: 'evm_increaseTime',
             params: [timeIncrease],
         })
     }
 
     public async balanceOf(tokenAddr: string, addr: string) {
-        const tokenContract = await this._hre.ethers.getContractAt('IERC20', tokenAddr)
+        const tokenContract = await this.hre.ethers.getContractAt('IERC20', tokenAddr)
 
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
-            ? await this._hre.ethers.provider.getBalance(addr)
+            ? await this.hre.ethers.provider.getBalance(addr)
             : await tokenContract.balanceOf(addr)
     }
 
@@ -106,9 +106,9 @@ export class HardhatUtils {
         await this.sendEther(acc, exchangeOwnerAddr, '1')
         await this.impersonateAccount(exchangeOwnerAddr)
 
-        const signer = this._hre.ethers.provider.getSigner(exchangeOwnerAddr)
+        const signer = this.hre.ethers.provider.getSigner(exchangeOwnerAddr)
 
-        const registryInstance = await this._hre.ethers.getContractFactory('SaverExchangeRegistry')
+        const registryInstance = await this.hre.ethers.getContractFactory('SaverExchangeRegistry')
         const registry = registryInstance.attach('0x25dd3F51e0C3c3Ff164DDC02A8E4D65Bb9cBB12D')
         const registryByOwner = registry.connect(signer)
 
@@ -117,14 +117,14 @@ export class HardhatUtils {
     }
 
     private async impersonateAccount(account: string) {
-        await this._hre.network.provider.request({
+        await this.hre.network.provider.request({
             method: 'hardhat_impersonateAccount',
             params: [account],
         })
     }
 
     private async stopImpersonatingAccount(account: string) {
-        await this._hre.network.provider.request({
+        await this.hre.network.provider.request({
             method: 'hardhat_stopImpersonatingAccount',
             params: [account],
         })

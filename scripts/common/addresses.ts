@@ -53,9 +53,11 @@ const addresses = {
         AUTOMATION_MCD_VIEW: '0xe976202F480878D86D6D4d26D130b048f0e3bBcF',
         AUTOMATION_CLOSE_COMMAND: '0xa655b783183E5DBDf3A36727bdB7CDCfFd854497',
         JUG: '0xC90C99FE9B5d5207A03b9F28A6E8A19C0e558916',
-        DAI_JOIN: '0x6a60b7070befb2bfc964F646efDF70388320f4E0'
+        DAI_JOIN: '0x6a60b7070befb2bfc964F646efDF70388320f4E0',
     },
 }
+
+export type AddressRegistry = typeof addresses['mainnet']
 
 export function coalesceNetwork(network: Network) {
     switch (network) {
