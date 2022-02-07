@@ -228,15 +228,15 @@ contract AutomationBot {
 
     function drawDaiFromVault(
         uint256 cdpId,
-        address managerAddress,
+        ManagerLike manager,
         uint256 txCostDaiCoverage
     ) internal {
         address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
 
         McdUtils utils = McdUtils(utilsAddress);
-        ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 1);
-        utils.drawDebt(txCostDaiCoverage, cdpId, managerAddress, msg.sender);
-        ManagerLike(managerAddress).cdpAllow(cdpId, address(utilsAddress), 0);
+        manager.cdpAllow(cdpId, utilsAddress, 1);
+        utils.drawDebt(txCostDaiCoverage, cdpId, manager, msg.sender);
+        manager.cdpAllow(cdpId, utilsAddress, 0);
     }
 
     //works correctly in context of automationBot
@@ -252,17 +252,19 @@ contract AutomationBot {
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
         );
-        drawDaiFromVault(cdpId, managerAddress, txCostsDaiCoverage);
+
+        ManagerLike manager = ManagerLike(managerAddress);
+
+        drawDaiFromVault(cdpId, manager, txCostsDaiCoverage);
 
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
-        ManagerLike manager = ManagerLike(managerAddress);
-        manager.cdpAllow(cdpId, address(command), 1);
+        manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
         activeTriggers[triggerId] = TriggerRecord(0, 0);
-        manager.cdpAllow(cdpId, address(command), 0);
+        manager.cdpAllow(cdpId, commandAddress, 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
 

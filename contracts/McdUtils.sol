@@ -65,18 +65,14 @@ contract McdUtils is DSMath {
     function drawDebt(
         uint256 borrowedDai,
         uint256 cdpId,
-        address manager,
+        ManagerLike manager,
         address sendTo
     ) external {
-        address urn = ManagerLike(manager).urns(cdpId);
-        address vat = ManagerLike(manager).vat();
+        address urn = manager.urns(cdpId);
+        address vat = manager.vat();
 
-        ManagerLike(manager).frob(
-            cdpId,
-            0,
-            _getDrawDart(vat, urn, ManagerLike(manager).ilks(cdpId), borrowedDai)
-        );
-        ManagerLike(manager).move(cdpId, address(this), mul(borrowedDai, RAY));
+        manager.frob(cdpId, 0, _getDrawDart(vat, urn, manager.ilks(cdpId), borrowedDai));
+        manager.move(cdpId, address(this), mul(borrowedDai, RAY));
 
         IVat(vat).hope(daiJoin);
 
