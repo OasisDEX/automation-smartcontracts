@@ -10,7 +10,6 @@ import "./interfaces/VatLike.sol";
 import "./interfaces/OsmMomLike.sol";
 import "./interfaces/OsmLike.sol";
 import "./external/DSMath.sol";
-import "hardhat/console.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdView is DSMath {
