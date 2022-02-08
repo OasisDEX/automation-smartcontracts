@@ -1,8 +1,8 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { constants } from 'ethers'
-import { getEvents, getCommandHash, AutomationServiceName, TriggerType, HardhatUtils } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -17,48 +17,25 @@ describe('AutomationBot', async () => {
     let snapshotId: string
 
     before(async () => {
-        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
-        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
+        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
-        ServiceRegistryInstance = (await serviceRegistryFactory.deploy(0)) as ServiceRegistry
-        ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
+        const system = await deploySystem({ utils, addCommands: false })
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
-            ServiceRegistryInstance.address,
+            system.serviceRegistry.address,
             true,
             true,
             false,
         )) as DummyCommand
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        AutomationBotInstance = await automationBotFactory.deploy(ServiceRegistryInstance.address)
-        AutomationBotInstance = await AutomationBotInstance.deployed()
-
-        AutomationExecutorInstance = await automationExecutorFactory.deploy(
-            AutomationBotInstance.address,
-            constants.AddressZero,
-        )
-        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            hardhatUtils.addresses.CDP_MANAGER,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-            AutomationBotInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-            AutomationExecutorInstance.address,
-        )
+        ServiceRegistryInstance = system.serviceRegistry
+        AutomationBotInstance = system.automationBot
+        AutomationExecutorInstance = system.automationExecutor
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
-        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
         const [owner] = await hre.ethers.getSigners()
         await ServiceRegistryInstance.addTrustedAddress(owner.address)
@@ -356,6 +333,7 @@ describe('AutomationBot', async () => {
                 0,
                 triggerData,
             ])
+
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
@@ -384,8 +362,29 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).not.to.be.reverted
+        })
+
+        //killswitch test
+        it('should revert despite only 3rd flag is false when AUTOMATION_EXECUTOR is set to 0x address', async () => {
+            await DummyCommandInstance.changeFlags(true, true, false)
+
+            await ServiceRegistryInstance.removeNamedService(
+                await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+            )
+
+            const tx = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+            )
+
+            await expect(tx).to.be.reverted
         })
 
         it('should emit TriggerExecuted event on successful execution', async () => {
@@ -396,6 +395,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, '0x')
         })
@@ -408,6 +408,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
@@ -420,6 +421,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
@@ -432,6 +434,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })

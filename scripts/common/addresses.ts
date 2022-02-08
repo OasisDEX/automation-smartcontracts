@@ -26,6 +26,8 @@ const addresses = {
         USDC: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
         MULTIPLY_PROXY_ACTIONS: '0x2a49eae5cca3f050ebec729cf90cc910fadaf7a2',
         EXCHANGE: '0x99e4484dac819aa74b347208752306615213d324', // no fees
+        JUG: '0x19c0976f590D67707E62397C87829d896Dc0f1F1',
+        DAI_JOIN: '0x9759A6Ac90977b93B58547b4A71c78317f391A28',
         AUTOMATION_SERVICE_REGISTRY: '',
         AUTOMATION_BOT: '',
         AUTOMATION_EXECUTOR: '',
@@ -50,8 +52,12 @@ const addresses = {
         AUTOMATION_EXECUTOR: '0xE3645061Ef51712Aec0C7D503510974Ab780fC3E',
         AUTOMATION_MCD_VIEW: '0xe976202F480878D86D6D4d26D130b048f0e3bBcF',
         AUTOMATION_CLOSE_COMMAND: '0xa655b783183E5DBDf3A36727bdB7CDCfFd854497',
+        JUG: '0xC90C99FE9B5d5207A03b9F28A6E8A19C0e558916',
+        DAI_JOIN: '0x6a60b7070befb2bfc964F646efDF70388320f4E0',
     },
 }
+
+export type AddressRegistry = typeof addresses['mainnet']
 
 export function coalesceNetwork(network: Network) {
     switch (network) {

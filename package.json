@@ -10,7 +10,7 @@
     "lint:contracts": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol",
     "lint:typescript": "./node_modules/.bin/eslint test/**/*.ts scripts/**/*.ts",
     "lint": "yarn lint:contracts && yarn lint:typescript",
-    "format:fix": "./node_modules/.bin/prettier --write contracts/*.sol contracts/**/*.sol test/**/*.ts",
+    "format:fix": "./node_modules/.bin/prettier --write contracts/*.sol contracts/**/*.sol test/**/*.ts scripts/**/*.ts",
     "format": "./node_modules/.bin/prettier --check contracts/*.sol contracts/**/*.sol test/**/*.ts"
   },
   "pre-commit": [

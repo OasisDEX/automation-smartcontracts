@@ -1,9 +1,11 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.1;
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
+import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
+import "./McdUtils.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -14,6 +16,7 @@ contract AutomationBot {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
+    string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
 
@@ -223,27 +226,45 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
+    function drawDaiFromVault(
+        uint256 cdpId,
+        ManagerLike manager,
+        uint256 txCostDaiCoverage
+    ) internal {
+        address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
+
+        McdUtils utils = McdUtils(utilsAddress);
+        manager.cdpAllow(cdpId, utilsAddress, 1);
+        utils.drawDebt(txCostDaiCoverage, cdpId, manager, msg.sender);
+        manager.cdpAllow(cdpId, utilsAddress, 0);
+    }
+
     //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
         uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
-        uint256 triggerId
+        uint256 triggerId,
+        uint256 txCostsDaiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
+        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
+            CDP_MANAGER_KEY
+        );
+
+        ManagerLike manager = ManagerLike(managerAddress);
+
+        drawDaiFromVault(cdpId, manager, txCostsDaiCoverage);
+
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
-        ManagerLike manager = ManagerLike(managerAddress);
-        manager.cdpAllow(cdpId, address(command), 1);
+        manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
         activeTriggers[triggerId] = TriggerRecord(0, 0);
-        manager.cdpAllow(cdpId, address(command), 0);
+        manager.cdpAllow(cdpId, commandAddress, 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
 

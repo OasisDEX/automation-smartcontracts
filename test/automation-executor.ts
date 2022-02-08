@@ -1,16 +1,10 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
-import {
-    getCommandHash,
-    generateRandomAddress,
-    getEvents,
-    AutomationServiceName,
-    TriggerType,
-    HardhatUtils,
-} from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { constants, Signer } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -31,24 +25,29 @@ describe('AutomationExecutor', async () => {
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
 
-        const serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
-        const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
-        const automationBotFactory = await hre.ethers.getContractFactory('AutomationBot')
-        const automationExecutorFactory = await hre.ethers.getContractFactory('AutomationExecutor')
-
-        ServiceRegistryInstance = await serviceRegistryFactory.deploy(0)
-        ServiceRegistryInstance = await ServiceRegistryInstance.deployed()
-
-        DummyCommandInstance = await dummyCommandFactory.deploy(ServiceRegistryInstance.address, true, true, false)
-        DummyCommandInstance = await DummyCommandInstance.deployed()
-
-        AutomationBotInstance = await automationBotFactory.deploy(ServiceRegistryInstance.address)
-        AutomationBotInstance = await AutomationBotInstance.deployed()
-
         ExchangeInstance = await deployMockContract(owner, [
             'function swapTokenForDai(address,uint256,uint256,address,bytes)',
         ])
         await ExchangeInstance.mock.swapTokenForDai.returns()
+
+        const system = await deploySystem({
+            utils: hardhatUtils,
+            addCommands: false,
+            addressOverrides: { EXCHANGE: ExchangeInstance.address },
+        })
+
+        ServiceRegistryInstance = system.serviceRegistry
+        AutomationBotInstance = system.automationBot
+        AutomationExecutorInstance = system.automationExecutor
+
+        const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
+        DummyCommandInstance = await dummyCommandFactory.deploy(ServiceRegistryInstance.address, true, true, false)
+        DummyCommandInstance = await DummyCommandInstance.deployed()
+
+        let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         MockERC20Instance = await deployMockContract(owner, [
             'function balanceOf(address) returns (uint256)',
@@ -59,32 +58,6 @@ describe('AutomationExecutor', async () => {
         await MockERC20Instance.mock.balanceOf.returns(0)
         await MockERC20Instance.mock.allowance.returns(0)
         await MockERC20Instance.mock.approve.returns(true)
-
-        AutomationExecutorInstance = await automationExecutorFactory.deploy(
-            AutomationBotInstance.address,
-            ExchangeInstance.address,
-        )
-        AutomationExecutorInstance = await AutomationExecutorInstance.deployed()
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-            hardhatUtils.addresses.CDP_MANAGER,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-            AutomationBotInstance.address,
-        )
-
-        await ServiceRegistryInstance.addNamedService(
-            await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-            AutomationExecutorInstance.address,
-        )
-
-        // await (await ServiceRegistryInstance.addTrustedAddress(AutomationExecutorInstance.address)).wait()
-
-        const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
-        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -185,6 +158,7 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -197,6 +171,7 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })

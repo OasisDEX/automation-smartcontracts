@@ -36,7 +36,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const events = await hre.ethers.provider.getLogs({
             address: hardhatUtils.addresses.AUTOMATION_BOT,
             topics: [bot.interface.getEventTopic('TriggerAdded'), triggerIdToTopic(args.trigger)],
-            fromBlock: startBlocks.AUTOMATION_BOT!,
+            fromBlock: startBlocks.AUTOMATION_BOT as number,
         })
 
         if (events.length !== 1) {
@@ -139,7 +139,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         console.log(`Starting trigger execution...`)
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString())
+            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0)
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(

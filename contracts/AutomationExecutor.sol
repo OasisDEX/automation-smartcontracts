@@ -52,9 +52,17 @@ contract AutomationExecutor {
         uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
-        uint256 triggerId
+        uint256 triggerId,
+        uint256 txCostsDaiCoverage
     ) external auth(msg.sender) {
-        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId);
+        bot.execute(
+            executionData,
+            cdpId,
+            triggerData,
+            commandAddress,
+            triggerId,
+            txCostsDaiCoverage
+        );
     }
 
     function swapTokenForDai(

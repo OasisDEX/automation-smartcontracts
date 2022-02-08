@@ -21,6 +21,7 @@ interface BotLike {
         uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
-        uint256 triggerId
+        uint256 triggerId,
+        uint256 txCostsDaiCoverage
     ) external;
 }
