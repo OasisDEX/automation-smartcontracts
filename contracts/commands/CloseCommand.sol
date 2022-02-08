@@ -48,7 +48,7 @@ contract CloseCommand is ICommand {
         }
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
-        uint256 collRatio = viewerContract.getRatio(cdpdId);
+        uint256 collRatio = viewerContract.getRatio(cdpdId, true);
         if (collRatio > slLevel * (10**16)) {
             return false;
         }

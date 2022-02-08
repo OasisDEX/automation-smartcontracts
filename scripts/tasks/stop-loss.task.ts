@@ -94,7 +94,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
-        const ratio = await mcdView.getRatio(vaultId.toString())
+        const ratio = await mcdView.getRatio(vaultId.toString(), true)
         const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-18).times(100).decimalPlaces(0)
 
         const cdpData = {
