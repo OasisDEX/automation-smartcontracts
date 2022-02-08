@@ -45,7 +45,6 @@ describe.skip('CloseCommand', async () => {
         McdViewInstance = system.mcdView
 
         await system.mcdView.approve(executorAddress, true)
-        console.log(executorAddress, receiverAddress)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
