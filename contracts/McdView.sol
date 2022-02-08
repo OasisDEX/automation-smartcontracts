@@ -34,14 +34,9 @@ contract McdView is DSMath {
         owner = _owner;
     }
 
-    function addWhitelisted(address _allowedReader) external {
+    function approve(address _allowedReader, bool isApproved) external {
         require(msg.sender == owner, "mcd-view/not-authorised");
-        whitelisted[_allowedReader] = true;
-    }
-
-    function clearWhitelisted(address _allowedReader) external {
-        require(msg.sender == owner, "mcd-view/not-authorised");
-        whitelisted[_allowedReader] = false;
+        whitelisted[_allowedReader] = isApproved;
     }
 
     /// @notice Gets Vault info (collateral, debt)

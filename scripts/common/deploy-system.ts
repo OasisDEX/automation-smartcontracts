@@ -97,7 +97,7 @@ export async function deploySystem({
         const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
         CloseCommandInstance = await closeCommandDeployment.deployed()
 
-        await McdViewInstance.addWhitelisted(CloseCommandInstance.address)
+        await McdViewInstance.approve(CloseCommandInstance.address, true)
 
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
 
