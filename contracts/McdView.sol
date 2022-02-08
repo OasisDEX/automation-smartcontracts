@@ -68,7 +68,6 @@ contract McdView is DSMath {
     /// @notice Gets oracle next price of the asset
     /// @param ilk Ilk of the Vault
     function getNextPrice(bytes32 ilk) public view returns (uint256) {
-        console.log("caller", msg.sender);
         require(whitelisted[msg.sender], "mcd-view/not-whitelisted");
         OsmLike osm = OsmLike(osmMom.osms(ilk));
         (bytes32 val, bool status) = osm.peep();
