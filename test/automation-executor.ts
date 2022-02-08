@@ -4,7 +4,7 @@ import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRe
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { constants, Signer } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
-import { deploySystem } from '../scripts/common/deploySystem'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 

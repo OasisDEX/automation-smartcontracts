@@ -50,7 +50,7 @@ contract DummyCommand is ICommand {
         bytes calldata,
         uint256,
         bytes memory
-    ) external override {
+    ) external view override {
         require(!revertsInExecute, "command failed");
     }
 }

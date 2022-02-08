@@ -1,4 +1,4 @@
-import hre, { ethers } from 'hardhat'
+import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
 import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
@@ -9,7 +9,7 @@ import {
     forgeUnoswapCallData,
     generateExecutionData,
 } from '../scripts/common'
-import { deploySystem } from '../scripts/common/deploySystem'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)

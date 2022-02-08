@@ -2,7 +2,7 @@ import hre from 'hardhat'
 import { expect } from 'chai'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
-import { deploySystem } from '../scripts/common/deploySystem'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 

@@ -5,7 +5,7 @@
 // Runtime Environment's members available in the global scope.
 import hre from 'hardhat'
 import { HardhatUtils } from '../common'
-import { deploySystem } from '../common/deploySystem'
+import { deploySystem } from '../common/deploy-system'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
