@@ -57,7 +57,7 @@ contract McdView is DSMath {
         (, uint256 mat) = spotter.ilks(ilk);
         (, , uint256 spot, , ) = vat.ilks(ilk);
 
-        return rmul(rmul(spot, spotter.par()), mat);
+        return div(rmul(rmul(spot, spotter.par()), mat), 10**9);
     }
 
     /// @notice Gets oracle next price of the asset
@@ -75,11 +75,14 @@ contract McdView is DSMath {
     function getRatio(uint256 vaultId, bool useNextPrice) public view returns (uint256) {
         bytes32 ilk = manager.ilks(vaultId);
         uint256 price = useNextPrice ? getNextPrice(ilk) : getPrice(ilk);
+        price = price / 10**9;
 
         (uint256 collateral, uint256 debt) = getVaultInfo(vaultId);
 
         if (debt == 0) return 0;
 
-        return rdiv(wmul(collateral, price), debt) / (10**18);
+        uint256 ratio = rdiv(wmul(collateral, price), debt);
+
+        return ratio;
     }
 }
