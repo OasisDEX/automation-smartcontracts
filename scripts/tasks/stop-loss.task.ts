@@ -12,6 +12,7 @@ import {
     Network,
     triggerIdToTopic,
     TriggerType,
+    zero,
 } from '../common'
 import { params } from './params'
 
@@ -119,17 +120,31 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
-        const tradeSize = new BigNumber(debt.toString()).times(collRatioPct).div(100) // value of collateral
-        const minToTokenAmount = isToCollateral ? tradeSize : tradeSize.times(95).div(100)
+        let tradeSize = zero
+        if (isToCollateral) {
+            tradeSize = new BigNumber(debt.toString())
+        } else {
+            tradeSize = new BigNumber(debt.toString()).times(collRatioPct).div(100) // value of collateral
+            tradeSize = tradeSize.times(1001).div(1000) // to account for debt increase before transaction is mined
+        }
+
+        const minToTokenAmount = tradeSize
+        console.log({ collRatioPct })
+
+        const fromTokenAmount = isToCollateral
+            ? collateral.toString()
+            : collateral.mul(100).div(collRatioPct.toNumber())
+        const toTokenAmount = minToTokenAmount.times(102).div(100).toFixed(0)
         const exchangeData = {
             fromTokenAddress: gem,
             toTokenAddress: hardhatUtils.addresses.DAI,
-            fromTokenAmount: collateral.toString(),
-            toTokenAmount: minToTokenAmount.times(102).div(100).toFixed(0),
+            fromTokenAmount: fromTokenAmount,
+            toTokenAmount: toTokenAmount,
             minToTokenAmount: minToTokenAmount.toFixed(0),
             exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: if network is mainnet real 1inch call should be made and calldata from it's result used
-            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toFixed(0)),
+            _exchangeCalldata: forgeUnoswapCallData(gem, fromTokenAmount.toString(), toTokenAmount.toString()),
         }
+        console.log({ isToCollateral, cdpData, exchangeData, serviceRegistry })
 
         const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
@@ -140,9 +155,17 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             hardhatUtils.addresses.AUTOMATION_EXECUTOR,
             signer,
         )
+        console.log({ executionData, vaultId, triggerData, commandAddress, args })
+        console.log('args.trigger.toString()')
+        console.log(args.trigger.toString())
+        console.log('vaultId.toString()')
+        console.log(vaultId.toString())
+
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0)
+            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), {
+                gasLimit: 3000000,
+            })
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(
