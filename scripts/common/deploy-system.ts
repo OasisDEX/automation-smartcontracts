@@ -61,7 +61,7 @@ export async function deploySystem({
         ServiceRegistryInstance.address,
         addresses.DAI,
         addresses.DAI_JOIN,
-        addresses.JUG,
+        addresses.MCD_JUG,
     )
     const McdUtilsInstance = (await mcdUtilsDeployment.deployed()) as McdUtils
 
