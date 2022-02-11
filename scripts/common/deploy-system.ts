@@ -20,7 +20,7 @@ export interface DeploySystemArgs {
     addressOverrides?: Partial<AddressRegistry>
 }
 
-const createServiceRegistry = function (serviceRegistryInstance: ServiceRegistry) {
+export const createServiceRegistry = function (serviceRegistryInstance: ServiceRegistry) {
     return async function (hash: string, address: string) {
         await serviceRegistryInstance.addNamedService(hash, address, {
             gasLimit: '100000',
