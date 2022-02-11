@@ -9,8 +9,9 @@ import '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
+import path from 'path'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
