@@ -92,7 +92,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
         const ratio = await mcdView.getRatio(vaultId.toString())
-        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-18).times(100).decimalPlaces(0)
+        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
         console.log(`ratio: ${collRatioPct.toString()}%`)
 
         const cdpData = {
@@ -119,7 +119,9 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
-        const tradeSize = new BigNumber(debt.toString()).times(collRatioPct).div(100) // value of collateral
+        const tradeSize = isToCollateral
+            ? new BigNumber(debt.toString()).times(1.002).decimalPlaces(0)
+            : new BigNumber(debt.toString()).times(collRatioPct).div(100).decimalPlaces(0) // value of collateral
         const minToTokenAmount = isToCollateral ? tradeSize : tradeSize.times(95).div(100)
         const exchangeData = {
             fromTokenAddress: gem,
