@@ -246,7 +246,7 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 txCostsDaiCoverage,
+        uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
@@ -256,7 +256,7 @@ contract AutomationBot {
 
         ManagerLike manager = ManagerLike(managerAddress);
 
-        drawDaiFromVault(cdpId, manager, txCostsDaiCoverage);
+        drawDaiFromVault(cdpId, manager, daiCoverage);
 
         ICommand command = ICommand(commandAddress);
 
