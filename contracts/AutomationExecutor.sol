@@ -53,7 +53,8 @@ contract AutomationExecutor {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 txCostsDaiCoverage
+        uint256 txCostsDaiCoverage,
+        uint256 minerBribe
     ) external auth(msg.sender) {
         bot.execute(
             executionData,
@@ -61,7 +62,8 @@ contract AutomationExecutor {
             triggerData,
             commandAddress,
             triggerId,
-            txCostsDaiCoverage
+            txCostsDaiCoverage,
+            minerBribe
         );
     }
 
