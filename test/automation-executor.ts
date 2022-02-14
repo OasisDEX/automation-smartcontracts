@@ -1,6 +1,5 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import BigNumber from 'bignumber.js'
 import { constants, Signer, BigNumber as EthersBN } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
