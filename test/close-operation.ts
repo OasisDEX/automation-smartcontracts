@@ -1,7 +1,16 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
+import {
+    AutomationBot,
+    DsProxyLike,
+    CloseCommand,
+    McdView,
+    MPALike,
+    AutomationExecutor,
+    OsmMomLike,
+    OsmLike,
+} from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -14,7 +23,23 @@ import { deploySystem } from '../scripts/common/deploy-system'
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
 
+//Block dependent test, works for 13998517
+
+async function setBudInOSM(osmAddress: string, budAddress: string) {
+    const BUD_MAPPING_STORAGE_SLOT = 5
+    const toHash = hre.ethers.utils.defaultAbiCoder.encode(['address', 'uint'], [budAddress, BUD_MAPPING_STORAGE_SLOT])
+    const valueSlot = hre.ethers.utils.keccak256(toHash).replace(/0x0/g, '0x')
+
+    await hre.ethers.provider.send('hardhat_setStorageAt', [
+        osmAddress,
+        valueSlot,
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+    ])
+    await hre.ethers.provider.send('evm_mine', [])
+}
+
 describe('CloseCommand', async () => {
+    /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
@@ -25,12 +50,17 @@ describe('CloseCommand', async () => {
     let usersProxy: DsProxyLike
     let snapshotId: string
     let receiverAddress: string
+    let executorAddress: string
     let mpaInstance: MPALike
+    let osmMomInstance: OsmMomLike
+    let osmInstance: OsmLike
 
     before(async () => {
+        const ethAilk = '0x4554482D41000000000000000000000000000000000000000000000000000000'
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
+        executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
 
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
@@ -42,7 +72,14 @@ describe('CloseCommand', async () => {
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
 
+        await system.mcdView.approve(executorAddress, true)
+
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+
+        osmMomInstance = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+        osmInstance = await hre.ethers.getContractAt('OsmLike', await osmMomInstance.osms(ethAilk)) //ETH-A ilk
+
+        await setBudInOSM(osmInstance.address, McdViewInstance.address)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
         usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
@@ -58,7 +95,7 @@ describe('CloseCommand', async () => {
         let serviceRegistry: any
 
         before(async () => {
-            const collRatioRaw = await McdViewInstance.getRatio(testCdpId)
+            const collRatioRaw = await McdViewInstance.getRatio(testCdpId, true)
             const collRatio18 = hre.ethers.utils.formatEther(collRatioRaw)
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()

@@ -79,14 +79,25 @@ export async function deploySystem({
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
     if (logDebug) console.log('Deploying McdView.....')
+    const signer = await ethers.provider.getSigner(0)
+    const signerAddress = await signer.getAddress()
 
-    const mcdViewDeployment = await mcdViewFactory.deploy(addresses.MCD_VAT, addresses.CDP_MANAGER, addresses.MCD_SPOT)
+    const mcdViewDeployment = await mcdViewFactory.deploy(
+        addresses.MCD_VAT,
+        addresses.CDP_MANAGER,
+        addresses.MCD_SPOT,
+        addresses.OSM_MOM,
+        signerAddress,
+    )
     const McdViewInstance = await mcdViewDeployment.deployed()
+
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand.....')
 
         const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
         CloseCommandInstance = await closeCommandDeployment.deployed()
+
+        await McdViewInstance.approve(CloseCommandInstance.address, true)
 
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
 
