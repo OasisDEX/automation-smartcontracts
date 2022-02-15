@@ -28,11 +28,7 @@ const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
 async function setBudInOSM(osmAddress: string, budAddress: string) {
     const BUD_MAPPING_STORAGE_SLOT = 5
     const toHash = hre.ethers.utils.defaultAbiCoder.encode(['address', 'uint'], [budAddress, BUD_MAPPING_STORAGE_SLOT])
-    let valueSlot = hre.ethers.utils.keccak256(toHash)
-
-    while (valueSlot.indexOf('0x0') != -1) {
-        valueSlot = valueSlot.replace('0x0', '0x')
-    }
+    const valueSlot = hre.ethers.utils.keccak256(toHash).replace(/0x0/g, '0x')
 
     await hre.ethers.provider.send('hardhat_setStorageAt', [
         osmAddress,
