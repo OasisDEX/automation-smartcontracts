@@ -363,6 +363,7 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -382,6 +383,7 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
 
             await expect(tx).to.be.reverted
@@ -396,6 +398,7 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, '0x')
         })
@@ -408,6 +411,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
                 0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -422,6 +426,7 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
@@ -434,6 +439,7 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
+                0,
                 0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
