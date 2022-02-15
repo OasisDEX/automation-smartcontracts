@@ -63,23 +63,20 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
-        const executor = await hre.ethers.getContractAt(
-            'AutomationExecutor',
-            hardhatUtils.addresses.AUTOMATION_EXECUTOR,
-            signer,
-        )
-        const executorOwner = await executor.owner()
-        if (executorOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
+        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        const proxyAddress = await cdpManager.owns(vaultId.toString())
+        const proxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
+        const currentProxyOwner = await proxy.owner()
+        if (currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
             if (network !== Network.HARDHAT && network !== Network.LOCAL) {
                 throw new Error(
-                    `Signer is not an owner of the executor contract. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${executorOwner}`,
+                    `Signer is not an owner of the executor contract. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${currentProxyOwner}`,
                 )
             }
-            signer = await hardhatUtils.impersonate(executorOwner)
+            signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
         const signerAddress = await signer.getAddress()
 
-        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
         const ilkRegistry = new hre.ethers.Contract(
             hardhatUtils.addresses.ILK_REGISTRY,
             ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
@@ -95,7 +92,8 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
         const ratio = await mcdView.getRatio(vaultId.toString(), true)
-        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-18).times(100).decimalPlaces(0)
+        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
+        console.log(`ratio: ${collRatioPct.toString()}%`)
 
         const cdpData = {
             ilk,
@@ -121,7 +119,9 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
-        const tradeSize = new BigNumber(debt.toString()).times(collRatioPct).div(100) // value of collateral
+        const tradeSize = isToCollateral
+            ? new BigNumber(debt.toString()).times(1.002).decimalPlaces(0)
+            : new BigNumber(debt.toString()).times(collRatioPct).div(100).decimalPlaces(0) // value of collateral
         const minToTokenAmount = isToCollateral ? tradeSize : tradeSize.times(95).div(100)
         const exchangeData = {
             fromTokenAddress: gem,
@@ -137,9 +137,14 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
         console.log(`Starting trigger execution...`)
+        const executor = await hre.ethers.getContractAt(
+            'AutomationExecutor',
+            hardhatUtils.addresses.AUTOMATION_EXECUTOR,
+            signer,
+        )
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0)
+            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0, 0)
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(

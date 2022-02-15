@@ -205,6 +205,7 @@ describe('CloseCommand', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                         0,
+                        0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -261,6 +262,7 @@ describe('CloseCommand', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
+                        0,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -282,6 +284,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                         0,
                     )
 
@@ -358,6 +361,7 @@ describe('CloseCommand', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                         0,
+                        0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -413,6 +417,7 @@ describe('CloseCommand', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                         0,
+                        0,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -429,6 +434,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
+                        0,
                         0,
                     )
 

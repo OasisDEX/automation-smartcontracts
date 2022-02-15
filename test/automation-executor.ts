@@ -1,12 +1,13 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
+import { constants, Signer, BigNumber as EthersBN } from 'ethers'
+import { deployMockContract, MockContract } from 'ethereum-waffle'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
-import { constants, Signer } from 'ethers'
-import { deployMockContract, MockContract } from 'ethereum-waffle'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
 describe('AutomationExecutor', async () => {
     const hardhatUtils = new HardhatUtils(hre)
@@ -159,6 +160,7 @@ describe('AutomationExecutor', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -172,8 +174,42 @@ describe('AutomationExecutor', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
+                0,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
+        })
+
+        it('should pay miner bribe to the coinbase address', async () => {
+            const minerBribe = EthersBN.from(10).pow(16) // 0.01 ETH
+            const blockReward = EthersBN.from(10).pow(18).mul(2)
+
+            await owner.sendTransaction({
+                to: AutomationBotInstance.address,
+                value: minerBribe,
+            })
+            await DummyCommandInstance.changeFlags(true, true, false)
+            const tx = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                minerBribe,
+            )
+            await expect(tx).not.to.be.reverted
+
+            const receipt = await (await tx).wait()
+            const block = await hre.ethers.provider.getBlock(receipt.blockHash)
+            expect(block.miner.toLowerCase()).to.eq(HARDHAT_DEFAULT_COINBASE)
+            expect(block.transactions.length).to.eq(1)
+
+            const transactionCost = receipt.gasUsed.mul(receipt.effectiveGasPrice.sub(block.baseFeePerGas!)).toString()
+            const balanceBefore = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number - 1)
+            const balanceAfter = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number)
+            expect(balanceAfter.toString()).to.eq(
+                balanceBefore.add(transactionCost).add(blockReward).add(minerBribe).toString(),
+            )
         })
     })
 
