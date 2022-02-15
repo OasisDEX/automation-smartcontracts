@@ -1,32 +1,31 @@
 # Oasis Automation Smart Contracts
-Simple change
+
 ## Description
 
 This is typescript hardhat project containing Smart Contracts and Tests of Oasis StopLoss automation.
 
-#Development
+# Development
 
 ## Testing
 
+```shell
+yarn build
+yarn test
+```
+
+## Deployment
 
 ```shell
-npx hardhat compile
-npx hardhat test
-npx hardhat coverage
+npx hardhat run scripts/deployment/deploy.ts --network <target network>
 ```
 
-TODO:
+## Linting & Formatting
 
+```shell
+yarn lint
+yarn format
 ```
-npx hardhat run scripts/deploy.ts
-TS_NODE_FILES=true npx ts-node scripts/deploy.ts
-npx eslint '**/*.{js,ts}'
-npx eslint '**/*.{js,ts}' --fix
-npx prettier '**/*.{json,sol,md}' --check
-npx prettier '**/*.{json,sol,md}' --write
-npx solhint 'contracts/**/*.sol'
-npx solhint 'contracts/**/*.sol' --fix
-```
+
 # Etherscan verification
 
 To try out Etherscan verification, you first need to deploy a contract to an Ethereum network that's supported by Etherscan, such as Ropsten.
