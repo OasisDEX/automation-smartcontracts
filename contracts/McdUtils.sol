@@ -1,15 +1,14 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
+
+import "./external/DSMath.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/Mcd.sol";
 import "./interfaces/BotLike.sol";
-import "./ServiceRegistry.sol";
 
-import "./interfaces/SpotterLike.sol";
-import "./interfaces/VatLike.sol";
-import "./external/DSMath.sol";
+import "./ServiceRegistry.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdUtils is DSMath {

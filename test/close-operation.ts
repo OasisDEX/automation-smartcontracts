@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
+import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils as ethersUtils } from 'ethers'
 import { expect } from 'chai'
 import {
     AutomationBot,
@@ -56,7 +56,7 @@ describe('CloseCommand', async () => {
     let osmInstance: OsmLike
 
     before(async () => {
-        const ethAilk = '0x4554482D41000000000000000000000000000000000000000000000000000000'
+        const ethAIlk = ethersUtils.formatBytes32String('ETH-A')
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
@@ -77,7 +77,7 @@ describe('CloseCommand', async () => {
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         osmMomInstance = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
-        osmInstance = await hre.ethers.getContractAt('OsmLike', await osmMomInstance.osms(ethAilk)) //ETH-A ilk
+        osmInstance = await hre.ethers.getContractAt('OsmLike', await osmMomInstance.osms(ethAIlk)) // ETH-A ilk
 
         await setBudInOSM(osmInstance.address, McdViewInstance.address)
 

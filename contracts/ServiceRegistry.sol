@@ -22,13 +22,13 @@ contract ServiceRegistry {
         if (lastExecuted[operationHash] == 0 && reqDelay > 0) {
             // not called before, scheduled for execution
             lastExecuted[operationHash] = block.timestamp;
-            emit ChangeScheduled(msg.data, operationHash, block.timestamp + reqDelay);
+            emit ChangeScheduled(operationHash, block.timestamp + reqDelay, msg.data);
         } else {
             require(
                 block.timestamp - reqDelay > lastExecuted[operationHash],
                 "registry/delay-too-small"
             );
-            emit ChangeApplied(msg.data, block.timestamp);
+            emit ChangeApplied(operationHash, block.timestamp, msg.data);
             _;
             lastExecuted[operationHash] = 0;
         }
@@ -108,7 +108,7 @@ contract ServiceRegistry {
     function removeNamedService(bytes32 serviceNameHash) external onlyOwner validateInput(36) {
         require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = address(0);
-        emit RemoveApplied(serviceNameHash);
+        emit NamedServiceRemoved(serviceNameHash);
     }
 
     function getRegisteredService(string memory serviceName) external view returns (address) {
@@ -129,8 +129,8 @@ contract ServiceRegistry {
         emit ChangeCancelled(scheduledExecution);
     }
 
-    event ChangeScheduled(bytes data, bytes32 dataHash, uint256 firstPossibleExecutionTime);
-    event ChangeCancelled(bytes32 data);
-    event ChangeApplied(bytes data, uint256 firstPossibleExecutionTime);
-    event RemoveApplied(bytes32 nameHash);
+    event ChangeScheduled(bytes32 dataHash, uint256 scheduledAt, bytes data);
+    event ChangeApplied(bytes32 dataHash, uint256 appliedAt, bytes data);
+    event ChangeCancelled(bytes32 dataHash);
+    event NamedServiceRemoved(bytes32 nameHash);
 }

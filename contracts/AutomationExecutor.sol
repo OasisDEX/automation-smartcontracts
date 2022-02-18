@@ -56,15 +56,11 @@ contract AutomationExecutor {
         uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
-        bot.execute(
-            executionData,
-            cdpId,
-            triggerData,
-            commandAddress,
-            triggerId,
-            daiCoverage,
-            minerBribe
-        );
+        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
+
+        if (minerBribe > 0) {
+            block.coinbase.transfer(minerBribe);
+        }
     }
 
     function swapTokenForDai(
@@ -86,4 +82,6 @@ contract AutomationExecutor {
         }
         IExchange(exchange).swapTokenForDai(asset, amount, receiveAtLeast, callee, withData);
     }
+
+    receive() external payable {}
 }

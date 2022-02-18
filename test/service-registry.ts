@@ -555,11 +555,11 @@ describe('ServiceRegistry', async () => {
             await expect(tx).to.be.revertedWith('registry/service-does-not-exist')
         })
 
-        it('should emit RemoveApplied if called once', async () => {
+        it('should emit NamedServiceRemoved if called once', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             const tx = await instance.removeNamedService(supposedHash)
             const txResult = await tx.wait()
-            expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('RemoveApplied')
+            expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('NamedServiceRemoved')
         })
 
         it('should fail if there are additional data in msg.data', async () => {

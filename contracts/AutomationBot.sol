@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.1;
+
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
@@ -116,13 +117,13 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
+        ManagerLike manager = ManagerLike(
+            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
         );
 
         address commandAddress = getCommandAddress(triggerType);
 
-        validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
+        validatePermissions(cdpId, msg.sender, manager);
 
         triggersCounter = triggersCounter + 1;
         activeTriggers[triggersCounter] = TriggerRecord(
@@ -168,10 +169,10 @@ contract AutomationBot {
         bytes memory triggerData
     ) external {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
+        ManagerLike manager = ManagerLike(
+            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
         );
-        ManagerLike manager = ManagerLike(managerAddress);
+
         address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
             AUTOMATION_BOT_KEY
         );
@@ -229,13 +230,12 @@ contract AutomationBot {
     function drawDaiFromVault(
         uint256 cdpId,
         ManagerLike manager,
-        uint256 txCostDaiCoverage
+        uint256 daiCoverage
     ) internal {
         address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
-
         McdUtils utils = McdUtils(utilsAddress);
         manager.cdpAllow(cdpId, utilsAddress, 1);
-        utils.drawDebt(txCostDaiCoverage, cdpId, manager, msg.sender);
+        utils.drawDebt(daiCoverage, cdpId, manager, msg.sender);
         manager.cdpAllow(cdpId, utilsAddress, 0);
     }
 
@@ -246,20 +246,15 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage,
-        uint256 minerBribe
+        uint256 daiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
+        ManagerLike manager = ManagerLike(
+            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
         );
-
-        ManagerLike manager = ManagerLike(managerAddress);
-
         drawDaiFromVault(cdpId, manager, daiCoverage);
 
         ICommand command = ICommand(commandAddress);
-
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
         manager.cdpAllow(cdpId, commandAddress, 1);
@@ -269,14 +264,8 @@ contract AutomationBot {
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
 
-        if (minerBribe > 0) {
-            block.coinbase.transfer(minerBribe);
-        }
-
         emit TriggerExecuted(triggerId, executionData);
     }
-
-    receive() external payable {}
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
 

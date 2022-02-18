@@ -184,7 +184,7 @@ describe('AutomationExecutor', async () => {
             const blockReward = EthersBN.from(10).pow(18).mul(2)
 
             await owner.sendTransaction({
-                to: AutomationBotInstance.address,
+                to: AutomationExecutorInstance.address,
                 value: minerBribe,
             })
             await DummyCommandInstance.changeFlags(true, true, false)
