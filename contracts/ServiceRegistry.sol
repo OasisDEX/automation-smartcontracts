@@ -129,7 +129,7 @@ contract ServiceRegistry {
         emit ChangeCancelled(scheduledExecution);
     }
 
-    event ChangeScheduled(bytes32 dataHash, uint256 scheduledAt, bytes data);
+    event ChangeScheduled(bytes32 dataHash, uint256 scheduledFor, bytes data);
     event ChangeApplied(bytes32 dataHash, uint256 appliedAt, bytes data);
     event ChangeCancelled(bytes32 dataHash);
     event NamedServiceRemoved(bytes32 nameHash);
