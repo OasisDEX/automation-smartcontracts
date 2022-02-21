@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { constants, Signer, BigNumber as EthersBN } from 'ethers'
+import { constants, Signer, BigNumber as EthersBN, utils } from 'ethers'
 import { deployMockContract, MockContract } from 'ethereum-waffle'
 import { AutomationBot, AutomationExecutor, DsProxyLike, DummyCommand, ServiceRegistry } from '../typechain'
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
@@ -17,22 +17,24 @@ describe('AutomationExecutor', async () => {
     let DummyCommandInstance: DummyCommand
     let MockERC20Instance: MockContract
     let MockDAIInstance: MockContract
-    let ExchangeInstance: MockContract
+    let MockExchangeInstance: MockContract
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
     let owner: Signer
+    let ownerAddress: string
     let notOwner: Signer
     let snapshotId: string
 
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
+        ownerAddress = await owner.getAddress()
 
-        ExchangeInstance = await deployMockContract(owner, [
+        MockExchangeInstance = await deployMockContract(owner, [
             'function swapTokenForDai(address,uint256,uint256,address,bytes)',
             'function swapDaiForToken(address,uint256,uint256,address,bytes)',
         ])
-        await ExchangeInstance.mock.swapTokenForDai.returns()
-        await ExchangeInstance.mock.swapDaiForToken.returns()
+        await MockExchangeInstance.mock.swapTokenForDai.returns()
+        await MockExchangeInstance.mock.swapDaiForToken.returns()
 
         const genericERC20ABI = [
             'function balanceOf(address) returns (uint256)',
@@ -61,7 +63,7 @@ describe('AutomationExecutor', async () => {
         const system = await deploySystem({
             utils: hardhatUtils,
             addCommands: false,
-            addressOverrides: { EXCHANGE: ExchangeInstance.address, DAI: MockDAIInstance.address },
+            addressOverrides: { EXCHANGE: MockExchangeInstance.address, DAI: MockDAIInstance.address },
         })
 
         ServiceRegistryInstance = system.serviceRegistry
@@ -138,7 +140,7 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should revert with executor/cannot-remove-owner if owner tries to remove themselves', async () => {
-            const tx = AutomationExecutorInstance.removeCaller(await owner.getAddress())
+            const tx = AutomationExecutorInstance.removeCaller(ownerAddress)
             await expect(tx).to.be.revertedWith('executor/cannot-remove-owner')
         })
     })
@@ -248,9 +250,13 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should successfully execute swap token for dai', async () => {
-            await MockERC20Instance.mock.balanceOf.returns(100)
-            await MockERC20Instance.mock.approve.returns(true)
-            await MockERC20Instance.mock.allowance.returns(0)
+            await MockERC20Instance.mock.balanceOf.withArgs(AutomationExecutorInstance.address).returns(100)
+            await MockERC20Instance.mock.allowance
+                .withArgs(AutomationExecutorInstance.address, MockExchangeInstance.address)
+                .returns(0)
+            await MockERC20Instance.mock.approve
+                .withArgs(MockExchangeInstance.address, constants.MaxUint256)
+                .returns(true)
             const tx = AutomationExecutorInstance.swap(
                 MockERC20Instance.address,
                 true,
@@ -263,9 +269,13 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should successfully execute swap dai for token', async () => {
-            await MockDAIInstance.mock.balanceOf.returns(100)
-            await MockDAIInstance.mock.approve.returns(true)
-            await MockDAIInstance.mock.allowance.returns(0)
+            await MockDAIInstance.mock.balanceOf.withArgs(AutomationExecutorInstance.address).returns(100)
+            await MockDAIInstance.mock.allowance
+                .withArgs(AutomationExecutorInstance.address, MockExchangeInstance.address)
+                .returns(0)
+            await MockDAIInstance.mock.approve
+                .withArgs(MockExchangeInstance.address, constants.MaxUint256)
+                .returns(true)
             const tx = AutomationExecutorInstance.swap(
                 MockERC20Instance.address,
                 false,
@@ -363,9 +373,11 @@ describe('AutomationExecutor', async () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it('successfully withdraw token amount', async () => {
-            await MockERC20Instance.mock.transfer.returns(true)
-            const tx = AutomationExecutorInstance.withdraw(MockERC20Instance.address, 100)
+        it('should successfully withdraw token amount', async () => {
+            const amount = 100
+            await MockERC20Instance.mock.transfer.returns(false)
+            await MockERC20Instance.mock.transfer.withArgs(ownerAddress, amount).returns(true)
+            const tx = AutomationExecutorInstance.withdraw(MockERC20Instance.address, amount)
             await expect(tx).not.to.be.reverted
         })
 
