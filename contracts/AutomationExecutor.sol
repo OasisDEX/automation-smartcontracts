@@ -7,14 +7,20 @@ import { IExchange } from "./interfaces/IExchange.sol";
 
 contract AutomationExecutor {
     BotLike public immutable bot;
+    IERC20 public immutable dai;
 
     address public exchange;
     address public owner;
 
     mapping(address => bool) public callers;
 
-    constructor(BotLike _bot, address _exchange) {
+    constructor(
+        BotLike _bot,
+        IERC20 _dai,
+        address _exchange
+    ) {
         bot = _bot;
+        dai = _dai;
         exchange = _exchange;
         owner = msg.sender;
         callers[owner] = true;
@@ -67,23 +73,44 @@ contract AutomationExecutor {
         );
     }
 
-    function swapTokenForDai(
-        address asset,
+    function swap(
+        address otherAsset,
+        bool toDai,
         uint256 amount,
         uint256 receiveAtLeast,
         address callee,
         bytes calldata withData
     ) external auth(msg.sender) {
-        // amount has to be strictly less than the balance save at least 1 wei at the storage slot to save gas
+        IERC20 fromToken = toDai ? IERC20(otherAsset) : dai;
         require(
-            amount > 0 && amount < IERC20(asset).balanceOf(address(this)),
+            amount > 0 && amount <= fromToken.balanceOf(address(this)),
             "executor/invalid-amount"
         );
 
-        uint256 allowance = IERC20(asset).allowance(address(this), exchange);
-        if (amount > allowance) {
-            require(IERC20(asset).approve(exchange, type(uint256).max), "executor/approval-failed");
+        if (amount > fromToken.allowance(address(this), exchange)) {
+            require(fromToken.approve(exchange, type(uint256).max), "executor/approval-failed");
         }
-        IExchange(exchange).swapTokenForDai(asset, amount, receiveAtLeast, callee, withData);
+
+        if (toDai) {
+            IExchange(exchange).swapTokenForDai(
+                otherAsset,
+                amount,
+                receiveAtLeast,
+                callee,
+                withData
+            );
+        } else {
+            IExchange(exchange).swapDaiForToken(
+                otherAsset,
+                amount,
+                receiveAtLeast,
+                callee,
+                withData
+            );
+        }
+    }
+
+    function withdraw(IERC20 asset, uint256 amount) external onlyOwner {
+        require(asset.transfer(owner, amount), "executor/transfer-failed");
     }
 }

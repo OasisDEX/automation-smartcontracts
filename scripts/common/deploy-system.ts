@@ -74,6 +74,7 @@ export async function deploySystem({
 
     const automationExecutorDeployment = await automationExecutorFactory.deploy(
         AutomationBotInstance.address,
+        addresses.DAI,
         addresses.EXCHANGE,
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
