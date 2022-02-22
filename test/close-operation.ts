@@ -270,7 +270,6 @@ describe('CloseCommand', async () => {
                     expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(
                         hre.ethers.utils.parseUnits('100', 18).toString(),
                     )
-                    return true
                 })
 
                 it('it should whipe all debt and collateral', async () => {

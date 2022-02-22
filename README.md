@@ -51,5 +51,5 @@ For faster runs of your tests and scripts, consider skipping ts-node's type chec
 Seeing weird errors like _more argumens than expected passed_ in freshly pulled dev branch ?
 Try following:
 ```shell
-rm -rf artifacts cache typechain && npx hardhat compile
+yarn clean && yarn build
 ```
