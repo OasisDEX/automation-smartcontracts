@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
-import { IERC20 } from "./interfaces/IERC20.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 
 contract AutomationExecutor {
@@ -111,6 +111,6 @@ contract AutomationExecutor {
     }
 
     function withdraw(IERC20 asset, uint256 amount) external onlyOwner {
-        require(asset.transfer(owner, amount), "executor/transfer-failed");
+        require(asset.transfer(owner, amount), "executor/withdrawal-failed");
     }
 }
