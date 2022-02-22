@@ -272,7 +272,7 @@ describe('CloseCommand', async () => {
                     )
                 })
 
-                it('it should whipe all debt and collateral', async () => {
+                it('it should wipe all debt and collateral', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
