@@ -149,7 +149,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const triggerExecutedEvent = getEvents(
             receipt,
-            'event TriggerExecuted(uint256 indexed triggerId, bytes executionData)',
+            'event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData)',
             'TriggerExecuted',
         )?.[0]
 
@@ -158,7 +158,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
 
         console.log(
-            `Successfully executed the trigger ${triggerExecutedEvent.args.triggerId.toString()}. Execution Data: ${
+            `Successfully executed the trigger ${triggerExecutedEvent.args.triggerId.toString()} for vault ${triggerExecutedEvent.args.cdpId.toString()}. Execution Data: ${
                 triggerExecutedEvent.args.executionData
             }`,
         )

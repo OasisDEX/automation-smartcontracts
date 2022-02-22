@@ -400,7 +400,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
             )
-            await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, '0x')
+            await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
         })
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {

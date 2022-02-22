@@ -273,7 +273,7 @@ contract AutomationBot {
             block.coinbase.transfer(minerBribe);
         }
 
-        emit TriggerExecuted(triggerId, executionData);
+        emit TriggerExecuted(triggerId, cdpId, executionData);
     }
 
     receive() external payable {}
@@ -291,5 +291,5 @@ contract AutomationBot {
         bytes triggerData
     );
 
-    event TriggerExecuted(uint256 indexed triggerId, bytes executionData);
+    event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData);
 }
