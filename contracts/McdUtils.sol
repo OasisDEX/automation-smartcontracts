@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./external/DSMath.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/Mcd.sol";
@@ -19,12 +19,12 @@ contract McdUtils is DSMath {
 
     constructor(
         address _serviceRegistry,
-        address _dai,
+        IERC20 _dai,
         address _daiJoin,
         address _jug
     ) {
         serviceRegistry = _serviceRegistry;
-        DAI = IERC20(_dai);
+        DAI = _dai;
         daiJoin = _daiJoin;
         jug = _jug;
     }

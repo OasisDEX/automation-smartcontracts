@@ -6,6 +6,7 @@
   "scripts": {
     "test": "npx hardhat test",
     "build": "npx hardhat compile",
+    "clean": "rm -rf artifacts cache typechain",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/*.sol contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
     "lint:contracts": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol",
     "lint:typescript": "./node_modules/.bin/eslint test/**/*.ts scripts/**/*.ts",
@@ -73,5 +74,7 @@
     "typechain": "^5.2.0",
     "typescript": "^4.4.4"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.5.0"
+  }
 }

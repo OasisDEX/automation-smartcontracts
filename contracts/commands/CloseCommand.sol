@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
-import "./../interfaces/ICommand.sol";
-import "./../interfaces/ManagerLike.sol";
-import "./../interfaces/BotLike.sol";
-import "./../interfaces/MPALike.sol";
-import "./../ServiceRegistry.sol";
-import "./../McdView.sol";
+import "../interfaces/ICommand.sol";
+import "../interfaces/ManagerLike.sol";
+import "../interfaces/BotLike.sol";
+import "../interfaces/MPALike.sol";
+import "../ServiceRegistry.sol";
+import "../McdView.sol";
 
 contract CloseCommand is ICommand {
     address public immutable serviceRegistry;

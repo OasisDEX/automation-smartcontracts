@@ -4,7 +4,6 @@ pragma solidity ^0.8.1;
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
-import "./interfaces/IERC20.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
@@ -23,16 +22,15 @@ contract AutomationBot {
 
     uint256 public triggersCounter = 0;
 
-    address public immutable serviceRegistry;
+    ServiceRegistry public immutable serviceRegistry;
 
-    constructor(address _serviceRegistry) {
+    constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
     }
 
     modifier auth(address caller) {
         require(
-            ServiceRegistry(serviceRegistry).getRegisteredService(AUTOMATION_EXECUTOR_KEY) ==
-                caller,
+            serviceRegistry.getRegisteredService(AUTOMATION_EXECUTOR_KEY) == caller,
             "bot/not-executor"
         );
         _;
@@ -70,7 +68,7 @@ contract AutomationBot {
     function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
 
-        address commandAddress = ServiceRegistry(serviceRegistry).getServiceAddress(commandHash);
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
 
         return commandAddress;
     }
@@ -117,9 +115,7 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
-        ManagerLike manager = ManagerLike(
-            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
-        );
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         address commandAddress = getCommandAddress(triggerType);
 
@@ -149,9 +145,7 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId
     ) external {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
+        address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
 
         validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
@@ -169,13 +163,9 @@ contract AutomationBot {
         bytes memory triggerData
     ) external {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-        ManagerLike manager = ManagerLike(
-            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
-        );
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
-        address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
-            AUTOMATION_BOT_KEY
-        );
+        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
         if (!isCdpAllowed(cdpId, automationBot, manager)) {
             manager.cdpAllow(cdpId, automationBot, 1);
@@ -194,14 +184,10 @@ contract AutomationBot {
         uint256 triggerId,
         bool removeAllowance
     ) external {
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
+        address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
 
-        address automationBot = ServiceRegistry(serviceRegistry).getRegisteredService(
-            AUTOMATION_BOT_KEY
-        );
+        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
         BotLike(automationBot).removeRecord(cdpId, triggerId);
 
@@ -214,14 +200,10 @@ contract AutomationBot {
     }
 
     //works correctly in context of dsProxy
-    function removeApproval(address _serviceRegistry, uint256 cdpId) external {
-        address managerAddress = ServiceRegistry(_serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
+    function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external {
+        address managerAddress = _serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = ServiceRegistry(_serviceRegistry).getRegisteredService(
-            AUTOMATION_BOT_KEY
-        );
+        address automationBot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         validatePermissions(cdpId, address(this), manager);
         manager.cdpAllow(cdpId, automationBot, 0);
         emit ApprovalRemoved(cdpId, automationBot);
@@ -232,7 +214,8 @@ contract AutomationBot {
         ManagerLike manager,
         uint256 daiCoverage
     ) internal {
-        address utilsAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_UTILS_KEY);
+        address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
+
         McdUtils utils = McdUtils(utilsAddress);
         manager.cdpAllow(cdpId, utilsAddress, 1);
         utils.drawDebt(daiCoverage, cdpId, manager, msg.sender);
@@ -249,9 +232,7 @@ contract AutomationBot {
         uint256 daiCoverage
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
-        ManagerLike manager = ManagerLike(
-            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
-        );
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         drawDaiFromVault(cdpId, manager, daiCoverage);
 
         ICommand command = ICommand(commandAddress);
@@ -264,7 +245,7 @@ contract AutomationBot {
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
 
-        emit TriggerExecuted(triggerId, executionData);
+        emit TriggerExecuted(triggerId, cdpId, executionData);
     }
 
     event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
@@ -280,5 +261,5 @@ contract AutomationBot {
         bytes triggerData
     );
 
-    event TriggerExecuted(uint256 indexed triggerId, bytes executionData);
+    event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData);
 }
