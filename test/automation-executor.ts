@@ -181,7 +181,6 @@ describe('AutomationExecutor', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
-                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -194,7 +193,6 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
-                0,
                 0,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
@@ -215,7 +213,6 @@ describe('AutomationExecutor', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
-                0,
                 minerBribe,
             )
             await expect(tx).not.to.be.reverted

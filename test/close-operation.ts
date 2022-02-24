@@ -154,7 +154,7 @@ describe('CloseCommand', async () => {
                 )
             })
 
-            describe('when Trigger is below current col ratio', async () => {
+            describe('when trigger is below current collateralization ratio', async () => {
                 let triggerId: number
                 let triggersData: BytesLike
                 let executionData: BytesLike
@@ -200,7 +200,6 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
-                        0,
                         0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -249,6 +248,14 @@ describe('CloseCommand', async () => {
                 })
 
                 it('it should pay instructed amount of DAI to executor to cover gas costs', async () => {
+                    const executionDataWithCoverage = generateExecutionData(
+                        mpaInstance,
+                        true,
+                        cdpData,
+                        exchangeData,
+                        serviceRegistry,
+                    )
+                    const daiCoverage = EthersBN.from(10).pow(18).mul(100)
                     const balanceBefore = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
 
                     await AutomationExecutorInstance.execute(
@@ -257,7 +264,7 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
-                        hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
+                        // hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI // TODO:
                         0,
                     )
 
@@ -267,9 +274,7 @@ describe('CloseCommand', async () => {
 
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
-                    expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(
-                        hre.ethers.utils.parseUnits('100', 18).toString(),
-                    )
+                    expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(daiCoverage.toString())
                 })
 
                 it('it should wipe all debt and collateral', async () => {
@@ -279,7 +284,6 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
-                        0,
                         0,
                     )
 
@@ -316,7 +320,7 @@ describe('CloseCommand', async () => {
                 let signer: Signer
 
                 beforeEach(async () => {
-                    // makeSnapshot
+                    // make snapshot
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
@@ -344,7 +348,6 @@ describe('CloseCommand', async () => {
                 })
 
                 afterEach(async () => {
-                    // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -355,7 +358,6 @@ describe('CloseCommand', async () => {
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
-                        0,
                         0,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -368,15 +370,14 @@ describe('CloseCommand', async () => {
                 let signer: Signer
 
                 before(async () => {
-                    // makeSnapshot
-                    //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    // make snapshot
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
                     triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage + 1)
 
                     executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
-                    // addTrigger
+                    // add trigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         2,
@@ -412,7 +413,6 @@ describe('CloseCommand', async () => {
                         CloseCommandInstance.address,
                         triggerId,
                         0,
-                        0,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -422,14 +422,13 @@ describe('CloseCommand', async () => {
                     return true
                 })
 
-                it('should send dai To receiverAddress', async () => {
+                it('should send DAI to the recipient', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
-                        0,
                         0,
                     )
 

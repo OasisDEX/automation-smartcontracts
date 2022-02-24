@@ -90,10 +90,11 @@ export function generateExecutionData(
     exchangeData: any,
     serviceRegistry: any,
 ): BytesLike {
-    if (toCollateral) {
-        return mpa.interface.encodeFunctionData('closeVaultExitCollateral', [exchangeData, cdpData, serviceRegistry])
-    }
-    return mpa.interface.encodeFunctionData('closeVaultExitDai', [exchangeData, cdpData, serviceRegistry])
+    return mpa.interface.encodeFunctionData(toCollateral ? 'closeVaultExitCollateral' : 'closeVaultExitDai', [
+        exchangeData,
+        cdpData,
+        serviceRegistry,
+    ])
 }
 
 export function triggerIdToTopic(id: BigNumber.Value): string {

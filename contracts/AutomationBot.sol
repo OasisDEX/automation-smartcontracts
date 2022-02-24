@@ -29,8 +29,7 @@ contract AutomationBot {
 
     modifier auth(address caller) {
         require(
-            ServiceRegistry(serviceRegistry).getRegisteredService(AUTOMATION_EXECUTOR_KEY) ==
-                caller,
+            serviceRegistry.getRegisteredService(AUTOMATION_EXECUTOR_KEY) == caller,
             "bot/not-executor"
         );
         _;
@@ -67,10 +66,7 @@ contract AutomationBot {
     // works correctly in any context
     function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
-
-        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
-
-        return commandAddress;
+        return serviceRegistry.getServiceAddress(commandHash);
     }
 
     // works correctly in any context
@@ -145,9 +141,9 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId
     ) external {
-        address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
-        validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
+        validatePermissions(cdpId, msg.sender, manager);
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
@@ -209,19 +205,6 @@ contract AutomationBot {
         emit ApprovalRemoved(cdpId, automationBot);
     }
 
-    function drawDaiFromVault(
-        uint256 cdpId,
-        ManagerLike manager,
-        uint256 txCostDaiCoverage
-    ) internal {
-        address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-
-        McdUtils utils = McdUtils(utilsAddress);
-        manager.cdpAllow(cdpId, utilsAddress, 1);
-        utils.drawDebt(txCostDaiCoverage, cdpId, manager, msg.sender);
-        manager.cdpAllow(cdpId, utilsAddress, 0);
-    }
-
     //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
@@ -229,14 +212,11 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
+
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-
-        drawDaiFromVault(cdpId, manager, daiCoverage);
-
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");

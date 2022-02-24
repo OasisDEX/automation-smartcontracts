@@ -59,18 +59,9 @@ contract AutomationExecutor {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
-        bot.execute(
-            executionData,
-            cdpId,
-            triggerData,
-            commandAddress,
-            triggerId,
-            daiCoverage,
-            minerBribe
-        );
+        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, minerBribe);
     }
 
     function swap(

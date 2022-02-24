@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { constants } from 'ethers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -56,13 +57,13 @@ describe('AutomationBot', async () => {
     })
 
     describe('getCommandAddress', async () => {
-        it('should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2', async () => {
+        it('should return some fake command address for triggerType 2', async () => {
             const address = await AutomationBotInstance.getCommandAddress(2)
             expect(address.toLowerCase()).to.equal(DummyCommandInstance.address.toLowerCase())
         })
         it('should return 0x0 for triggerType 1', async () => {
             const address = await AutomationBotInstance.getCommandAddress(1)
-            expect(address.toLowerCase()).to.equal('0x0000000000000000000000000000000000000000'.toLowerCase())
+            expect(address.toLowerCase()).to.equal(constants.AddressZero)
         })
     })
 
@@ -84,7 +85,7 @@ describe('AutomationBot', async () => {
             const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
-        it('should emit TriggerAdded if called by user being an owner of Proxy', async () => {
+        it('should emit TriggerAdded if called by user that is the owner of the proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -103,7 +104,7 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
-        it('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
+        it('should revert if removedTriggerId is incorrect if called by user that is the owner of the proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -113,7 +114,7 @@ describe('AutomationBot', async () => {
                 '0x',
             ])
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.revertedWith('')
+            await expect(tx).to.be.reverted
         })
     })
 
@@ -363,7 +364,6 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
-                0,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -383,7 +383,6 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
-                0,
             )
 
             await expect(tx).to.be.reverted
@@ -398,7 +397,6 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
-                0,
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
         })
@@ -411,7 +409,6 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
-                0,
                 0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -426,7 +423,6 @@ describe('AutomationBot', async () => {
                 DummyCommandInstance.address,
                 triggerId,
                 0,
-                0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
@@ -439,7 +435,6 @@ describe('AutomationBot', async () => {
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
-                0,
                 0,
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
