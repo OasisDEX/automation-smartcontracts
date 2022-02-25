@@ -62,6 +62,7 @@ describe('AutomationExecutor', async () => {
             TestERC20Instance.transfer(TestExchangeInstance.address, testTokenTotalSupply.div(2)),
             TestDAIInstance.transfer(AutomationExecutorInstance.address, daiTotalSupply.div(2)),
             TestERC20Instance.transfer(AutomationExecutorInstance.address, testTokenTotalSupply.div(2)),
+            owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) }),
         ])
 
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
@@ -205,7 +206,7 @@ describe('AutomationExecutor', async () => {
             const blockReward = EthersBN.from(10).pow(18).mul(2)
 
             await owner.sendTransaction({
-                to: AutomationBotInstance.address,
+                to: AutomationExecutorInstance.address,
                 value: minerBribe,
             })
             await DummyCommandInstance.changeFlags(true, true, false)
@@ -364,7 +365,15 @@ describe('AutomationExecutor', async () => {
             expect(executorBalanceBefore.sub(amount).toString()).to.eq(executorBalanceAfter.toString())
         })
 
-        it('should revert on invalid amount and balance to remain unchanged', async () => {
+        it('should successfully withdraw ETH amount and balance should remain unchanged', async () => {
+            const executorBalance = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.withdraw(constants.AddressZero, executorBalance.add(1))
+            await expect(tx).to.be.revertedWith('executor/invalid-amount')
+            const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            expect(executorBalance.toString()).to.eq(executorBalanceAfter.toString())
+        })
+
+        it('should revert on invalid token amount and balance should remain unchanged', async () => {
             const executorBalance = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
             const tx = AutomationExecutorInstance.withdraw(TestERC20Instance.address, executorBalance.add(1))
             await expect(tx).to.be.revertedWith('ERC20: transfer amount exceeds balance')
@@ -375,6 +384,9 @@ describe('AutomationExecutor', async () => {
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
             const tx = AutomationExecutorInstance.connect(notOwner).withdraw(TestERC20Instance.address, 100)
             await expect(tx).to.be.revertedWith('executor/only-owner')
+
+            const tx2 = AutomationExecutorInstance.connect(notOwner).withdraw(constants.AddressZero, 100)
+            await expect(tx2).to.be.revertedWith('executor/only-owner')
         })
     })
 })

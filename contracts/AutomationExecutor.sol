@@ -62,15 +62,11 @@ contract AutomationExecutor {
         uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
-        bot.execute(
-            executionData,
-            cdpId,
-            triggerData,
-            commandAddress,
-            triggerId,
-            daiCoverage,
-            minerBribe
-        );
+        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
+
+        if (minerBribe > 0) {
+            block.coinbase.transfer(minerBribe);
+        }
     }
 
     function swap(
@@ -110,7 +106,15 @@ contract AutomationExecutor {
         }
     }
 
-    function withdraw(IERC20 asset, uint256 amount) external onlyOwner {
-        require(asset.transfer(owner, amount), "executor/withdrawal-failed");
+    function withdraw(address asset, uint256 amount) external onlyOwner {
+        if (asset == address(0)) {
+            require(amount <= address(this).balance, "executor/invalid-amount");
+            (bool sent, ) = payable(owner).call{ value: amount }("");
+            require(sent, "executor/withdrawal-failed");
+        } else {
+            require(IERC20(asset).transfer(owner, amount), "executor/withdrawal-failed");
+        }
     }
+
+    receive() external payable {}
 }
