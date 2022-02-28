@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.1;
+pragma solidity ^0.8.0;
 
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
