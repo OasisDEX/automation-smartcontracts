@@ -13,11 +13,11 @@ import "./external/DSMath.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdView is DSMath {
-    ManagerLike public manager;
-    VatLike public vat;
-    SpotterLike public spotter;
-    OsmMomLike public osmMom;
-    address public owner;
+    ManagerLike public immutable manager;
+    VatLike public immutable vat;
+    SpotterLike public immutable spotter;
+    OsmMomLike public immutable osmMom;
+    address public immutable owner;
     mapping(address => bool) public whitelisted;
 
     constructor(

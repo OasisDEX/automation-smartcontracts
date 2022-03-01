@@ -62,6 +62,7 @@ contract AutomationExecutor {
         uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
+        //TODO: add transfering ETH Back to the caller to cover gas costs
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 
         if (minerBribe > 0) {
