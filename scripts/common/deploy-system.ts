@@ -133,8 +133,7 @@ export async function deploySystem({
 
     await addServiceRegistryEntry(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_VIEW),
-        '0x0f1ae882272032d494926d5d983e4fbe253cb544',
-        //McdViewInstance.address,
+        McdViewInstance.address,
     )
 
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
