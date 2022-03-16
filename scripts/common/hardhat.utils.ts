@@ -30,6 +30,16 @@ export class HardhatUtils {
         await weth.deposit({ value: amount })
     }
 
+    public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {
+        console.log(` 🛰  Replacing Tx nonce=${nonce}`)
+        const tx = await signer.sendTransaction({
+            value: 0,
+            gasPrice: gasPriceInGwei * 1000_000_000,
+            to: await signer.getAddress(),
+        })
+        console.log(` 🛰  Tx send ${tx.hash}`)
+    }
+
     public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
         if (!silent) {
             console.log(` 🛰  Deploying: ${contractName}`)

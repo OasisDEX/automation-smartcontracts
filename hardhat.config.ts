@@ -61,7 +61,7 @@ const config: HardhatUserConfig = {
             },
             hardfork: 'london',
             gas: 'auto',
-            initialBaseFeePerGas: 1000000000,
+            initialBaseFeePerGas: 2000000000,
             allowUnlimitedContractSize: true,
         },
         ...Object.fromEntries(
@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
                     'goerli',
                     process.env.ALCHEMY_NODE_GOERLI,
                     process.env.PRIVATE_KEY_GOERLI!,
-                    1000000000,
+                    5000000000,
                 ),
             ].filter(Boolean) as [string, HardhatNetworkConfig][],
         ),

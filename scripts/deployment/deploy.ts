@@ -10,6 +10,7 @@ import { deploySystem } from '../common/deploy-system'
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
     const signer = hre.ethers.provider.getSigner(0)
+    //await utils.cancelTx(80, 10, signer);
     const network = hre.network.name || ''
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
