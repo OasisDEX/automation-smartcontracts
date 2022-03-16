@@ -31,7 +31,7 @@ export class HardhatUtils {
     }
 
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {
-        console.log(` 🛰  Replacing Tx nonce=${nonce}`)
+        console.log(`🛰  Replacing Tx with nonce ${nonce}`)
         const tx = await signer.sendTransaction({
             value: 0,
             gasPrice: gasPriceInGwei * 1000_000_000,
