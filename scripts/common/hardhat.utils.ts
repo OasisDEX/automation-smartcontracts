@@ -37,7 +37,7 @@ export class HardhatUtils {
             gasPrice: gasPriceInGwei * 1000_000_000,
             to: await signer.getAddress(),
         })
-        console.log(` 🛰  Tx send ${tx.hash}`)
+        console.log(` 🛰  Tx sent ${tx.hash}`)
     }
 
     public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
