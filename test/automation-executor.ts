@@ -8,6 +8,7 @@ import {
     DummyCommand,
     ServiceRegistry,
     TestExchange,
+    TestWETH,
 } from '../typechain'
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
@@ -19,6 +20,7 @@ const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 describe('AutomationExecutor', async () => {
     const testTokenTotalSupply = EthersBN.from(10).pow(18)
     const daiTotalSupply = EthersBN.from(10).pow(18)
+    const wethAmount = EthersBN.from(10).pow(18).mul(10)
     const hardhatUtils = new HardhatUtils(hre)
 
     let ServiceRegistryInstance: ServiceRegistry
@@ -27,6 +29,7 @@ describe('AutomationExecutor', async () => {
     let DummyCommandInstance: DummyCommand
     let TestERC20Instance: TestERC20
     let TestDAIInstance: TestERC20
+    let TestWETHInstance: TestWETH
     let TestExchangeInstance: TestExchange
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
@@ -43,13 +46,21 @@ describe('AutomationExecutor', async () => {
         TestERC20Instance = await testERC20Factory.deploy('Test Token', 'TST', testTokenTotalSupply)
         TestDAIInstance = await testERC20Factory.deploy('Dai', 'DAI', daiTotalSupply)
 
+        const testWETHFactory = await hre.ethers.getContractFactory('TestWETH', owner)
+        TestWETHInstance = await testWETHFactory.deploy()
+        await TestWETHInstance.deposit({ value: wethAmount })
+
         const testExchangeFactory = await hre.ethers.getContractFactory('TestExchange', owner)
         TestExchangeInstance = await testExchangeFactory.deploy(TestDAIInstance.address)
 
         const system = await deploySystem({
             utils: hardhatUtils,
             addCommands: false,
-            addressOverrides: { EXCHANGE: TestExchangeInstance.address, DAI: TestDAIInstance.address },
+            addressOverrides: {
+                EXCHANGE: TestExchangeInstance.address,
+                DAI: TestDAIInstance.address,
+                WETH: TestWETHInstance.address,
+            },
         })
 
         ServiceRegistryInstance = system.serviceRegistry
@@ -393,6 +404,36 @@ describe('AutomationExecutor', async () => {
 
             const tx2 = AutomationExecutorInstance.connect(notOwner).withdraw(constants.AddressZero, 100)
             await expect(tx2).to.be.revertedWith('executor/only-owner')
+        })
+    })
+
+    describe('unwrapWETH', () => {
+        before(async () => {
+            await TestWETHInstance.transfer(AutomationExecutorInstance.address, wethAmount)
+        })
+
+        beforeEach(async () => {
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
+
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
+
+        it('should successfully unwrap WETH to ETH', async () => {
+            const ethBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const wethBalanceBefore = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount)
+            await expect(tx).not.to.be.reverted
+            const ethBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const wethBalanceAfter = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
+            expect(ethBalanceBefore.add(wethAmount).toString()).to.eq(ethBalanceAfter.toString())
+            expect(wethBalanceBefore.sub(wethAmount).toString()).to.eq(wethBalanceAfter.toString())
+        })
+
+        it('should revert on invalid amount', async () => {
+            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount.add(1))
+            await expect(tx).to.be.reverted
         })
     })
 })
