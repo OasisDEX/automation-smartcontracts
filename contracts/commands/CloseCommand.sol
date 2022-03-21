@@ -47,13 +47,8 @@ contract CloseCommand is ICommand {
             return false;
         }
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
-        McdView viewerContract = McdView(viewAddress);
-        uint256 collRatio = viewerContract.getRatio(cdpdId, true);
-        if (collRatio > slLevel * (10**16)) {
-            return false;
-        }
-        //TODO: currently it is current not NextPrice
-        return true;
+        uint256 collRatio = McdView(viewAddress).getRatio(cdpdId, true);
+        return collRatio <= slLevel * 10**16;
     }
 
     function execute(
