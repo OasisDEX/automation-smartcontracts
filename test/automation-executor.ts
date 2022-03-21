@@ -66,7 +66,13 @@ describe('AutomationExecutor', async () => {
         ])
 
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
-        DummyCommandInstance = await dummyCommandFactory.deploy(ServiceRegistryInstance.address, true, true, false)
+        DummyCommandInstance = await dummyCommandFactory.deploy(
+            ServiceRegistryInstance.address,
+            true,
+            true,
+            false,
+            true,
+        )
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
         let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)

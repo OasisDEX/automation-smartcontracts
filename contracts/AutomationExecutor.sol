@@ -40,10 +40,12 @@ contract AutomationExecutor {
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "executor/invalid-new-owner");
         owner = newOwner;
     }
 
     function setExchange(address newExchange) external onlyOwner {
+        require(newExchange != address(0), "executor/invalid-new-exchange");
         exchange = newExchange;
     }
 

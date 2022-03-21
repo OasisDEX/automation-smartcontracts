@@ -116,8 +116,12 @@ contract AutomationBot {
         bytes memory triggerData
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-
         address commandAddress = getCommandAddress(triggerType);
+
+        require(
+            ICommand(commandAddress).isTriggerDataValid(cdpId, triggerData),
+            "bot/invalid-trigger-data"
+        );
 
         validatePermissions(cdpId, msg.sender, manager);
 

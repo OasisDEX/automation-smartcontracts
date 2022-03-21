@@ -30,24 +30,17 @@ contract CloseCommand is ICommand {
         override
         returns (bool)
     {
-        (uint256 cdpdId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
-        if (slLevel <= 100) {
-            //completely invalid value
-            return false;
-        }
-        if (_cdpId != cdpdId) {
-            //inconsistence of trigger data and declared cdp
-            return false;
-        }
+        (, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
+
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
             CDP_MANAGER_KEY
         );
         ManagerLike manager = ManagerLike(managerAddress);
-        if (manager.owns(cdpdId) == address(0)) {
+        if (manager.owns(_cdpId) == address(0)) {
             return false;
         }
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
-        uint256 collRatio = McdView(viewAddress).getRatio(cdpdId, true);
+        uint256 collRatio = McdView(viewAddress).getRatio(_cdpId, true);
         return collRatio <= slLevel * 10**16;
     }
 
@@ -76,5 +69,18 @@ contract CloseCommand is ICommand {
         (bool status, ) = mpaAddress.delegatecall(executionData);
 
         require(status, "execution failed");
+    }
+
+    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
+        external
+        pure
+        override
+        returns (bool)
+    {
+        (uint256 cdpId, uint16 triggerType, uint256 slLevel) = abi.decode(
+            triggerData,
+            (uint256, uint16, uint256)
+        );
+        return slLevel > 100 && _cdpId == cdpId && (triggerType == 1 || triggerType == 2);
     }
 }

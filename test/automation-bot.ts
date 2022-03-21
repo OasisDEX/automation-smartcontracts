@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { utils } from 'ethers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -27,6 +28,7 @@ describe('AutomationBot', async () => {
             true,
             true,
             false,
+            true,
         )) as DummyCommand
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
@@ -64,31 +66,39 @@ describe('AutomationBot', async () => {
     })
 
     describe('addTrigger', async () => {
+        const triggerType = 2
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256'],
+            [testCdpId, triggerType, 101],
+        )
+
         it('should fail if called from address not being an owner', async () => {
-            const tx = AutomationBotInstance.addTrigger(1, 1, 0, '0x')
+            const tx = AutomationBotInstance.addTrigger(1, triggerType, 0, triggerData)
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
+
         it('should pass if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 0,
-                '0x',
+                triggerData,
             ])
             await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
+
         it('should emit TriggerAdded if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 0,
-                '0x',
+                triggerData,
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -100,14 +110,15 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
+
         it('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 7,
-                '0x',
+                triggerData,
             ])
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             await expect(tx).to.be.revertedWith('')
