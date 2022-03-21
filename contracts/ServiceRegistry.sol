@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 contract ServiceRegistry {
     mapping(bytes32 => uint256) public lastExecuted;
-    mapping(address => bool) private trustedAddresses;
     mapping(bytes32 => address) private namedService;
     address public owner;
 
@@ -62,23 +61,6 @@ contract ServiceRegistry {
         delayedExecution
     {
         requiredDelay = newDelay;
-    }
-
-    function addTrustedAddress(address trustedAddress)
-        external
-        onlyOwner
-        validateInput(36)
-        delayedExecution
-    {
-        trustedAddresses[trustedAddress] = true;
-    }
-
-    function removeTrustedAddress(address trustedAddress) external onlyOwner validateInput(36) {
-        trustedAddresses[trustedAddress] = false;
-    }
-
-    function isTrusted(address testedAddress) external view returns (bool) {
-        return trustedAddresses[testedAddress];
     }
 
     function getServiceNameHash(string memory name) external pure returns (bytes32) {

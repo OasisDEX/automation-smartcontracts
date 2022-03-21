@@ -37,9 +37,6 @@ describe('AutomationBot', async () => {
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
-        const [owner] = await hre.ethers.getSigners()
-        await ServiceRegistryInstance.addTrustedAddress(owner.address)
-
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManagerInstance.owns(testCdpId)
