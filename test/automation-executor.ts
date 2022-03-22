@@ -218,6 +218,48 @@ describe('AutomationExecutor', async () => {
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
 
+        it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+            await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
+
+            const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceBefore = await hre.ethers.provider.getBalance(await owner.getAddress())
+
+            const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+            )
+
+            const tx = AutomationExecutorInstance.connect(owner).execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+            )
+
+            await expect(tx).not.to.be.reverted
+
+            const receipt = await (await tx).wait()
+            const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+            const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
+            console.log(txCost)
+            console.log(receipt.gasUsed.toString())
+            console.log(receipt.effectiveGasPrice.toString())
+            console.log(executorBalanceBefore.toString())
+            console.log(executorBalanceAfter.toString())
+            console.log(ownerBalanceBefore.toString())
+            console.log(ownerBalanceAfter.toString())
+        })
+
         it('should pay miner bribe to the coinbase address', async () => {
             const minerBribe = EthersBN.from(10).pow(16) // 0.01 ETH
             const blockReward = EthersBN.from(10).pow(18).mul(2)
