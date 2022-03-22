@@ -41,7 +41,7 @@ contract ServiceRegistry {
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay < MAX_DELAY, "registry/invalid-delay");
+        require(initialDelay <= MAX_DELAY, "registry/invalid-delay");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
@@ -61,7 +61,7 @@ contract ServiceRegistry {
         validateInput(36)
         delayedExecution
     {
-        require(newDelay < MAX_DELAY, "registry/invalid-delay");
+        require(newDelay <= MAX_DELAY, "registry/invalid-delay");
         requiredDelay = newDelay;
     }
 
