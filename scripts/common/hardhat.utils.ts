@@ -25,11 +25,6 @@ export class HardhatUtils {
         return await this.hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
     }
 
-    public async depositToWeth(amount: number) {
-        const weth = await this.hre.ethers.getContractAt('IWETH', this.addresses.WETH)
-        await weth.deposit({ value: amount })
-    }
-
     public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
         if (!silent) {
             console.log(` 🛰  Deploying: ${contractName}`)

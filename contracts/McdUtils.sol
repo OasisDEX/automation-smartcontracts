@@ -34,12 +34,6 @@ contract McdUtils is DSMath {
         require(y >= 0, "int256-overflow");
     }
 
-    function convertTo18(address gemJoin, uint256 amt) internal view returns (uint256 wad) {
-        // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
-        // Adapters will automatically handle the difference of precision
-        wad = mul(amt, 10**(18 - IJoin(gemJoin).dec()));
-    }
-
     function _getDrawDart(
         address vat,
         address urn,
