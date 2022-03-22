@@ -84,7 +84,7 @@ contract AutomationExecutor {
         uint256 etherUsed = tx.gasprice *
             (initialGasAvailable - finalGasAvailable + POST_CHECK_GAS_COST);
         console.log("gasprice", tx.gasprice);
-        console.log("etherUsed", etherUsed);
+        console.log("etherUsed", etherUsed); //it calculates slightly too much, probably due to end of tx reimbursement.
         console.log("initialGasAvailable", initialGasAvailable);
         console.log("finalGasAvailable", finalGasAvailable);
         if (address(this).balance > etherUsed) {
