@@ -74,7 +74,7 @@ contract McdView is DSMath {
     /// @param vaultId Id of the Vault
     function getRatio(uint256 vaultId, bool useNextPrice) public view returns (uint256) {
         bytes32 ilk = manager.ilks(vaultId);
-        uint256 price = (useNextPrice ? getNextPrice(ilk) : getPrice(ilk));
+        uint256 price = useNextPrice ? getNextPrice(ilk) : getPrice(ilk);
         (uint256 collateral, uint256 debt) = getVaultInfo(vaultId);
         if (debt == 0) return 0;
         return rdiv(wmul(collateral, price), debt * 10**9);
