@@ -25,11 +25,6 @@ export class HardhatUtils {
         return await this.hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
     }
 
-    public async depositToWeth(amount: number) {
-        const weth = await this.hre.ethers.getContractAt('IWETH', this.addresses.WETH)
-        await weth.deposit({ value: amount })
-    }
-
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {
         console.log(`🛰  Replacing Tx with nonce ${nonce}`)
         const tx = await signer.sendTransaction({
