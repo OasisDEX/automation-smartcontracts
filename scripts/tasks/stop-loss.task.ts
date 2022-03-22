@@ -91,8 +91,11 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
-        const ratio = await mcdView.getRatio(vaultId.toString(), true)
+        console.log(mcdView.getRatio)
+        const ratio = await mcdView.getRatio(vaultId.toString(), false, { gasLimit: 5000000 })
+        console.log('1')
         const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
+
         console.log(`ratio: ${collRatioPct.toString()}%`)
 
         const cdpData = {
@@ -142,10 +145,14 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             hardhatUtils.addresses.AUTOMATION_EXECUTOR,
             signer,
         )
+        console.log('test')
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0, 0)
+            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0, 0, {
+                gasLimit: 5000000,
+            })
         const receipt = await tx.wait()
+        console.log('test2')
 
         const triggerExecutedEvent = getEvents(
             receipt,
