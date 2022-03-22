@@ -14,6 +14,8 @@ contract AutomationExecutor {
     IERC20 public immutable dai;
     IWETH public immutable weth;
 
+    uint256 public constant POST_CHECK_GAS_COST = 22300;
+
     address public exchange;
     address public owner;
 
@@ -71,11 +73,19 @@ contract AutomationExecutor {
         uint256 daiCoverage,
         uint256 minerBribe
     ) external auth(msg.sender) {
-        //TODO: add transfering ETH Back to the caller to cover gas costs
+        uint256 initialGasAvailable = gasleft();
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);
+        }
+        uint256 finalGasAvailable = gasleft();
+        uint256 etherUsed = tx.gasprice *
+            (initialGasAvailable - finalGasAvailable + POST_CHECK_GAS_COST);
+        if (address(this).balance > etherUsed) {
+            payable(msg.sender).transfer(etherUsed);
+        } else {
+            payable(msg.sender).transfer(address(this).balance);
         }
     }
 

@@ -227,7 +227,8 @@ describe('AutomationExecutor', async () => {
                 value: minerBribe,
             })
             await DummyCommandInstance.changeFlags(true, true, false)
-            const tx = AutomationExecutorInstance.execute(
+
+            const estimation = await AutomationExecutorInstance.estimateGas.execute(
                 '0x',
                 testCdpId,
                 triggerData,
@@ -236,6 +237,18 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
             )
+
+            const tx = AutomationExecutorInstance.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                minerBribe,
+                { gasLimit: estimation.toNumber() + 50000 },
+            )
+
             await expect(tx).not.to.be.reverted
 
             const receipt = await (await tx).wait()
