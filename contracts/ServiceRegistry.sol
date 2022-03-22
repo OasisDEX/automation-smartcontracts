@@ -40,7 +40,7 @@ contract ServiceRegistry {
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay < type(uint256).max, "registry/risk-of-overflow");
+        require(initialDelay < 3 days, "registry/invalid-delay");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
