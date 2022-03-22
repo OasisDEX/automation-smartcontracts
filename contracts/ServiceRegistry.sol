@@ -2,11 +2,12 @@
 pragma solidity ^0.8.0;
 
 contract ServiceRegistry {
+    uint256 public constant MAX_DELAY = 3 days;
+
     mapping(bytes32 => uint256) public lastExecuted;
     mapping(bytes32 => address) private namedService;
     address public owner;
-
-    uint256 public requiredDelay = 1800; // big enough that any power of miner over timestamp does not matter
+    uint256 public requiredDelay;
 
     modifier validateInput(uint256 len) {
         require(msg.data.length == len, "registry/illegal-padding");
@@ -40,7 +41,7 @@ contract ServiceRegistry {
     }
 
     constructor(uint256 initialDelay) {
-        require(initialDelay < 3 days, "registry/invalid-delay");
+        require(initialDelay < MAX_DELAY, "registry/invalid-delay");
         requiredDelay = initialDelay;
         owner = msg.sender;
     }
@@ -60,6 +61,7 @@ contract ServiceRegistry {
         validateInput(36)
         delayedExecution
     {
+        require(newDelay < MAX_DELAY, "registry/invalid-delay");
         requiredDelay = newDelay;
     }
 
