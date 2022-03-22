@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 contract ServiceRegistry {
-    uint256 public constant MAX_DELAY = 3 days;
+    uint256 public constant MAX_DELAY = 30 days;
 
     mapping(bytes32 => uint256) public lastExecuted;
     mapping(bytes32 => address) private namedService;
