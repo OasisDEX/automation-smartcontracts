@@ -205,12 +205,32 @@ contract AutomationBot {
 
     //works correctly in context of dsProxy
     function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external {
+        address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 0);
+        emit ApprovalRemoved(cdpId, approvedEntity);
+    }
+
+    //works correctly in context of dsProxy
+    function grantApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external {
+        address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 1);
+        emit ApprovalGranted(cdpId, approvedEntity);
+    }
+
+    //works correctly in context of dsProxy
+    function changeApprovalStatus(
+        ServiceRegistry _serviceRegistry,
+        uint256 cdpId,
+        uint256 status
+    ) private returns (address) {
         address managerAddress = _serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        require(
+            isCdpAllowed(cdpId, automationBot, manager) != (status == 1),
+            "bot/approval-unchanged"
+        );
         validatePermissions(cdpId, address(this), manager);
-        manager.cdpAllow(cdpId, automationBot, 0);
-        emit ApprovalRemoved(cdpId, automationBot);
+        manager.cdpAllow(cdpId, automationBot, status);
+        return automationBot;
     }
 
     function drawDaiFromVault(
