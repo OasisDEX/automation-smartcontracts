@@ -9,4 +9,5 @@ typechain
 cache
 artifacts
 dist/
+test/workspace.code-workspace
 tenderly.yaml
