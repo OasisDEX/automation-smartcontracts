@@ -75,12 +75,13 @@ export async function deploySystem({
     const automationExecutorDeployment = await automationExecutorFactory.deploy(
         AutomationBotInstance.address,
         addresses.DAI,
+        addresses.WETH,
         addresses.EXCHANGE,
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
     if (logDebug) console.log('Deploying McdView.....')
-    const signer = await ethers.provider.getSigner(0)
+    const signer = ethers.provider.getSigner(0)
     const signerAddress = await signer.getAddress()
 
     const mcdViewDeployment = await mcdViewFactory.deploy(

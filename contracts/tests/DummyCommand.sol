@@ -10,27 +10,38 @@ contract DummyCommand is ICommand {
     bool public initialCheckReturn;
     bool public finalCheckReturn;
     bool public revertsInExecute;
+    bool public validTriggerData;
 
     constructor(
         address _serviceRegistry,
         bool _initialCheckReturn,
         bool _finalCheckReturn,
-        bool _revertsInExecute
+        bool _revertsInExecute,
+        bool _validTriggerData
     ) {
         serviceRegistry = _serviceRegistry;
         initialCheckReturn = _initialCheckReturn;
         finalCheckReturn = _finalCheckReturn;
         revertsInExecute = _revertsInExecute;
+        validTriggerData = _validTriggerData;
+    }
+
+    function changeValidTriggerDataFlag(bool _validTriggerData) external {
+        validTriggerData = _validTriggerData;
     }
 
     function changeFlags(
         bool _initialCheckReturn,
         bool _finalCheckReturn,
         bool _revertsInExecute
-    ) public {
+    ) external {
         initialCheckReturn = _initialCheckReturn;
         finalCheckReturn = _finalCheckReturn;
         revertsInExecute = _revertsInExecute;
+    }
+
+    function isTriggerDataValid(uint256, bytes memory) external view override returns (bool) {
+        return validTriggerData;
     }
 
     function isExecutionCorrect(

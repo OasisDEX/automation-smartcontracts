@@ -2,12 +2,17 @@
 pragma solidity ^0.8.0;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 
 contract AutomationExecutor {
+    using SafeERC20 for IERC20;
+
     BotLike public immutable bot;
     IERC20 public immutable dai;
+    IWETH public immutable weth;
 
     address public exchange;
     address public owner;
@@ -17,9 +22,11 @@ contract AutomationExecutor {
     constructor(
         BotLike _bot,
         IERC20 _dai,
+        IWETH _weth,
         address _exchange
     ) {
         bot = _bot;
+        weth = _weth;
         dai = _dai;
         exchange = _exchange;
         owner = msg.sender;
@@ -37,10 +44,12 @@ contract AutomationExecutor {
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "executor/invalid-new-owner");
         owner = newOwner;
     }
 
     function setExchange(address newExchange) external onlyOwner {
+        require(newExchange != address(0), "executor/invalid-new-exchange");
         exchange = newExchange;
     }
 
@@ -115,6 +124,10 @@ contract AutomationExecutor {
         } else {
             require(IERC20(asset).transfer(owner, amount), "executor/withdrawal-failed");
         }
+    }
+
+    function unwrapWETH(uint256 amount) external onlyOwner {
+        weth.withdraw(amount);
     }
 
     receive() external payable {}

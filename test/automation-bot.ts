@@ -3,6 +3,7 @@ import { expect } from 'chai'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { utils } from 'ethers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -27,6 +28,7 @@ describe('AutomationBot', async () => {
             true,
             true,
             false,
+            true,
         )) as DummyCommand
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
@@ -36,9 +38,6 @@ describe('AutomationBot', async () => {
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
-
-        const [owner] = await hre.ethers.getSigners()
-        await ServiceRegistryInstance.addTrustedAddress(owner.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -67,31 +66,39 @@ describe('AutomationBot', async () => {
     })
 
     describe('addTrigger', async () => {
+        const triggerType = 2
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256'],
+            [testCdpId, triggerType, 101],
+        )
+
         it('should fail if called from address not being an owner', async () => {
-            const tx = AutomationBotInstance.addTrigger(1, 1, 0, '0x')
+            const tx = AutomationBotInstance.addTrigger(1, triggerType, 0, triggerData)
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
+
         it('should pass if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 0,
-                '0x',
+                triggerData,
             ])
             await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
+
         it('should emit TriggerAdded if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 0,
-                '0x',
+                triggerData,
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -103,14 +110,15 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
         })
+
         it('should revert if removedTriggerId is incorrect if called by user being an owner of Proxy', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                1,
+                triggerType,
                 7,
-                '0x',
+                triggerData,
             ])
             const tx = usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             await expect(tx).to.be.revertedWith('')
@@ -145,6 +153,68 @@ describe('AutomationBot', async () => {
                 hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(true, 'approval do not exist for AutomationBot')
+        })
+    })
+
+    describe('grantApproval', async () => {
+        beforeEach(async () => {
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+        })
+        it('allows to add approval to cdp which did not have it', async () => {
+            let status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false)
+
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+
+            status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(true)
+        })
+
+        it('throws if called not by proxy', async () => {
+            const tx = AutomationBotInstance.grantApproval(ServiceRegistryInstance.address, testCdpId)
+            await expect(tx).to.be.revertedWith('bot/no-permissions')
+        })
+
+        it('emits ApprovalGranted', async () => {
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+            const txRes = await tx.wait()
+
+            const filteredEvents = getEvents(
+                txRes,
+                'event ApprovalGranted(uint256 indexed cdpId, address approvedEntity)',
+                'ApprovalGranted',
+            )
+
+            expect(filteredEvents.length).to.equal(1)
+            expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
         })
     })
 
