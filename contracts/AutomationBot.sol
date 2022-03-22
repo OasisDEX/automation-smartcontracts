@@ -224,6 +224,10 @@ contract AutomationBot {
         address managerAddress = _serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
         address automationBot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        require(
+            isCdpAllowed(cdpId, automationBot, manager) != (status == 1),
+            "bot/approval-unchanged"
+        );
         validatePermissions(cdpId, address(this), manager);
         manager.cdpAllow(cdpId, automationBot, status);
         return automationBot;
