@@ -156,6 +156,68 @@ describe('AutomationBot', async () => {
         })
     })
 
+    describe('grantApproval', async () => {
+        beforeEach(async () => {
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+        })
+        it('allows to add approval to cdp which did not have it', async () => {
+            let status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false)
+
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+
+            status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(true)
+        })
+
+        it('throws if called not by proxy', async () => {
+            const tx = AutomationBotInstance.grantApproval(ServiceRegistryInstance.address, testCdpId)
+            await expect(tx).to.be.revertedWith('bot/no-permissions')
+        })
+
+        it('emits ApprovalGranted', async () => {
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
+                ServiceRegistryInstance.address,
+                testCdpId,
+            ])
+
+            const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+            const txRes = await tx.wait()
+
+            const filteredEvents = getEvents(
+                txRes,
+                'event ApprovalGranted(uint256 indexed cdpId, address approvedEntity)',
+                'ApprovalGranted',
+            )
+
+            expect(filteredEvents.length).to.equal(1)
+            expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
+        })
+    })
+
     describe('removeApproval', async () => {
         beforeEach(async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
