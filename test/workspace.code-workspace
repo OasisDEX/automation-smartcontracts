@@ -1,0 +1,22 @@
+{
+    "folders": [
+        {
+            "path": ".."
+        },
+        {
+            "path": "../../oasis-borrow"
+        },
+        {
+            "path": "../../multiply-proxy-actions"
+        },
+        {
+            "path": "../../scaffold-eth"
+        },
+        {
+            "path": "../../staking_contracts"
+        },
+        {
+            "path": "../../automation-workers"
+        }
+    ]
+}
