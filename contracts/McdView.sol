@@ -77,6 +77,6 @@ contract McdView is DSMath {
         uint256 price = useNextPrice ? getNextPrice(ilk) : getPrice(ilk);
         (uint256 collateral, uint256 debt) = getVaultInfo(vaultId);
         if (debt == 0) return 0;
-        return rdiv(wmul(collateral, price), debt * 10**9);
+        return wdiv(wmul(collateral, price), debt);
     }
 }
