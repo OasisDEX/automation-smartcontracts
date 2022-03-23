@@ -6,7 +6,6 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
-import { console } from "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
@@ -80,10 +79,9 @@ contract AutomationExecutor {
         }
         uint256 finalGasAvailable = gasleft();
         uint256 etherUsed = tx.gasprice * (initialGasAvailable - finalGasAvailable);
-        console.log("gasprice", tx.gasprice);
-        console.log("etherUsed", etherUsed); //it calculates slightly too much, probably due to end of tx reimbursement.
-        console.log("initialGasAvailable", initialGasAvailable);
-        console.log("finalGasAvailable", finalGasAvailable);
+        
+        //it calculates slightly too much, probably due to end of tx reimbursement.
+        
         if (address(this).balance > etherUsed) {
             payable(msg.sender).transfer(etherUsed);
         } else {
