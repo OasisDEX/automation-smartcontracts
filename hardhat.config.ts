@@ -61,8 +61,8 @@ const config: HardhatUserConfig = {
             },
             hardfork: 'london',
             gas: 'auto',
-            initialBaseFeePerGas: 2000000000,
-            allowUnlimitedContractSize: true,
+            initialBaseFeePerGas: 1000000000,
+            allowUnlimitedContractSize: false,
         },
         ...Object.fromEntries(
             [
