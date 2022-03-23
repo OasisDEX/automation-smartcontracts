@@ -15,8 +15,6 @@ contract AutomationExecutor {
     IERC20 public immutable dai;
     IWETH public immutable weth;
 
-    uint256 public constant POST_CHECK_GAS_COST = 0;
-
     address public exchange;
     address public owner;
 
@@ -81,8 +79,7 @@ contract AutomationExecutor {
             block.coinbase.transfer(minerBribe);
         }
         uint256 finalGasAvailable = gasleft();
-        uint256 etherUsed = tx.gasprice *
-            (initialGasAvailable - finalGasAvailable + POST_CHECK_GAS_COST);
+        uint256 etherUsed = tx.gasprice * (initialGasAvailable - finalGasAvailable);
         console.log("gasprice", tx.gasprice);
         console.log("etherUsed", etherUsed); //it calculates slightly too much, probably due to end of tx reimbursement.
         console.log("initialGasAvailable", initialGasAvailable);
