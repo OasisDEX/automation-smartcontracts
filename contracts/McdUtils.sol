@@ -67,7 +67,9 @@ contract McdUtils is DSMath {
         manager.frob(cdpId, 0, _getDrawDart(vat, urn, manager.ilks(cdpId), borrowedDai));
         manager.move(cdpId, address(this), mul(borrowedDai, RAY));
 
-        IVat(vat).hope(daiJoin);
+        if (IVat(vat).can(address(this), daiJoin) == 0) {
+            IVat(vat).hope(daiJoin);
+        }
 
         IJoin(daiJoin).exit(sendTo, borrowedDai);
     }
