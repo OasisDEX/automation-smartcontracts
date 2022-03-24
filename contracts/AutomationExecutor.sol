@@ -70,20 +70,18 @@ contract AutomationExecutor {
         address commandAddress,
         uint256 triggerId,
         uint256 daiCoverage,
-        uint256 minerBribe
+        uint256 minerBribe,
+        int256 gasRefund
     ) external auth(msg.sender) {
         uint256 initialGasAvailable = gasleft();
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
-        int256 refund = ICommand(commandAddress).expectedRefund(triggerData);
 
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);
         }
         uint256 finalGasAvailable = gasleft();
         uint256 etherUsed = tx.gasprice *
-            uint256(int256(initialGasAvailable - finalGasAvailable) - refund);
-
-        //it calculates slightly too much, probably due to end of tx reimbursement.
+            uint256(int256(initialGasAvailable - finalGasAvailable) - gasRefund);
 
         if (address(this).balance > etherUsed) {
             payable(msg.sender).transfer(etherUsed);

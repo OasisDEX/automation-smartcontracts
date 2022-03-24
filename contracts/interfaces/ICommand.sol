@@ -19,6 +19,4 @@ interface ICommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external;
-
-    function expectedRefund(bytes memory triggerData) external view returns (int256);
 }

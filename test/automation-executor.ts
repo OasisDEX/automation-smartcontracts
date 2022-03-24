@@ -200,6 +200,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -214,6 +215,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
@@ -232,6 +234,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
@@ -242,6 +245,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
             )
 
@@ -279,6 +283,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 minerBribe,
+                15000,
             )
 
             const tx = AutomationExecutorInstance.execute(
@@ -289,6 +294,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 minerBribe,
+                15000,
                 { gasLimit: estimation.toNumber() + 50000 },
             )
 

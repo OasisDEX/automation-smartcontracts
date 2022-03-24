@@ -202,6 +202,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -259,6 +260,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
+                        178000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -290,6 +292,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -300,6 +303,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -333,6 +337,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -409,6 +414,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -465,6 +471,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -492,6 +499,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -502,6 +510,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -535,6 +544,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
