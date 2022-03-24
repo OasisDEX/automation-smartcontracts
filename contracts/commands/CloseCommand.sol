@@ -25,7 +25,7 @@ contract CloseCommand is ICommand {
     }
 
     function expectedRefund(bytes memory) external pure returns (int256) {
-        return 15000;
+        return 0;
     }
 
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)

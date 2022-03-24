@@ -272,6 +272,61 @@ describe('CloseCommand', async () => {
                     )
                 })
 
+                it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                    await signer.sendTransaction({
+                        to: AutomationExecutorInstance.address,
+                        value: EthersBN.from(10).pow(18),
+                    })
+                    const executorBalanceBefore = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceBefore = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('1')
+                    const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                    )
+                    console.log('2')
+
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+                    )
+                    console.log('3')
+                    await tx
+                    await expect(tx).not.to.be.reverted
+
+                    const receipt = await (await tx).wait()
+                    const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+                    const executorBalanceAfter = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+                    expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                        10,
+                    ) //account for some refund calculation inacurencies
+                    expect(
+                        ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
+                })
+
                 it('it should wipe all debt and collateral', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,

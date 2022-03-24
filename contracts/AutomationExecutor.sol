@@ -7,6 +7,7 @@ import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
+import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
@@ -76,10 +77,20 @@ contract AutomationExecutor {
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
         int256 refund = ICommand(commandAddress).expectedRefund(triggerData);
 
+        console.log("Refund");
+        console.logInt(refund);
+
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);
         }
         uint256 finalGasAvailable = gasleft();
+        console.log("finalGasAvailable", finalGasAvailable);
+        console.log("initialGasAvailable", initialGasAvailable);
+        console.log(
+            "gas to pay for",
+            uint256(int256(initialGasAvailable - finalGasAvailable) - refund)
+        );
+        console.log("initialGasAvailable", initialGasAvailable);
         uint256 etherUsed = tx.gasprice *
             uint256(int256(initialGasAvailable - finalGasAvailable) - refund);
 
