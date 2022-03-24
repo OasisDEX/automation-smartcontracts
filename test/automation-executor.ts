@@ -200,6 +200,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -214,8 +215,54 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
+                15000,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
+        })
+
+        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+            await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
+
+            const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceBefore = await hre.ethers.provider.getBalance(await owner.getAddress())
+
+            const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                15000,
+            )
+
+            const tx = AutomationExecutorInstance.connect(owner).execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                15000,
+                { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
+            )
+
+            await expect(tx).not.to.be.reverted
+
+            const receipt = await (await tx).wait()
+            const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+            const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
+                990,
+            ) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                1010,
+            ) //account for some refund calculation inacurencies
         })
 
         it('should pay miner bribe to the coinbase address', async () => {
@@ -227,6 +274,18 @@ describe('AutomationExecutor', async () => {
                 value: minerBribe,
             })
             await DummyCommandInstance.changeFlags(true, true, false)
+
+            const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                '0x',
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                minerBribe,
+                15000,
+            )
+
             const tx = AutomationExecutorInstance.execute(
                 '0x',
                 testCdpId,
@@ -235,7 +294,10 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 minerBribe,
+                15000,
+                { gasLimit: estimation.toNumber() + 50000 },
             )
+
             await expect(tx).not.to.be.reverted
 
             const receipt = await (await tx).wait()

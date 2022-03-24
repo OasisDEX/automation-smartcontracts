@@ -186,10 +186,14 @@ describe('CloseCommand', async () => {
                     )
 
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -202,6 +206,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -214,9 +219,13 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -259,6 +268,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
+                        178000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -272,6 +282,60 @@ describe('CloseCommand', async () => {
                     )
                 })
 
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                    await signer.sendTransaction({
+                        to: AutomationExecutorInstance.address,
+                        value: EthersBN.from(10).pow(18),
+                    })
+                    const executorBalanceBefore = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceBefore = await hre.ethers.provider.getBalance(executorAddress)
+
+                    const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        178000,
+                    )
+
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        178000,
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
+                    )
+                    const receipt = await (await tx).wait()
+
+                    await expect(tx).not.to.be.reverted
+                    const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+                    const executorBalanceAfter = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+                    expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                        10,
+                    ) //account for some refund calculation inacurencies
+                    expect(
+                        ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
+                })
+
                 it('it should wipe all debt and collateral', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
@@ -281,6 +345,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -341,10 +406,14 @@ describe('CloseCommand', async () => {
                     )
 
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -357,6 +426,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -397,10 +467,14 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
+                    const balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -413,6 +487,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -420,6 +495,60 @@ describe('CloseCommand', async () => {
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
                     return true
+                })
+
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                    await signer.sendTransaction({
+                        to: AutomationExecutorInstance.address,
+                        value: EthersBN.from(10).pow(18),
+                    })
+                    const executorBalanceBefore = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceBefore = await hre.ethers.provider.getBalance(executorAddress)
+
+                    const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        178000,
+                    )
+
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        178000,
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
+                    )
+                    const receipt = await (await tx).wait()
+
+                    await expect(tx).not.to.be.reverted
+                    const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+                    const executorBalanceAfter = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+                    expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                        10,
+                    ) //account for some refund calculation inacurencies
+                    expect(
+                        ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
                 })
 
                 it('should send dai To receiverAddress', async () => {
@@ -431,6 +560,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
+                        178000,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

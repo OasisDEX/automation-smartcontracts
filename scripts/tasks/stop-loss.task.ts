@@ -17,11 +17,13 @@ import { params } from './params'
 
 interface StopLossArgs {
     trigger: BigNumber
+    refund: BigNumber
     forked?: Network
 }
 
 task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
+    .addOptionalParam('refund', 'Gas refund amount', new BigNumber(178000), params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
@@ -144,9 +146,19 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         )
         const tx = await executor
             .connect(signer)
-            .execute(executionData, vaultId.toString(), triggerData, commandAddress, args.trigger.toString(), 0, 0, {
-                gasLimit: 5000000, //to send forcefully even failed request
-            })
+            .execute(
+                executionData,
+                vaultId.toString(),
+                triggerData,
+                commandAddress,
+                args.trigger.toString(),
+                0,
+                0,
+                args.refund.toNumber(),
+                {
+                    gasLimit: 5000000, //to send forcefully even failed request
+                },
+            )
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(
