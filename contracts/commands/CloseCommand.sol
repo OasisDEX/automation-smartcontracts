@@ -24,6 +24,10 @@ contract CloseCommand is ICommand {
         return !(collateral > 0 || debt > 0);
     }
 
+    function expectedRefund(bytes memory) external pure returns (int256) {
+        return 15000;
+    }
+
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
         external
         view

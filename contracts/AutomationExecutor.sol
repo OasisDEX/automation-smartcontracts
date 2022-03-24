@@ -6,6 +6,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
+import { ICommand } from "./interfaces/ICommand.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
@@ -73,15 +74,17 @@ contract AutomationExecutor {
     ) external auth(msg.sender) {
         uint256 initialGasAvailable = gasleft();
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
+        int256 refund = ICommand(commandAddress).expectedRefund(triggerData);
 
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);
         }
         uint256 finalGasAvailable = gasleft();
-        uint256 etherUsed = tx.gasprice * (initialGasAvailable - finalGasAvailable);
-        
+        uint256 etherUsed = tx.gasprice *
+            uint256(int256(initialGasAvailable - finalGasAvailable) - refund);
+
         //it calculates slightly too much, probably due to end of tx reimbursement.
-        
+
         if (address(this).balance > etherUsed) {
             payable(msg.sender).transfer(etherUsed);
         } else {

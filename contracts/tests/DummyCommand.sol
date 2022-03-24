@@ -26,6 +26,10 @@ contract DummyCommand is ICommand {
         validTriggerData = _validTriggerData;
     }
 
+    function expectedRefund(bytes memory) external pure returns (int256) {
+        return 15000;
+    }
+
     function changeValidTriggerDataFlag(bool _validTriggerData) external {
         validTriggerData = _validTriggerData;
     }

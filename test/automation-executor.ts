@@ -251,13 +251,14 @@ describe('AutomationExecutor', async () => {
             const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
             const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
             const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
-            console.log(txCost)
-            console.log(receipt.gasUsed.toString())
-            console.log(receipt.effectiveGasPrice.toString())
-            console.log(executorBalanceBefore.toString())
-            console.log(executorBalanceAfter.toString())
-            console.log(ownerBalanceBefore.toString())
-            console.log(ownerBalanceAfter.toString())
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
+                990,
+            ) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                1010,
+            ) //account for some refund calculation inacurencies
         })
 
         it('should pay miner bribe to the coinbase address', async () => {
