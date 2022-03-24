@@ -291,7 +291,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                     )
-                    console.log('2')
+                    console.log('2 gasEstimation = ', estimation.toString())
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -303,11 +303,10 @@ describe('CloseCommand', async () => {
                         0,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
                     )
-                    console.log('3')
-                    await tx
-                    await expect(tx).not.to.be.reverted
-
                     const receipt = await (await tx).wait()
+                    console.log('3 gasUsed', receipt.gasUsed.toString())
+
+                    await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
                         AutomationExecutorInstance.address,

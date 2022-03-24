@@ -24,8 +24,12 @@ contract CloseCommand is ICommand {
         return !(collateral > 0 || debt > 0);
     }
 
+    /*
+    for every command different amount of gas refund due to store operations is due.
+    */
     function expectedRefund(bytes memory) external pure returns (int256) {
-        return 0;
+        return 178000; //refund size is related to setting some storage slots to 0 and also modifying some storage slot back and forth to at the end of a day same value
+        //it does not depend here on stopLoss levels
     }
 
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
