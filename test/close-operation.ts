@@ -272,7 +272,7 @@ describe('CloseCommand', async () => {
                     )
                 })
 
-                it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
                     await signer.sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -281,7 +281,7 @@ describe('CloseCommand', async () => {
                         AutomationExecutorInstance.address,
                     )
                     const ownerBalanceBefore = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('1')
+
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
                         testCdpId,
@@ -291,7 +291,6 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                     )
-                    console.log('2 gasEstimation = ', estimation.toString())
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -304,7 +303,6 @@ describe('CloseCommand', async () => {
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
                     )
                     const receipt = await (await tx).wait()
-                    console.log('3 gasUsed', receipt.gasUsed.toString())
 
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
@@ -474,6 +472,58 @@ describe('CloseCommand', async () => {
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
                     return true
+                })
+
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                    await signer.sendTransaction({
+                        to: AutomationExecutorInstance.address,
+                        value: EthersBN.from(10).pow(18),
+                    })
+                    const executorBalanceBefore = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceBefore = await hre.ethers.provider.getBalance(executorAddress)
+
+                    const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                    )
+
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+                    )
+                    const receipt = await (await tx).wait()
+
+                    await expect(tx).not.to.be.reverted
+                    const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+                    const executorBalanceAfter = await hre.ethers.provider.getBalance(
+                        AutomationExecutorInstance.address,
+                    )
+                    const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+                    expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                        10,
+                    ) //account for some refund calculation inacurencies
+                    expect(
+                        ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    expect(
+                        executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
+                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
                 })
 
                 it('should send dai To receiverAddress', async () => {
