@@ -246,7 +246,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
-                { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+                { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
 
             await expect(tx).not.to.be.reverted

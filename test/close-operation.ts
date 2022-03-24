@@ -191,6 +191,8 @@ describe('CloseCommand', async () => {
                 afterEach(async () => {
                     // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    let balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                 })
 
                 it('should revert trigger execution', async () => {
@@ -219,6 +221,8 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    let balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                 })
 
                 before(async () => {
@@ -304,7 +308,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
-                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
 
@@ -403,6 +407,8 @@ describe('CloseCommand', async () => {
                 afterEach(async () => {
                     // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    let balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                 })
 
                 it('should revert trigger execution', async () => {
@@ -460,6 +466,8 @@ describe('CloseCommand', async () => {
                 afterEach(async () => {
                     // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    let balance = await hre.ethers.provider.getBalance(executorAddress)
+                    console.log('Remaining', balance.toString())
                 })
 
                 it('it should whipe all debt and collateral', async () => {
@@ -511,7 +519,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
-                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '1000000000000' },
+                        { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
 
