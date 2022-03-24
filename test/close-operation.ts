@@ -283,10 +283,13 @@ describe('CloseCommand', async () => {
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
-                    await signer.sendTransaction({
+                    await (
+                        await hre.ethers.provider.getSigner(2)
+                    ).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
                     })
+
                     const executorBalanceBefore = await hre.ethers.provider.getBalance(
                         AutomationExecutorInstance.address,
                     )
@@ -498,7 +501,9 @@ describe('CloseCommand', async () => {
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
-                    await signer.sendTransaction({
+                    await (
+                        await hre.ethers.provider.getSigner(2)
+                    ).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
                     })
