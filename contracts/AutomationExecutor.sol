@@ -104,8 +104,10 @@ contract AutomationExecutor {
             "executor/invalid-amount"
         );
 
-        if (amount > fromToken.allowance(address(this), exchange)) {
-            fromToken.safeIncreaseAllowance(exchange, type(uint256).max);
+        uint256 allowence = fromToken.allowance(address(this), exchange);
+
+        if (amount > allowence) {
+            fromToken.safeIncreaseAllowance(exchange, type(uint256).max - allowence);
         }
 
         if (toDai) {
