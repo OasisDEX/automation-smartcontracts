@@ -186,14 +186,10 @@ describe('CloseCommand', async () => {
                     )
 
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -219,13 +215,9 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -409,14 +401,10 @@ describe('CloseCommand', async () => {
                     )
 
                     triggerId = filteredEvents[0].args.triggerId.toNumber()
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -470,14 +458,10 @@ describe('CloseCommand', async () => {
 
                 beforeEach(async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining before', balance.toString())
                 })
 
                 afterEach(async () => {
                     // revertSnapshot
-                    const balance = await hre.ethers.provider.getBalance(executorAddress)
-                    console.log('Remaining', balance.toString())
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 

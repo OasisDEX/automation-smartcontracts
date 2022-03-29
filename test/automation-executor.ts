@@ -305,10 +305,12 @@ describe('AutomationExecutor', async () => {
             expect(block.miner.toLowerCase()).to.eq(HARDHAT_DEFAULT_COINBASE)
             expect(block.transactions.length).to.eq(1)
 
-            const transactionCost = receipt.gasUsed.mul(receipt.effectiveGasPrice.sub(block.baseFeePerGas!)).toString()
+            const transactionCost = receipt.gasUsed
+                .mul(receipt.effectiveGasPrice.sub(block.baseFeePerGas ?? 0))
+                .toString()
             const balanceBefore = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number - 1)
             const balanceAfter = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number)
-            expect(balanceAfter.toString()).to.eq(
+            expect(balanceAfter.toString()).to.be.equal(
                 balanceBefore.add(transactionCost).add(blockReward).add(minerBribe).toString(),
             )
         })
