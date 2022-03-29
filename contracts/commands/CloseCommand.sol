@@ -41,7 +41,7 @@ contract CloseCommand is ICommand {
         }
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         uint256 collRatio = McdView(viewAddress).getRatio(_cdpId, true);
-        bool vaultNotEmpty = (collRatio != 0); // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
+        bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         return vaultNotEmpty && collRatio <= slLevel * 10**16;
     }
 
