@@ -105,7 +105,7 @@ contract AutomationExecutor {
         );
 
         if (amount > fromToken.allowance(address(this), exchange)) {
-            require(fromToken.approve(exchange, type(uint256).max), "executor/approval-failed");
+            fromToken.safeIncreaseAllowance(exchange, type(uint256).max);
         }
 
         if (toDai) {
@@ -133,7 +133,7 @@ contract AutomationExecutor {
             (bool sent, ) = payable(owner).call{ value: amount }("");
             require(sent, "executor/withdrawal-failed");
         } else {
-            require(IERC20(asset).transfer(owner, amount), "executor/withdrawal-failed");
+            IERC20(asset).safeTransfer(owner, amount);
         }
     }
 
