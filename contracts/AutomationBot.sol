@@ -42,7 +42,7 @@ contract AutomationBot {
         address operator,
         ManagerLike manager
     ) private view {
-        require(isCdpOwner(cdpId, operator, manager), "bot/no-permissions");
+        require(isCdpAllowed(cdpId, operator, manager), "bot/no-permissions");
     }
 
     // works correctly in any context
@@ -52,16 +52,7 @@ contract AutomationBot {
         ManagerLike manager
     ) public view returns (bool) {
         address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1 || operator == cdpOwner);
-    }
-
-    // works correctly in any context
-    function isCdpOwner(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) private view returns (bool) {
-        return (operator == manager.owns(cdpId));
+        return manager.cdpCan(cdpOwner, cdpId, operator) == 1 || operator == cdpOwner;
     }
 
     // works correctly in any context
