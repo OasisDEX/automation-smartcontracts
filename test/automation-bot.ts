@@ -14,7 +14,7 @@ import { utils } from 'ethers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-describe('AutomationBot', async () => {
+describe.only('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -75,10 +75,19 @@ describe('AutomationBot', async () => {
 
     describe('addTrigger', async () => {
         const triggerType = 2
+        let internalSnapshotId: any
         const triggerData = utils.defaultAbiCoder.encode(
             ['uint256', 'uint16', 'uint256'],
             [testCdpId, triggerType, 101],
         )
+
+        beforeEach(async () => {
+            internalSnapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
+
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [internalSnapshotId])
+        })
 
         it('should fail if called from address not being an owner', async () => {
             const tx = AutomationBotInstance.addTrigger(1, triggerType, 0, triggerData)
@@ -116,9 +125,11 @@ describe('AutomationBot', async () => {
                         1,
                     ]),
                 )
+            console.log('Setting cdpAllow')
             await expect(cdpAllowTx).not.to.be.reverted
 
             const tx2 = await AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, 0, triggerData)
+            console.log('executing addRecord')
             await expect(tx2).not.to.be.reverted
 
             const receipt = await tx2.wait()
@@ -231,7 +242,14 @@ describe('AutomationBot', async () => {
         })
 
         it('throws if called not by proxy', async () => {
-            const tx = AutomationBotInstance.grantApproval(ServiceRegistryInstance.address, testCdpId)
+            const [, other] = await hre.ethers.getSigners()
+            const isAllowed = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                await other.getAddress(),
+                CDPManagerInstance.address,
+            )
+            expect(isAllowed).to.be.equal(false, 'other should not have permissions over cdp')
+            const tx = AutomationBotInstance.connect(other).grantApproval(ServiceRegistryInstance.address, testCdpId)
             await expect(tx).to.be.revertedWith('bot/no-permissions')
         })
 
@@ -411,7 +429,8 @@ describe('AutomationBot', async () => {
             expect(status).to.equal(false)
         })
         it('should fail if called by not proxy owning Vault', async () => {
-            const tx = AutomationBotInstance.removeTrigger(testCdpId, 0, false)
+            const newSigner = await hre.ethers.getSigner(proxyOwnerAddress)
+            const tx = AutomationBotInstance.connect(newSigner).removeTrigger(testCdpId, 0, false)
             await expect(tx).to.revertedWith('bot/no-permissions')
         })
         it('should fail if called by not proxy owning Vault', async () => {
