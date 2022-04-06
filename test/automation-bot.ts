@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { Contract, utils } from 'ethers'
+import { Contract, Signer, utils } from 'ethers'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
@@ -56,6 +56,25 @@ describe('AutomationBot', async () => {
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
     })
+
+    const executeCdpAllow = async (
+        proxy: DsProxyLike,
+        signer: Signer,
+        cdpId: number,
+        operator: string,
+        allow: number,
+    ) =>
+        proxy
+            .connect(signer)
+            .execute(
+                DssProxyActions.address,
+                DssProxyActions.interface.encodeFunctionData('cdpAllow', [
+                    hardhatUtils.addresses.CDP_MANAGER,
+                    cdpId,
+                    operator,
+                    allow,
+                ]),
+            )
 
     beforeEach(async () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
@@ -123,18 +142,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const cdpAllowTx = ownerProxy
-                .connect(proxyOwner)
-                .execute(
-                    DssProxyActions.address,
-                    DssProxyActions.interface.encodeFunctionData('cdpAllow', [
-                        hardhatUtils.addresses.CDP_MANAGER,
-                        testCdpId,
-                        signerAddress,
-                        1,
-                    ]),
-                )
-            console.log('Setting cdpAllow')
+            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
             const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, 0, triggerData)
@@ -148,17 +156,7 @@ describe('AutomationBot', async () => {
             )
             expect(events.length).to.be.equal(1)
 
-            const cdpDisallowTx = ownerProxy
-                .connect(proxyOwner)
-                .execute(
-                    DssProxyActions.address,
-                    DssProxyActions.interface.encodeFunctionData('cdpAllow', [
-                        hardhatUtils.addresses.CDP_MANAGER,
-                        testCdpId,
-                        signerAddress,
-                        0,
-                    ]),
-                )
+            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
             await expect(cdpDisallowTx).not.to.be.reverted
         })
 
@@ -492,6 +490,32 @@ describe('AutomationBot', async () => {
 
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             await expect(tx).to.be.reverted
+        })
+
+        it('should successfully remove a trigger if called by user having permissions over the vault', async () => {
+            const [signer] = await hre.ethers.getSigners()
+            const signerAddress = await signer.getAddress()
+
+            const tx = AutomationBotInstance.connect(signer).removeRecord(testCdpId, triggerId)
+            await expect(tx).to.be.reverted
+
+            const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
+            await expect(cdpAllowTx).not.to.be.reverted
+
+            const tx2 = AutomationBotInstance.connect(signer).removeRecord(testCdpId, triggerId)
+            await expect(tx2).not.to.be.reverted
+
+            const receipt = await (await tx2).wait()
+            const events = getEvents(
+                receipt,
+                'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
+                'TriggerRemoved',
+            )
+            expect(events.length).to.be.equal(1)
+
+            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
+            await expect(cdpDisallowTx).not.to.be.reverted
         })
     })
 
