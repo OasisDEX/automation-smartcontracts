@@ -7,7 +7,7 @@ import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationEx
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-describe('AutomationBot', async () => {
+describe.only('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -134,6 +134,7 @@ describe('AutomationBot', async () => {
                         1,
                     ]),
                 )
+            console.log('Setting cdpAllow')
             await expect(cdpAllowTx).not.to.be.reverted
 
             const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, 0, triggerData)
