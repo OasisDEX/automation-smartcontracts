@@ -7,7 +7,7 @@ import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationEx
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-describe.only('AutomationBot', async () => {
+describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
