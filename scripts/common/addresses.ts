@@ -32,6 +32,7 @@ const addresses = {
         AUTOMATION_BOT: '',
         AUTOMATION_EXECUTOR: '',
         AUTOMATION_MCD_VIEW: '',
+        AUTOMATION_MCD_UTILS: '',
         AUTOMATION_CLOSE_COMMAND: '',
     },
     [Network.GOERLI]: {
