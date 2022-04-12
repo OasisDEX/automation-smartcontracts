@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { constants, Contract, Signer, utils } from 'ethers'
+import { constants, Signer } from 'ethers'
 import { task } from 'hardhat/config'
 import {
     coalesceNetwork,
