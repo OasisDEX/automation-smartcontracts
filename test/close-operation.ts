@@ -17,6 +17,7 @@ import {
     encodeTriggerData,
     forgeUnoswapCallData,
     generateExecutionData,
+    TriggerType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
@@ -165,14 +166,18 @@ describe('CloseCommand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
+                    triggersData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.CLOSE_TO_COLLATERAL,
+                        currentCollRatioAsPercentage - 1,
+                    )
 
                     executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        2,
+                        TriggerType.CLOSE_TO_COLLATERAL,
                         0,
                         triggersData,
                     ])
@@ -226,14 +231,18 @@ describe('CloseCommand', async () => {
 
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = encodeTriggerData(testCdpId, 1, currentCollRatioAsPercentage + 1)
+                    triggersData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.CLOSE_TO_COLLATERAL,
+                        currentCollRatioAsPercentage + 1,
+                    )
 
                     executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        2,
+                        TriggerType.CLOSE_TO_COLLATERAL,
                         0,
                         triggersData,
                     ])
@@ -275,9 +284,7 @@ describe('CloseCommand', async () => {
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
-                    await (
-                        await hre.ethers.provider.getSigner(2)
-                    ).sendTransaction({
+                    await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
                     })
@@ -380,14 +387,18 @@ describe('CloseCommand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage - 1)
+                    triggersData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.CLOSE_TO_DAI,
+                        currentCollRatioAsPercentage - 1,
+                    )
 
                     executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        2,
+                        TriggerType.CLOSE_TO_DAI,
                         0,
                         triggersData,
                     ])
@@ -422,6 +433,7 @@ describe('CloseCommand', async () => {
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
+
             describe('when Trigger is above current col ratio', async () => {
                 let triggerId: number
                 let triggersData: BytesLike
@@ -433,14 +445,18 @@ describe('CloseCommand', async () => {
                     //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = encodeTriggerData(testCdpId, 2, currentCollRatioAsPercentage + 1)
+                    triggersData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.CLOSE_TO_DAI,
+                        currentCollRatioAsPercentage + 1,
+                    )
 
                     executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        2,
+                        TriggerType.CLOSE_TO_DAI,
                         0,
                         triggersData,
                     ])
@@ -481,13 +497,10 @@ describe('CloseCommand', async () => {
 
                     expect(debt.toNumber()).to.be.equal(0)
                     expect(collateral.toNumber()).to.be.equal(0)
-                    return true
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
-                    await (
-                        await hre.ethers.provider.getSigner(2)
-                    ).sendTransaction({
+                    await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
                     })
@@ -561,7 +574,6 @@ describe('CloseCommand', async () => {
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()
                     expect(valueRecovered).to.be.below(1000)
                     expect(valueRecovered).to.be.above(950)
-                    return true
                 })
             })
         })
