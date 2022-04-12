@@ -89,7 +89,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
         }
         const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
-        const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
+        const collRatioPct = Math.floor(parseFloat(hre.ethers.utils.formatEther(ratio)) * 100)
         console.log(`Ratio: ${collRatioPct.toString()}%`)
 
         const cdpData = {
@@ -116,18 +116,17 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: hardhatUtils.addresses.EXCHANGE,
         }
 
-        const tradeSize = isToCollateral
-            ? new BigNumber(debt.toString()).times(1.002).decimalPlaces(0)
-            : new BigNumber(debt.toString()).times(collRatioPct).div(100).decimalPlaces(0) // value of collateral
-        const minToTokenAmount = isToCollateral ? tradeSize : tradeSize.times(95).div(100)
+        const [fee, feeBase] = [20, 10000]
+        const tradeSize = isToCollateral ? debt.mul(feeBase).div(feeBase - fee) : debt.mul(collRatioPct).div(100) // value of collateral
+        const minToTokenAmount = isToCollateral ? tradeSize.mul(100001).div(100000) : tradeSize.mul(95).div(100)
         const exchangeData = {
             fromTokenAddress: gem,
             toTokenAddress: hardhatUtils.addresses.DAI,
             fromTokenAmount: collateral.toString(),
-            toTokenAmount: minToTokenAmount.times(102).div(100).toFixed(0),
-            minToTokenAmount: minToTokenAmount.toFixed(0),
+            toTokenAmount: 0,
+            minToTokenAmount: minToTokenAmount,
             exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: if network is mainnet real 1inch call should be made and calldata from it's result used
-            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toFixed(0)),
+            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toString()),
         }
 
         const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
