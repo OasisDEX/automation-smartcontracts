@@ -63,22 +63,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        let signer: Signer = hre.ethers.provider.getSigner(0)
-
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
-        const proxyAddress = await cdpManager.owns(vaultId.toString())
-        const proxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
-        const currentProxyOwner = await proxy.owner()
-        if (currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
-            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
-                throw new Error(
-                    `Signer is not an owner of the executor contract. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${currentProxyOwner}`,
-                )
-            }
-            signer = await hardhatUtils.impersonate(currentProxyOwner)
-        }
-        const signerAddress = await signer.getAddress()
-
         const ilkRegistry = new hre.ethers.Contract(
             hardhatUtils.addresses.ILK_REGISTRY,
             ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
@@ -93,14 +78,17 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
-        const ratio = await mcdView.getRatio(vaultId.toString(), false)
+
+        const ratio = await mcdView
+            .connect(await hardhatUtils.impersonate(await mcdView.owner()))
+            .getRatio(vaultId.toString(), true)
         const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
-        console.log(`Ratio with current price: ${collRatioPct.toString()}%`)
+        console.log(`Ratio: ${collRatioPct.toString()}%`)
 
         const cdpData = {
             ilk,
             gemJoin,
-            fundsReceiver: signerAddress,
+            fundsReceiver: constants.AddressZero,
             cdpId: vaultId.toString(),
             requiredDebt: 0,
             borrowCollateral: collateral.toString(),
@@ -142,11 +130,20 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const executor = await hre.ethers.getContractAt(
             'AutomationExecutor',
             hardhatUtils.addresses.AUTOMATION_EXECUTOR,
-            signer,
         )
 
+        let executorSigner: Signer = hre.ethers.provider.getSigner(0)
+        if (!(await executor.callers(await executorSigner.getAddress()))) {
+            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
+                throw new Error(
+                    `Signer is not authorized to call the executor. Cannot impersonate on external network. Signer: ${await executorSigner.getAddress()}.`,
+                )
+            }
+            executorSigner = await hardhatUtils.impersonate(await executor.owner())
+        }
+
         const tx = await executor
-            .connect(signer)
+            .connect(executorSigner)
             .execute(
                 executionData,
                 vaultId.toString(),
