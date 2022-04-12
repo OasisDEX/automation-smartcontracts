@@ -23,9 +23,11 @@ contract AutomationBot {
     uint256 public triggersCounter = 0;
 
     ServiceRegistry public immutable serviceRegistry;
+    address public immutable self;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        self = address(this);
     }
 
     modifier auth(address caller) {
@@ -33,6 +35,11 @@ contract AutomationBot {
             serviceRegistry.getRegisteredService(AUTOMATION_EXECUTOR_KEY) == caller,
             "bot/not-executor"
         );
+        _;
+    }
+
+    modifier onlyDelegate() {
+        require(address(this) != self, "bot/only-delegate");
         _;
     }
 
@@ -52,7 +59,7 @@ contract AutomationBot {
         ManagerLike manager
     ) public view returns (bool) {
         address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1 || operator == cdpOwner);
+        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
     // works correctly in any context
@@ -123,7 +130,7 @@ contract AutomationBot {
             "bot/invalid-trigger-data"
         );
 
-        validatePermissions(cdpId, msg.sender, manager);
+        require(isCdpAllowed(cdpId, msg.sender, manager), "bot/no-permissions");
 
         triggersCounter = triggersCounter + 1;
         activeTriggers[triggersCounter] = TriggerRecord(
@@ -151,7 +158,8 @@ contract AutomationBot {
     ) external {
         address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
 
-        validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
+        require(isCdpAllowed(cdpId, msg.sender, ManagerLike(managerAddress)), "bot/no-permissions");
+        // validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
@@ -165,7 +173,7 @@ contract AutomationBot {
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData
-    ) external {
+    ) external onlyDelegate {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
@@ -187,7 +195,7 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerId,
         bool removeAllowance
-    ) external {
+    ) external onlyDelegate {
         address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
 
@@ -204,13 +212,13 @@ contract AutomationBot {
     }
 
     //works correctly in context of dsProxy
-    function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external {
+    function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
         address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 0);
         emit ApprovalRemoved(cdpId, approvedEntity);
     }
 
     //works correctly in context of dsProxy
-    function grantApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external {
+    function grantApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
         address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 1);
         emit ApprovalGranted(cdpId, approvedEntity);
     }
