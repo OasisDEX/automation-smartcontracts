@@ -79,9 +79,16 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
         const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
 
-        const ratio = await mcdView
-            .connect(await hardhatUtils.impersonate(await mcdView.owner()))
-            .getRatio(vaultId.toString(), true)
+        let mcdViewCaller: Signer = hre.ethers.provider.getSigner(0)
+        if (!(await mcdView.whitelisted(await mcdViewCaller.getAddress()))) {
+            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
+                throw new Error(
+                    `Signer is not authorized to call mcd view next price. Cannot impersonate on external network. Signer: ${await mcdViewCaller.getAddress()}.`,
+                )
+            }
+            mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
+        }
+        const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
         const collRatioPct = new BigNumber(ratio.toString()).shiftedBy(-16).decimalPlaces(0)
         console.log(`Ratio: ${collRatioPct.toString()}%`)
 
