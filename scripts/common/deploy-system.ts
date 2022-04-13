@@ -26,7 +26,7 @@ const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
         const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
             gasLimit: '100000',
         })
-        return receipt.wait()
+        return await receipt.wait()
     }
 }
 
@@ -107,10 +107,8 @@ export async function deploySystem({
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
         await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), CloseCommandInstance.address)
 
-        if (deployMcdView) {
-            if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
-            await (await McdViewInstance.approve(CloseCommandInstance.address, true)).wait()
-        }
+        if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
+        await (await McdViewInstance.approve(CloseCommandInstance.address, true)).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
