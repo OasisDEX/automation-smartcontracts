@@ -2,7 +2,7 @@ import { AutomationBot, AutomationExecutor, CloseCommand, McdUtils, McdView, Ser
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType } from './types'
-import { getCommandHash } from './utils'
+import { getCommandHash, getServiceNameHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -20,11 +20,12 @@ export interface DeploySystemArgs {
     addressOverrides?: Partial<AddressRegistry>
 }
 
-const createServiceRegistry = function (serviceRegistryInstance: ServiceRegistry) {
-    return async function (hash: string, address: string) {
-        await serviceRegistryInstance.addNamedService(hash, address, {
+const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
+    return async (hash: string, address: string) => {
+        const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
             gasLimit: '100000',
         })
+        return receipt.wait()
     }
 }
 
@@ -66,12 +67,10 @@ export async function deploySystem({
     const McdUtilsInstance = (await mcdUtilsDeployment.deployed()) as McdUtils
 
     if (logDebug) console.log('Deploying AutomationBot....')
-
     const automationBotDeployment = await automationBotFactory.deploy(ServiceRegistryInstance.address)
     const AutomationBotInstance = await automationBotDeployment.deployed()
 
     if (logDebug) console.log('Deploying AutomationExecutor.....')
-
     const automationExecutorDeployment = await automationExecutorFactory.deploy(
         AutomationBotInstance.address,
         addresses.DAI,
@@ -81,82 +80,57 @@ export async function deploySystem({
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
     if (logDebug) console.log('Deploying McdView.....')
-    const signer = ethers.provider.getSigner(0)
-    const signerAddress = await signer.getAddress()
-
     const mcdViewDeployment = await mcdViewFactory.deploy(
         addresses.MCD_VAT,
         addresses.CDP_MANAGER,
         addresses.MCD_SPOT,
         addresses.OSM_MOM,
-        signerAddress,
+        await ethers.provider.getSigner(0).getAddress(),
     )
     const McdViewInstance = await mcdViewDeployment.deployed()
 
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand.....')
-
         const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
         CloseCommandInstance = await closeCommandDeployment.deployed()
-
         await McdViewInstance.approve(CloseCommandInstance.address, true)
 
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-
-        await addServiceRegistryEntry(
-            getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
-            (CloseCommandInstance as CloseCommand).address,
-        )
+        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), CloseCommandInstance.address)
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
+        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), CloseCommandInstance.address)
 
-        await addServiceRegistryEntry(
-            getCommandHash(TriggerType.CLOSE_TO_DAI),
-            (CloseCommandInstance as CloseCommand).address,
-        )
+        if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
+        await (await McdViewInstance.approve(CloseCommandInstance.address, true)).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
-
-    await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.CDP_MANAGER),
-        addresses.CDP_MANAGER,
-    )
+    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
     if (logDebug) console.log('Adding AUTOMATION_BOT to ServiceRegistry....')
-
     await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         AutomationBotInstance.address,
     )
 
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
-
-    await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_VIEW),
-        McdViewInstance.address,
-    )
+    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), McdViewInstance.address)
 
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
-
     await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
+        getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
         addresses.MULTIPLY_PROXY_ACTIONS,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
-
     await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+        getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         AutomationExecutorInstance.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
-
-    await addServiceRegistryEntry(
-        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.MCD_UTILS),
-        McdUtilsInstance.address,
-    )
+    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), McdUtilsInstance.address)
 
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
