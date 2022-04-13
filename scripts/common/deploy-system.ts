@@ -97,7 +97,6 @@ export async function deploySystem({
         if (logDebug) console.log('Deploying CloseCommand.....')
         const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
         CloseCommandInstance = await closeCommandDeployment.deployed()
-        await McdViewInstance.approve(CloseCommandInstance.address, true)
     }
 
     if (logDebug) {
