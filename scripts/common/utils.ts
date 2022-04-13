@@ -1,7 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BigNumber as EthersBN, BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { TriggerType } from './types'
+import { AutomationServiceName, TriggerType } from './types'
 
 const standardAmounts = {
     ETH: '2',
@@ -39,6 +39,10 @@ export const one = new BigNumber(1)
 
 export async function fetchStandardAmounts() {
     return standardAmounts
+}
+
+export function getServiceNameHash(service: AutomationServiceName) {
+    return utils.keccak256(Buffer.from(service))
 }
 
 export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName: string) {
