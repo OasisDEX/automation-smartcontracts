@@ -7,7 +7,7 @@ const startBlocks = {
         AUTOMATION_BOT: null,
     },
     [Network.GOERLI]: {
-        AUTOMATION_BOT: 6547495,
+        AUTOMATION_BOT: 6707333,
     },
 }
 
