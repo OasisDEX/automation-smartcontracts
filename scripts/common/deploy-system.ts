@@ -16,6 +16,7 @@ export interface DeployedSystem {
 export interface DeploySystemArgs {
     utils: HardhatUtils
     addCommands: boolean
+    deployMcdView?: boolean
     logDebug?: boolean
     addressOverrides?: Partial<AddressRegistry>
 }
@@ -32,6 +33,7 @@ const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
 export async function deploySystem({
     utils,
     addCommands,
+    deployMcdView = true,
     logDebug = false,
     addressOverrides = {},
 }: DeploySystemArgs): Promise<DeployedSystem> {
@@ -50,14 +52,12 @@ export async function deploySystem({
     const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
 
     if (logDebug) console.log('Deploying ServiceRegistry....')
-
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
     const ServiceRegistryInstance = await serviceRegistryDeployment.deployed()
 
     const addServiceRegistryEntry = createServiceRegistry(ServiceRegistryInstance)
 
     if (logDebug) console.log('Deploying McdUtils.....')
-
     const mcdUtilsDeployment = await mcdUtilsFactory.deploy(
         ServiceRegistryInstance.address,
         addresses.DAI,
@@ -79,15 +79,21 @@ export async function deploySystem({
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
-    if (logDebug) console.log('Deploying McdView.....')
-    const mcdViewDeployment = await mcdViewFactory.deploy(
-        addresses.MCD_VAT,
-        addresses.CDP_MANAGER,
-        addresses.MCD_SPOT,
-        addresses.OSM_MOM,
-        await ethers.provider.getSigner(0).getAddress(),
-    )
-    const McdViewInstance = await mcdViewDeployment.deployed()
+    let McdViewInstance: McdView
+    const signer = ethers.provider.getSigner(0)
+    if (deployMcdView) {
+        if (logDebug) console.log('Deploying McdView.....')
+        const mcdViewDeployment = await mcdViewFactory.deploy(
+            addresses.MCD_VAT,
+            addresses.CDP_MANAGER,
+            addresses.MCD_SPOT,
+            addresses.OSM_MOM,
+            await signer.getAddress(),
+        )
+        McdViewInstance = await mcdViewDeployment.deployed()
+    } else {
+        McdViewInstance = await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, signer)
+    }
 
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand.....')
@@ -101,8 +107,10 @@ export async function deploySystem({
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
         await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), CloseCommandInstance.address)
 
-        if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
-        await (await McdViewInstance.approve(CloseCommandInstance.address, true)).wait()
+        if (deployMcdView) {
+            if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
+            await (await McdViewInstance.approve(CloseCommandInstance.address, true)).wait()
+        }
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
