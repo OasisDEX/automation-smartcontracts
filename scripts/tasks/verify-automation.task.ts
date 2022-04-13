@@ -10,38 +10,33 @@ task('verify-automation')
     .setAction(async (args: VerifyAutomationArgs, hre) => {
         const { name: network } = hre.network
         console.log(`Network: ${network}. Verifying contracts...\n`)
-        const utils = new HardhatUtils(hre)
+        const { addresses } = new HardhatUtils(hre)
 
         const contracts = [
             {
-                address: utils.addresses.AUTOMATION_SERVICE_REGISTRY,
+                address: addresses.AUTOMATION_SERVICE_REGISTRY,
                 constructorArguments: [args.delay],
             },
             {
-                address: utils.addresses.AUTOMATION_BOT,
-                constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY],
+                address: addresses.AUTOMATION_BOT,
+                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
             },
             {
-                address: utils.addresses.AUTOMATION_EXECUTOR,
+                address: addresses.AUTOMATION_EXECUTOR,
+                constructorArguments: [addresses.AUTOMATION_BOT, addresses.DAI, addresses.WETH, addresses.EXCHANGE],
+            },
+            {
+                address: addresses.AUTOMATION_MCD_UTILS,
                 constructorArguments: [
-                    utils.addresses.AUTOMATION_BOT,
-                    utils.addresses.DAI,
-                    utils.addresses.WETH,
-                    utils.addresses.EXCHANGE,
+                    addresses.AUTOMATION_SERVICE_REGISTRY,
+                    addresses.DAI,
+                    addresses.DAI_JOIN,
+                    addresses.MCD_JUG,
                 ],
             },
             {
-                address: utils.addresses.AUTOMATION_MCD_UTILS,
-                constructorArguments: [
-                    utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-                    utils.addresses.DAI,
-                    utils.addresses.DAI_JOIN,
-                    utils.addresses.MCD_JUG,
-                ],
-            },
-            {
-                address: utils.addresses.AUTOMATION_CLOSE_COMMAND,
-                constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY],
+                address: addresses.AUTOMATION_CLOSE_COMMAND,
+                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
             },
         ]
 
