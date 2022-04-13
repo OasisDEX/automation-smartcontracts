@@ -6,11 +6,29 @@ import fs from 'fs'
 import chalk from 'chalk'
 import { ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
+import { DeployedSystem } from './deploy-system'
 
 export class HardhatUtils {
     public readonly addresses
     constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
         this.addresses = getAddressesFor(forked || this.hre.network.name)
+    }
+
+    public async getDefaultSystem(): Promise<DeployedSystem> {
+        return {
+            serviceRegistry: await this.hre.ethers.getContractAt(
+                'ServiceRegistry',
+                this.addresses.AUTOMATION_SERVICE_REGISTRY,
+            ),
+            mcdUtils: await this.hre.ethers.getContractAt('McdUtils', this.addresses.AUTOMATION_MCD_UTILS),
+            automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
+            automationExecutor: await this.hre.ethers.getContractAt(
+                'AutomationExecutor',
+                this.addresses.AUTOMATION_EXECUTOR,
+            ),
+            mcdView: await this.hre.ethers.getContractAt('McdView', this.addresses.AUTOMATION_MCD_VIEW),
+            closeCommand: await this.hre.ethers.getContractAt('CloseCommand', this.addresses.AUTOMATION_CLOSE_COMMAND),
+        }
     }
 
     public async getOrCreateProxy(address: string, signer?: Signer) {
