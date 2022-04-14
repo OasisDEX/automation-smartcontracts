@@ -73,6 +73,8 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const ilk = await cdpManager.ilks(vaultId.toString())
         const gem = await ilkRegistry.gem(ilk)
         const gemJoin = await ilkRegistry.join(ilk)
+        const jug = await hre.ethers.getContractAt('IJug', hardhatUtils.addresses.MCD_JUG)
+        await (await jug.drip(ilk)).wait()
 
         console.log('Join Address: ', gemJoin)
 
