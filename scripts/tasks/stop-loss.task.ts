@@ -1,6 +1,8 @@
 import { BigNumber } from 'bignumber.js'
-import { constants, Signer } from 'ethers'
+import { constants, Signer, utils } from 'ethers'
 import { task } from 'hardhat/config'
+import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
+import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
     coalesceNetwork,
     decodeTriggerData,
@@ -9,21 +11,29 @@ import {
     getEvents,
     getStartBlocksFor,
     HardhatUtils,
+    isLocalNetwork,
     Network,
     triggerIdToTopic,
     TriggerType,
 } from '../common'
 import { params } from './params'
+import { getQuote } from '../common/one-inch'
 
 interface StopLossArgs {
     trigger: BigNumber
     refund: BigNumber
+    slippage: BigNumber
     forked?: Network
 }
+
+const OAZO_FEE = new BigNumber(0.002)
+const LOAN_FEE = new BigNumber(0)
+const DEFAULT_SLIPPAGE = new BigNumber(0.005)
 
 task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
+    .addOptionalParam('slippage', 'Slippage for trade', DEFAULT_SLIPPAGE, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
@@ -31,12 +41,13 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
+        const { addresses } = hardhatUtils
         const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
-        const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
+        const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
 
         const events = await hre.ethers.provider.getLogs({
-            address: hardhatUtils.addresses.AUTOMATION_BOT,
+            address: addresses.AUTOMATION_BOT,
             topics: [bot.interface.getEventTopic('TriggerAdded'), triggerIdToTopic(args.trigger)],
             fromBlock: startBlocks.AUTOMATION_BOT as number,
         })
@@ -63,82 +74,17 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
-        const ilkRegistry = new hre.ethers.Contract(
-            hardhatUtils.addresses.ILK_REGISTRY,
-            ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
-            hre.ethers.provider,
-        )
-
-        const ilk = await cdpManager.ilks(vaultId.toString())
-        const gem = await ilkRegistry.gem(ilk)
-        const gemJoin = await ilkRegistry.join(ilk)
-        const jug = await hre.ethers.getContractAt('IJug', hardhatUtils.addresses.MCD_JUG)
-        await (await jug.drip(ilk)).wait()
-
-        console.log('Join Address: ', gemJoin)
-
-        const mcdView = await hre.ethers.getContractAt('McdView', hardhatUtils.addresses.AUTOMATION_MCD_VIEW)
-        const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toString())
-
-        let mcdViewCaller: Signer = hre.ethers.provider.getSigner(0)
-        if (!(await mcdView.whitelisted(await mcdViewCaller.getAddress()))) {
-            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
-                throw new Error(
-                    `Signer is not authorized to call mcd view next price. Cannot impersonate on external network. Signer: ${await mcdViewCaller.getAddress()}.`,
-                )
-            }
-            mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
-        }
-        const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
-        const collRatioPct = Math.floor(parseFloat(hre.ethers.utils.formatEther(ratio)) * 100)
-        console.log(`Ratio: ${collRatioPct.toString()}%`)
-
-        const cdpData = {
-            ilk,
-            gemJoin,
-            fundsReceiver: constants.AddressZero,
-            cdpId: vaultId.toString(),
-            requiredDebt: 0,
-            borrowCollateral: collateral.toString(),
-            withdrawCollateral: 0,
-            withdrawDai: 0,
-            depositDai: 0,
-            depositCollateral: 0,
-            skipFL: false,
-            methodName: '',
-        }
-
         const serviceRegistry = {
-            jug: hardhatUtils.addresses.MCD_JUG,
-            manager: hardhatUtils.addresses.CDP_MANAGER,
-            multiplyProxyActions: hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: hardhatUtils.addresses.MCD_FLASH,
+            jug: addresses.MCD_JUG,
+            manager: addresses.CDP_MANAGER,
+            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: addresses.MCD_FLASH,
             feeRecepient: constants.AddressZero, // TODO:
-            exchange: hardhatUtils.addresses.EXCHANGE,
+            exchange: addresses.EXCHANGE,
         }
 
-        const [fee, feeBase] = [20, 10000]
-        const tradeSize = isToCollateral ? debt.mul(feeBase).div(feeBase - fee) : debt.mul(collRatioPct).div(100) // value of collateral
-        const minToTokenAmount = isToCollateral ? tradeSize.mul(100001).div(100000) : tradeSize.mul(95).div(100)
-        const exchangeData = {
-            fromTokenAddress: gem,
-            toTokenAddress: hardhatUtils.addresses.DAI,
-            fromTokenAmount: collateral.toString(),
-            toTokenAmount: 0,
-            minToTokenAmount: minToTokenAmount,
-            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d', // TODO: if network is mainnet real 1inch call should be made and calldata from it's result used
-            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toString(), minToTokenAmount.toString()),
-        }
-
-        const mpa = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
-        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
-
-        console.log(`Starting trigger execution...`)
-        const executor = await hre.ethers.getContractAt(
-            'AutomationExecutor',
-            hardhatUtils.addresses.AUTOMATION_EXECUTOR,
-        )
+        console.log('Preparing exchange data...')
+        const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
 
         let executorSigner: Signer = hre.ethers.provider.getSigner(0)
         if (!(await executor.callers(await executorSigner.getAddress()))) {
@@ -150,21 +96,30 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             executorSigner = await hardhatUtils.impersonate(await executor.owner())
         }
 
-        const tx = await executor
-            .connect(executorSigner)
-            .execute(
-                executionData,
-                vaultId.toString(),
-                triggerData,
-                commandAddress,
-                args.trigger.toString(),
-                0,
-                0,
-                args.refund.toNumber(),
-                {
-                    gasLimit: 5000000, //to send forcefully even failed request
-                },
-            )
+        const executSignerAddress = await executorSigner.getAddress()
+        const { exchangeData, cdpData } = await getExecutionData(
+            hardhatUtils,
+            executSignerAddress,
+            vaultId,
+            isToCollateral,
+            args.slippage,
+        )
+        const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
+        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
+
+        console.log(`Starting trigger execution...`)
+        const tx = await executor.connect(executorSigner).execute(
+            executionData,
+            vaultId.toString(),
+            triggerData,
+            commandAddress,
+            args.trigger.toString(),
+            0,
+            0,
+            args.refund.toNumber(),
+            // to send forcefully even failed request
+            { gasLimit: 5000000 },
+        )
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(
@@ -183,3 +138,118 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             }`,
         )
     })
+
+async function getExecutionData(
+    hardhatUtils: HardhatUtils,
+    signerAddress: string,
+    vaultId: BigNumber,
+    isToCollateral: boolean,
+    slippage: BigNumber,
+) {
+    const { addresses, hre } = hardhatUtils
+
+    const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
+    const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
+    const [collateral, debt] = vaultInfo.map(v => new BigNumber(v.toString()))
+
+    const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
+    const ilk = await cdpManager.ilks(vaultId.toString())
+
+    let mcdViewCaller: Signer = hre.ethers.provider.getSigner(0)
+    if (!(await mcdView.whitelisted(await mcdViewCaller.getAddress()))) {
+        if (isLocalNetwork(hre.network.name)) {
+            throw new Error(
+                `Signer is not authorized to call mcd view next price. Cannot impersonate on external network. Signer: ${await mcdViewCaller.getAddress()}.`,
+            )
+        }
+        mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
+    }
+    const nextPrice = await mcdView.connect(mcdViewCaller).getNextPrice(ilk)
+    const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
+    const collRatioPct = Math.floor(parseFloat(utils.formatEther(ratio)) * 100)
+    console.log(`Ratio: ${collRatioPct.toString()}%`)
+
+    const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
+    await (await jug.drip(ilk)).wait()
+
+    const ilkRegistry = new hre.ethers.Contract(
+        addresses.ILK_REGISTRY,
+        ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
+        hre.ethers.provider,
+    )
+
+    const [gem, gemJoin, ilkDecimals] = await Promise.all([
+        ilkRegistry.gem(ilk),
+        ilkRegistry.join(ilk),
+        ilkRegistry.dec(ilk),
+    ])
+    console.log('Join Address: ', gemJoin)
+
+    const cdpData = {
+        ilk,
+        gemJoin,
+        fundsReceiver: constants.AddressZero,
+        cdpId: vaultId.toString(),
+        requiredDebt: 0,
+        borrowCollateral: collateral.toString(),
+        withdrawCollateral: 0,
+        withdrawDai: 0,
+        depositDai: 0,
+        depositCollateral: 0,
+        skipFL: false,
+        methodName: '',
+    }
+
+    const [fee, feeBase] = [20, 10000]
+    const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
+    if (hre.network.name !== Network.MAINNET) {
+        const minToTokenAmount = isToCollateral ? tradeSize.times(100001).div(100000) : tradeSize.times(95).div(100)
+        const exchangeData = {
+            fromTokenAddress: gem,
+            toTokenAddress: addresses.DAI,
+            fromTokenAmount: collateral.toFixed(0),
+            toTokenAmount: 0,
+            minToTokenAmount: minToTokenAmount.toFixed(0),
+            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
+            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toFixed(0), minToTokenAmount.toFixed(0)),
+        }
+        return { exchangeData, cdpData }
+    }
+
+    const daiInfo = { address: addresses.DAI, decimals: 18 }
+    const gemInfo = { address: gem, decimals: ilkDecimals.toNumber() }
+    const { tx, tokenPrice, collateralAmount, daiAmount } = await getQuote(
+        daiInfo,
+        gemInfo,
+        signerAddress,
+        new BigNumber(debt.toString()),
+        slippage,
+    )
+
+    const marketParams: MarketParams = {
+        oraclePrice: new BigNumber(nextPrice.toString()).shiftedBy(-18),
+        marketPrice: tokenPrice,
+        OF: OAZO_FEE,
+        FF: LOAN_FEE,
+        slippage,
+    }
+    const vaultInfoForClosing: VaultInfoForClosing = {
+        currentDebt: daiAmount,
+        currentCollateral: collateralAmount,
+    }
+
+    const closeParams = isToCollateral
+        ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
+        : getCloseToDaiParams(marketParams, vaultInfoForClosing)
+    const closeParamsFormatted = Object.fromEntries(
+        Object.entries(closeParams).map(([k, v]) => [k, BigNumber.isBigNumber(v) ? v.toString() : v]),
+    )
+    const exchangeData = {
+        ...closeParamsFormatted,
+        fromTokenAddress: gem,
+        toTokenAddress: addresses.DAI,
+        exchangeAddress: tx.to,
+        _exchangeCalldata: tx.data,
+    }
+    return { exchangeData, cdpData }
+}

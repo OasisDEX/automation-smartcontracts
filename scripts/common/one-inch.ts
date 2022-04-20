@@ -1,31 +1,35 @@
 import { OneInchSwapResponse } from './types'
+import axios from 'axios'
+import BigNumber from 'bignumber.js'
 
-function formatOneInchSwapUrl(
-    fromToken: string,
-    toToken: string,
-    amount: string,
-    slippage: string,
-    recepient: string,
-    protocols: string[] = [],
+const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap`
+
+export async function getQuote(
+    dai: { address: string; decimals: number },
+    collateral: { address: string; decimals: number },
+    sender: string,
+    amount: BigNumber, // This is always the receiveAtLeast amount of tokens we want to exchange from
+    slippage: BigNumber,
 ) {
-    const protocolsParam = !protocols?.length ? '' : `&protocols=${protocols.join(',')}`
-    return `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?fromTokenAddress=${fromToken}&toTokenAddress=${toToken}&amount=${amount}&fromAddress=${recepient}&slippage=${slippage}${protocolsParam}&disableEstimate=true&allowPartialFill=false`
-}
+    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}`, {
+        params: {
+            fromTokenAddress: collateral.address,
+            toTokenAddress: dai.address,
+            amount: amount.shiftedBy(collateral.decimals).toFixed(0),
+            fromAddress: sender,
+            slippage: slippage.times(100).toString(),
+            disableEstimate: true,
+            allowPartialFill: false,
+            protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
+        },
+    })
 
-export async function exchangeTokens(
-    fromTokenAddress: string,
-    toTokenAddress: string,
-    amount: string,
-    slippage: string,
-    recepient: string,
-    protocols: string[] = [],
-): Promise<OneInchSwapResponse> {
-    const url = formatOneInchSwapUrl(fromTokenAddress, toTokenAddress, amount, slippage, recepient, protocols)
-    const response = await fetch(url)
-
-    if (!response.ok) {
-        throw new Error(`Error performing 1inch swap request ${url}: ${await response.text()}`)
+    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-collateral.decimals)
+    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-dai.decimals)
+    return {
+        collateralAmount,
+        daiAmount,
+        tokenPrice: daiAmount.div(collateralAmount),
+        tx: data.tx,
     }
-
-    return response.json()
 }
