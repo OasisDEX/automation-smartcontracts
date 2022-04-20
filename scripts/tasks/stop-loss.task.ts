@@ -103,6 +103,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             vaultId,
             isToCollateral,
             args.slippage,
+            args.forked,
         )
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
@@ -145,6 +146,7 @@ async function getExecutionData(
     vaultId: BigNumber,
     isToCollateral: boolean,
     slippage: BigNumber,
+    forked?: Network,
 ) {
     const { addresses, hre } = hardhatUtils
 
@@ -164,6 +166,19 @@ async function getExecutionData(
         }
         mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
     }
+
+    if (isLocalNetwork(hre.network.name)) {
+        const osmMom = await hre.ethers.getContractAt('OsmMomLike', addresses.OSM_MOM)
+        const osmAddress = await osmMom.osms(ilk)
+        const hash = utils.solidityKeccak256(['uint256', 'uint256'], [mcdView.address, 5])
+        const isBud = await hre.ethers.provider.getStorageAt(osmAddress, hash)
+        if (EthersBN.from(isBud).eq(0)) {
+            await hre.network.provider.send('hardhat_setStorageAt', [osmAddress, hash, utils.hexZeroPad('0x01', 32)])
+            await hre.ethers.provider.getStorageAt(osmAddress, hash)
+            console.log(`Whitelisted MCDView on local...`)
+        }
+    }
+
     const nextPrice = await mcdView.connect(mcdViewCaller).getNextPrice(ilk)
     const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
     const collRatioPct = Math.floor(parseFloat(utils.formatEther(ratio)) * 100)
@@ -174,7 +189,11 @@ async function getExecutionData(
 
     const ilkRegistry = new hre.ethers.Contract(
         addresses.ILK_REGISTRY,
-        ['function join(bytes32) view returns (address)', 'function gem(bytes32) view returns (address)'],
+        [
+            'function join(bytes32) view returns (address)',
+            'function gem(bytes32) view returns (address)',
+            'function dec(bytes32) view returns (uint256)',
+        ],
         hre.ethers.provider,
     )
 
@@ -183,7 +202,7 @@ async function getExecutionData(
         ilkRegistry.join(ilk),
         ilkRegistry.dec(ilk),
     ])
-    console.log('Join Address: ', gemJoin)
+    console.log(`Join Address: ${gemJoin}`)
 
     const cdpData = {
         ilk,
@@ -191,7 +210,7 @@ async function getExecutionData(
         fundsReceiver: constants.AddressZero,
         cdpId: vaultId.toString(),
         requiredDebt: 0,
-        borrowCollateral: collateral.toString(),
+        borrowCollateral: collateral.toFixed(0),
         withdrawCollateral: 0,
         withdrawDai: 0,
         depositDai: 0,
@@ -202,7 +221,7 @@ async function getExecutionData(
 
     const [fee, feeBase] = [20, 10000]
     const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
-    if (hre.network.name !== Network.MAINNET) {
+    if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
         const minToTokenAmount = isToCollateral ? tradeSize.times(100001).div(100000) : tradeSize.times(95).div(100)
         const exchangeData = {
             fromTokenAddress: gem,
@@ -216,6 +235,7 @@ async function getExecutionData(
         return { exchangeData, cdpData }
     }
 
+    console.log('Requesting quote from 1inch...')
     const daiInfo = { address: addresses.DAI, decimals: 18 }
     const gemInfo = { address: gem, decimals: ilkDecimals.toNumber() }
     const { tx, tokenPrice, collateralAmount, daiAmount } = await getQuote(
@@ -242,7 +262,7 @@ async function getExecutionData(
         ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
         : getCloseToDaiParams(marketParams, vaultInfoForClosing)
     const closeParamsFormatted = Object.fromEntries(
-        Object.entries(closeParams).map(([k, v]) => [k, BigNumber.isBigNumber(v) ? v.toString() : v]),
+        Object.entries(closeParams).map(([k, v]) => [k, BigNumber.isBigNumber(v) ? v.toFixed(0) : v]),
     )
     const exchangeData = {
         ...closeParamsFormatted,

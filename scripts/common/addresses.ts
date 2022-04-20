@@ -4,7 +4,7 @@ export const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 const startBlocks = {
     [Network.MAINNET]: {
-        AUTOMATION_BOT: null,
+        AUTOMATION_BOT: 14583413,
     },
     [Network.GOERLI]: {
         AUTOMATION_BOT: 6707333,
