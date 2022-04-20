@@ -2,7 +2,7 @@ import { AutomationBot, AutomationExecutor, CloseCommand, McdUtils, McdView, Ser
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType } from './types'
-import { getCommandHash, getServiceNameHash } from './utils'
+import { getCommandHash, getServiceNameHash, wait } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -117,48 +117,65 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
     }
 
-    await configureRegistryEntries(system, addresses as AddressRegistry, logDebug)
+    await configureRegistryEntries(system, addresses as AddressRegistry, delay, logDebug)
     return system
 }
 
-export async function configureRegistryEntries(system: DeployedSystem, addresses: AddressRegistry, logDebug = false) {
+export async function configureRegistryEntries(
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    delay: number,
+    logDebug = false,
+) {
     const addServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
+    const delayedOperation = async (op: () => Promise<any>) => {
+        await op()
+        if (delay > 0) {
+            await wait(delay * 1000)
+            await op()
+        }
+    }
+    const delayedAddServiceRegistryEntry = (hash: string, address: string) =>
+        delayedOperation(() => addServiceRegistryEntry(hash, address))
 
     if (system.closeCommand) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), system.closeCommand.address)
+        await delayedAddServiceRegistryEntry(
+            getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
+            system.closeCommand.address,
+        )
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
-        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
+        await delayedAddServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
         await (await system.mcdView.approve(system.closeCommand.address, true)).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
+    await delayedAddServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
     if (logDebug) console.log('Adding AUTOMATION_BOT to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await delayedAddServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         system.automationBot.address,
     )
 
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
+    await delayedAddServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
 
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await delayedAddServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
         addresses.MULTIPLY_PROXY_ACTIONS,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await delayedAddServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         system.automationExecutor.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
+    await delayedAddServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
 }

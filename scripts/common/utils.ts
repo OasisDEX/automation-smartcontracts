@@ -103,3 +103,7 @@ export function generateExecutionData(
 export function triggerIdToTopic(id: BigNumber.Value): string {
     return '0x' + new BigNumber(id).toString(16).padStart(64, '0')
 }
+
+export function wait(ms: number) {
+    return new Promise<void>(resolve => setTimeout(() => resolve(), ms))
+}
