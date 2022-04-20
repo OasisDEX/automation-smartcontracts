@@ -1,8 +1,9 @@
+import { ContractReceipt } from 'ethers'
 import { AutomationBot, AutomationExecutor, CloseCommand, McdUtils, McdView, ServiceRegistry } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType } from './types'
-import { getCommandHash, getServiceNameHash, wait } from './utils'
+import { getCommandHash, getEvents, getServiceNameHash, wait } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -22,11 +23,11 @@ export interface DeploySystemArgs {
 }
 
 const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
-    return async (hash: string, address: string): Promise<void> => {
+    return async (hash: string, address: string): Promise<ContractReceipt> => {
         const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
             gasLimit: '100000',
         })
-        await receipt.wait()
+        return await receipt.wait()
     }
 }
 
@@ -128,11 +129,20 @@ export async function configureRegistryEntries(
     logDebug = false,
 ) {
     const addServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
-    const delayedOperation = async (op: () => Promise<any>) => {
+    const delayedOperation = async (op: () => Promise<ContractReceipt>) => {
         await op()
         if (delay > 0) {
-            await wait(delay * 1000)
-            await op()
+            await wait(Math.max(15, delay) * 1000)
+
+            const [changeApplied] = getEvents(
+                await op(),
+                'event ChangeApplied(bytes32 dataHash, uint256 appliedAt, bytes data)',
+                'ChangeApplied',
+            )
+            if (!changeApplied) {
+                throw new Error(`Failed to apply change.`)
+            }
+            console.log(`Operation successfully applied`)
         }
     }
     const delayedAddServiceRegistryEntry = (hash: string, address: string) =>
