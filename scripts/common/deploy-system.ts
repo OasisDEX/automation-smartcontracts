@@ -140,7 +140,7 @@ export async function configureRegistryEntries(
                 'ChangeApplied',
             )
             if (!changeApplied) {
-                throw new Error(`Failed to apply change.`)
+                throw new Error(`Failed to apply change`)
             }
             console.log(`Operation successfully applied`)
         }
