@@ -83,12 +83,11 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             exchange: addresses.EXCHANGE,
         }
 
-        console.log('Preparing exchange data...')
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
 
         let executorSigner: Signer = hre.ethers.provider.getSigner(0)
         if (!(await executor.callers(await executorSigner.getAddress()))) {
-            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
+            if (!isLocalNetwork(network)) {
                 throw new Error(
                     `Signer is not authorized to call the executor. Cannot impersonate on external network. Signer: ${await executorSigner.getAddress()}.`,
                 )
@@ -96,6 +95,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             executorSigner = await hardhatUtils.impersonate(await executor.owner())
         }
 
+        console.log('Preparing exchange data...')
         const executSignerAddress = await executorSigner.getAddress()
         const { exchangeData, cdpData } = await getExecutionData(
             hardhatUtils,
@@ -157,7 +157,7 @@ async function getExecutionData(
 
     let mcdViewCaller: Signer = hre.ethers.provider.getSigner(0)
     if (!(await mcdView.whitelisted(await mcdViewCaller.getAddress()))) {
-        if (isLocalNetwork(hre.network.name)) {
+        if (!isLocalNetwork(hre.network.name)) {
             throw new Error(
                 `Signer is not authorized to call mcd view next price. Cannot impersonate on external network. Signer: ${await mcdViewCaller.getAddress()}.`,
             )
