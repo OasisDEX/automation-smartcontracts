@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { constants, Signer, utils } from 'ethers'
+import { constants, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import { task } from 'hardhat/config'
 import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
@@ -150,7 +150,7 @@ async function getExecutionData(
 
     const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
     const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
-    const [collateral, debt] = vaultInfo.map(v => new BigNumber(v.toString()))
+    const [collateral, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
 
     const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
     const ilk = await cdpManager.ilks(vaultId.toString())
