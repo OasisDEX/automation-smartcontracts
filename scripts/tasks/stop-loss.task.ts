@@ -213,8 +213,8 @@ async function getExecutionData(
         methodName: '',
     }
 
-    const [fee, feeBase] = [20, 10000]
     if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
+        const [fee, feeBase] = [20, 10000]
         const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
         const minToTokenAmount = isToCollateral ? tradeSize.times(100001).div(100000) : tradeSize.times(95).div(100)
         const exchangeData = {
