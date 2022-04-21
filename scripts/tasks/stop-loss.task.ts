@@ -74,27 +74,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        const serviceRegistry = {
-            jug: addresses.MCD_JUG,
-            manager: addresses.CDP_MANAGER,
-            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: addresses.MCD_FLASH,
-            feeRecepient: constants.AddressZero, // TODO:
-            exchange: addresses.EXCHANGE,
-        }
-
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
-
-        console.log('Preparing exchange data...')
-        const { exchangeData, cdpData } = await getExecutionData(
-            hardhatUtils,
-            vaultId,
-            isToCollateral,
-            args.slippage,
-            args.forked,
-        )
-        const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
-        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
         let executorSigner: Signer = hre.ethers.provider.getSigner(0)
         if (!(await executor.callers(await executorSigner.getAddress()))) {
@@ -112,6 +92,28 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
                 value: EthersBN.from(10).pow(18),
             })
         }
+
+        console.log('Preparing exchange data...')
+        const serviceRegistry = {
+            jug: addresses.MCD_JUG,
+            manager: addresses.CDP_MANAGER,
+            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: addresses.MCD_FLASH,
+            feeRecepient:
+                network === Network.MAINNET
+                    ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
+                    : await executorSigner.getAddress(),
+            exchange: addresses.EXCHANGE,
+        }
+        const { exchangeData, cdpData } = await getExecutionData(
+            hardhatUtils,
+            vaultId,
+            isToCollateral,
+            args.slippage,
+            args.forked,
+        )
+        const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
+        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
         console.log(`Starting trigger execution...`)
         const tx = await executor.connect(executorSigner).execute(
