@@ -74,15 +74,6 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        const serviceRegistry = {
-            jug: addresses.MCD_JUG,
-            manager: addresses.CDP_MANAGER,
-            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: addresses.MCD_FLASH,
-            feeRecepient: constants.AddressZero, // TODO:
-            exchange: addresses.EXCHANGE,
-        }
-
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
 
         console.log('Preparing exchange data...')
@@ -111,6 +102,18 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
                 to: executionOwner,
                 value: EthersBN.from(10).pow(18),
             })
+        }
+
+        const serviceRegistry = {
+            jug: addresses.MCD_JUG,
+            manager: addresses.CDP_MANAGER,
+            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: addresses.MCD_FLASH,
+            feeRecepient:
+                network === Network.MAINNET
+                    ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
+                    : await executorSigner.getAddress(),
+            exchange: addresses.EXCHANGE,
         }
 
         console.log(`Starting trigger execution...`)
