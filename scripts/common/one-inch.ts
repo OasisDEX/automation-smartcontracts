@@ -1,21 +1,34 @@
-import { OneInchSwapResponse } from './types'
 import axios from 'axios'
 import BigNumber from 'bignumber.js'
+import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
 
-const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap`
+const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
 
-export async function getQuote(
-    dai: { address: string; decimals: number },
-    collateral: { address: string; decimals: number },
+export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
+    const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
+        params: {
+            fromTokenAddress: collateralAddress,
+            toTokenAddress: daiAddress,
+            amount: amount.toFixed(0),
+        },
+    })
+    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
+    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
+    return daiAmount.div(collateralAmount)
+}
+
+export async function getSwap(
+    daiAddress: string,
+    collateralAddress: string,
     sender: string,
-    amount: BigNumber, // This is always the receiveAtLeast amount of tokens we want to exchange from
+    amount: BigNumber,
     slippage: BigNumber,
 ) {
-    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}`, {
+    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
         params: {
-            fromTokenAddress: collateral.address,
-            toTokenAddress: dai.address,
-            amount: amount.shiftedBy(collateral.decimals).toFixed(0),
+            fromTokenAddress: collateralAddress,
+            toTokenAddress: daiAddress,
+            amount: amount.toFixed(0),
             fromAddress: sender,
             slippage: slippage.times(100).toString(),
             disableEstimate: true,
@@ -24,12 +37,14 @@ export async function getQuote(
         },
     })
 
-    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-collateral.decimals)
-    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-dai.decimals)
+    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
+    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
     return {
         collateralAmount,
         daiAmount,
-        tokenPrice: daiAmount.div(collateralAmount),
+        tokenPrice: daiAmount.div(collateralAmount), // .times(new BigNumber(100).minus(slippage).div(100)),
         tx: data.tx,
+        fromToken: data.fromToken,
+        toToken: data.toToken,
     }
 }

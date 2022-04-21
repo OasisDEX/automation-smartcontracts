@@ -17,7 +17,7 @@ import {
     TriggerType,
 } from '../common'
 import { params } from './params'
-import { getQuote } from '../common/one-inch'
+import { getQuote, getSwap } from '../common/one-inch'
 
 interface StopLossArgs {
     trigger: BigNumber
@@ -85,21 +85,9 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
 
-        let executorSigner: Signer = hre.ethers.provider.getSigner(0)
-        if (!(await executor.callers(await executorSigner.getAddress()))) {
-            if (!isLocalNetwork(network)) {
-                throw new Error(
-                    `Signer is not authorized to call the executor. Cannot impersonate on external network. Signer: ${await executorSigner.getAddress()}.`,
-                )
-            }
-            executorSigner = await hardhatUtils.impersonate(await executor.owner())
-        }
-
         console.log('Preparing exchange data...')
-        const executSignerAddress = await executorSigner.getAddress()
         const { exchangeData, cdpData } = await getExecutionData(
             hardhatUtils,
-            executSignerAddress,
             vaultId,
             isToCollateral,
             args.slippage,
@@ -107,6 +95,23 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         )
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
+
+        let executorSigner: Signer = hre.ethers.provider.getSigner(0)
+        if (!(await executor.callers(await executorSigner.getAddress()))) {
+            if (!isLocalNetwork(network)) {
+                throw new Error(
+                    `Signer is not authorized to call the executor. Cannot impersonate on external network. Signer: ${await executorSigner.getAddress()}.`,
+                )
+            }
+            const executionOwner = await executor.owner()
+            executorSigner = await hardhatUtils.impersonate(executionOwner)
+            console.log(`Impersonated execution owner ${executionOwner}...`)
+            // Fund the owner
+            await hre.ethers.provider.getSigner(0).sendTransaction({
+                to: executionOwner,
+                value: EthersBN.from(10).pow(18),
+            })
+        }
 
         console.log(`Starting trigger execution...`)
         const tx = await executor.connect(executorSigner).execute(
@@ -142,7 +147,6 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
 async function getExecutionData(
     hardhatUtils: HardhatUtils,
-    signerAddress: string,
     vaultId: BigNumber,
     isToCollateral: boolean,
     slippage: BigNumber,
@@ -150,22 +154,12 @@ async function getExecutionData(
 ) {
     const { addresses, hre } = hardhatUtils
 
-    const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
-    const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
-    const [collateral, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
-
     const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
     const ilk = await cdpManager.ilks(vaultId.toString())
+    const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
+    await (await jug.drip(ilk)).wait()
 
-    let mcdViewCaller: Signer = hre.ethers.provider.getSigner(0)
-    if (!(await mcdView.whitelisted(await mcdViewCaller.getAddress()))) {
-        if (!isLocalNetwork(hre.network.name)) {
-            throw new Error(
-                `Signer is not authorized to call mcd view next price. Cannot impersonate on external network. Signer: ${await mcdViewCaller.getAddress()}.`,
-            )
-        }
-        mcdViewCaller = await hardhatUtils.impersonate(await mcdView.owner())
-    }
+    const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
 
     if (isLocalNetwork(hre.network.name)) {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', addresses.OSM_MOM)
@@ -179,13 +173,13 @@ async function getExecutionData(
         }
     }
 
-    const nextPrice = await mcdView.connect(mcdViewCaller).getNextPrice(ilk)
-    const ratio = await mcdView.connect(mcdViewCaller).getRatio(vaultId.toString(), true)
+    const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
+    const [collateral, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
+
+    const oraclePrice = await mcdView.getPrice(ilk)
+    const ratio = await mcdView.getRatio(vaultId.toString(), false)
     const collRatioPct = Math.floor(parseFloat(utils.formatEther(ratio)) * 100)
     console.log(`Ratio: ${collRatioPct.toString()}%`)
-
-    const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
-    await (await jug.drip(ilk)).wait()
 
     const ilkRegistry = new hre.ethers.Contract(
         addresses.ILK_REGISTRY,
@@ -220,8 +214,8 @@ async function getExecutionData(
     }
 
     const [fee, feeBase] = [20, 10000]
-    const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
     if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
+        const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
         const minToTokenAmount = isToCollateral ? tradeSize.times(100001).div(100000) : tradeSize.times(95).div(100)
         const exchangeData = {
             fromTokenAddress: gem,
@@ -236,40 +230,42 @@ async function getExecutionData(
     }
 
     console.log('Requesting quote from 1inch...')
-    const daiInfo = { address: addresses.DAI, decimals: 18 }
-    const gemInfo = { address: gem, decimals: ilkDecimals.toNumber() }
-    const { tx, tokenPrice, collateralAmount, daiAmount } = await getQuote(
-        daiInfo,
-        gemInfo,
-        signerAddress,
-        new BigNumber(debt.toString()),
-        slippage,
-    )
+    const quoteAmount = isToCollateral ? collateral.div(collRatioPct).times(100) : collateral
+    const marketPrice = await getQuote(addresses.DAI, gem, quoteAmount)
 
     const marketParams: MarketParams = {
-        oraclePrice: new BigNumber(nextPrice.toString()).shiftedBy(-18),
-        marketPrice: tokenPrice,
+        oraclePrice: new BigNumber(oraclePrice.toString()).shiftedBy(-18),
+        marketPrice,
         OF: OAZO_FEE,
         FF: LOAN_FEE,
         slippage,
     }
     const vaultInfoForClosing: VaultInfoForClosing = {
-        currentDebt: daiAmount,
-        currentCollateral: collateralAmount,
+        currentDebt: debt.shiftedBy(-18),
+        currentCollateral: collateral.shiftedBy(-ilkDecimals.toNumber()),
     }
 
     const closeParams = isToCollateral
         ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
         : getCloseToDaiParams(marketParams, vaultInfoForClosing)
-    const closeParamsFormatted = Object.fromEntries(
-        Object.entries(closeParams).map(([k, v]) => [k, BigNumber.isBigNumber(v) ? v.toFixed(0) : v]),
+
+    console.log('Requesting swap from 1inch...')
+    const swap = await getSwap(
+        addresses.DAI,
+        gem,
+        addresses.EXCHANGE,
+        closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
+        slippage.times(100),
     )
+
     const exchangeData = {
-        ...closeParamsFormatted,
         fromTokenAddress: gem,
         toTokenAddress: addresses.DAI,
-        exchangeAddress: tx.to,
-        _exchangeCalldata: tx.data,
+        fromTokenAmount: closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()).toFixed(0),
+        toTokenAmount: closeParams.toTokenAmount.shiftedBy(18).toFixed(0),
+        minToTokenAmount: closeParams.minToTokenAmount.shiftedBy(18).toFixed(0),
+        exchangeAddress: swap.tx.to,
+        _exchangeCalldata: swap.tx.data,
     }
     return { exchangeData, cdpData }
 }
