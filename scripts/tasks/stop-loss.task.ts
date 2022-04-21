@@ -216,7 +216,7 @@ async function getExecutionData(
     if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
         const [fee, feeBase] = [20, 10000]
         const tradeSize = isToCollateral ? debt.times(feeBase).div(feeBase - fee) : debt.times(collRatioPct).div(100) // value of collateral
-        const minToTokenAmount = isToCollateral ? tradeSize.times(100001).div(100000) : tradeSize.times(95).div(100)
+        const minToTokenAmount = isToCollateral ? tradeSize.times(1.00001) : tradeSize.times(0.95)
         const exchangeData = {
             fromTokenAddress: gem,
             toTokenAddress: addresses.DAI,
