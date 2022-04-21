@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { Signer } from 'ethers'
+import { Signer, BigNumber as EthersBN } from 'ethers'
 import { task, types } from 'hardhat/config'
 import { coalesceNetwork, encodeTriggerData, getEvents, HardhatUtils, Network, TriggerType } from '../common'
 import { params } from './params'
@@ -37,6 +37,11 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             }
             console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
+            // Fund the owner
+            hre.ethers.provider.getSigner(0).sendTransaction({
+                to: currentProxyOwner,
+                value: EthersBN.from(10).pow(18),
+            })
         }
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)

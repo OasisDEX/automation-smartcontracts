@@ -1,31 +1,50 @@
-import { OneInchSwapResponse } from './types'
+import axios from 'axios'
+import BigNumber from 'bignumber.js'
+import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
 
-function formatOneInchSwapUrl(
-    fromToken: string,
-    toToken: string,
-    amount: string,
-    slippage: string,
-    recepient: string,
-    protocols: string[] = [],
-) {
-    const protocolsParam = !protocols?.length ? '' : `&protocols=${protocols.join(',')}`
-    return `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?fromTokenAddress=${fromToken}&toTokenAddress=${toToken}&amount=${amount}&fromAddress=${recepient}&slippage=${slippage}${protocolsParam}&disableEstimate=true&allowPartialFill=false`
+const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
+
+export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
+    const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
+        params: {
+            fromTokenAddress: collateralAddress,
+            toTokenAddress: daiAddress,
+            amount: amount.toFixed(0),
+        },
+    })
+    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
+    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
+    return daiAmount.div(collateralAmount)
 }
 
-export async function exchangeTokens(
-    fromTokenAddress: string,
-    toTokenAddress: string,
-    amount: string,
-    slippage: string,
-    recepient: string,
-    protocols: string[] = [],
-): Promise<OneInchSwapResponse> {
-    const url = formatOneInchSwapUrl(fromTokenAddress, toTokenAddress, amount, slippage, recepient, protocols)
-    const response = await fetch(url)
+export async function getSwap(
+    daiAddress: string,
+    collateralAddress: string,
+    sender: string,
+    amount: BigNumber,
+    slippage: BigNumber,
+) {
+    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
+        params: {
+            fromTokenAddress: collateralAddress,
+            toTokenAddress: daiAddress,
+            amount: amount.toFixed(0),
+            fromAddress: sender,
+            slippage: slippage.times(100).toString(),
+            disableEstimate: true,
+            allowPartialFill: false,
+            protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
+        },
+    })
 
-    if (!response.ok) {
-        throw new Error(`Error performing 1inch swap request ${url}: ${await response.text()}`)
+    const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
+    const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
+    return {
+        collateralAmount,
+        daiAmount,
+        tokenPrice: daiAmount.div(collateralAmount), // .times(new BigNumber(100).minus(slippage).div(100)),
+        tx: data.tx,
+        fromToken: data.fromToken,
+        toToken: data.toToken,
     }
-
-    return response.json()
 }

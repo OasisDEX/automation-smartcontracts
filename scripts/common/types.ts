@@ -23,9 +23,14 @@ export enum AutomationServiceName {
     MULTIPLY_PROXY_ACTIONS = 'MULTIPLY_PROXY_ACTIONS',
 }
 
-export interface OneInchSwapResponse {
+export interface OneInchQuoteResponse {
+    fromToken: { decimals: number }
+    toToken: { decimals: number }
     toTokenAmount: string
     fromTokenAmount: string
+}
+
+export interface OneInchSwapResponse extends OneInchQuoteResponse {
     tx: {
         from: string
         to: string

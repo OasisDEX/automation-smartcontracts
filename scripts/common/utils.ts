@@ -1,44 +1,13 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BigNumber as EthersBN, BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, TriggerType } from './types'
-
-const standardAmounts = {
-    ETH: '2',
-    WETH: '2',
-    AAVE: '8',
-    BAT: '4000',
-    USDC: '2000',
-    UNI: '50',
-    SUSD: '2000',
-    BUSD: '2000',
-    SNX: '100',
-    REP: '70',
-    REN: '1000',
-    MKR: '1',
-    ENJ: '1000',
-    DAI: '2000',
-    WBTC: '0.04',
-    RENBTC: '0.04',
-    ZRX: '2000',
-    KNC: '1000',
-    MANA: '2000',
-    PAXUSD: '2000',
-    COMP: '5',
-    LRC: '3000',
-    LINK: '70',
-    USDT: '2000',
-    TUSD: '2000',
-    BAL: '50',
-    GUSD: '2000',
-    YFI: '0.05',
-}
+import { AutomationServiceName, Network, TriggerType } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
 
-export async function fetchStandardAmounts() {
-    return standardAmounts
+export function isLocalNetwork(network: string) {
+    return [Network.HARDHAT, Network.LOCAL].includes(network as Network)
 }
 
 export function getServiceNameHash(service: AutomationServiceName) {
