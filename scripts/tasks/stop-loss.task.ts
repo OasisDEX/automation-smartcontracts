@@ -126,7 +126,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             0,
             args.refund.toNumber(),
             // to send forcefully even failed request
-            { gasLimit: 5000000 },
+            { gasLimit: 2_000_000 },
         )
         const receipt = await tx.wait()
 
@@ -158,8 +158,10 @@ async function getExecutionData(
 
     const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
     const ilk = await cdpManager.ilks(vaultId.toString())
-    const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
-    await (await jug.drip(ilk)).wait()
+    if (hre.network.name !== Network.MAINNET) {
+        const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
+        await (await jug.drip(ilk)).wait()
+    }
 
     const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
 
