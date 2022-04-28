@@ -257,7 +257,8 @@ async function getExecutionData(
         ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
         : getCloseToDaiParams(marketParams, vaultInfoForClosing)
 
-    console.log('Requesting swap from 1inch...')
+    console.log('Requesting swap from 1inch...', addresses.EXCHANGE)
+    console.log('Gem is', gem)
     const swap = await getSwap(
         addresses.DAI,
         gem,
