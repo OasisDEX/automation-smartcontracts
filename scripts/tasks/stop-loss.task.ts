@@ -203,10 +203,13 @@ async function getExecutionData(
     console.log(`Join Address: ${gemJoin}`)
 
     const vaultOwner = await cdpManager.owns(vaultId.toString())
+    const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
+    const proxyOwner = await proxy.owner()
+
     const cdpData = {
         ilk,
         gemJoin,
-        fundsReceiver: vaultOwner,
+        fundsReceiver: proxyOwner,
         cdpId: vaultId.toString(),
         requiredDebt: 0,
         borrowCollateral: collateral.toFixed(0),
