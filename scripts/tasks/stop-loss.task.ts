@@ -267,9 +267,9 @@ async function getExecutionData(
         slippage.times(100),
     )
     console.log(
-        `closeParams fromTokenAmount=${closeParams.fromTokenAmount.toString()}, closeParams minToTokenAmount=${
-            closeParams.minToTokenAmount
-        }`,
+        `closeParams fromTokenAmount=${closeParams.fromTokenAmount.toString()}, 
+        closeParams toTokenAmount=${closeParams.toTokenAmount},
+        closeParams minToTokenAmount=${closeParams.minToTokenAmount}`,
     )
 
     const exchangeData = {
@@ -281,5 +281,8 @@ async function getExecutionData(
         exchangeAddress: swap.tx.to,
         _exchangeCalldata: swap.tx.data,
     }
+
+    console.log(exchangeData)
+    console.log(cdpData)
     return { exchangeData, cdpData }
 }
