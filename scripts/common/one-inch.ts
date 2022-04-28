@@ -40,7 +40,7 @@ export async function getSwap(
             toTokenAddress: daiAddress,
             amount: amount.toFixed(0),
             fromAddress: sender,
-            slippage: slippage.times(100).toString(),
+            slippage: slippage.toString(),
             disableEstimate: true,
             allowPartialFill: false,
             protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
