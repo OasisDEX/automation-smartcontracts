@@ -1,5 +1,5 @@
 import { task, types } from 'hardhat/config'
-import { HardhatUtils } from '../common'
+import { HardhatUtils, Network } from '../common'
 
 interface VerifyAutomationArgs {
     delay: number
@@ -23,7 +23,12 @@ task('verify-automation')
             },
             {
                 address: addresses.AUTOMATION_EXECUTOR,
-                constructorArguments: [addresses.AUTOMATION_BOT, addresses.DAI, addresses.WETH, addresses.EXCHANGE],
+                constructorArguments: [
+                    addresses.AUTOMATION_BOT,
+                    addresses.DAI,
+                    addresses.WETH,
+                    network === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
+                ],
             },
             {
                 address: addresses.AUTOMATION_MCD_UTILS,
