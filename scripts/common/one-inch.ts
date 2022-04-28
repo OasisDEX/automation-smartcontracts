@@ -24,6 +24,16 @@ export async function getSwap(
     amount: BigNumber,
     slippage: BigNumber,
 ) {
+    console.log('One inch params', {
+        fromTokenAddress: collateralAddress,
+        toTokenAddress: daiAddress,
+        amount: amount.toFixed(0),
+        fromAddress: sender,
+        slippage: slippage.times(100).toString(),
+        disableEstimate: true,
+        allowPartialFill: false,
+        protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
+    })
     const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
         params: {
             fromTokenAddress: collateralAddress,
@@ -36,6 +46,8 @@ export async function getSwap(
             protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
         },
     })
+
+    console.log('One inch payload', data)
 
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
     const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
