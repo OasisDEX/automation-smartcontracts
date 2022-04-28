@@ -53,3 +53,8 @@ Try following:
 ```shell
 yarn clean && yarn build
 ```
+
+## Documentation
+
+Documentation is available under:
+https://docs.google.com/document/d/1FCrgutHmmaB2pBKnVfpEMuVb7BTdreEYtcghES8wOUQ/edit
