@@ -266,6 +266,11 @@ async function getExecutionData(
         closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
         slippage.times(100),
     )
+    console.log(
+        `closeParams fromTokenAmount=${closeParams.fromTokenAmount.toString()}, closeParams minToTokenAmount=${
+            closeParams.minToTokenAmount
+        }`,
+    )
 
     const exchangeData = {
         fromTokenAddress: gem,
