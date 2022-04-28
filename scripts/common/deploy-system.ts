@@ -73,7 +73,7 @@ export async function deploySystem({
         AutomationBotInstance.address,
         addresses.DAI,
         addresses.WETH,
-        addresses.EXCHANGE,
+        utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
