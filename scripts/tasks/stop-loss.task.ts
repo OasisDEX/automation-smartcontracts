@@ -202,10 +202,11 @@ async function getExecutionData(
     ])
     console.log(`Join Address: ${gemJoin}`)
 
+    const vaultOwner = await cdpManager.owns(vaultId.toString())
     const cdpData = {
         ilk,
         gemJoin,
-        fundsReceiver: constants.AddressZero,
+        fundsReceiver: vaultOwner,
         cdpId: vaultId.toString(),
         requiredDebt: 0,
         borrowCollateral: collateral.toFixed(0),
