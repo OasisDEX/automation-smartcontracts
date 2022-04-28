@@ -253,7 +253,7 @@ async function getExecutionData(
         marketPrice,
         OF: OAZO_FEE,
         FF: LOAN_FEE,
-        slippage,
+        slippage: slippage.div(100),
     }
     const vaultInfoForClosing: VaultInfoForClosing = {
         currentDebt: debt.shiftedBy(-18),
