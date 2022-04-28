@@ -34,7 +34,7 @@ const DEFAULT_SLIPPAGE_PCT = new BigNumber(0.5)
 task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
-    .addOptionalParam('slippage', 'Slippage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
+    .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .addOptionalParam('debug', 'Debug mode', false, types.boolean)
     .setAction(async (args: StopLossArgs, hre) => {
