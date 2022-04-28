@@ -200,7 +200,6 @@ async function getExecutionData(
         ilkRegistry.join(ilk),
         ilkRegistry.dec(ilk),
     ])
-    console.log(`Join Address: ${gemJoin}`)
 
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
@@ -237,8 +236,9 @@ async function getExecutionData(
         return { exchangeData, cdpData }
     }
 
-    console.log('Requesting quote from 1inch...')
     const quoteAmount = isToCollateral ? collateral.div(collRatioPct).times(100) : collateral
+
+    console.log('Requesting quote from 1inch...')
     const marketPrice = await getQuote(addresses.DAI, gem, quoteAmount)
 
     const marketParams: MarketParams = {
@@ -257,19 +257,13 @@ async function getExecutionData(
         ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
         : getCloseToDaiParams(marketParams, vaultInfoForClosing)
 
-    console.log('Requesting swap from 1inch...', addresses.EXCHANGE)
-    console.log('Gem is', gem)
+    console.log('Requesting swap from 1inch...')
     const swap = await getSwap(
         addresses.DAI,
         gem,
         addresses.EXCHANGE,
         closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
         slippage.times(100),
-    )
-    console.log(
-        `closeParams fromTokenAmount=${closeParams.fromTokenAmount.toString()}, 
-        closeParams toTokenAmount=${closeParams.toTokenAmount},
-        closeParams minToTokenAmount=${closeParams.minToTokenAmount}`,
     )
 
     const exchangeData = {
