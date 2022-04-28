@@ -1,8 +1,13 @@
 # Oasis Automation Smart Contracts
 
-## Description
+### Description
 
 This is typescript hardhat project containing Smart Contracts and Tests of Oasis StopLoss automation.
+
+### Documentation
+
+Documentation is available under:
+https://docs.google.com/document/d/1FCrgutHmmaB2pBKnVfpEMuVb7BTdreEYtcghES8wOUQ/edit
 
 # Development
 
@@ -53,8 +58,3 @@ Try following:
 ```shell
 yarn clean && yarn build
 ```
-
-## Documentation
-
-Documentation is available under:
-https://docs.google.com/document/d/1FCrgutHmmaB2pBKnVfpEMuVb7BTdreEYtcghES8wOUQ/edit
