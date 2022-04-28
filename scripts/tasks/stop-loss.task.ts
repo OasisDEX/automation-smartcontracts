@@ -18,6 +18,7 @@ import {
 } from '../common'
 import { params } from './params'
 import { getQuote, getSwap } from '../common/one-inch'
+import { boolean } from 'hardhat/internal/core/params/argumentTypes'
 
 interface StopLossArgs {
     trigger: BigNumber
@@ -36,7 +37,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
     .addOptionalParam('slippage', 'Slippage for trade', DEFAULT_SLIPPAGE, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
-    .addOptionalParam('debug', 'Debug mode', false)
+    .addOptionalParam('debug', 'Debug mode', false, boolean)
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
         console.log(
