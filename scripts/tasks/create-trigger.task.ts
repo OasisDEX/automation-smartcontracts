@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
-import { task, types } from 'hardhat/config'
-import { max, maxBy } from 'lodash'
+import { types } from 'hardhat/config'
+import { max } from 'lodash'
 import {
     coalesceNetwork,
     encodeTriggerData,
@@ -13,23 +13,22 @@ import {
     TriggerType,
     isLocalNetwork,
 } from '../common'
+import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
-interface CreateTriggerParams {
+interface CreateTriggerArgs extends BaseTaskArgs {
     vault: BigNumber
     type: number
     ratio: BigNumber
-    replace: boolean
-    forked?: Network
+    noreplace: boolean
 }
 
-task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a user')
+createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', '', params.bignumber)
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
     .addParam('ratio', 'The collateralization ratio for stop loss (i.e. 170)', '', params.bignumber)
-    .addParam('replace', 'The flag whether the task should replace previously created trigger', true, types.boolean)
-    .addOptionalParam('forked', 'Forked network')
-    .setAction(async (args: CreateTriggerParams, hre) => {
+    .addFlag('noreplace', 'The flag whether the task should replace previously created trigger')
+    .setAction(async (args: CreateTriggerArgs, hre) => {
         const { name: network } = hre.network
         console.log(
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
@@ -39,14 +38,15 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
         let triggerIdToReplace = 0
-        if (args.replace) {
+        if (!args.noreplace) {
             const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
             const vaultIdTopic = bignumberToTopic(args.vault)
             const topicFilters = [
                 [bot.interface.getEventTopic('TriggerAdded'), null, null, vaultIdTopic],
                 [bot.interface.getEventTopic('TriggerRemoved'), vaultIdTopic],
+                [bot.interface.getEventTopic('TriggerExecuted'), null, vaultIdTopic],
             ]
-            const [addedTriggerIds, removedTriggerIds] = await Promise.all(
+            const [addedTriggerIds, removedTriggerIds, executedTriggerIds] = await Promise.all(
                 topicFilters.map(async filter => {
                     const logs = await hre.ethers.provider.getLogs({
                         address: bot.address,
@@ -56,9 +56,17 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
                     return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber())
                 }),
             )
-            triggerIdToReplace = max(
-                addedTriggerIds.filter(addedId => !removedTriggerIds.some(removedId => removedId === addedId)),
+            const activeTriggerIds = addedTriggerIds.filter(
+                addedId => !removedTriggerIds.includes(addedId) && !executedTriggerIds.includes(addedId),
             )
+            if (activeTriggerIds.length > 1) {
+                console.log(
+                    `Warning: Found more than one active trigger id. Choosing to replace the latest. Active trigger IDs: ${activeTriggerIds.join(
+                        ', ',
+                    )}`,
+                )
+            }
+            triggerIdToReplace = max(activeTriggerIds)
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -90,14 +98,28 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             triggerData,
         ])
 
-        const tx = await proxy.connect(signer).execute(hardhatUtils.addresses.AUTOMATION_BOT, addTriggerData)
+        const info = [
+            `Replaced Trigger ID: ${triggerIdToReplace || '<none>'}`,
+            `Trigger Data: ${triggerData}`,
+            `Automation Bot: ${bot.address}`,
+            `Vault ID: ${args.vault.toString()}`,
+            `DSProxy: ${proxyAddress}`,
+            `Signer: ${await signer.getAddress()}`,
+        ]
+
+        if (args.dryrun) {
+            console.log(info.join('\n'))
+            return
+        }
+
+        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData)
         const receipt = await tx.wait()
 
-        const triggerAddedEvent = getEvents(
+        const [triggerAddedEvent] = getEvents(
             receipt,
             'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
             'TriggerAdded',
-        )?.[0]
+        )
 
         if (!triggerAddedEvent) {
             throw new Error(`Failed to create trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
@@ -105,12 +127,9 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
 
         const triggerId = parseInt(triggerAddedEvent.topics[1], 16)
 
-        console.log(`Trigger with type ${args.type} was succesfully created`)
-        console.log(`Trigger ID: ${triggerId}`)
-        console.log(`Replaced Trigger ID: ${triggerIdToReplace || '<none>'}`)
-        console.log(`Trigger Data: ${triggerData}`)
-        console.log(`Automation Bot: ${hardhatUtils.addresses.AUTOMATION_BOT}`)
-        console.log(`Vault ID: ${args.vault.toString()}`)
-        console.log(`DSProxy: ${proxyAddress}`)
-        console.log(`Signer: ${await signer.getAddress()}`)
+        console.log(
+            [`Trigger with type ${args.type} was succesfully created`, `Trigger ID: ${triggerId}`]
+                .concat(info)
+                .join('\n'),
+        )
     })

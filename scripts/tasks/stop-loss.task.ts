@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, utils, BigNumber as EthersBN } from 'ethers'
-import { task, types } from 'hardhat/config'
+import { task } from 'hardhat/config'
 import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
@@ -36,7 +36,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
     .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
-    .addOptionalParam('debug', 'Debug mode', false, types.boolean)
+    .addFlag('debug', 'Debug mode')
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
         console.log(
