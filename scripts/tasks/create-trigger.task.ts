@@ -1,13 +1,25 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { task, types } from 'hardhat/config'
-import { coalesceNetwork, encodeTriggerData, getEvents, HardhatUtils, Network, TriggerType } from '../common'
+import { max, maxBy } from 'lodash'
+import {
+    coalesceNetwork,
+    encodeTriggerData,
+    getEvents,
+    getStartBlocksFor,
+    HardhatUtils,
+    Network,
+    bignumberToTopic,
+    TriggerType,
+    isLocalNetwork,
+} from '../common'
 import { params } from './params'
 
 interface CreateTriggerParams {
     vault: BigNumber
     type: number
     ratio: BigNumber
+    replace: boolean
     forked?: Network
 }
 
@@ -15,6 +27,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
     .addParam('vault', 'The vault (cdp) ID', '', params.bignumber)
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
     .addParam('ratio', 'The collateralization ratio for stop loss (i.e. 170)', '', params.bignumber)
+    .addParam('replace', 'The flag whether the task should replace previously created trigger', true, types.boolean)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: CreateTriggerParams, hre) => {
         const { name: network } = hre.network
@@ -23,6 +36,31 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
+        const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
+
+        let triggerIdToReplace = 0
+        if (args.replace) {
+            const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
+            const vaultIdTopic = bignumberToTopic(args.vault)
+            const topicFilters = [
+                [bot.interface.getEventTopic('TriggerAdded'), null, null, vaultIdTopic],
+                [bot.interface.getEventTopic('TriggerRemoved'), vaultIdTopic],
+            ]
+            const [addedTriggerIds, removedTriggerIds] = await Promise.all(
+                topicFilters.map(async filter => {
+                    const logs = await hre.ethers.provider.getLogs({
+                        address: bot.address,
+                        topics: filter,
+                        fromBlock: startBlocks.AUTOMATION_BOT,
+                    })
+                    return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber())
+                }),
+            )
+            triggerIdToReplace = max(
+                addedTriggerIds.filter(addedId => !removedTriggerIds.some(removedId => removedId === addedId)),
+            )
+        }
+
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -30,7 +68,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         const proxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         const currentProxyOwner = await proxy.owner()
         if (currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
-            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
+            if (!isLocalNetwork(network)) {
                 throw new Error(
                     `Signer is not an owner of the proxy. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${currentProxyOwner}`,
                 )
@@ -44,12 +82,11 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             })
         }
 
-        const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, args.ratio.toNumber())
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
             args.vault.toString(),
             args.type,
-            0,
+            triggerIdToReplace,
             triggerData,
         ])
 
@@ -70,6 +107,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
 
         console.log(`Trigger with type ${args.type} was succesfully created`)
         console.log(`Trigger ID: ${triggerId}`)
+        console.log(`Replaced Trigger ID: ${triggerIdToReplace || '<none>'}`)
         console.log(`Trigger Data: ${triggerData}`)
         console.log(`Automation Bot: ${hardhatUtils.addresses.AUTOMATION_BOT}`)
         console.log(`Vault ID: ${args.vault.toString()}`)

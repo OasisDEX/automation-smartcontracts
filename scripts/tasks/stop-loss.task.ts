@@ -13,7 +13,7 @@ import {
     HardhatUtils,
     isLocalNetwork,
     Network,
-    triggerIdToTopic,
+    bignumberToTopic,
     TriggerType,
 } from '../common'
 import { params } from './params'
@@ -50,8 +50,8 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const events = await hre.ethers.provider.getLogs({
             address: addresses.AUTOMATION_BOT,
-            topics: [bot.interface.getEventTopic('TriggerAdded'), triggerIdToTopic(args.trigger)],
-            fromBlock: startBlocks.AUTOMATION_BOT as number,
+            topics: [bot.interface.getEventTopic('TriggerAdded'), bignumberToTopic(args.trigger)],
+            fromBlock: startBlocks.AUTOMATION_BOT,
         })
 
         if (events.length !== 1) {

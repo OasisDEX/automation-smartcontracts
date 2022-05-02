@@ -14,13 +14,10 @@ export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }
 
-export function getEvents(txResult: ContractReceipt, eventAbi: string, eventName: string) {
-    const abi = [eventAbi]
-    const iface = new utils.Interface(abi)
-    const events = txResult.events ? txResult.events : []
-
-    const filteredEvents = events.filter(x => x.topics[0] === iface.getEventTopic(eventName))
-    return filteredEvents.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data }))
+export function getEvents(receipt: ContractReceipt, eventAbi: string, eventName: string) {
+    const iface = new utils.Interface([eventAbi])
+    const filteredEvents = receipt.events?.filter(x => x.topics[0] === iface.getEventTopic(eventName))
+    return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
 export function getCommandHash(triggerType: TriggerType) {
@@ -69,6 +66,6 @@ export function generateExecutionData(
     return mpa.interface.encodeFunctionData('closeVaultExitDai', [exchangeData, cdpData, serviceRegistry])
 }
 
-export function triggerIdToTopic(id: BigNumber.Value): string {
+export function bignumberToTopic(id: BigNumber.Value): string {
     return '0x' + new BigNumber(id).toString(16).padStart(64, '0')
 }
