@@ -1,20 +1,20 @@
 import BigNumber from 'bignumber.js'
 import { Signer } from 'ethers'
-import { task, types } from 'hardhat/config'
+import { types } from 'hardhat/config'
 import { coalesceNetwork, HardhatUtils, Network, isLocalNetwork, getEvents } from '../common'
+import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
-interface RemoveTriggerParams {
+interface RemoveTriggerArgs extends BaseTaskArgs {
     id: BigNumber
     allowance: boolean
     forked?: Network
 }
 
-task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
+createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
     .addParam('id', 'The trigger ID', '', params.bignumber)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
-    .addOptionalParam('forked', 'Forked network')
-    .setAction(async (args: RemoveTriggerParams, hre) => {
+    .setAction(async (args: RemoveTriggerArgs, hre) => {
         const { name: network } = hre.network
         console.log(
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
@@ -53,6 +53,18 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
             args.allowance,
         ])
 
+        const info = [
+            `Vault ID: ${vault}`,
+            `Allowance Removed: ${args.allowance}`,
+            `Automation Bot: ${bot.address}`,
+            `DSProxy: ${proxyAddress}`,
+            `Signer: ${await signer.getAddress()}`,
+        ]
+        if (args.dryrun) {
+            console.log(info.join('\n'))
+            return
+        }
+
         const tx = await proxy.connect(signer).execute(bot.address, removeTriggerData)
         const receipt = await tx.wait()
 
@@ -66,10 +78,5 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log(`Trigger with id ${args.id.toString()} was succesfully removed`)
-        console.log(`Vault ID: ${vault}`)
-        console.log(`Allowance removed: ${args.allowance}`)
-        console.log(`Automation Bot: ${bot.address}`)
-        console.log(`DSProxy: ${proxyAddress}`)
-        console.log(`Signer: ${await signer.getAddress()}`)
+        console.log([`Trigger with id ${args.id.toString()} was succesfully removed`].concat(info).join('\n'))
     })

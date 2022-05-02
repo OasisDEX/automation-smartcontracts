@@ -36,7 +36,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
     .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
-    .addOptionalParam('debug', 'Debug mode', false, types.boolean)
+    .addFlag('debug', 'Debug mode')
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
         console.log(
