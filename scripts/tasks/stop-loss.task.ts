@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, utils, BigNumber as EthersBN } from 'ethers'
-import { task, types } from 'hardhat/config'
+import { task } from 'hardhat/config'
 import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
