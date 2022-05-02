@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { task, types } from 'hardhat/config'
-import { max, maxBy } from 'lodash'
+import { max } from 'lodash'
 import {
     coalesceNetwork,
     encodeTriggerData,

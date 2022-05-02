@@ -1,15 +1,7 @@
 import BigNumber from 'bignumber.js'
 import { Signer } from 'ethers'
 import { task, types } from 'hardhat/config'
-import {
-    coalesceNetwork,
-    getStartBlocksFor,
-    HardhatUtils,
-    Network,
-    bignumberToTopic,
-    isLocalNetwork,
-    getEvents,
-} from '../common'
+import { coalesceNetwork, HardhatUtils, Network, isLocalNetwork, getEvents } from '../common'
 import { params } from './params'
 
 interface RemoveTriggerParams {
