@@ -28,21 +28,15 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
-        const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
-        const [addedTriggerEvent] = await hre.ethers.provider.getLogs({
-            address: hardhatUtils.addresses.AUTOMATION_BOT,
-            topics: [bot.interface.getEventTopic('TriggerAdded'), bignumberToTopic(args.id)],
-            fromBlock: startBlocks.AUTOMATION_BOT,
-        })
-
-        if (!addedTriggerEvent) {
-            throw new Error(`Failed to find TriggerAdded event for trigger: ${args.id.toString()}`)
+        const triggerInfo = await bot.activeTriggers(args.id.toString())
+        if (triggerInfo.cdpId.eq(0)) {
+            throw new Error(`Trigger with id ${args.id.toString()} is not active`)
         }
 
-        const vault = bot.interface.parseLog(addedTriggerEvent).args.cdpId.toString()
+        const vault = triggerInfo.cdpId.toString()
         console.log(`Vault: ${vault}`)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
