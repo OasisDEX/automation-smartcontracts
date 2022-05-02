@@ -1,16 +1,26 @@
 import BigNumber from 'bignumber.js'
 import { Signer } from 'ethers'
-import { task } from 'hardhat/config'
-import { coalesceNetwork, getStartBlocksFor, HardhatUtils, Network, triggerIdToTopic } from '../common'
+import { task, types } from 'hardhat/config'
+import {
+    coalesceNetwork,
+    getStartBlocksFor,
+    HardhatUtils,
+    Network,
+    bignumberToTopic,
+    isLocalNetwork,
+    getEvents,
+} from '../common'
 import { params } from './params'
 
 interface RemoveTriggerParams {
     id: BigNumber
+    allowance: boolean
     forked?: Network
 }
 
 task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
     .addParam('id', 'The trigger ID', '', params.bignumber)
+    .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: RemoveTriggerParams, hre) => {
         const { name: network } = hre.network
@@ -24,7 +34,7 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
 
         const [addedTriggerEvent] = await hre.ethers.provider.getLogs({
             address: hardhatUtils.addresses.AUTOMATION_BOT,
-            topics: [bot.interface.getEventTopic('TriggerAdded'), triggerIdToTopic(args.id)],
+            topics: [bot.interface.getEventTopic('TriggerAdded'), bignumberToTopic(args.id)],
             fromBlock: startBlocks.AUTOMATION_BOT,
         })
 
@@ -42,7 +52,7 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
         const proxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         const currentProxyOwner = await proxy.owner()
         if (currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
-            if (network !== Network.HARDHAT && network !== Network.LOCAL) {
+            if (!isLocalNetwork(network)) {
                 throw new Error(
                     `Signer is not an owner of the proxy. Cannot impersonate on external network. Signer: ${await signer.getAddress()}. Owner: ${currentProxyOwner}`,
                 )
@@ -50,4 +60,30 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
             console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
+
+        const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
+            vault,
+            args.id.toString(),
+            args.allowance,
+        ])
+
+        const tx = await proxy.connect(signer).execute(bot.address, removeTriggerData, { gasLimit: 1_000_000 })
+        const receipt = await tx.wait()
+
+        const [triggerRemovedEvent] = getEvents(
+            receipt,
+            'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
+            'TriggerRemoved',
+        )
+
+        if (!triggerRemovedEvent) {
+            throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
+        }
+
+        console.log(`Trigger with id ${args.id.toString()} was succesfully removed`)
+        console.log(`Vault ID: ${vault}`)
+        console.log(`Allowance removed: ${args.allowance}`)
+        console.log(`Automation Bot: ${hardhatUtils.addresses.AUTOMATION_BOT}`)
+        console.log(`DSProxy: ${proxyAddress}`)
+        console.log(`Signer: ${await signer.getAddress()}`)
     })

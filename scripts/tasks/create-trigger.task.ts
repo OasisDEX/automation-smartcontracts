@@ -45,8 +45,9 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             const topicFilters = [
                 [bot.interface.getEventTopic('TriggerAdded'), null, null, vaultIdTopic],
                 [bot.interface.getEventTopic('TriggerRemoved'), vaultIdTopic],
+                [bot.interface.getEventTopic('TriggerExecuted'), null, vaultIdTopic],
             ]
-            const [addedTriggerIds, removedTriggerIds] = await Promise.all(
+            const [addedTriggerIds, removedTriggerIds, executedTriggerIds] = await Promise.all(
                 topicFilters.map(async filter => {
                     const logs = await hre.ethers.provider.getLogs({
                         address: bot.address,
@@ -56,9 +57,17 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
                     return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber())
                 }),
             )
-            triggerIdToReplace = max(
-                addedTriggerIds.filter(addedId => !removedTriggerIds.some(removedId => removedId === addedId)),
+            const activeTriggerIds = addedTriggerIds.filter(
+                addedId => !removedTriggerIds.includes(addedId) && !executedTriggerIds.includes(addedId),
             )
+            if (activeTriggerIds.length > 1) {
+                console.log(
+                    `Warning: Found more that one active trigger id. Choosing to replace the latest. Active rigger IDs: ${activeTriggerIds.join(
+                        ', ',
+                    )}`,
+                )
+            }
+            triggerIdToReplace = max(activeTriggerIds)
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -90,14 +99,14 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             triggerData,
         ])
 
-        const tx = await proxy.connect(signer).execute(hardhatUtils.addresses.AUTOMATION_BOT, addTriggerData)
+        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData)
         const receipt = await tx.wait()
 
-        const triggerAddedEvent = getEvents(
+        const [triggerAddedEvent] = getEvents(
             receipt,
             'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
             'TriggerAdded',
-        )?.[0]
+        )
 
         if (!triggerAddedEvent) {
             throw new Error(`Failed to create trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
