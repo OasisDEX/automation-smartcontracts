@@ -118,7 +118,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
         console.log(`Trigger ID: ${triggerId}`)
         console.log(`Replaced Trigger ID: ${triggerIdToReplace || '<none>'}`)
         console.log(`Trigger Data: ${triggerData}`)
-        console.log(`Automation Bot: ${hardhatUtils.addresses.AUTOMATION_BOT}`)
+        console.log(`Automation Bot: ${bot.address}`)
         console.log(`Vault ID: ${args.vault.toString()}`)
         console.log(`DSProxy: ${proxyAddress}`)
         console.log(`Signer: ${await signer.getAddress()}`)
