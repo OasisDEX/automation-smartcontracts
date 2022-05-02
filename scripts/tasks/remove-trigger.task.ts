@@ -61,7 +61,7 @@ task<RemoveTriggerParams>('remove-trigger', 'Removes a trigger for a user')
             args.allowance,
         ])
 
-        const tx = await proxy.connect(signer).execute(bot.address, removeTriggerData, { gasLimit: 1_000_000 })
+        const tx = await proxy.connect(signer).execute(bot.address, removeTriggerData)
         const receipt = await tx.wait()
 
         const [triggerRemovedEvent] = getEvents(
