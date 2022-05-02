@@ -1,6 +1,6 @@
 import { BigNumber } from 'bignumber.js'
-import { constants, Signer, utils, BigNumber as EthersBN } from 'ethers'
-import { task } from 'hardhat/config'
+import { Signer, utils, BigNumber as EthersBN } from 'ethers'
+import { task, types } from 'hardhat/config'
 import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
@@ -24,17 +24,19 @@ interface StopLossArgs {
     refund: BigNumber
     slippage: BigNumber
     forked?: Network
+    debug: boolean
 }
 
 const OAZO_FEE = new BigNumber(0.002)
 const LOAN_FEE = new BigNumber(0)
-const DEFAULT_SLIPPAGE = new BigNumber(0.005)
+const DEFAULT_SLIPPAGE_PCT = new BigNumber(0.5)
 
 task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
-    .addOptionalParam('slippage', 'Slippage for trade', DEFAULT_SLIPPAGE, params.bignumber)
+    .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
     .addOptionalParam('forked', 'Forked network')
+    .addOptionalParam('debug', 'Debug mode', false, types.boolean)
     .setAction(async (args: StopLossArgs, hre) => {
         const { name: network } = hre.network
         console.log(
@@ -112,6 +114,10 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             args.slippage,
             args.forked,
         )
+        if (args.debug) {
+            console.log('cpData', cdpData)
+            console.log('exchangeData', exchangeData)
+        }
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
@@ -200,7 +206,6 @@ async function getExecutionData(
         ilkRegistry.join(ilk),
         ilkRegistry.dec(ilk),
     ])
-    console.log(`Join Address: ${gemJoin}`)
 
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
@@ -237,8 +242,9 @@ async function getExecutionData(
         return { exchangeData, cdpData }
     }
 
-    console.log('Requesting quote from 1inch...')
     const quoteAmount = isToCollateral ? collateral.div(collRatioPct).times(100) : collateral
+
+    console.log('Requesting quote from 1inch...')
     const marketPrice = await getQuote(addresses.DAI, gem, quoteAmount)
 
     const marketParams: MarketParams = {
@@ -246,7 +252,7 @@ async function getExecutionData(
         marketPrice,
         OF: OAZO_FEE,
         FF: LOAN_FEE,
-        slippage,
+        slippage: slippage.div(100),
     }
     const vaultInfoForClosing: VaultInfoForClosing = {
         currentDebt: debt.shiftedBy(-18),
@@ -263,7 +269,7 @@ async function getExecutionData(
         gem,
         addresses.EXCHANGE,
         closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
-        slippage.times(100),
+        slippage,
     )
 
     const exchangeData = {
@@ -275,5 +281,6 @@ async function getExecutionData(
         exchangeAddress: swap.tx.to,
         _exchangeCalldata: swap.tx.data,
     }
+
     return { exchangeData, cdpData }
 }
