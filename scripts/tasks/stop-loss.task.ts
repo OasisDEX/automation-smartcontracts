@@ -282,7 +282,5 @@ async function getExecutionData(
         _exchangeCalldata: swap.tx.data,
     }
 
-    console.log(exchangeData)
-    console.log(cdpData)
     return { exchangeData, cdpData }
 }
