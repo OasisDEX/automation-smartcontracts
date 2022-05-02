@@ -62,7 +62,7 @@ task<CreateTriggerParams>('create-trigger', 'Creates a stop loss trigger for a u
             )
             if (activeTriggerIds.length > 1) {
                 console.log(
-                    `Warning: Found more that one active trigger id. Choosing to replace the latest. Active rigger IDs: ${activeTriggerIds.join(
+                    `Warning: Found more than one active trigger id. Choosing to replace the latest. Active trigger IDs: ${activeTriggerIds.join(
                         ', ',
                     )}`,
                 )
