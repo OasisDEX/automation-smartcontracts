@@ -66,7 +66,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for
                     )}`,
                 )
             }
-            triggerIdToReplace = max(activeTriggerIds)
+            triggerIdToReplace = max(activeTriggerIds) ?? 0
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
