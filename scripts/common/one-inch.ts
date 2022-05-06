@@ -14,8 +14,7 @@ export async function getQuote(daiAddress: string, collateralAddress: string, am
     })
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
     const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
-    const price = daiAmount.div(collateralAmount)
-    return price
+    return daiAmount.div(collateralAmount);
 }
 
 export async function getSwap(
