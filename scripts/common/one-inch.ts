@@ -5,6 +5,7 @@ import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
 const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
+    console.log('1inch params', collateralAddress, amount.toString())
     const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
         params: {
             fromTokenAddress: collateralAddress,
@@ -12,9 +13,15 @@ export async function getQuote(daiAddress: string, collateralAddress: string, am
             amount: amount.toFixed(0),
         },
     })
+    console.log('data.fromToken.decimals', data.fromToken.decimals)
+    console.log('data.toToken.decimals', data.toToken.decimals)
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
     const daiAmount = new BigNumber(data.toTokenAmount).shiftedBy(-data.toToken.decimals)
-    return daiAmount.div(collateralAmount)
+    console.log('collateralAmount', collateralAmount.toString())
+    console.log('daiAmount', daiAmount.toString())
+    const price = daiAmount.div(collateralAmount)
+    console.log('price', price.toString())
+    return price
 }
 
 export async function getSwap(

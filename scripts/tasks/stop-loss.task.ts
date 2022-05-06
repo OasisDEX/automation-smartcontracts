@@ -164,16 +164,20 @@ async function getExecutionData(
 
     const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
     const ilk = await cdpManager.ilks(vaultId.toString())
+    console.log('Ilk', ilk)
     if (hre.network.name !== Network.MAINNET) {
         const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
-        await (await jug.drip(ilk)).wait()
+        console.log(`drip(${ilk})`)
+        await (await jug.drip(ilk, { gasLimit: 300000 })).wait()
     }
 
     const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
 
+    console.log(`network = ${hre.network.name}`)
     if (isLocalNetwork(hre.network.name)) {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', addresses.OSM_MOM)
         const osmAddress = await osmMom.osms(ilk)
+        console.log(`osmAddress = ${osmAddress}`)
         const hash = utils.solidityKeccak256(['uint256', 'uint256'], [mcdView.address, 5])
         const isBud = await hre.ethers.provider.getStorageAt(osmAddress, hash)
         if (EthersBN.from(isBud).eq(0)) {
@@ -210,6 +214,8 @@ async function getExecutionData(
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
     const proxyOwner = await proxy.owner()
+
+    console.log('Proxy owner', proxyOwner)
 
     const cdpData = {
         ilk,
@@ -259,9 +265,15 @@ async function getExecutionData(
         currentCollateral: collateral.shiftedBy(-ilkDecimals.toNumber()),
     }
 
+    console.log('marketParams.marketPrice', marketParams.marketPrice.toString())
+    console.log('marketParams.oraclePrice', marketParams.oraclePrice.toString())
+
     const closeParams = isToCollateral
         ? getCloseToCollateralParams(marketParams, vaultInfoForClosing)
         : getCloseToDaiParams(marketParams, vaultInfoForClosing)
+
+    console.log('closeParams.fromTokenAmount', closeParams.fromTokenAmount.toString())
+    console.log('closeParams.toTokenAmount', closeParams.toTokenAmount.toString())
 
     console.log('Requesting swap from 1inch...')
     const swap = await getSwap(
@@ -281,6 +293,11 @@ async function getExecutionData(
         exchangeAddress: swap.tx.to,
         _exchangeCalldata: swap.tx.data,
     }
+
+    console.log('ilkDecimals', ilkDecimals.toNumber())
+    console.log('exchangeData.fromTokenAmount', exchangeData.fromTokenAmount.toString())
+    console.log('exchangeData.toTokenAmount', exchangeData.toTokenAmount.toString())
+    console.log('exchangeData.minToTokenAmount', exchangeData.minToTokenAmount.toString())
 
     return { exchangeData, cdpData }
 }

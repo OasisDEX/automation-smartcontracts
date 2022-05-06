@@ -74,6 +74,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
         const proxyAddress = await cdpManager.owns(args.vault.toString())
         const proxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
+        console.log('Proxy address', proxyAddress)
         const currentProxyOwner = await proxy.owner()
         if (currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase()) {
             if (!isLocalNetwork(network)) {
