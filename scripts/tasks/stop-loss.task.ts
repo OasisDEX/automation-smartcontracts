@@ -188,7 +188,7 @@ async function getExecutionData(
     }
 
     const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
-    const [collateral, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
+    const [collateral18, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
 
     const oraclePrice = await mcdView.getPrice(ilk)
     const ratio = await mcdView.getRatio(vaultId.toString(), false)
@@ -210,6 +210,8 @@ async function getExecutionData(
         ilkRegistry.join(ilk),
         ilkRegistry.dec(ilk),
     ])
+
+    const collateral = collateral18.shiftedBy(ilkDecimals - 18)
 
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
