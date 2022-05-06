@@ -166,6 +166,7 @@ async function getExecutionData(
     const ilk = await cdpManager.ilks(vaultId.toString())
     if (hre.network.name !== Network.MAINNET) {
         const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
+        console.log(`Executing drip(${ilk})`)
         await (await jug.drip(ilk, { gasLimit: 300000 })).wait()
     }
 
@@ -184,7 +185,7 @@ async function getExecutionData(
     }
 
     const vaultInfo = await mcdView.getVaultInfo(vaultId.toString())
-    const [collateral, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
+    const [collateral18, debt] = vaultInfo.map((v: EthersBN) => new BigNumber(v.toString()))
 
     const oraclePrice = await mcdView.getPrice(ilk)
     const ratio = await mcdView.getRatio(vaultId.toString(), false)
@@ -206,6 +207,8 @@ async function getExecutionData(
         ilkRegistry.join(ilk),
         ilkRegistry.dec(ilk),
     ])
+
+    const collateral = collateral18.shiftedBy(ilkDecimals - 18)
 
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
