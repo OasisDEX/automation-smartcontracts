@@ -535,7 +535,7 @@ describe('AutomationBot', async () => {
 
     describe('execute with re-register', async () => {
         let triggerId = 1
-        let firstExecutionEvents: any = undefined
+        let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
         const triggerData =
             '0x0000000000000000000000000000000000000000000000000000000000006CBB000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000A5'
 
@@ -551,17 +551,18 @@ describe('AutomationBot', async () => {
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             ).wait()
-            firstExecutionEvents = getEvents(
+            firstTriggerAddedEvent = getEvents(
                 receipt,
                 'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
                 'TriggerAdded',
-            )
-            triggerId = (firstExecutionEvents[0] as any).args.triggerId.toNumber()
+            )[0]
+            triggerId = firstTriggerAddedEvent.args.triggerId.toNumber()
         })
+
         it('should work', async () => {
             const realExecutionData = '0x'
-            const executionData = utils.defaultAbiCoder.encode(['uint256', 'bytes'], [triggerId, realExecutionData])
-            const executionRecipt = await (
+            const executionData = utils.defaultAbiCoder.encode(['bytes'], [realExecutionData])
+            const executionReceipt = await (
                 await AutomationExecutorInstance.execute(
                     executionData,
                     testCdpId,
@@ -573,18 +574,23 @@ describe('AutomationBot', async () => {
                     0,
                 )
             ).wait()
-            const executionEvents = getEvents(
-                executionRecipt,
+
+            const [triggerAddedEvent] = getEvents(
+                executionReceipt,
                 'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
                 'TriggerAdded',
             )
-            console.log('gas used', executionRecipt.gasUsed.toNumber())
-            expect(executionEvents[0].args.triggerId.toNumber()).to.be.equal(
-                firstExecutionEvents[0].args.triggerId.toNumber() + 1,
+            console.log('gas used', executionReceipt.gasUsed.toNumber())
+
+            expect(triggerAddedEvent.args.triggerId.toNumber()).to.be.equal(
+                firstTriggerAddedEvent.args.triggerId.toNumber() + 1,
             )
-            expect(executionEvents[0].args.commandAddress).to.be.equal(firstExecutionEvents[0].args.commandAddress)
-            expect(executionEvents[0].args.cdpId.toNumber()).to.be.equal(firstExecutionEvents[0].args.cdpId.toNumber())
-            expect(executionEvents[0].args.triggerData).to.be.equal(firstExecutionEvents[0].args.triggerData)
+            expect(triggerAddedEvent.args.commandAddress).to.be.equal(firstTriggerAddedEvent.args.commandAddress)
+            expect(triggerAddedEvent.args.cdpId.toNumber()).to.be.equal(firstTriggerAddedEvent.args.cdpId.toNumber())
+            expect(triggerAddedEvent.args.triggerData).to.be.equal(firstTriggerAddedEvent.args.triggerData)
+
+            const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
+            expect(executedTriggerRecord.cdpId).to.eq(0)
         })
     })
 
