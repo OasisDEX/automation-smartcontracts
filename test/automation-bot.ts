@@ -4,6 +4,7 @@ import { Contract, Signer, utils } from 'ethers'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
+import { DummyRollingCommand } from '../typechain/DummyRollingCommand'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -13,6 +14,7 @@ describe('AutomationBot', async () => {
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
     let DummyCommandInstance: DummyCommand
+    let DummyRollingCommandInstance: DummyRollingCommand
     let DssProxyActions: Contract
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
@@ -21,7 +23,9 @@ describe('AutomationBot', async () => {
     let snapshotId: string
 
     before(async () => {
+        const dummyRollingCommandFactory = await hre.ethers.getContractFactory('DummyRollingCommand')
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
+
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         const system = await deploySystem({ utils, addCommands: false })
@@ -33,6 +37,14 @@ describe('AutomationBot', async () => {
             false,
             true,
         )) as DummyCommand
+        DummyRollingCommandInstance = (await dummyRollingCommandFactory.deploy(
+            system.serviceRegistry.address,
+            true,
+            true,
+            false,
+            true,
+        )) as DummyRollingCommand
+        DummyRollingCommandInstance = await DummyRollingCommandInstance.deployed()
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
         ServiceRegistryInstance = system.serviceRegistry
@@ -45,6 +57,8 @@ describe('AutomationBot', async () => {
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
+        const rollingCommandHash = getCommandHash(100)
+        await system.serviceRegistry.addNamedService(rollingCommandHash, DummyRollingCommandInstance.address)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -519,6 +533,61 @@ describe('AutomationBot', async () => {
         })
     })
 
+    describe('execute with re-register', async () => {
+        let triggerId = 1
+        let firstExecutionEvents: any = undefined
+        const triggerData =
+            '0x0000000000000000000000000000000000000000000000000000000000006CBB000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000A5'
+
+        before(async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                100,
+                0,
+                triggerData,
+            ])
+            const receipt = await (
+                await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            ).wait()
+            firstExecutionEvents = getEvents(
+                receipt,
+                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                'TriggerAdded',
+            )
+            triggerId = (firstExecutionEvents[0] as any).args.triggerId.toNumber()
+        })
+        it('should work', async () => {
+            const realExecutionData = '0x'
+            const executionData = utils.defaultAbiCoder.encode(['uint256', 'bytes'], [triggerId, realExecutionData])
+            const executionRecipt = await (
+                await AutomationExecutorInstance.execute(
+                    executionData,
+                    testCdpId,
+                    triggerData,
+                    DummyRollingCommandInstance.address,
+                    triggerId,
+                    0,
+                    0,
+                    0,
+                )
+            ).wait()
+            const executionEvents = getEvents(
+                executionRecipt,
+                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
+                'TriggerAdded',
+            )
+            console.log('gas used', executionRecipt.gasUsed.toNumber())
+            expect(executionEvents[0].args.triggerId.toNumber()).to.be.equal(
+                firstExecutionEvents[0].args.triggerId.toNumber() + 1,
+            )
+            expect(executionEvents[0].args.commandAddress).to.be.equal(firstExecutionEvents[0].args.commandAddress)
+            expect(executionEvents[0].args.cdpId.toNumber()).to.be.equal(firstExecutionEvents[0].args.cdpId.toNumber())
+            expect(executionEvents[0].args.triggerData).to.be.equal(firstExecutionEvents[0].args.triggerData)
+        })
+    })
+
     describe('execute', async () => {
         let triggerId = 0
         const triggerData = '0x'
@@ -607,6 +676,9 @@ describe('AutomationBot', async () => {
                 },
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
+            const receipt = await (await tx).wait()
+
+            console.log('gas used', receipt.gasUsed.toNumber())
         })
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {

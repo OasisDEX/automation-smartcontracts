@@ -25,7 +25,7 @@ contract DummyRollingCommand is DummyCommand {
             _validTriggerData
         )
     {
-        TriggerType = 5;
+        TriggerType = 100;
     }
 
     function execute(
@@ -40,6 +40,7 @@ contract DummyRollingCommand is DummyCommand {
         );
         bytes memory addTriggerCallData = abi.encodeWithSelector(
             _bot.addTrigger.selector,
+            cdpId,
             TriggerType,
             replacedTriggerId,
             triggerData
@@ -47,7 +48,7 @@ contract DummyRollingCommand is DummyCommand {
 
         (bool status, ) = address(msg.sender).delegatecall(addTriggerCallData);
 
-        require(status, "add-triger-failed");
+        require(status, "addTrigger reverted");
 
         //TODO: use remaining execution data to call whatever is needed
         require(!revertsInExecute, "command failed");
