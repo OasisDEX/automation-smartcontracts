@@ -565,6 +565,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(tx).not.to.be.reverted
         })
@@ -586,6 +589,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
 
             await expect(tx).to.be.reverted
@@ -602,6 +608,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
         })
@@ -617,6 +626,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
@@ -632,6 +644,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
@@ -647,6 +662,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
         })
