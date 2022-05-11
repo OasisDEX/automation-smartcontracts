@@ -166,7 +166,7 @@ async function getExecutionData(
     const ilk = await cdpManager.ilks(vaultId.toString())
     if (hre.network.name !== Network.MAINNET) {
         const jug = await hre.ethers.getContractAt('IJug', addresses.MCD_JUG)
-        console.log(`Executing drip(${ilk})`)
+        console.log(`Executing drip. Ilk: ${ilk}`)
         await (await jug.drip(ilk, { gasLimit: 300000 })).wait()
     }
 
