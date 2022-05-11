@@ -43,9 +43,6 @@ jobs:
       - name: format
         run: yarn format
 
-      - name: clean
-        run: yarn clean
-
       - name: compile
         env:
             ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
