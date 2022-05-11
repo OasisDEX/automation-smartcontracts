@@ -242,12 +242,7 @@ async function getExecutionData(
         return { exchangeData, cdpData }
     }
 
-    const quoteAmount = isToCollateral
-        ? collateral
-              .div(collRatioPct)
-              .times(100)
-              .shiftedBy(ilkDecimals - 18)
-        : collateral
+    const quoteAmount = isToCollateral ? collateral.div(collRatioPct).times(100) : collateral
 
     console.log('Requesting quote from 1inch...')
     const marketPrice = await getQuote(addresses.DAI, gem, quoteAmount)
