@@ -55,13 +55,12 @@ task<TriggerInfoArgs>('trigger-info')
             `Found trigger information\nCommand Address: ${commandAddress}\nVault ID: ${vaultId.toString()}\nTrigger Type: ${triggerType.toString()}\nStop Loss Level: ${stopLossLevel.toString()}`,
         )
 
-        const block = args.block || 'latest'
         const closeCommand = await hre.ethers.getContractAt('CloseCommand', addresses.AUTOMATION_CLOSE_COMMAND)
         const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
 
         const opts = {
-            blockTag: block,
+            blockTag: args.block || 'latest',
         }
 
         const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
@@ -72,7 +71,7 @@ task<TriggerInfoArgs>('trigger-info')
         const nextCollRatio = await mcdView.getRatio(vaultId.toString(), true, opts)
 
         console.log(
-            `\nInfo At Block: ${block}\nIs Execution Legal: ${isExecutionLegal}\nPrice: ${toBaseUnits(
+            `\nInfo At Block: ${opts.blockTag}\nIs Execution Legal: ${isExecutionLegal}\nPrice: ${toBaseUnits(
                 price,
             )}\nNext Price: ${toBaseUnits(nextPrice)}\nColl Ratio: ${toBaseUnits(
                 collRatio,
