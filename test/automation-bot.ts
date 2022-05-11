@@ -602,6 +602,9 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                {
+                    gasLimit: 2000_000,
+                },
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
         })

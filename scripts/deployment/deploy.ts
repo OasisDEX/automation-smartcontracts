@@ -10,12 +10,12 @@ import { deploySystem } from '../common/deploy-system'
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
     const signer = hre.ethers.provider.getSigner(0)
-    //await utils.cancelTx(80, 10, signer);
+    await utils.cancelTx(61, 120, signer)
     const network = hre.network.name || ''
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    await deploySystem({ utils, addCommands: true, deployMcdView: false, logDebug: true })
+    //  await deploySystem({ utils, addCommands: true, deployMcdView: false, logDebug: true })
 }
 
 // We recommend this pattern to be able to use async/await everywhere
