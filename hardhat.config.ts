@@ -58,7 +58,7 @@ const config: HardhatUserConfig = {
             chainId: 2137,
             mining: {
                 auto: true,
-                interval:2000
+                interval: 2000,
             },
             hardfork: 'london',
             gas: 'auto',
