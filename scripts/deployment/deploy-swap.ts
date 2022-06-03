@@ -1,5 +1,6 @@
 import hre, { ethers } from 'hardhat'
 import axios from 'axios'
+import { uniq } from 'lodash'
 import { AutomationServiceName, getServiceNameHash, getStartBlocksFor, HardhatUtils, Network } from '../common'
 import { AutomationExecutor } from '../../typechain'
 
@@ -37,7 +38,7 @@ async function getExecutorWhitelistedCallers(executor: AutomationExecutor, start
         .map(({ input }) => executor.interface.decodeFunctionData('addCaller', input!).caller)
 
     const whitelistedCallers = (
-        await Promise.all(addedCallers.map(async caller => ((await executor.callers(caller)) ? caller : null)))
+        await Promise.all(uniq(addedCallers).map(async caller => ((await executor.callers(caller)) ? caller : null)))
     ).filter(Boolean)
 
     return whitelistedCallers
