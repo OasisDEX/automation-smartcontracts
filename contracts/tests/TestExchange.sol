@@ -19,10 +19,12 @@ contract TestExchange is IExchange {
         uint256 amount,
         uint256 receiveAtLeast,
         address,
-        bytes calldata
+        bytes calldata withData
     ) external override {
         IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
-        DAI.safeTransfer(msg.sender, receiveAtLeast);
+        (address receiver, uint256 toAmount) = abi.decode(withData, (address, uint256));
+        require(toAmount >= receiveAtLeast, "test-exchange/not-enough");
+        DAI.safeTransfer(receiver, toAmount);
     }
 
     function swapDaiForToken(
@@ -30,9 +32,11 @@ contract TestExchange is IExchange {
         uint256 amount,
         uint256 receiveAtLeast,
         address,
-        bytes calldata
+        bytes calldata withData
     ) external override {
         DAI.safeTransferFrom(msg.sender, address(this), amount);
-        IERC20(asset).safeTransfer(msg.sender, receiveAtLeast);
+        (address receiver, uint256 toAmount) = abi.decode(withData, (address, uint256));
+        require(toAmount >= receiveAtLeast, "test-exchange/not-enough");
+        IERC20(asset).safeTransfer(receiver, toAmount);
     }
 }

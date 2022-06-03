@@ -26,6 +26,7 @@ export class HardhatUtils {
                 'AutomationExecutor',
                 this.addresses.AUTOMATION_EXECUTOR,
             ),
+            automationSwap: await this.hre.ethers.getContractAt('AutomationSwap', this.addresses.AUTOMATION_SWAP),
             mcdView: await this.hre.ethers.getContractAt('McdView', this.addresses.AUTOMATION_MCD_VIEW),
             closeCommand: await this.hre.ethers.getContractAt('CloseCommand', this.addresses.AUTOMATION_CLOSE_COMMAND),
         }

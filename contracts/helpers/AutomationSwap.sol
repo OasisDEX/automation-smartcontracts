@@ -67,10 +67,11 @@ contract AutomationSwap {
         address callee,
         bytes calldata withData
     ) external auth(msg.sender) {
+        require(receiver != address(0), "swap/receiver-zero-address");
         executor.swap(otherAsset, toDai, amount, 0, callee, withData);
         IERC20 toToken = toDai ? dai : IERC20(otherAsset);
         uint256 balance = toToken.balanceOf(address(this));
-        require(balance >= receiveAtLeast, "swap/receive-at-least");
+        require(balance >= receiveAtLeast, "swap/received-less");
         toToken.safeTransfer(receiver, balance);
     }
 }
