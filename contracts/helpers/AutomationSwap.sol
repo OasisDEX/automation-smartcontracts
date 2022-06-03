@@ -71,6 +71,6 @@ contract AutomationSwap {
         IERC20 toToken = toDai ? dai : IERC20(otherAsset);
         uint256 balance = toToken.balanceOf(address(this));
         require(balance >= receiveAtLeast, "swap/receive-at-least");
-        toToken.transfer(receiver, balance);
+        toToken.safeTransfer(receiver, balance);
     }
 }

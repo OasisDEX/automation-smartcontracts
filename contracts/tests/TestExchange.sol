@@ -21,11 +21,8 @@ contract TestExchange is IExchange {
         address,
         bytes calldata
     ) external override {
-        require(
-            IERC20(asset).transferFrom(msg.sender, address(this), amount),
-            "exchange/asset-from-failed"
-        );
-        require(DAI.transfer(msg.sender, receiveAtLeast), "exchange/dai-to-failed");
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        DAI.safeTransfer(msg.sender, receiveAtLeast);
     }
 
     function swapDaiForToken(
@@ -35,7 +32,7 @@ contract TestExchange is IExchange {
         address,
         bytes calldata
     ) external override {
-        require(DAI.transferFrom(msg.sender, address(this), amount), "exchange/dai-from-failed");
-        require(IERC20(asset).transfer(msg.sender, receiveAtLeast), "exchange/asset-to-failed");
+        DAI.safeTransferFrom(msg.sender, address(this), amount);
+        IERC20(asset).safeTransfer(msg.sender, receiveAtLeast);
     }
 }
