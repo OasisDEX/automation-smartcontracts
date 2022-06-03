@@ -66,7 +66,7 @@ describe('CloseCommand', async () => {
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        const system = await deploySystem({ utils, addCommands: true, logDebug: true })
+        const system = await deploySystem({ utils, addCommands: true })
 
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
