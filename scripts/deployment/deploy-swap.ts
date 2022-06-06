@@ -70,9 +70,7 @@ async function main() {
         automationSwapDeployment.address,
     )
 
-    for (const caller of callers) {
-        await (await AutomationSwapInstance.addCaller(caller)).wait()
-    }
+    await (await AutomationSwapInstance.addCallers(callers)).wait()
 }
 
 // We recommend this pattern to be able to use async/await everywhere

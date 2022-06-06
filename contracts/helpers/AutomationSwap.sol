@@ -49,13 +49,21 @@ contract AutomationSwap {
         _;
     }
 
-    function addCaller(address caller) external onlyOwner {
-        callers[caller] = true;
+    function addCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            // TODO: already whitelisted ?
+            callers[_callers[i]] = true;
+        }
     }
 
-    function removeCaller(address caller) external onlyOwner {
-        require(caller != msg.sender, "swap/cannot-remove-owner");
-        callers[caller] = false;
+    function removeCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(caller != msg.sender, "swap/cannot-remove-owner");
+            callers[caller] = false;
+        }
     }
 
     function swap(

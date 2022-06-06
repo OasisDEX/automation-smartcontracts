@@ -76,38 +76,39 @@ describe('AutomationSwap', async () => {
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
-    describe('addCaller', () => {
+    describe('addCallers', () => {
         it('should be able to whitelist new callers', async () => {
             const caller = generateRandomAddress()
             expect(await AutomationSwapInstance.callers(caller)).to.be.false
-            await AutomationSwapInstance.addCaller(caller)
+            await AutomationSwapInstance.addCallers([caller])
             expect(await AutomationSwapInstance.callers(caller)).to.be.true
         })
 
         it('should revert with swap/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
-            const tx = AutomationSwapInstance.connect(notOwner).addCaller(caller)
+            const tx = AutomationSwapInstance.connect(notOwner).addCallers([caller])
             await expect(tx).to.be.revertedWith('swap/only-owner')
         })
     })
 
-    describe('removeCaller', () => {
+    describe('removeCallers', () => {
         it('should be able to whitelist new callers', async () => {
             const caller = generateRandomAddress()
-            await AutomationSwapInstance.addCaller(caller)
+            await AutomationSwapInstance.addCallers([caller])
             expect(await AutomationSwapInstance.callers(caller)).to.be.true
-            await AutomationSwapInstance.removeCaller(caller)
+            await AutomationSwapInstance.removeCallers([caller])
             expect(await AutomationSwapInstance.callers(caller)).to.be.false
         })
 
         it('should revert with swap/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
-            const tx = AutomationSwapInstance.connect(notOwner).removeCaller(caller)
+            const tx = AutomationSwapInstance.connect(notOwner).removeCallers([caller])
             await expect(tx).to.be.revertedWith('swap/only-owner')
         })
 
         it('should revert with swap/cannot-remove-owner if owner tries to remove themselves', async () => {
-            const tx = AutomationSwapInstance.removeCaller(ownerAddress)
+            const caller = generateRandomAddress()
+            const tx = AutomationSwapInstance.removeCallers([caller, ownerAddress])
             await expect(tx).to.be.revertedWith('swap/cannot-remove-owner')
         })
     })
