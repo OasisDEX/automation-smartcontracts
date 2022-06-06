@@ -3,6 +3,7 @@ import axios from 'axios'
 import { uniq } from 'lodash'
 import { AutomationServiceName, getServiceNameHash, getStartBlocksFor, HardhatUtils, Network } from '../common'
 import { AutomationExecutor } from '../../typechain'
+import { constants } from 'ethers'
 
 interface EtherscanTransactionListResponse {
     result: {
@@ -65,12 +66,20 @@ async function main() {
     const AutomationSwapInstance = await automationSwapDeployment.deployed()
 
     await system.automationExecutor.addCaller(AutomationSwapInstance.address)
+
+    const swapHash = getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP)
+    const entry = await system.serviceRegistry.getServiceAddress(swapHash)
+    if (entry !== constants.AddressZero) {
+        console.log('Removing existing AUTOMATION_SWAP entry...')
+        await (await system.serviceRegistry.removeNamedService(swapHash)).wait()
+    }
     await system.serviceRegistry.addNamedService(
         getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
         automationSwapDeployment.address,
     )
 
     await (await AutomationSwapInstance.addCallers(callers)).wait()
+    console.log(`AutomationSwap deployed at ${automationSwapDeployment.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

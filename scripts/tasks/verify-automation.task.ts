@@ -13,40 +13,40 @@ task('verify-automation')
         const { addresses } = new HardhatUtils(hre)
 
         const contracts = [
-            {
-                address: addresses.AUTOMATION_SERVICE_REGISTRY,
-                constructorArguments: [args.delay],
-            },
-            {
-                address: addresses.AUTOMATION_BOT,
-                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
-            },
-            {
-                address: addresses.AUTOMATION_EXECUTOR,
-                constructorArguments: [
-                    addresses.AUTOMATION_BOT,
-                    addresses.DAI,
-                    addresses.WETH,
-                    network === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
-                ],
-            },
+            // {
+            //     address: addresses.AUTOMATION_SERVICE_REGISTRY,
+            //     constructorArguments: [args.delay],
+            // },
+            // {
+            //     address: addresses.AUTOMATION_BOT,
+            //     constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
+            // },
+            // {
+            //     address: addresses.AUTOMATION_EXECUTOR,
+            //     constructorArguments: [
+            //         addresses.AUTOMATION_BOT,
+            //         addresses.DAI,
+            //         addresses.WETH,
+            //         network === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
+            //     ],
+            // },
             {
                 address: addresses.AUTOMATION_SWAP,
                 constructorArguments: [addresses.AUTOMATION_EXECUTOR, addresses.DAI],
             },
-            {
-                address: addresses.AUTOMATION_MCD_UTILS,
-                constructorArguments: [
-                    addresses.AUTOMATION_SERVICE_REGISTRY,
-                    addresses.DAI,
-                    addresses.DAI_JOIN,
-                    addresses.MCD_JUG,
-                ],
-            },
-            {
-                address: addresses.AUTOMATION_CLOSE_COMMAND,
-                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
-            },
+            // {
+            //     address: addresses.AUTOMATION_MCD_UTILS,
+            //     constructorArguments: [
+            //         addresses.AUTOMATION_SERVICE_REGISTRY,
+            //         addresses.DAI,
+            //         addresses.DAI_JOIN,
+            //         addresses.MCD_JUG,
+            //     ],
+            // },
+            // {
+            //     address: addresses.AUTOMATION_CLOSE_COMMAND,
+            //     constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
+            // },
         ]
 
         for (const { address, constructorArguments } of contracts) {

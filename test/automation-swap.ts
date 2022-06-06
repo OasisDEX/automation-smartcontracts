@@ -1,17 +1,9 @@
 import hre from 'hardhat'
 import { Signer, BigNumber as EthersBN, constants, utils } from 'ethers'
-import { generateRandomAddress, HardhatUtils } from '../scripts/common'
-import { deploySystem } from '../scripts/common/deploy-system'
-import {
-    AutomationBot,
-    AutomationExecutor,
-    AutomationSwap,
-    ServiceRegistry,
-    TestERC20,
-    TestExchange,
-    TestWETH,
-} from '../typechain'
 import { expect } from 'chai'
+import { generateExecutionData, generateRandomAddress, HardhatUtils } from '../scripts/common'
+import { deploySystem } from '../scripts/common/deploy-system'
+import { AutomationExecutor, AutomationSwap, TestERC20, TestExchange, TestWETH } from '../typechain'
 
 describe('AutomationSwap', async () => {
     const testTokenTotalSupply = EthersBN.from(10).pow(18)
@@ -80,8 +72,17 @@ describe('AutomationSwap', async () => {
         it('should be able to whitelist new callers', async () => {
             const caller = generateRandomAddress()
             expect(await AutomationSwapInstance.callers(caller)).to.be.false
-            await AutomationSwapInstance.addCallers([caller])
+            const tx = AutomationSwapInstance.addCallers([caller])
+            await expect(tx).to.emit(AutomationSwapInstance, 'CallerAdded').withArgs(utils.getAddress(caller))
             expect(await AutomationSwapInstance.callers(caller)).to.be.true
+        })
+
+        it('should revert on duplicate caller whitelist', async () => {
+            const caller = generateRandomAddress()
+            const tx = AutomationSwapInstance.addCallers([caller])
+            await expect(tx).not.to.be.reverted
+            const tx2 = AutomationSwapInstance.addCallers([caller])
+            await expect(tx2).to.be.revertedWith('swap/duplicate-whitelist')
         })
 
         it('should revert with swap/only-owner on unauthorized sender', async () => {
@@ -96,7 +97,8 @@ describe('AutomationSwap', async () => {
             const caller = generateRandomAddress()
             await AutomationSwapInstance.addCallers([caller])
             expect(await AutomationSwapInstance.callers(caller)).to.be.true
-            await AutomationSwapInstance.removeCallers([caller])
+            const tx = AutomationSwapInstance.removeCallers([caller])
+            await expect(tx).to.emit(AutomationSwapInstance, 'CallerRemoved').withArgs(utils.getAddress(caller))
             expect(await AutomationSwapInstance.callers(caller)).to.be.false
         })
 
