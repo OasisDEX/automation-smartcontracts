@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { constants, Signer, BigNumber as EthersBN } from 'ethers'
+import { constants, Signer, BigNumber as EthersBN, utils } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
@@ -327,6 +327,7 @@ describe('AutomationExecutor', async () => {
 
         it('should successfully execute swap token for dai', async () => {
             const amount = 100
+            const receiveAtLeast = 90
             const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
@@ -335,9 +336,9 @@ describe('AutomationExecutor', async () => {
                 TestERC20Instance.address,
                 true,
                 amount,
-                amount,
+                receiveAtLeast,
                 constants.AddressZero,
-                '0x',
+                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationExecutorInstance.address, amount]),
             )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
@@ -350,6 +351,7 @@ describe('AutomationExecutor', async () => {
 
         it('should successfully execute swap dai for token', async () => {
             const amount = 100
+            const receiveAtLeast = 90
             const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
@@ -358,9 +360,9 @@ describe('AutomationExecutor', async () => {
                 TestERC20Instance.address,
                 false,
                 amount,
-                amount,
+                receiveAtLeast,
                 constants.AddressZero,
-                '0x',
+                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationExecutorInstance.address, amount]),
             )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
