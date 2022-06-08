@@ -65,9 +65,9 @@ describe('ServiceRegistry', async () => {
         })
 
         it('should fail if called for a second time immediately', async () => {
-            const notOwnerTrustedRegistryInstance = trustedRegistryInstance.connect(owner)
-            await notOwnerTrustedRegistryInstance.transferOwnership(await notOwner.getAddress())
-            const tx2 = notOwnerTrustedRegistryInstance.transferOwnership(await notOwner.getAddress())
+            const instance = trustedRegistryInstance.connect(owner)
+            await instance.transferOwnership(await notOwner.getAddress())
+            const tx2 = instance.transferOwnership(await notOwner.getAddress())
             await expect(tx2).to.be.revertedWith('delay-too-small')
         })
 
@@ -76,13 +76,6 @@ describe('ServiceRegistry', async () => {
             const tx = await instance.transferOwnership(await notOwner.getAddress())
             const txResult = await tx.wait()
             expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeScheduled')
-        })
-
-        it('should fail if called for a second time immediately', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.transferOwnership(await notOwner.getAddress())
-            const tx2 = instance.transferOwnership(await notOwner.getAddress())
-            await expect(tx2).to.be.revertedWith('delay-too-small')
         })
 
         it('should fail if called for a second time after too short delay', async () => {
@@ -224,8 +217,8 @@ describe('ServiceRegistry', async () => {
         it('should have no effect if called once', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await notOwner.getAddress())
-            const newOwnerAddress = await instance.getServiceAddress(supposedHash)
-            expect(newOwnerAddress).to.be.equal('0x0000000000000000000000000000000000000000')
+            const serviceAddress = await instance.getServiceAddress(supposedHash)
+            expect(serviceAddress).to.be.equal('0x0000000000000000000000000000000000000000')
         })
 
         it('should emit ChangeScheduled if called once', async () => {

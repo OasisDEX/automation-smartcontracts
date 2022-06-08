@@ -11,3 +11,8 @@ artifacts
 dist/
 test/workspace.code-workspace
 tenderly.yaml
+
+# Foundry
+cache/
+out/
+
