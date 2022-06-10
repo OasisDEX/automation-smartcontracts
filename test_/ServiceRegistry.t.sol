@@ -217,8 +217,55 @@ contract ServiceRegistryTest is Test {
         registry.addNamedService(serviceHash, serviceAddress);
     }
 
+    // should fail if there are additional data in msg.data
+    function test_addNamedService_badData() external {
+        (bool success, bytes memory data) = address(registry).call(
+            bytes.concat(
+                abi.encodeWithSelector(
+                    ServiceRegistry.addNamedService.selector,
+                    serviceHash,
+                    serviceAddress
+                ),
+                "1234"
+            )
+        );
+        assertFalse(success);
+        assertEq(data, abi.encodeWithSignature("Error(string)", "registry/illegal-padding"));
+    }
+
     // should update if called for a second time after proper delay
     function test_addNamedService_success() external {
-        // TODO:
+        bytes memory msgData = abi.encodeWithSelector(
+            ServiceRegistry.addNamedService.selector,
+            serviceHash,
+            serviceAddress
+        );
+        assertTrue(registry.requiredDelay() != newDelay);
+
+        vm.expectEmit(true, true, true, true);
+        emit ChangeScheduled(keccak256(msgData), block.timestamp + initialDelay, msgData);
+        registry.addNamedService(serviceHash, serviceAddress);
+
+        uint256 newTimestamp = block.timestamp + initialDelay + 1;
+        vm.warp(newTimestamp);
+
+        vm.expectEmit(true, true, true, true);
+        emit ChangeApplied(keccak256(msgData), newTimestamp, msgData);
+        registry.addNamedService(serviceHash, serviceAddress);
+
+        assertEq(registry.getRegisteredService(serviceName), serviceAddress);
+        assertEq(registry.getServiceAddress(serviceHash), serviceAddress);
+    }
+
+    // should fail if called for a second time after proper delay, when some address already exists
+    function test_addNamedService_alreadyExists() external {
+        registry.addNamedService(serviceHash, serviceAddress);
+        uint256 newTimestamp = block.timestamp + initialDelay + 1;
+        vm.warp(newTimestamp);
+        registry.addNamedService(serviceHash, serviceAddress);
+        registry.addNamedService(serviceHash, serviceAddress);
+        vm.warp(newTimestamp + initialDelay + 1);
+        vm.expectRevert("registry/service-override");
+        registry.addNamedService(serviceHash, serviceAddress);
     }
 }
