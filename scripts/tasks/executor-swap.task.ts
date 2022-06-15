@@ -14,8 +14,6 @@ interface ExecutorSwapArgs {
 
 const DEFAULT_SLIPPAGE_PCT = new BigNumber(1)
 
-export const ONE_INCH_ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
-
 task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
     .addParam('amount', 'The DAI amount to swap (base units)', '', params.bignumber)
     .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
