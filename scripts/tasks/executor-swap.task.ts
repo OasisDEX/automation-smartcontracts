@@ -112,6 +112,11 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         console.log(`DAI Balance After: ${new BigNumber(daiBalanceAfter.toString()).shiftedBy(-18).toFixed(2)}`)
         console.log(`WETH Balance After: ${new BigNumber(wethBalanceAfter.toString()).shiftedBy(-18).toFixed(6)}`)
 
+        if (wethBalanceAfter.eq(0)) {
+            console.log(`Zero WETH balance. Nothing to swap...`)
+            return
+        }
+
         const unwrapGasPrice = await getGasPrice()
         const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter)
         const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
