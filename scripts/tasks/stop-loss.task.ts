@@ -121,6 +121,20 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
+        const estimate = await executor.connect(executorSigner).estimateGas.execute(
+            executionData,
+            vaultId.toString(),
+            triggerData,
+            commandAddress,
+            args.trigger.toString(),
+            0,
+            0,
+            args.refund.toNumber(),
+            // to send forcefully even failed request
+            { gasLimit: 2_000_000 },
+        )
+        console.log(`Gas Estimate: ${estimate.toString()}`)
+
         console.log(`Starting trigger execution...`)
         const tx = await executor.connect(executorSigner).execute(
             executionData,
@@ -132,7 +146,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             0,
             args.refund.toNumber(),
             // to send forcefully even failed request
-            { gasLimit: 2_000_000 },
+            { gasLimit: 4_000_000, gasPrice: 105_000_000_000 },
         )
         const receipt = await tx.wait()
 
@@ -268,8 +282,8 @@ async function getExecutionData(
 
     console.log('Requesting swap from 1inch...')
     const swap = await getSwap(
-        addresses.DAI,
         gem,
+        addresses.DAI,
         addresses.EXCHANGE,
         closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
         slippage,
