@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { Signer, BigNumber as EthersBN, constants, utils } from 'ethers'
 import { expect } from 'chai'
-import { generateExecutionData, generateRandomAddress, HardhatUtils } from '../scripts/common'
+import { generateRandomAddress, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationExecutor, AutomationSwap, TestERC20, TestExchange, TestWETH } from '../typechain'
 
@@ -57,6 +57,7 @@ describe('AutomationSwap', async () => {
             TestDAIInstance.transfer(AutomationExecutorInstance.address, daiTotalSupply.div(2)),
             TestERC20Instance.transfer(AutomationExecutorInstance.address, testTokenTotalSupply.div(2)),
             owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) }),
+            owner.sendTransaction({ to: TestExchangeInstance.address, value: EthersBN.from(10).pow(18) }),
         ])
     })
 
@@ -148,7 +149,10 @@ describe('AutomationSwap', async () => {
                 amount,
                 receiveAtLeast,
                 constants.AddressZero,
-                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationSwapInstance.address, amount]),
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationSwapInstance.address, amount, false],
+                ),
             )
             await expect(tx).not.to.be.reverted
             const [
@@ -181,7 +185,10 @@ describe('AutomationSwap', async () => {
                 amount,
                 receiveAtLeast,
                 constants.AddressZero,
-                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationSwapInstance.address, amount]),
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationSwapInstance.address, amount, false],
+                ),
             )
             await expect(tx).not.to.be.reverted
             const [
@@ -196,6 +203,63 @@ describe('AutomationSwap', async () => {
             expect(executorTestTokenBalanceBefore.toString()).to.eq(executorTestTokenBalanceAfter.toString())
         })
 
+        it('should be able to swap dai for eth', async () => {
+            const amount = 100
+            const receiveAtLeast = 90
+            const [ownerDaiBalanceBefore, ownerEthBalanceBefore, executorDaiBalanceBefore, executorEthBalanceBefore] =
+                await Promise.all([
+                    TestDAIInstance.balanceOf(ownerAddress),
+                    hre.ethers.provider.getBalance(ownerAddress),
+                    TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                    hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+                ])
+            const tx = AutomationSwapInstance.swap(
+                ownerAddress,
+                constants.AddressZero,
+                false,
+                amount,
+                receiveAtLeast,
+                constants.AddressZero,
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationSwapInstance.address, amount, true],
+                ),
+            )
+            await expect(tx).not.to.be.reverted
+            const receipt = await (await tx).wait()
+            const [ownerDaiBalanceAfter, ownerEthBalanceAfter, executorDaiBalanceAfter, executorEthBalanceAfter] =
+                await Promise.all([
+                    TestDAIInstance.balanceOf(ownerAddress),
+                    hre.ethers.provider.getBalance(ownerAddress),
+                    TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                    hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+                ])
+            expect(executorDaiBalanceBefore.sub(amount).toString()).to.eq(executorDaiBalanceAfter.toString())
+            expect(
+                ownerEthBalanceBefore.add(amount).sub(receipt.gasUsed.mul(receipt.effectiveGasPrice)).toString(),
+            ).to.eq(ownerEthBalanceAfter.toString())
+            expect(ownerDaiBalanceBefore.toString()).to.eq(ownerDaiBalanceAfter.toString())
+            expect(executorEthBalanceBefore.toString()).to.eq(executorEthBalanceAfter.toString())
+        })
+
+        it('should revert on swap eth to dai', async () => {
+            const amount = 100
+            const receiveAtLeast = amount + 1
+            const tx = AutomationSwapInstance.swap(
+                ownerAddress,
+                constants.AddressZero,
+                true,
+                amount,
+                receiveAtLeast,
+                constants.AddressZero,
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationSwapInstance.address, amount, true],
+                ),
+            )
+            await expect(tx).to.be.reverted
+        })
+
         it('should revert with swap/received-less if swapped to less amount than expected', async () => {
             const amount = 100
             const receiveAtLeast = amount + 1
@@ -206,7 +270,10 @@ describe('AutomationSwap', async () => {
                 amount,
                 receiveAtLeast,
                 constants.AddressZero,
-                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationSwapInstance.address, amount]),
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationSwapInstance.address, amount, true],
+                ),
             )
             await expect(tx).to.be.revertedWith('swap/received-less')
         })
