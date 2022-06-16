@@ -338,7 +338,10 @@ describe('AutomationExecutor', async () => {
                 amount,
                 receiveAtLeast,
                 constants.AddressZero,
-                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationExecutorInstance.address, amount]),
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationExecutorInstance.address, amount, false],
+                ),
             )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
@@ -362,7 +365,10 @@ describe('AutomationExecutor', async () => {
                 amount,
                 receiveAtLeast,
                 constants.AddressZero,
-                utils.defaultAbiCoder.encode(['address', 'uint256'], [AutomationExecutorInstance.address, amount]),
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationExecutorInstance.address, amount, false],
+                ),
             )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([

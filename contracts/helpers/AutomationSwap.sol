@@ -34,6 +34,9 @@ contract AutomationSwap {
 
     mapping(address => bool) public callers;
 
+    event CallerAdded(address indexed caller);
+    event CallerRemoved(address indexed caller);
+
     constructor(AutomationExecutor _executor, IERC20 _dai) {
         executor = _executor;
         dai = _dai;
@@ -51,13 +54,24 @@ contract AutomationSwap {
         _;
     }
 
-    function addCaller(address caller) external onlyOwner {
-        callers[caller] = true;
+    function addCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(!callers[caller], "swap/duplicate-whitelist");
+            callers[caller] = true;
+            emit CallerAdded(caller);
+        }
     }
 
-    function removeCaller(address caller) external onlyOwner {
-        require(caller != msg.sender, "swap/cannot-remove-owner");
-        callers[caller] = false;
+    function removeCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(caller != msg.sender, "swap/cannot-remove-owner");
+            callers[caller] = false;
+            emit CallerRemoved(caller);
+        }
     }
 
     function swap(
