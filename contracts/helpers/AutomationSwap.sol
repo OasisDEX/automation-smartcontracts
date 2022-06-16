@@ -25,6 +25,8 @@ import { AutomationExecutor } from "../AutomationExecutor.sol";
 contract AutomationSwap {
     using SafeERC20 for IERC20;
 
+    address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
     AutomationExecutor public immutable executor;
     IERC20 public immutable dai;
 
@@ -68,10 +70,23 @@ contract AutomationSwap {
         bytes calldata withData
     ) external auth(msg.sender) {
         require(receiver != address(0), "swap/receiver-zero-address");
-        executor.swap(otherAsset, toDai, amount, 0, callee, withData);
-        IERC20 toToken = toDai ? dai : IERC20(otherAsset);
-        uint256 balance = toToken.balanceOf(address(this));
-        require(balance >= receiveAtLeast, "swap/received-less");
-        toToken.safeTransfer(receiver, balance);
+        bool isEth = otherAsset == ETH_ADDRESS || otherAsset == address(0);
+        // isEth && toDai - swap will fail
+        // mock other asset as ERC20 if it's a swap to eth
+        address other = isEth && !toDai ? address(dai) : otherAsset;
+        executor.swap(other, toDai, amount, 0, callee, withData);
+        if (isEth) {
+            uint256 balance = address(this).balance;
+            require(balance >= receiveAtLeast, "swap/received-less");
+            (bool sent, ) = payable(receiver).call{ value: balance }("");
+            require(sent, "swap/withdrawal-failed");
+        } else {
+            IERC20 toToken = toDai ? dai : IERC20(otherAsset);
+            uint256 balance = toToken.balanceOf(address(this));
+            require(balance >= receiveAtLeast, "swap/received-less");
+            toToken.safeTransfer(receiver, balance);
+        }
     }
+
+    receive() external payable {}
 }
