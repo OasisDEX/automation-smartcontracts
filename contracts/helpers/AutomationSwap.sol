@@ -25,12 +25,17 @@ import { AutomationExecutor } from "../AutomationExecutor.sol";
 contract AutomationSwap {
     using SafeERC20 for IERC20;
 
+    address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
     AutomationExecutor public immutable executor;
     IERC20 public immutable dai;
 
     address public owner;
 
     mapping(address => bool) public callers;
+
+    event CallerAdded(address indexed caller);
+    event CallerRemoved(address indexed caller);
 
     constructor(AutomationExecutor _executor, IERC20 _dai) {
         executor = _executor;
@@ -49,13 +54,24 @@ contract AutomationSwap {
         _;
     }
 
-    function addCaller(address caller) external onlyOwner {
-        callers[caller] = true;
+    function addCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(!callers[caller], "swap/duplicate-whitelist");
+            callers[caller] = true;
+            emit CallerAdded(caller);
+        }
     }
 
-    function removeCaller(address caller) external onlyOwner {
-        require(caller != msg.sender, "swap/cannot-remove-owner");
-        callers[caller] = false;
+    function removeCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(caller != msg.sender, "swap/cannot-remove-owner");
+            callers[caller] = false;
+            emit CallerRemoved(caller);
+        }
     }
 
     function swap(
@@ -68,10 +84,23 @@ contract AutomationSwap {
         bytes calldata withData
     ) external auth(msg.sender) {
         require(receiver != address(0), "swap/receiver-zero-address");
-        executor.swap(otherAsset, toDai, amount, 0, callee, withData);
-        IERC20 toToken = toDai ? dai : IERC20(otherAsset);
-        uint256 balance = toToken.balanceOf(address(this));
-        require(balance >= receiveAtLeast, "swap/received-less");
-        toToken.safeTransfer(receiver, balance);
+        bool isEth = otherAsset == ETH_ADDRESS || otherAsset == address(0);
+        // isEth && toDai - swap will fail
+        // mock other asset as ERC20 if it's a swap to eth
+        address other = isEth && !toDai ? address(dai) : otherAsset;
+        executor.swap(other, toDai, amount, 0, callee, withData);
+        if (isEth) {
+            uint256 balance = address(this).balance;
+            require(balance >= receiveAtLeast, "swap/received-less");
+            (bool sent, ) = payable(receiver).call{ value: balance }("");
+            require(sent, "swap/withdrawal-failed");
+        } else {
+            IERC20 toToken = toDai ? dai : IERC20(otherAsset);
+            uint256 balance = toToken.balanceOf(address(this));
+            require(balance >= receiveAtLeast, "swap/received-less");
+            toToken.safeTransfer(receiver, balance);
+        }
     }
+
+    receive() external payable {}
 }
