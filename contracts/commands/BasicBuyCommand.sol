@@ -88,7 +88,7 @@ contract BasicBuyCommand is ICommand {
 
         return
             collRatio != 0 &&
-            collRatio >= execCollRatio * 10**16 && // TODO: is this needed?
+            collRatio >= execCollRatio * 10**16 &&
             collRatio < targetCollRatio * 10**16 &&
             nextPrice <= maxBuyPrice;
     }
