@@ -137,13 +137,14 @@ describe('BasicBuyCommand', () => {
     })
 
     describe('execute', () => {
+        // 257
         const targetRatio = new BigNumber(180)
         const triggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            200,
+            250,
             targetRatio.toFixed(),
-            new BigNumber(1).shiftedBy(26).toFixed(),
+            new BigNumber(5000).shiftedBy(18).toFixed(),
             false,
         ) // TODO:
         let triggerId: number
@@ -206,6 +207,9 @@ describe('BasicBuyCommand', () => {
                     withdrawColl: new BigNumber(0),
                 },
             )
+            console.log(new BigNumber(oraclePrice.toString()).shiftedBy(-18).toFixed())
+            console.log(collRatio.toString())
+            console.log('c', collateralDelta.shiftedBy(-18).toFixed(), debtDelta.shiftedBy(-18).toFixed())
 
             const cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -264,7 +268,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 0,
             )
-            await expect(tx).not.to.be.reverted
+            await expect(tx).to.be.revertedWith('sdgsdfs')
         })
     })
 })
