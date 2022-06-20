@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils as ethersUtils } from 'ethers'
+import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
 import {
     AutomationBot,
@@ -22,22 +22,9 @@ import {
 import { deploySystem } from '../scripts/common/deploy-system'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
-const testCdpId = parseInt((process.env.CDP_ID || '26125') as string)
+const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-//Block dependent test, works for 13998517
-
-async function setBudInOSM(osmAddress: string, budAddress: string) {
-    const BUD_MAPPING_STORAGE_SLOT = 5
-    const toHash = hre.ethers.utils.defaultAbiCoder.encode(['address', 'uint'], [budAddress, BUD_MAPPING_STORAGE_SLOT])
-    const valueSlot = hre.ethers.utils.keccak256(toHash).replace(/0x0/g, '0x')
-
-    await hre.ethers.provider.send('hardhat_setStorageAt', [
-        osmAddress,
-        valueSlot,
-        '0x0000000000000000000000000000000000000000000000000000000000000001',
-    ])
-    await hre.ethers.provider.send('evm_mine', [])
-}
+// Block dependent test, works for 13998517
 
 describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -47,44 +34,38 @@ describe('CloseCommand', async () => {
     let CloseCommandInstance: CloseCommand
     let McdViewInstance: McdView
     let DAIInstance: Contract
-    let proxyOwnerAddress: string
+    let MPAInstance: MPALike
     let usersProxy: DsProxyLike
-    let snapshotId: string
+    let proxyOwnerAddress: string
     let receiverAddress: string
     let executorAddress: string
-    let mpaInstance: MPALike
-    let osmMomInstance: OsmMomLike
-    let osmInstance: OsmLike
+    let snapshotId: string
 
     before(async () => {
-        const ethAIlk = ethersUtils.formatBytes32String('ETH-A')
-        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
+        const ethAIlk = utils.formatBytes32String('ETH-A')
 
-        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
+        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
-        mpaInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
+        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        const system = await deploySystem({ utils, addCommands: true })
-
+        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
 
-        await system.mcdView.approve(executorAddress, true)
+        await McdViewInstance.approve(executorAddress, true)
 
-        const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
-
-        osmMomInstance = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
-        osmInstance = await hre.ethers.getContractAt('OsmLike', await osmMomInstance.osms(ethAIlk)) // ETH-A ilk
-
-        await setBudInOSM(osmInstance.address, McdViewInstance.address)
-
-        const proxyAddress = await cdpManagerInstance.owns(testCdpId)
+        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        const proxyAddress = await cdpManager.owns(testCdpId)
         usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         proxyOwnerAddress = await usersProxy.owner()
+
+        const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+        const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
+        await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
     })
 
     describe('execute', async () => {
@@ -157,7 +138,7 @@ describe('CloseCommand', async () => {
 
             describe('when Trigger is below current col ratio', async () => {
                 let triggerId: number
-                let triggersData: BytesLike
+                let triggerData: BytesLike
                 let executionData: BytesLike
                 let signer: Signer
 
@@ -166,31 +147,26 @@ describe('CloseCommand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = encodeTriggerData(
+                    triggerData = encodeTriggerData(
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
                         currentCollRatioAsPercentage - 1,
                     )
 
-                    executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
                         0,
-                        triggersData,
+                        triggerData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    const filteredEvents = getEvents(
-                        txRes,
-                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                        'TriggerAdded',
-                    )
-
-                    triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
                 })
 
                 afterEach(async () => {
@@ -202,7 +178,7 @@ describe('CloseCommand', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
+                        triggerData,
                         CloseCommandInstance.address,
                         triggerId,
                         0,
@@ -237,7 +213,7 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage + 1,
                     )
 
-                    executionData = generateExecutionData(mpaInstance, true, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -249,13 +225,8 @@ describe('CloseCommand', async () => {
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    const filteredEvents = getEvents(
-                        txRes,
-                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                        'TriggerAdded',
-                    )
-
-                    triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
                 })
 
                 it('it should pay instructed amount of DAI to executor to cover gas costs', async () => {
@@ -393,7 +364,7 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage - 1,
                     )
 
-                    executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(MPAInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -405,13 +376,8 @@ describe('CloseCommand', async () => {
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    const filteredEvents = getEvents(
-                        txRes,
-                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                        'TriggerAdded',
-                    )
-
-                    triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
                 })
 
                 afterEach(async () => {
@@ -451,7 +417,7 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage + 1,
                     )
 
-                    executionData = generateExecutionData(mpaInstance, false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateExecutionData(MPAInstance, false, cdpData, exchangeData, serviceRegistry)
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -463,13 +429,8 @@ describe('CloseCommand', async () => {
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    const filteredEvents = getEvents(
-                        txRes,
-                        'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                        'TriggerAdded',
-                    )
-
-                    triggerId = filteredEvents[0].args.triggerId.toNumber()
+                    const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
                 })
 
                 beforeEach(async () => {
@@ -481,7 +442,7 @@ describe('CloseCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it('it should whipe all debt and collateral', async () => {
+                it('it should wipe all debt and collateral', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,

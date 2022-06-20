@@ -14,9 +14,9 @@ export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }
 
-export function getEvents(receipt: ContractReceipt, eventAbi: string, eventName: string) {
+export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
-    const filteredEvents = receipt.events?.filter(x => x.topics[0] === iface.getEventTopic(eventName))
+    const filteredEvents = receipt.events?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
     return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
@@ -28,11 +28,17 @@ export function generateRandomAddress() {
     return utils.hexlify(utils.randomBytes(20))
 }
 
-export function encodeTriggerData(vaultId: number, triggerType: number, stopLossLevel: number): BytesLike {
-    return utils.defaultAbiCoder.encode(
-        ['uint256', 'uint16', 'uint256'],
-        [vaultId, triggerType, Math.round(stopLossLevel)],
-    )
+export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
+    const args = [vaultId, triggerType, ...rest]
+    switch (triggerType) {
+        case TriggerType.CLOSE_TO_COLLATERAL:
+        case TriggerType.CLOSE_TO_DAI:
+            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
+        case TriggerType.BASIC_BUY:
+            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256', 'uint256', 'uint256'], args)
+        default:
+            throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
+    }
 }
 
 export function decodeTriggerData(data: string) {

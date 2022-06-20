@@ -2,6 +2,7 @@ import {
     AutomationBot,
     AutomationExecutor,
     AutomationSwap,
+    BasicBuyCommand,
     CloseCommand,
     McdUtils,
     McdView,
@@ -19,7 +20,8 @@ export interface DeployedSystem {
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
     mcdView: McdView
-    closeCommand: CloseCommand | undefined
+    closeCommand?: CloseCommand
+    basicBuy?: BasicBuyCommand
 }
 
 export interface DeploySystemArgs {
@@ -47,6 +49,7 @@ export async function deploySystem({
     addressOverrides = {},
 }: DeploySystemArgs): Promise<DeployedSystem> {
     let CloseCommandInstance: CloseCommand | undefined
+    let BasicBuyInstance: BasicBuyCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -57,15 +60,16 @@ export async function deploySystem({
     const automationBotFactory = await ethers.getContractFactory('AutomationBot')
     const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
     const automationSwapFactory = await ethers.getContractFactory('AutomationSwap')
-    const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
     const mcdViewFactory = await ethers.getContractFactory('McdView')
     const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
+    const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
+    const basicBuyFactory = await ethers.getContractFactory('BasicBuyCommand')
 
     if (logDebug) console.log('Deploying ServiceRegistry....')
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
     const ServiceRegistryInstance = await serviceRegistryDeployment.deployed()
 
-    if (logDebug) console.log('Deploying McdUtils.....')
+    if (logDebug) console.log('Deploying McdUtils....')
     const mcdUtilsDeployment = await mcdUtilsFactory.deploy(
         ServiceRegistryInstance.address,
         addresses.DAI,
@@ -74,11 +78,11 @@ export async function deploySystem({
     )
     const McdUtilsInstance = await mcdUtilsDeployment.deployed()
 
-    if (logDebug) console.log('Deploying AutomationBot.....')
+    if (logDebug) console.log('Deploying AutomationBot....')
     const automationBotDeployment = await automationBotFactory.deploy(ServiceRegistryInstance.address)
     const AutomationBotInstance = await automationBotDeployment.deployed()
 
-    if (logDebug) console.log('Deploying AutomationExecutor.....')
+    if (logDebug) console.log('Deploying AutomationExecutor....')
     const automationExecutorDeployment = await automationExecutorFactory.deploy(
         AutomationBotInstance.address,
         addresses.DAI,
@@ -87,7 +91,7 @@ export async function deploySystem({
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
-    if (logDebug) console.log('Deploying AutomationSwap.....')
+    if (logDebug) console.log('Deploying AutomationSwap....')
     const automationSwapDeployment = await automationSwapFactory.deploy(
         AutomationExecutorInstance.address,
         addresses.DAI,
@@ -98,7 +102,7 @@ export async function deploySystem({
     let McdViewInstance: McdView
     const signer = ethers.provider.getSigner(0)
     if (deployMcdView) {
-        if (logDebug) console.log('Deploying McdView.....')
+        if (logDebug) console.log('Deploying McdView....')
         const mcdViewDeployment = await mcdViewFactory.deploy(
             addresses.MCD_VAT,
             addresses.CDP_MANAGER,
@@ -112,9 +116,13 @@ export async function deploySystem({
     }
 
     if (addCommands) {
-        if (logDebug) console.log('Deploying CloseCommand.....')
+        if (logDebug) console.log('Deploying CloseCommand....')
         const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
         CloseCommandInstance = await closeCommandDeployment.deployed()
+
+        if (logDebug) console.log('Deploying BasicBuy....')
+        const basicBuyDeployment = await basicBuyFactory.deploy(ServiceRegistryInstance.address)
+        BasicBuyInstance = await basicBuyDeployment.deployed()
     }
 
     if (logDebug) {
@@ -124,10 +132,13 @@ export async function deploySystem({
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
-        console.log(`CloseCommand deployed to: ${CloseCommandInstance?.address}`)
+        if (addCommands) {
+            console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
+            console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
+        }
     }
 
-    const system = {
+    const system: DeployedSystem = {
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
@@ -135,6 +146,7 @@ export async function deploySystem({
         automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
+        basicBuy: BasicBuyInstance,
     }
 
     await configureRegistryEntries(system, addresses as AddressRegistry, logDebug)
@@ -151,8 +163,16 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
         await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
 
-        if (logDebug) console.log('Whitelisting CloseCommand on McdView...')
+        if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await (await system.mcdView.approve(system.closeCommand.address, true)).wait()
+    }
+
+    if (system.basicBuy) {
+        if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
+        await addServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
+
+        if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
+        await (await system.mcdView.approve(system.basicBuy.address, true)).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')

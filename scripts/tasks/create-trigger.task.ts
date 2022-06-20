@@ -115,11 +115,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for
         const tx = await proxy.connect(signer).execute(bot.address, addTriggerData)
         const receipt = await tx.wait()
 
-        const [triggerAddedEvent] = getEvents(
-            receipt,
-            'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-            'TriggerAdded',
-        )
+        const [triggerAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerAdded'))
 
         if (!triggerAddedEvent) {
             throw new Error(`Failed to create trigger. Contract Receipt: ${JSON.stringify(receipt)}`)

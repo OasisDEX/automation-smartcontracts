@@ -173,13 +173,8 @@ describe('AutomationExecutor', async () => {
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const result = await tx.wait()
 
-            const filteredEvents = getEvents(
-                result,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )
-
-            triggerId = filteredEvents[0].args.triggerId.toNumber()
+            const [event] = getEvents(result, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            triggerId = event.args.triggerId.toNumber()
         })
 
         beforeEach(async () => {

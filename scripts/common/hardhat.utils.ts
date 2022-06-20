@@ -169,6 +169,19 @@ export class HardhatUtils {
         return this.isEth(tokenAddr) ? this.addresses.WETH : tokenAddr
     }
 
+    public async setBudInOSM(osmAddress: string, budAddress: string) {
+        const BUD_MAPPING_STORAGE_SLOT = 5
+        const toHash = utils.defaultAbiCoder.encode(['address', 'uint'], [budAddress, BUD_MAPPING_STORAGE_SLOT])
+        const valueSlot = utils.keccak256(toHash).replace(/0x0/g, '0x')
+
+        await this.hre.ethers.provider.send('hardhat_setStorageAt', [
+            osmAddress,
+            valueSlot,
+            '0x0000000000000000000000000000000000000000000000000000000000000001',
+        ])
+        await this.hre.ethers.provider.send('evm_mine', [])
+    }
+
     private isEth(tokenAddr: string) {
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
     }

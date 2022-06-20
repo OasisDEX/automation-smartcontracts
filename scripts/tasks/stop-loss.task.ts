@@ -156,12 +156,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         )
         const receipt = await tx.wait()
 
-        const triggerExecutedEvent = getEvents(
-            receipt,
-            'event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData)',
-            'TriggerExecuted',
-        )?.[0]
-
+        const triggerExecutedEvent = getEvents(receipt, bot.interface.getEvent('TriggerExecuted'))?.[0]
         if (!triggerExecutedEvent) {
             throw new Error(`Failed to execute the trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }

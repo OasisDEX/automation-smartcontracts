@@ -163,11 +163,7 @@ describe('AutomationBot', async () => {
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()
-            const events = getEvents(
-                receipt,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )
+            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
 
             const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
@@ -185,11 +181,7 @@ describe('AutomationBot', async () => {
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
             const receipt = await tx.wait()
-            const events = getEvents(
-                receipt,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )
+            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
         })
 
@@ -300,11 +292,7 @@ describe('AutomationBot', async () => {
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
-            const filteredEvents = getEvents(
-                txRes,
-                'event ApprovalGranted(uint256 indexed cdpId, address approvedEntity)',
-                'ApprovalGranted',
-            )
+            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalGranted'))
 
             expect(filteredEvents.length).to.equal(1)
             expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
@@ -373,11 +361,7 @@ describe('AutomationBot', async () => {
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
-            const filteredEvents = getEvents(
-                txRes,
-                'event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity)',
-                'ApprovalRemoved',
-            )
+            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalRemoved'))
 
             expect(filteredEvents.length).to.equal(1)
             expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
@@ -399,13 +383,8 @@ describe('AutomationBot', async () => {
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
-            const filteredEvents = getEvents(
-                txRes,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )
-
-            triggerId = filteredEvents[0].args.triggerId.toNumber()
+            const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            triggerId = event.args.triggerId.toNumber()
         })
 
         it('should fail if trying to remove trigger that does not exist', async () => {
@@ -521,11 +500,7 @@ describe('AutomationBot', async () => {
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()
-            const events = getEvents(
-                receipt,
-                'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
-                'TriggerRemoved',
-            )
+            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
             expect(events.length).to.be.equal(1)
 
             const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
@@ -551,11 +526,7 @@ describe('AutomationBot', async () => {
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             ).wait()
-            firstTriggerAddedEvent = getEvents(
-                receipt,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )[0]
+            firstTriggerAddedEvent = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))[0]
             triggerId = firstTriggerAddedEvent.args.triggerId.toNumber()
         })
 
@@ -577,8 +548,7 @@ describe('AutomationBot', async () => {
 
             const [triggerAddedEvent] = getEvents(
                 executionReceipt,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
+                AutomationBotInstance.interface.getEvent('TriggerAdded'),
             )
             console.log('gas used', executionReceipt.gasUsed.toNumber())
 
@@ -612,13 +582,8 @@ describe('AutomationBot', async () => {
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
 
-            const filteredEvents = getEvents(
-                txRes,
-                'event TriggerAdded(uint256 indexed triggerId, address indexed commandAddress, uint256 indexed cdpId, bytes triggerData)',
-                'TriggerAdded',
-            )
-
-            triggerId = filteredEvents[0].args.triggerId.toNumber()
+            const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            triggerId = event.args.triggerId.toNumber()
         })
 
         beforeEach(async () => {
