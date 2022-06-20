@@ -1,6 +1,8 @@
 import hre from 'hardhat'
-import { BytesLike, utils } from 'ethers'
-import { encodeTriggerData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
+import { BytesLike, Contract, utils } from 'ethers'
+import { expect } from 'chai'
+import { getMultiplyParams } from '@oasisdex/multiply'
+import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -13,10 +15,11 @@ import {
     OsmLike,
     OsmMomLike,
 } from '../typechain'
-import { expect } from 'chai'
+import BigNumber from 'bignumber.js'
+import { getQuote } from '../scripts/common/one-inch'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
-const testCdpId = parseInt(process.env.CDP_ID || '8463')
+const testCdpId = parseInt(process.env.CDP_ID || '13288')
 
 describe('BasicBuyCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
@@ -31,6 +34,7 @@ describe('BasicBuyCommand', () => {
     let proxyOwnerAddress: string
     let receiverAddress: string
     let executorAddress: string
+    let cdpId: string
     let snapshotId: string
 
     before(async () => {
@@ -116,7 +120,14 @@ describe('BasicBuyCommand', () => {
 
         it('should successfully create the trigger', async () => {
             const [executionRatio, targetRatio] = [102, 101]
-            const triggerData = encodeTriggerData(testCdpId, TriggerType.BASIC_BUY, executionRatio, targetRatio, 0)
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                executionRatio,
+                targetRatio,
+                0,
+                false,
+            )
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -126,7 +137,15 @@ describe('BasicBuyCommand', () => {
     })
 
     describe('execute', () => {
-        const triggerData = encodeTriggerData(testCdpId, TriggerType.BASIC_BUY)
+        const targetRatio = new BigNumber(180)
+        const triggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.BASIC_BUY,
+            200,
+            targetRatio.toFixed(),
+            new BigNumber(1).shiftedBy(26).toFixed(),
+            false,
+        ) // TODO:
         let triggerId: number
 
         beforeEach(async () => {
@@ -141,7 +160,7 @@ describe('BasicBuyCommand', () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
             const dataToSupply = system.automationBot.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
-                2,
+                TriggerType.BASIC_BUY,
                 0,
                 triggerData,
             ])
@@ -153,7 +172,99 @@ describe('BasicBuyCommand', () => {
         })
 
         it('executes the trigger', async () => {
-            //
+            const collRatio = await system.mcdView.getRatio(testCdpId, false)
+            const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
+            const oraclePrice = await system.mcdView.getPrice(ethAIlk)
+            const marketPrice = await getQuote(
+                hardhatUtils.addresses.DAI,
+                hardhatUtils.addresses.WETH,
+                new BigNumber(1).shiftedBy(18),
+            )
+            const slippage = new BigNumber(0.002)
+
+            const { collateralDelta, debtDelta, skipFL } = getMultiplyParams(
+                // market params
+                {
+                    oraclePrice: new BigNumber(oraclePrice.toString()),
+                    marketPrice,
+                    OF: new BigNumber(0),
+                    FF: new BigNumber(0),
+                    slippage,
+                },
+                // vault info
+                {
+                    currentDebt: new BigNumber(debt.toString()),
+                    currentCollateral: new BigNumber(collateral.toString()),
+                    minCollRatio: new BigNumber(collRatio.toString()),
+                },
+                // desired cdp state
+                {
+                    requiredCollRatio: targetRatio,
+                    providedCollateral: new BigNumber(0),
+                    providedDai: new BigNumber(0),
+                    withdrawDai: new BigNumber(0),
+                    withdrawColl: new BigNumber(0),
+                },
+            )
+
+            const cdpData = {
+                gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
+                fundsReceiver: receiverAddress,
+                cdpId: testCdpId,
+                ilk: '0x0000000000000000000000000000000000000000000000000000000000000000',
+                requiredDebt: debtDelta.abs().toFixed(0),
+                borrowCollateral: collateralDelta.abs().toFixed(0),
+                withdrawCollateral: 0,
+                withdrawDai: 0,
+                depositDai: 0, // simple case no additional dai
+                depositCollateral: 0,
+                skipFL,
+                methodName: '',
+            }
+
+            const serviceRegistry = {
+                jug: hardhatUtils.addresses.MCD_JUG,
+                manager: hardhatUtils.addresses.CDP_MANAGER,
+                multiplyProxyActions: hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
+                lender: hardhatUtils.addresses.MCD_FLASH,
+                feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
+                exchange: EXCHANGE_ADDRESS,
+            }
+
+            // coll1 / debt1  => coll1 / debt2
+
+            const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
+            const exchangeData = {
+                fromTokenAddress: hardhatUtils.addresses.WETH,
+                toTokenAddress: hardhatUtils.addresses.DAI,
+                fromTokenAmount: cdpData.requiredDebt,
+                toTokenAmount: cdpData.borrowCollateral,
+                minToTokenAmount: minToTokenAmount.toFixed(0),
+                exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
+                _exchangeCalldata: forgeUnoswapCallData(
+                    hardhatUtils.addresses.WETH,
+                    cdpData.requiredDebt,
+                    minToTokenAmount.toFixed(0),
+                ),
+            }
+
+            const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
+                exchangeData,
+                cdpData,
+                serviceRegistry,
+            ])
+
+            const tx = system.automationExecutor.execute(
+                executionData,
+                testCdpId,
+                triggerData,
+                system.basicBuy!.address,
+                triggerId,
+                0,
+                0,
+                0,
+            )
+            await expect(tx).not.to.be.reverted
         })
     })
 })
