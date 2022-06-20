@@ -75,9 +75,7 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, ) = decode(
-            triggerData
-        );
+        (, , uint256 execCollRatio, , uint256 maxBuyPrice, ) = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(cdpId);
