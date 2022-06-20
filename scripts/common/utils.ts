@@ -35,7 +35,7 @@ export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...
         case TriggerType.CLOSE_TO_DAI:
             return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
         case TriggerType.BASIC_BUY:
-            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256', 'uint256', 'uint256'], args)
+            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'], args)
         default:
             throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
     }

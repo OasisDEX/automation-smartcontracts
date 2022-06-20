@@ -75,7 +75,9 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , uint256 execCollRatio, , uint256 maxBuyPrice) = decode(triggerData);
+        (, , uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, ) = decode(
+            triggerData
+        );
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(cdpId);
@@ -84,7 +86,11 @@ contract BasicBuyCommand is ICommand {
         uint256 collRatio = mcdView.getRatio(cdpId, true);
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
-        return collRatio != 0 && collRatio >= execCollRatio * 10**16 && nextPrice <= maxBuyPrice;
+        return
+            collRatio != 0 &&
+            collRatio >= execCollRatio * 10**16 && // TODO: is this needed?
+            collRatio < targetCollRatio * 10**16 &&
+            nextPrice <= maxBuyPrice;
     }
 
     function execute(
