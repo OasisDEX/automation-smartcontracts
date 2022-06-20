@@ -98,8 +98,10 @@ contract BasicBuyCommand is ICommand {
         bytes4 selector = abi.decode(executionData, (bytes4));
         require(selector == MPALike.increaseMultiple.selector, "basic-buy/invalid-selector");
 
-        (bool status, ) = serviceRegistry.getRegisteredService(MPA_KEY).delegatecall(executionData);
-        require(status, "basic-buy/execution-failed");
+        (bool status, bytes memory errorMsg) = serviceRegistry
+            .getRegisteredService(MPA_KEY)
+            .delegatecall(executionData);
+        require(status, string(errorMsg)); //  "basic-buy/execution-failed");
 
         if (continuous) {
             (status, ) = msg.sender.delegatecall(

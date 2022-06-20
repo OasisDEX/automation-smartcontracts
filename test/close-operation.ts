@@ -1,16 +1,7 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import {
-    AutomationBot,
-    DsProxyLike,
-    CloseCommand,
-    McdView,
-    MPALike,
-    AutomationExecutor,
-    OsmMomLike,
-    OsmLike,
-} from '../typechain'
+import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -21,7 +12,6 @@ import {
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
-const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 // Block dependent test, works for 13998517
@@ -69,12 +59,12 @@ describe('CloseCommand', async () => {
     })
 
     describe('execute', async () => {
+        const serviceRegistry = hardhatUtils.mpaServiceRegistry()
         let currentCollRatioAsPercentage: number
         let collateralAmount: string
         let debtAmount: string
         let cdpData: any
         let exchangeData: any
-        let serviceRegistry: any
 
         before(async () => {
             const collRatioRaw = await McdViewInstance.getRatio(testCdpId, true)
@@ -83,15 +73,6 @@ describe('CloseCommand', async () => {
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
             currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
-
-            serviceRegistry = {
-                jug: hardhatUtils.addresses.MCD_JUG,
-                manager: hardhatUtils.addresses.CDP_MANAGER,
-                multiplyProxyActions: hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS,
-                lender: hardhatUtils.addresses.MCD_FLASH,
-                feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
-                exchange: EXCHANGE_ADDRESS,
-            }
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
