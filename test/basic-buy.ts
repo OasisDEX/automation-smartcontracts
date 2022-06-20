@@ -2,6 +2,7 @@ import hre from 'hardhat'
 import { BytesLike, Contract, utils } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
+import BigNumber from 'bignumber.js'
 import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import {
@@ -15,7 +16,6 @@ import {
     OsmLike,
     OsmMomLike,
 } from '../typechain'
-import BigNumber from 'bignumber.js'
 import { getQuote } from '../scripts/common/one-inch'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
@@ -239,14 +239,14 @@ describe('BasicBuyCommand', () => {
 
             const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
             const exchangeData = {
-                fromTokenAddress: hardhatUtils.addresses.WETH,
-                toTokenAddress: hardhatUtils.addresses.DAI,
+                fromTokenAddress: hardhatUtils.addresses.DAI,
+                toTokenAddress: hardhatUtils.addresses.WETH,
                 fromTokenAmount: cdpData.requiredDebt,
                 toTokenAmount: cdpData.borrowCollateral,
                 minToTokenAmount: minToTokenAmount.toFixed(0),
                 exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
                 _exchangeCalldata: forgeUnoswapCallData(
-                    hardhatUtils.addresses.WETH,
+                    hardhatUtils.addresses.DAI,
                     cdpData.requiredDebt,
                     minToTokenAmount.toFixed(0),
                 ),
