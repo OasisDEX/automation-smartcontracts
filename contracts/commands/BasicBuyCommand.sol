@@ -86,11 +86,7 @@ contract BasicBuyCommand is ICommand {
         uint256 collRatio = mcdView.getRatio(cdpId, true);
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
-        return
-            collRatio != 0 &&
-            collRatio >= execCollRatio * 10**16 &&
-            collRatio < targetCollRatio * 10**16 &&
-            nextPrice <= maxBuyPrice;
+        return collRatio != 0 && collRatio >= execCollRatio * 10**16 && nextPrice <= maxBuyPrice;
     }
 
     function execute(
