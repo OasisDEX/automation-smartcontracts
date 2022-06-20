@@ -1,4 +1,12 @@
-import { AutomationBot, AutomationExecutor, CloseCommand, McdUtils, McdView, ServiceRegistry } from '../../typechain'
+import {
+    AutomationBot,
+    AutomationExecutor,
+    AutomationSwap,
+    CloseCommand,
+    McdUtils,
+    McdView,
+    ServiceRegistry,
+} from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType } from './types'
@@ -9,6 +17,7 @@ export interface DeployedSystem {
     mcdUtils: McdUtils
     automationBot: AutomationBot
     automationExecutor: AutomationExecutor
+    automationSwap: AutomationSwap
     mcdView: McdView
     closeCommand: CloseCommand | undefined
 }
@@ -47,6 +56,7 @@ export async function deploySystem({
     const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
     const automationBotFactory = await ethers.getContractFactory('AutomationBot')
     const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
+    const automationSwapFactory = await ethers.getContractFactory('AutomationSwap')
     const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
     const mcdViewFactory = await ethers.getContractFactory('McdView')
     const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
@@ -64,7 +74,7 @@ export async function deploySystem({
     )
     const McdUtilsInstance = await mcdUtilsDeployment.deployed()
 
-    if (logDebug) console.log('Deploying AutomationBot....')
+    if (logDebug) console.log('Deploying AutomationBot.....')
     const automationBotDeployment = await automationBotFactory.deploy(ServiceRegistryInstance.address)
     const AutomationBotInstance = await automationBotDeployment.deployed()
 
@@ -76,6 +86,14 @@ export async function deploySystem({
         utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
     )
     const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
+
+    if (logDebug) console.log('Deploying AutomationSwap.....')
+    const automationSwapDeployment = await automationSwapFactory.deploy(
+        AutomationExecutorInstance.address,
+        addresses.DAI,
+    )
+    const AutomationSwapInstance = await automationSwapDeployment.deployed()
+    await AutomationExecutorInstance.addCaller(AutomationSwapInstance.address)
 
     let McdViewInstance: McdView
     const signer = ethers.provider.getSigner(0)
@@ -103,6 +121,7 @@ export async function deploySystem({
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
+        console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         console.log(`CloseCommand deployed to: ${CloseCommandInstance?.address}`)
@@ -113,6 +132,7 @@ export async function deploySystem({
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
         automationExecutor: AutomationExecutorInstance,
+        automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
     }
@@ -157,6 +177,12 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
     await addServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         system.automationExecutor.address,
+    )
+
+    if (logDebug) console.log('Adding AUTOMATION_SWAP to ServiceRegistry....')
+    await addServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
+        system.automationSwap.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')

@@ -19,13 +19,12 @@ contract TestExchange is IExchange {
         uint256 amount,
         uint256 receiveAtLeast,
         address,
-        bytes calldata
+        bytes calldata withData
     ) external override {
-        require(
-            IERC20(asset).transferFrom(msg.sender, address(this), amount),
-            "exchange/asset-from-failed"
-        );
-        require(DAI.transfer(msg.sender, receiveAtLeast), "exchange/dai-to-failed");
+        (address receiver, uint256 toAmount, ) = abi.decode(withData, (address, uint256, bool));
+        IERC20(asset).safeTransferFrom(msg.sender, address(this), amount);
+        require(toAmount >= receiveAtLeast, "test-exchange/not-enough");
+        DAI.safeTransfer(receiver, toAmount);
     }
 
     function swapDaiForToken(
@@ -33,9 +32,23 @@ contract TestExchange is IExchange {
         uint256 amount,
         uint256 receiveAtLeast,
         address,
-        bytes calldata
+        bytes calldata withData
     ) external override {
-        require(DAI.transferFrom(msg.sender, address(this), amount), "exchange/dai-from-failed");
-        require(IERC20(asset).transfer(msg.sender, receiveAtLeast), "exchange/asset-to-failed");
+        DAI.safeTransferFrom(msg.sender, address(this), amount);
+        (address receiver, uint256 toAmount, bool isEth) = abi.decode(
+            withData,
+            (address, uint256, bool)
+        );
+        if (isEth) {
+            // revert if other asset is not ERC20 to mirror the behavior of exchange
+            IERC20(asset).balanceOf(address(this));
+            (bool sent, ) = payable(receiver).call{ value: toAmount }("");
+            require(sent, "test-exchange/transfer-failed");
+        } else {
+            require(toAmount >= receiveAtLeast, "test-exchange/not-enough");
+            IERC20(asset).safeTransfer(receiver, toAmount);
+        }
     }
+
+    receive() external payable {}
 }
