@@ -18,6 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
+import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
@@ -26,6 +27,8 @@ import { MPALike } from "../interfaces/MPALike.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 
 contract BasicBuyCommand is ICommand {
+    using SafeMath for uint256;
+
     ServiceRegistry public immutable serviceRegistry;
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -44,10 +47,20 @@ contract BasicBuyCommand is ICommand {
             uint256 execCollRatio,
             uint256 targetCollRatio,
             uint256 maxBuyPrice,
-            bool continuous
+            bool continuous,
+            uint16 deviation
         )
     {
-        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool));
+        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool, uint16));
+    }
+
+    function bounds(uint256 val, uint16 deviation)
+        public
+        pure
+        returns (uint256 lower, uint256 upper)
+    {
+        uint256 offset = val.mul(deviation).div(100);
+        return (val.sub(offset), val.add(offset));
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -61,13 +74,12 @@ contract BasicBuyCommand is ICommand {
             uint256 execCollRatio,
             uint256 targetCollRatio,
             ,
-
+            ,
+            uint16 deviation
         ) = decode(triggerData);
+        (uint256 lowerTarget, uint256 upperTarget) = bounds(targetCollRatio, deviation);
         return
-            _cdpId == cdpId &&
-            triggerType == 3 &&
-            execCollRatio > targetCollRatio &&
-            targetCollRatio > 100;
+            _cdpId == cdpId && triggerType == 3 && execCollRatio > upperTarget && lowerTarget > 100;
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -75,7 +87,7 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , uint256 execCollRatio, , uint256 maxBuyPrice, ) = decode(triggerData);
+        (, , uint256 execCollRatio, , uint256 maxBuyPrice, , ) = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(cdpId);
@@ -92,7 +104,7 @@ contract BasicBuyCommand is ICommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        (, uint16 triggerType, , , , bool continuous) = decode(triggerData);
+        (, uint16 triggerType, , , , bool continuous, ) = decode(triggerData);
         require(triggerType == 3, "basic-buy/type-not-supported");
 
         bytes4 selector = abi.decode(executionData, (bytes4));
@@ -122,9 +134,10 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , , uint256 targetCollRatio, , ) = decode(triggerData);
+        (, , , uint256 targetRatio, , , uint16 deviation) = decode(triggerData);
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        (uint256 lowerTarget, uint256 upperTarget) = bounds(targetRatio, deviation);
         uint256 collRatio = mcdView.getRatio(cdpId, true);
-        return collRatio <= targetCollRatio * 10**16; // TODO: add bounds
+        return collRatio <= upperTarget * 10**16 && collRatio >= lowerTarget * 10**16;
     }
 }
