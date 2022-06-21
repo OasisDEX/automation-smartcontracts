@@ -140,44 +140,27 @@ describe('BasicBuyCommand', () => {
     })
 
     describe('execute', () => {
-        const mpaServiceRegistry = hardhatUtils.mpaServiceRegistry()
-        const executionRatio = toRatio(2.55)
-        const targetRatio = new BigNumber(2.53).shiftedBy(4)
-        const triggerData = encodeTriggerData(
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            executionRatio,
-            targetRatio.toFixed(),
-            new BigNumber(5000).shiftedBy(18).toFixed(),
-            false,
-            toRatio(0.5),
-        )
-        let triggerId: number
-
-        beforeEach(async () => {
-            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-        })
-
-        afterEach(async () => {
-            await hre.ethers.provider.send('evm_revert', [snapshotId])
-        })
-
-        beforeEach(async () => {
-            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
-            const dataToSupply = system.automationBot.interface.encodeFunctionData('addTrigger', [
+        async function createTriggerForExecution(
+            executionRatio: BigNumber.Value,
+            targetRatio: BigNumber.Value,
+            continuous: boolean,
+        ) {
+            const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
-                0,
-                triggerData,
-            ])
-            const tx = await usersProxy.connect(newSigner).execute(system.automationBot.address, dataToSupply)
-            const result = await tx.wait()
+                new BigNumber(executionRatio).toFixed(),
+                new BigNumber(targetRatio).toFixed(),
+                new BigNumber(5000).shiftedBy(18).toFixed(),
+                continuous,
+                toRatio(0.5),
+            )
+            const createTriggerTx = await createTrigger(triggerData)
+            const receipt = await createTriggerTx.wait()
+            const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            return { triggerId: event.args.triggerId.toNumber(), triggerData }
+        }
 
-            const [event] = getEvents(result, system.automationBot.interface.getEvent('TriggerAdded'))
-            triggerId = event.args.triggerId.toNumber()
-        })
-
-        it('executes the trigger', async () => {
+        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
             const collRatio = await system.mcdView.getRatio(testCdpId, true)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
             const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
@@ -186,7 +169,6 @@ describe('BasicBuyCommand', () => {
 
             const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
             const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
-                // market params
                 {
                     oraclePrice: oraclePriceUnits,
                     marketPrice: oraclePriceUnits,
@@ -194,13 +176,11 @@ describe('BasicBuyCommand', () => {
                     FF: new BigNumber(0),
                     slippage,
                 },
-                // vault info
                 {
                     currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
                     currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-18),
                     minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
                 },
-                // desired cdp state
                 {
                     requiredCollRatio: targetRatio.shiftedBy(-4),
                     providedCollateral: new BigNumber(0),
@@ -244,10 +224,10 @@ describe('BasicBuyCommand', () => {
             const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
                 exchangeData,
                 cdpData,
-                mpaServiceRegistry,
+                hardhatUtils.mpaServiceRegistry(),
             ])
 
-            const tx = system.automationExecutor.execute(
+            return system.automationExecutor.execute(
                 executionData,
                 testCdpId,
                 triggerData,
@@ -257,7 +237,50 @@ describe('BasicBuyCommand', () => {
                 0,
                 0,
             )
+        }
+
+        beforeEach(async () => {
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
+
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
+
+        it('executes the trigger', async () => {
+            const executionRatio = toRatio(2.55)
+            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
+
+            await expect(executeTrigger(triggerId, targetRatio, triggerData)).not.to.be.reverted
+        })
+
+        it('does not recreate the trigger if `continuous` is set to false', async () => {
+            const executionRatio = toRatio(2.55)
+            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
+
+            const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
+            const receipt = await (await tx).wait()
+            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(events.length).to.eq(0)
+        })
+
+        it('recreates the trigger if `continuous` is set to true', async () => {
+            const executionRatio = toRatio(2.55)
+            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
+
+            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            await expect(tx).not.to.be.reverted
+            const receipt = await (await tx).wait()
+            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(events.length).to.eq(1)
+            const [event] = events
+            expect(event.args.triggerData).to.eq(triggerData)
+            expect(event.args.commandAddress).to.eq(system.basicBuy!.address)
+            expect(event.args.cdpId).to.eq(testCdpId)
         })
     })
 })
