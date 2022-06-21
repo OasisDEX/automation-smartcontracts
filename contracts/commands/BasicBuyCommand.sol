@@ -144,11 +144,11 @@ contract BasicBuyCommand is ICommand {
         bytes32 ilk = manager.ilks(cdpId);
 
         DogLike dog = DogLike(serviceRegistry.getRegisteredService(DOG_KEY));
-        uint256 chop = dog.chop(ilk);
+        uint256 liquidationRatio = dog.chop(ilk);
 
         (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
         return
             (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
-            collRatio < chop.mul(101).div(100);
+            collRatio < liquidationRatio.mul(101).div(100);
     }
 }

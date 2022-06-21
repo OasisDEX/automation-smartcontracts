@@ -73,10 +73,12 @@ async function main() {
         console.log('Removing existing AUTOMATION_SWAP entry...')
         await (await system.serviceRegistry.removeNamedService(swapHash)).wait()
     }
-    await system.serviceRegistry.addNamedService(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
-        automationSwapDeployment.address,
-    )
+    await (
+        await system.serviceRegistry.addNamedService(
+            getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
+            automationSwapDeployment.address,
+        )
+    ).wait()
 
     await (await AutomationSwapInstance.addCallers(callers)).wait()
     console.log(`AutomationSwap Deployed: ${automationSwapDeployment.address}`)
