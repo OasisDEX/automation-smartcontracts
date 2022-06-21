@@ -35,7 +35,10 @@ export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...
         case TriggerType.CLOSE_TO_DAI:
             return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
         case TriggerType.BASIC_BUY:
-            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'], args)
+            return utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint16'],
+                args,
+            )
         default:
             throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
     }
@@ -50,13 +53,16 @@ export function decodeTriggerData(data: string) {
     }
 }
 
-export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string): string {
-    const magicPostfix =
-        '0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11b03a8694'
-    const fromAmountHexPadded = EthersBN.from(fromAmount).toHexString().substring(2).padStart(64, '0')
-    const toAmountHexPadded = EthersBN.from(toAmount).toHexString().substring(2).padStart(64, '0')
-    const fromTokenPadded = fromToken.substring(2).padStart(64, '0')
-    return '0x2e95b6c8' + fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
+export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
+    const iface = new utils.Interface([
+        'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
+    ])
+    return iface.encodeFunctionData('unoswap', [
+        fromToken,
+        fromAmount,
+        toAmount,
+        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
+    ])
 }
 
 export function generateExecutionData(

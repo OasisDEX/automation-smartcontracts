@@ -49,9 +49,9 @@ describe('BasicBuyCommand', () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
-    afterEach(async () => {
-        await hre.ethers.provider.send('evm_revert', [snapshotId])
-    })
+    // afterEach(async () => {
+    //     await hre.ethers.provider.send('evm_revert', [snapshotId])
+    // })
 
     describe('isTriggerDataValid', () => {
         const createTrigger = async (triggerData: BytesLike) => {
@@ -74,6 +74,7 @@ describe('BasicBuyCommand', () => {
                 targetRatio,
                 0,
                 false,
+                0,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -87,6 +88,7 @@ describe('BasicBuyCommand', () => {
                 targetRatio,
                 0,
                 false,
+                0,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -100,6 +102,7 @@ describe('BasicBuyCommand', () => {
                 targetRatio,
                 0,
                 false,
+                0,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -122,6 +125,7 @@ describe('BasicBuyCommand', () => {
                 targetRatio,
                 0,
                 false,
+                0,
             )
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
@@ -133,14 +137,15 @@ describe('BasicBuyCommand', () => {
 
     describe('execute', () => {
         const mpaServiceRegistry = hardhatUtils.mpaServiceRegistry()
-        const targetRatio = new BigNumber(210)
+        const targetRatio = new BigNumber(255)
         const triggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            211,
+            256,
             targetRatio.toFixed(),
             new BigNumber(5000).shiftedBy(18).toFixed(),
             false,
+            0,
         ) // TODO:
         let triggerId: number
 
@@ -148,9 +153,9 @@ describe('BasicBuyCommand', () => {
             snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
         })
 
-        afterEach(async () => {
-            await hre.ethers.provider.send('evm_revert', [snapshotId])
-        })
+        // afterEach(async () => {
+        //     await hre.ethers.provider.send('evm_revert', [snapshotId])
+        // })
 
         beforeEach(async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
@@ -171,15 +176,15 @@ describe('BasicBuyCommand', () => {
             const collRatio = await system.mcdView.getRatio(testCdpId, false)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
             const oraclePrice = await system.mcdView.getPrice(ethAIlk)
-            const slippage = new BigNumber(0.005)
+            const slippage = new BigNumber(0.01)
             const oasisFee = new BigNumber(0.002)
 
-            const marketPrice = new BigNumber('1127.317957123042248273950503605697') // uni v2 price at block 14997398
+            const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
             const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
                 // market params
                 {
-                    oraclePrice: new BigNumber(oraclePrice.toString()).shiftedBy(-18),
-                    marketPrice,
+                    oraclePrice: oraclePriceUnits,
+                    marketPrice: oraclePriceUnits,
                     OF: oasisFee,
                     FF: new BigNumber(0),
                     slippage,
@@ -228,6 +233,7 @@ describe('BasicBuyCommand', () => {
                     hardhatUtils.addresses.DAI,
                     new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
                     minToTokenAmount.toFixed(0),
+                    false,
                 ),
             }
 
@@ -248,7 +254,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 { gasLimit: 3_000_000 },
             )
-            await expect(tx).to.be.revertedWith('sdgsdfs')
+            await expect(tx).not.to.be.reverted
         })
     })
 })
