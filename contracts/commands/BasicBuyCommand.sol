@@ -23,7 +23,7 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
-import { DogLike } from "../interfaces/DogLike.sol";
+import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
@@ -36,9 +36,7 @@ contract BasicBuyCommand is ICommand {
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
-    string private constant DOG_KEY = "DOG";
-
-    uint256 private constant LOWEST_RATIO = 10**4;
+    string private constant MCD_SPOT_KEY = "MCD_SPOT";
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -62,7 +60,7 @@ contract BasicBuyCommand is ICommand {
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
         external
-        pure
+        view
         returns (bool)
     {
         (
@@ -74,12 +72,18 @@ contract BasicBuyCommand is ICommand {
             ,
             uint64 deviation
         ) = decode(triggerData);
+
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        bytes32 ilk = manager.ilks(cdpId);
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, uint256 liquidationRatio) = spot.ilks(ilk);
+
         (uint256 lowerTarget, uint256 upperTarget) = targetCollRatio.bounds(deviation);
         return
             _cdpId == cdpId &&
             triggerType == 3 &&
             execCollRatio > upperTarget &&
-            lowerTarget > LOWEST_RATIO;
+            lowerTarget.ray() > liquidationRatio;
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -113,7 +117,7 @@ contract BasicBuyCommand is ICommand {
         (bool status, bytes memory errorMsg) = serviceRegistry
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
-        require(status, string(errorMsg));
+        require(status, "basic-buy/execution-failed");
 
         if (continuous) {
             (status, ) = msg.sender.delegatecall(
@@ -142,13 +146,12 @@ contract BasicBuyCommand is ICommand {
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(cdpId);
-
-        DogLike dog = DogLike(serviceRegistry.getRegisteredService(DOG_KEY));
-        uint256 liquidationRatio = dog.chop(ilk);
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, uint256 liquidationRatio) = spot.ilks(ilk);
 
         (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
         return
             (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
-            collRatio < liquidationRatio.mul(101).div(100);
+            collRatio * 10**9 < liquidationRatio.mul(101).div(100);
     }
 }

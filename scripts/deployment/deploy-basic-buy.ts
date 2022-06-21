@@ -26,15 +26,15 @@ async function main() {
     await (await system.serviceRegistry.addNamedService(commandHash, deployed.address)).wait()
     console.log(`BASIC_BUY entry added to ServiceRegistry....`)
 
-    console.log('Adding DOG to ServiceRegistry....')
-    const dogNameHash = getServiceNameHash(AutomationServiceName.DOG)
+    console.log('Adding MCD_SPOT to ServiceRegistry....')
+    const dogNameHash = getServiceNameHash(AutomationServiceName.MCD_SPOT)
     const dogEntry = await system.serviceRegistry.getServiceAddress(dogNameHash)
-    if (dogEntry.toLowerCase() !== utils.addresses.DOG.toLowerCase()) {
-        console.log('Removing existing DOG entry....')
+    if (dogEntry.toLowerCase() !== utils.addresses.MCD_SPOT.toLowerCase()) {
+        console.log('Removing existing MCD_SPOT entry....')
         await (await system.serviceRegistry.removeNamedService(dogNameHash)).wait()
     }
-    await (await system.serviceRegistry.addNamedService(dogNameHash, utils.addresses.DOG)).wait()
-    console.log(`DOG entry added to ServiceRegistry....`)
+    await (await system.serviceRegistry.addNamedService(dogNameHash, utils.addresses.MCD_SPOT)).wait()
+    console.log(`MCD_SPOT entry added to ServiceRegistry....`)
 
     console.log(`Whitelisting BasicBuyCommand on McdView....`)
     await (await system.mcdView.approve(deployed.address, true)).wait()

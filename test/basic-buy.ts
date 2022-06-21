@@ -28,6 +28,17 @@ describe('BasicBuyCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
+    const createTrigger = async (triggerData: BytesLike) => {
+        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
+            testCdpId,
+            TriggerType.BASIC_BUY,
+            0,
+            triggerData,
+        ])
+        const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
+        return usersProxy.connect(signer).execute(system.automationBot.address, data)
+    }
+
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
@@ -58,19 +69,8 @@ describe('BasicBuyCommand', () => {
     })
 
     describe('isTriggerDataValid', () => {
-        const createTrigger = async (triggerData: BytesLike) => {
-            const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                0,
-                triggerData,
-            ])
-            const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
-            return usersProxy.connect(signer).execute(system.automationBot.address, data)
-        }
-
         it('should fail if target coll ratio is higher than execution ratio', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.01), toRatio(1.02)]
+            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.52)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -83,8 +83,8 @@ describe('BasicBuyCommand', () => {
             await expect(createTrigger(triggerData)).to.be.reverted
         })
 
-        it('should fail if target target coll ratio is lte 100', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.01), toRatio(1)]
+        it('should fail if target target coll ratio is lte liquidation ratio', async () => {
+            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.45)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -98,7 +98,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
+            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
                 TriggerType.BASIC_BUY,
@@ -112,7 +112,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if trigger type is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
+            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, executionRatio, targetRatio, 0, false],
@@ -121,7 +121,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should successfully create the trigger', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
+            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -208,7 +208,6 @@ describe('BasicBuyCommand', () => {
                     withdrawDai: new BigNumber(0),
                     withdrawColl: new BigNumber(0),
                 },
-                true,
             )
 
             const cdpData = {

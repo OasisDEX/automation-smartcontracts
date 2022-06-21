@@ -24,8 +24,9 @@ import "hardhat/console.sol";
 library RatioUtils {
     using SafeMath for uint256;
 
-    uint256 public constant WAD = 10**18;
     uint256 public constant RATIO = 10**4;
+    uint256 public constant WAD = 10**18;
+    uint256 public constant RAY = 10**27;
 
     // convert base units to ratio
     function toRatio(uint256 units) internal pure returns (uint256) {
@@ -34,6 +35,10 @@ library RatioUtils {
 
     function wad(uint256 ratio) internal pure returns (uint256) {
         return ratio.mul(WAD).div(RATIO);
+    }
+
+    function ray(uint256 ratio) internal pure returns (uint256) {
+        return ratio.mul(RAY).div(RATIO);
     }
 
     function bounds(uint256 ratio, uint64 deviation)

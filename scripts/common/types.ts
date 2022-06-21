@@ -17,7 +17,7 @@ export enum TriggerType {
 
 export enum AutomationServiceName {
     CDP_MANAGER = 'CDP_MANAGER',
-    DOG = 'DOG',
+    MCD_SPOT = 'MCD_SPOT',
     AUTOMATION_BOT = 'AUTOMATION_BOT',
     AUTOMATION_EXECUTOR = 'AUTOMATION_EXECUTOR',
     AUTOMATION_SWAP = 'AUTOMATION_SWAP',
