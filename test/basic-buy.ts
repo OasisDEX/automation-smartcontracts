@@ -10,6 +10,10 @@ import { DsProxyLike, IERC20, MPALike } from '../typechain'
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 
+function toRatio(units: number) {
+    return new BigNumber(units).shiftedBy(4).toNumber()
+}
+
 // BLOCK_NUMBER=14997398
 describe('BasicBuyCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
@@ -49,9 +53,9 @@ describe('BasicBuyCommand', () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
-    // afterEach(async () => {
-    //     await hre.ethers.provider.send('evm_revert', [snapshotId])
-    // })
+    afterEach(async () => {
+        await hre.ethers.provider.send('evm_revert', [snapshotId])
+    })
 
     describe('isTriggerDataValid', () => {
         const createTrigger = async (triggerData: BytesLike) => {
@@ -66,7 +70,7 @@ describe('BasicBuyCommand', () => {
         }
 
         it('should fail if target coll ratio is higher than execution ratio', async () => {
-            const [executionRatio, targetRatio] = [101, 102]
+            const [executionRatio, targetRatio] = [toRatio(1.01), toRatio(1.02)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -80,7 +84,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if target target coll ratio is lte 100', async () => {
-            const [executionRatio, targetRatio] = [101, 100]
+            const [executionRatio, targetRatio] = [toRatio(1.01), toRatio(1)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -94,7 +98,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [102, 101]
+            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
                 TriggerType.BASIC_BUY,
@@ -108,7 +112,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if trigger type is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [102, 101]
+            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, executionRatio, targetRatio, 0, false],
@@ -117,7 +121,7 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should successfully create the trigger', async () => {
-            const [executionRatio, targetRatio] = [102, 101]
+            const [executionRatio, targetRatio] = [toRatio(1.02), toRatio(1.01)]
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
@@ -137,25 +141,26 @@ describe('BasicBuyCommand', () => {
 
     describe('execute', () => {
         const mpaServiceRegistry = hardhatUtils.mpaServiceRegistry()
-        const targetRatio = new BigNumber(255)
+        const executionRatio = toRatio(2.55)
+        const targetRatio = new BigNumber(2.53).shiftedBy(4)
         const triggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            256,
+            executionRatio,
             targetRatio.toFixed(),
             new BigNumber(5000).shiftedBy(18).toFixed(),
             false,
-            0,
-        ) // TODO:
+            toRatio(0.5),
+        )
         let triggerId: number
 
         beforeEach(async () => {
             snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
         })
 
-        // afterEach(async () => {
-        //     await hre.ethers.provider.send('evm_revert', [snapshotId])
-        // })
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
 
         beforeEach(async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
@@ -173,9 +178,9 @@ describe('BasicBuyCommand', () => {
         })
 
         it('executes the trigger', async () => {
-            const collRatio = await system.mcdView.getRatio(testCdpId, false)
+            const collRatio = await system.mcdView.getRatio(testCdpId, true)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
-            const oraclePrice = await system.mcdView.getPrice(ethAIlk)
+            const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
             const slippage = new BigNumber(0.01)
             const oasisFee = new BigNumber(0.002)
 
@@ -197,7 +202,7 @@ describe('BasicBuyCommand', () => {
                 },
                 // desired cdp state
                 {
-                    requiredCollRatio: targetRatio.shiftedBy(-2),
+                    requiredCollRatio: targetRatio.shiftedBy(-4),
                     providedCollateral: new BigNumber(0),
                     providedDai: new BigNumber(0),
                     withdrawDai: new BigNumber(0),
@@ -252,7 +257,6 @@ describe('BasicBuyCommand', () => {
                 0,
                 0,
                 0,
-                { gasLimit: 3_000_000 },
             )
             await expect(tx).not.to.be.reverted
         })

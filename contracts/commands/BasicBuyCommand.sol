@@ -19,20 +19,26 @@
 pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
+import { DogLike } from "../interfaces/DogLike.sol";
+import { ServiceRegistry } from "../ServiceRegistry.sol";
+import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 
 contract BasicBuyCommand is ICommand {
     using SafeMath for uint256;
+    using RatioUtils for uint256;
 
     ServiceRegistry public immutable serviceRegistry;
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
+    string private constant DOG_KEY = "DOG";
+
+    uint256 private constant LOWEST_RATIO = 10**4;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -48,19 +54,10 @@ contract BasicBuyCommand is ICommand {
             uint256 targetCollRatio,
             uint256 maxBuyPrice,
             bool continuous,
-            uint16 deviation
+            uint64 deviation
         )
     {
-        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool, uint16));
-    }
-
-    function bounds(uint256 val, uint16 deviation)
-        public
-        pure
-        returns (uint256 lower, uint256 upper)
-    {
-        uint256 offset = val.mul(deviation).div(100);
-        return (val.sub(offset), val.add(offset));
+        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool, uint64));
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -75,11 +72,14 @@ contract BasicBuyCommand is ICommand {
             uint256 targetCollRatio,
             ,
             ,
-            uint16 deviation
+            uint64 deviation
         ) = decode(triggerData);
-        (uint256 lowerTarget, uint256 upperTarget) = bounds(targetCollRatio, deviation);
+        (uint256 lowerTarget, uint256 upperTarget) = targetCollRatio.bounds(deviation);
         return
-            _cdpId == cdpId && triggerType == 3 && execCollRatio > upperTarget && lowerTarget > 100;
+            _cdpId == cdpId &&
+            triggerType == 3 &&
+            execCollRatio > upperTarget &&
+            lowerTarget > LOWEST_RATIO;
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -96,7 +96,7 @@ contract BasicBuyCommand is ICommand {
         uint256 collRatio = mcdView.getRatio(cdpId, true);
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
-        return collRatio != 0 && collRatio >= execCollRatio * 10**16 && nextPrice <= maxBuyPrice;
+        return collRatio != 0 && collRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
     }
 
     function execute(
@@ -113,7 +113,7 @@ contract BasicBuyCommand is ICommand {
         (bool status, bytes memory errorMsg) = serviceRegistry
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
-        require(status, string(errorMsg)); //  "basic-buy/execution-failed");
+        require(status, string(errorMsg));
 
         if (continuous) {
             (status, ) = msg.sender.delegatecall(
@@ -134,10 +134,21 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , , uint256 targetRatio, , , uint16 deviation) = decode(triggerData);
+        (, , , uint256 targetRatio, , , uint64 deviation) = decode(triggerData);
+
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        (uint256 lowerTarget, uint256 upperTarget) = bounds(targetRatio, deviation);
-        uint256 collRatio = mcdView.getRatio(cdpId, true);
-        return collRatio <= upperTarget * 10**16 && collRatio >= lowerTarget * 10**16;
+        uint256 collRatio = mcdView.getRatio(cdpId, false);
+        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
+
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        bytes32 ilk = manager.ilks(cdpId);
+
+        DogLike dog = DogLike(serviceRegistry.getRegisteredService(DOG_KEY));
+        uint256 chop = dog.chop(ilk);
+
+        (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
+        return
+            (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
+            collRatio < chop.mul(101).div(100);
     }
 }
