@@ -79,7 +79,7 @@ async function main() {
     )
 
     await (await AutomationSwapInstance.addCallers(callers)).wait()
-    console.log(`AutomationSwap deployed at ${automationSwapDeployment.address}`)
+    console.log(`AutomationSwap Deployed: ${automationSwapDeployment.address}`)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
