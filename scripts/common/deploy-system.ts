@@ -3,6 +3,7 @@ import {
     AutomationExecutor,
     AutomationSwap,
     BasicBuyCommand,
+    BasicSellCommand,
     CloseCommand,
     McdUtils,
     McdView,
@@ -22,6 +23,7 @@ export interface DeployedSystem {
     mcdView: McdView
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
+    basicSell?: BasicSellCommand
 }
 
 export interface DeploySystemArgs {
@@ -50,6 +52,7 @@ export async function deploySystem({
 }: DeploySystemArgs): Promise<DeployedSystem> {
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
+    let BasicSellInstance: BasicSellCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -64,6 +67,7 @@ export async function deploySystem({
     const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
     const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
     const basicBuyFactory = await ethers.getContractFactory('BasicBuyCommand')
+    const basicSellFactory = await ethers.getContractFactory('BasicSellCommand')
 
     if (logDebug) console.log('Deploying ServiceRegistry....')
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
@@ -123,6 +127,10 @@ export async function deploySystem({
         if (logDebug) console.log('Deploying BasicBuy....')
         const basicBuyDeployment = await basicBuyFactory.deploy(ServiceRegistryInstance.address)
         BasicBuyInstance = await basicBuyDeployment.deployed()
+
+        if (logDebug) console.log('Deploying BasicSell....')
+        const basicSellDeployment = await basicSellFactory.deploy(ServiceRegistryInstance.address)
+        BasicSellInstance = await basicSellDeployment.deployed()
     }
 
     if (logDebug) {
@@ -135,6 +143,7 @@ export async function deploySystem({
         if (addCommands) {
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
+            console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
         }
     }
 
@@ -147,6 +156,7 @@ export async function deploySystem({
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
+        basicSell: BasicSellInstance,
     }
 
     await configureRegistryEntries(system, addresses as AddressRegistry, logDebug)
@@ -173,6 +183,14 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await (await system.mcdView.approve(system.basicBuy.address, true)).wait()
+    }
+
+    if (system.basicSell) {
+        if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
+        await addServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicSell.address)
+
+        if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
+        await (await system.mcdView.approve(system.basicSell.address, true)).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')

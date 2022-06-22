@@ -27,17 +27,12 @@ import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
+import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-contract BasicBuyCommand is ICommand {
+contract BasicBuyCommand is ICommand, BaseMPACommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
-    string private constant MCD_VIEW_KEY = "MCD_VIEW";
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
-    string private constant MCD_SPOT_KEY = "MCD_SPOT";
-
-    ServiceRegistry public immutable serviceRegistry;
     address public immutable owner;
 
     // The parameter setting that is common for all users.
@@ -50,14 +45,22 @@ contract BasicBuyCommand is ICommand {
     // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
     uint256 public liquidationRatioPercentage = 100; // 1%
 
-    constructor(ServiceRegistry _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
         owner = msg.sender;
     }
 
     function setLiquidationRatioPercentage(uint256 _liquidationRatioPercentage) external {
         require(msg.sender == owner, "basic-buy/only-owner");
         liquidationRatioPercentage = _liquidationRatioPercentage;
+    }
+
+    function getTriggerType(bytes memory triggerData)
+        public
+        pure
+        override
+        returns (uint16 triggerType)
+    {
+        (, triggerType, , , , , ) = decode(triggerData);
     }
 
     function decode(bytes memory triggerData)
@@ -111,12 +114,7 @@ contract BasicBuyCommand is ICommand {
     {
         (, , uint256 execCollRatio, , uint256 maxBuyPrice, , ) = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
-
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 collRatio = mcdView.getRatio(cdpId, true);
-        uint256 nextPrice = mcdView.getNextPrice(ilk);
+        (uint256 collRatio, , uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
 
         return collRatio != 0 && collRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
     }
@@ -126,28 +124,13 @@ contract BasicBuyCommand is ICommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
+        validateTriggerType(triggerData, executionData, 3, MPALike.increaseMultiple.selector);
         (, uint16 triggerType, , , , bool continuous, ) = decode(triggerData);
-        require(triggerType == 3, "basic-buy/type-not-supported");
 
-        bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == MPALike.increaseMultiple.selector, "basic-buy/invalid-selector");
-
-        (bool status, bytes memory errorMsg) = serviceRegistry
-            .getRegisteredService(MPA_KEY)
-            .delegatecall(executionData);
-        require(status, "basic-buy/execution-failed");
+        executeMPAMethod(executionData);
 
         if (continuous) {
-            (status, ) = msg.sender.delegatecall(
-                abi.encodeWithSelector(
-                    AutomationBot(msg.sender).addTrigger.selector,
-                    cdpId,
-                    triggerType,
-                    0,
-                    triggerData
-                )
-            );
-            require(status, "basic-buy/trigger-recreation-failed");
+            reregisterTrigger(triggerData, cdpId);
         }
     }
 
@@ -159,11 +142,11 @@ contract BasicBuyCommand is ICommand {
         (, , , uint256 targetRatio, , , uint64 deviation) = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 collRatio = mcdView.getRatio(cdpId, false);
-        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
+        (uint256 collRatio, uint256 nextCollRatio, , bytes32 ilk) = getBasicVaultAndMarketInfo(
+            cdpId
+        );
+
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 

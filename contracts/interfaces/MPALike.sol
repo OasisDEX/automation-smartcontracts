@@ -41,6 +41,12 @@ interface MPALike {
         AddressRegistry calldata addressRegistry
     ) external;
 
+    function decreaseMultiple(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) external;
+
     function closeVaultExitCollateral(
         ExchangeData calldata exchangeData,
         CdpData memory cdpData,

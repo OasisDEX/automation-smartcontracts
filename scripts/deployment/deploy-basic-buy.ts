@@ -1,6 +1,13 @@
-import { constants } from 'ethers'
-import hre, { ethers } from 'hardhat'
-import { AutomationServiceName, getCommandHash, getServiceNameHash, HardhatUtils, TriggerType } from '../common'
+import { constants, ethers } from 'ethers'
+import hre from 'hardhat'
+import {
+    AutomationServiceName,
+    deployCommand,
+    ensureEntryInServiceRegistry,
+    getServiceNameHash,
+    HardhatUtils,
+    TriggerType,
+} from '../common'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -11,25 +18,20 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    const basicBuyFactory = await ethers.getContractFactory('BasicBuyCommand')
-    const basicBuyDeployment = await basicBuyFactory.deploy(utils.addresses.AUTOMATION_SERVICE_REGISTRY)
-    const deployed = await basicBuyDeployment.deployed()
+    const deployed = await deployCommand(ethers, utils, 'BasicBuyCommand')
+
     console.log(`BasicBuy Deployed: ${deployed.address}`)
 
     console.log('Adding BASIC_BUY to ServiceRegistry....')
-    const commandHash = getCommandHash(TriggerType.BASIC_BUY)
-    const entry = await system.serviceRegistry.getServiceAddress(commandHash)
-    if (entry !== constants.AddressZero) {
-        console.log('Removing existing BASIC_BUY entry....')
-        await (await system.serviceRegistry.removeNamedService(commandHash)).wait()
-    }
-    await (await system.serviceRegistry.addNamedService(commandHash, deployed.address)).wait()
+
+    await ensureEntryInServiceRegistry(TriggerType.BASIC_BUY, deployed.address, system.serviceRegistry)
+
     console.log(`BASIC_BUY entry added to ServiceRegistry....`)
 
     console.log('Adding MCD_SPOT to ServiceRegistry....')
     const dogNameHash = getServiceNameHash(AutomationServiceName.MCD_SPOT)
     const dogEntry = await system.serviceRegistry.getServiceAddress(dogNameHash)
-    if (dogEntry.toLowerCase() !== utils.addresses.MCD_SPOT.toLowerCase()) {
+    if (dogEntry.toLowerCase() !== utils.addresses.MCD_SPOT.toLowerCase() && dogEntry !== constants.AddressZero) {
         console.log('Removing existing MCD_SPOT entry....')
         await (await system.serviceRegistry.removeNamedService(dogNameHash)).wait()
     }

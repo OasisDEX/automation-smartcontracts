@@ -13,6 +13,7 @@ export enum TriggerType {
     CLOSE_TO_COLLATERAL = 1,
     CLOSE_TO_DAI = 2,
     BASIC_BUY = 3,
+    BASIC_SELL = 4,
 }
 
 export enum AutomationServiceName {
