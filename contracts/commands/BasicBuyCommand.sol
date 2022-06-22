@@ -32,14 +32,31 @@ contract BasicBuyCommand is ICommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
-    ServiceRegistry public immutable serviceRegistry;
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
     string private constant MCD_SPOT_KEY = "MCD_SPOT";
 
+    ServiceRegistry public immutable serviceRegistry;
+    address public immutable owner;
+
+    // The parameter setting that is common for all users.
+    // If the PSM experiences a major price difference between current
+    // and next prices & it is not possible to fullfill the user's
+    // target collateralization ratio at the next price without bringing
+    // the collateralization ratio at the current price under the liquidation ratio,
+    // the trigger will be correctly executed if it's within the `liquidation ratio` and
+    // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
+    uint256 public liquidationRatioPercentage = 100; // 1%
+
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        owner = msg.sender;
+    }
+
+    function setLiquidationRatioPercentage(uint256 _liquidationRatioPercentage) external {
+        require(msg.sender == owner, "basic-buy/only-owner");
+        liquidationRatioPercentage = _liquidationRatioPercentage;
     }
 
     function decode(bytes memory triggerData)
@@ -152,6 +169,10 @@ contract BasicBuyCommand is ICommand {
         (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
         return
             (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
-            collRatio * 10**9 < liquidationRatio.mul(101).div(100);
+            (collRatio < nextCollRatio &&
+                collRatio * 10**9 <
+                liquidationRatio.mul(RatioUtils.RATIO + liquidationRatioPercentage).div(
+                    RatioUtils.RATIO
+                ));
     }
 }
