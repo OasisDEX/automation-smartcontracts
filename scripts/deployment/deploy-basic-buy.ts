@@ -28,8 +28,8 @@ async function main() {
 
     console.log('Adding MCD_SPOT to ServiceRegistry....')
     const spotNameHash = getServiceNameHash(AutomationServiceName.MCD_SPOT)
-    const dogEntry = await system.serviceRegistry.getServiceAddress(spotNameHash)
-    if (dogEntry.toLowerCase() !== utils.addresses.MCD_SPOT.toLowerCase()) {
+    const spotEntry = await system.serviceRegistry.getServiceAddress(spotNameHash)
+    if (spotEntry.toLowerCase() !== utils.addresses.MCD_SPOT.toLowerCase()) {
         console.log('Removing existing MCD_SPOT entry....')
         await (await system.serviceRegistry.removeNamedService(spotNameHash)).wait()
     }
