@@ -45,7 +45,8 @@ contract BasicBuyCommand is ICommand {
     // and next prices & it is not possible to fullfill the user's
     // target collateralization ratio at the next price without bringing
     // the collateralization ratio at the current price under the liquidation ratio,
-    // the trigger will be correctly executed if it's within the `liquidation ratio` and
+    // the trigger will be correctly executed if the current
+    // collateralization ratio within the `liquidation ratio` and
     // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
     uint256 public liquidationRatioPercentage = 100; // 1%
 
