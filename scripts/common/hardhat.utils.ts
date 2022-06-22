@@ -14,6 +14,17 @@ export class HardhatUtils {
         this.addresses = getAddressesFor(forked || this.hre.network.name)
     }
 
+    public mpaServiceRegistry() {
+        return {
+            jug: this.addresses.MCD_JUG,
+            manager: this.addresses.CDP_MANAGER,
+            multiplyProxyActions: this.addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: this.addresses.MCD_FLASH,
+            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
+            exchange: '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B',
+        }
+    }
+
     public async getDefaultSystem(): Promise<DeployedSystem> {
         return {
             serviceRegistry: await this.hre.ethers.getContractAt(
@@ -167,6 +178,19 @@ export class HardhatUtils {
 
     public convertToWeth(tokenAddr: string) {
         return this.isEth(tokenAddr) ? this.addresses.WETH : tokenAddr
+    }
+
+    public async setBudInOSM(osmAddress: string, budAddress: string) {
+        const BUD_MAPPING_STORAGE_SLOT = 5
+        const toHash = utils.defaultAbiCoder.encode(['address', 'uint'], [budAddress, BUD_MAPPING_STORAGE_SLOT])
+        const valueSlot = utils.keccak256(toHash).replace(/0x0/g, '0x')
+
+        await this.hre.ethers.provider.send('hardhat_setStorageAt', [
+            osmAddress,
+            valueSlot,
+            '0x0000000000000000000000000000000000000000000000000000000000000001',
+        ])
+        await this.hre.ethers.provider.send('evm_mine', [])
     }
 
     private isEth(tokenAddr: string) {

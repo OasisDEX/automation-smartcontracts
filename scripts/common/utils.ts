@@ -14,9 +14,9 @@ export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }
 
-export function getEvents(receipt: ContractReceipt, eventAbi: string, eventName: string) {
+export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
-    const filteredEvents = receipt.events?.filter(x => x.topics[0] === iface.getEventTopic(eventName))
+    const filteredEvents = receipt.events?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
     return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
@@ -28,11 +28,20 @@ export function generateRandomAddress() {
     return utils.hexlify(utils.randomBytes(20))
 }
 
-export function encodeTriggerData(vaultId: number, triggerType: number, stopLossLevel: number): BytesLike {
-    return utils.defaultAbiCoder.encode(
-        ['uint256', 'uint16', 'uint256'],
-        [vaultId, triggerType, Math.round(stopLossLevel)],
-    )
+export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
+    const args = [vaultId, triggerType, ...rest]
+    switch (triggerType) {
+        case TriggerType.CLOSE_TO_COLLATERAL:
+        case TriggerType.CLOSE_TO_DAI:
+            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
+        case TriggerType.BASIC_BUY:
+            return utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64'],
+                args,
+            )
+        default:
+            throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
+    }
 }
 
 export function decodeTriggerData(data: string) {
@@ -44,13 +53,16 @@ export function decodeTriggerData(data: string) {
     }
 }
 
-export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string): string {
-    const magicPostfix =
-        '0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11b03a8694'
-    const fromAmountHexPadded = EthersBN.from(fromAmount).toHexString().substring(2).padStart(64, '0')
-    const toAmountHexPadded = EthersBN.from(toAmount).toHexString().substring(2).padStart(64, '0')
-    const fromTokenPadded = fromToken.substring(2).padStart(64, '0')
-    return '0x2e95b6c8' + fromTokenPadded + fromAmountHexPadded + toAmountHexPadded + magicPostfix
+export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
+    const iface = new utils.Interface([
+        'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
+    ])
+    return iface.encodeFunctionData('unoswap', [
+        fromToken,
+        fromAmount,
+        toAmount,
+        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
+    ])
 }
 
 export function generateExecutionData(

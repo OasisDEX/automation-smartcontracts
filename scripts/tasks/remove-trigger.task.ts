@@ -68,12 +68,7 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         const tx = await proxy.connect(signer).execute(bot.address, removeTriggerData)
         const receipt = await tx.wait()
 
-        const [triggerRemovedEvent] = getEvents(
-            receipt,
-            'event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId)',
-            'TriggerRemoved',
-        )
-
+        const [triggerRemovedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerRemoved'))
         if (!triggerRemovedEvent) {
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }

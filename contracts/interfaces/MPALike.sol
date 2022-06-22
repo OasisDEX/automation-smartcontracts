@@ -35,6 +35,12 @@ interface MPALike {
         bytes _exchangeCalldata;
     }
 
+    function increaseMultiple(
+        ExchangeData calldata exchangeData,
+        CdpData memory cdpData,
+        AddressRegistry calldata addressRegistry
+    ) external;
+
     function closeVaultExitCollateral(
         ExchangeData calldata exchangeData,
         CdpData memory cdpData,
