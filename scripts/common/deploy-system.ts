@@ -187,7 +187,7 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
 
     if (system.basicSell) {
         if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
-        await addServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicSell.address)
+        await addServiceRegistryEntry(getCommandHash(TriggerType.BASIC_SELL), system.basicSell.address)
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
         await (await system.mcdView.approve(system.basicSell.address, true)).wait()
