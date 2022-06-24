@@ -5,7 +5,6 @@ import {
     bignumberToTopic,
     coalesceNetwork,
     decodeBasicTriggerData,
-    decodeStopLossData,
     getStartBlocksFor,
     HardhatUtils,
     Network,
