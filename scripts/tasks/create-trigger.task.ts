@@ -99,7 +99,6 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             })
         }
 
-        // if (new BigNumber()) {}
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
             args.vault.toString(),

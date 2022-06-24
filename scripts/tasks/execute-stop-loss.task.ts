@@ -195,28 +195,12 @@ async function getExchangeAndCdpData(
     const collRatioPct = Math.floor(parseFloat(utils.formatEther(ratio)) * 100)
     console.log(`Ratio: ${collRatioPct.toString()}%`)
 
-    const ilkRegistry = new hre.ethers.Contract(
-        addresses.ILK_REGISTRY,
-        [
-            'function join(bytes32) view returns (address)',
-            'function gem(bytes32) view returns (address)',
-            'function dec(bytes32) view returns (uint256)',
-        ],
-        hre.ethers.provider,
-    )
-
-    const [gem, gemJoin, ilkDecimals] = await Promise.all([
-        ilkRegistry.gem(ilk),
-        ilkRegistry.join(ilk),
-        ilkRegistry.dec(ilk),
-    ])
-
-    const collateral = collateral18.shiftedBy(ilkDecimals - 18)
-
     const vaultOwner = await cdpManager.owns(vaultId.toString())
     const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
     const proxyOwner = await proxy.owner()
 
+    const { gem, gemJoin, ilkDecimals } = await hardhatUtils.getIlkData(ilk)
+    const collateral = collateral18.shiftedBy(ilkDecimals - 18)
     const cdpData = {
         ilk,
         gemJoin,

@@ -18,16 +18,20 @@ import { params } from './params'
 interface BasicBuyArgs {
     trigger: BigNumber
     refund: BigNumber
-    // slippage: BigNumber
+    slippage: BigNumber
     forked?: Network
     debug: boolean
 }
+
+const OAZO_FEE = new BigNumber(0.002)
+const LOAN_FEE = new BigNumber(0)
+const DEFAULT_SLIPPAGE_PCT = new BigNumber(0.5)
 
 task('basic-buy')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
-    // .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
+    .addOptionalParam('slippage', 'Slippage percentage for trade', DEFAULT_SLIPPAGE_PCT, params.bignumber)
     .addFlag('debug', 'Debug mode')
     .setAction(async (args: BasicBuyArgs, hre) => {
         const { name: network } = hre.network
@@ -95,7 +99,13 @@ task('basic-buy')
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
         }
-        const { exchangeData, cdpData } = await getExecutionData(hardhatUtils, vaultId, targetCollRatio)
+        const { exchangeData, cdpData } = await getExecutionData(
+            hardhatUtils,
+            vaultId,
+            targetCollRatio,
+            args.slippage,
+            args.forked,
+        )
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = mpa.interface.encodeFunctionData('increaseMultiple', [
             exchangeData,
@@ -154,6 +164,7 @@ async function getExecutionData(
     hardhatUtils: HardhatUtils,
     vaultId: BigNumber,
     targetRatio: BigNumber,
+    slippage: BigNumber,
     forked?: Network,
 ) {
     const { addresses, hre } = hardhatUtils
@@ -170,66 +181,59 @@ async function getExecutionData(
     const collRatio = await mcdView.connect(mcdViewSigner).getRatio(vaultId.toFixed(), true)
     const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toFixed())
     const oraclePrice = await mcdView.connect(mcdViewSigner).getNextPrice(ilk)
-    const slippage = new BigNumber(0.01)
-    const oasisFee = new BigNumber(0.002)
 
-    const ilkRegistry = new hre.ethers.Contract(
-        addresses.ILK_REGISTRY,
-        [
-            'function join(bytes32) view returns (address)',
-            'function gem(bytes32) view returns (address)',
-            'function dec(bytes32) view returns (uint256)',
-        ],
-        hre.ethers.provider,
-    )
-
-    const [gem, gemJoin, ilkDecimals] = await Promise.all([
-        ilkRegistry.gem(ilk),
-        ilkRegistry.join(ilk),
-        ilkRegistry.dec(ilk),
-    ])
-
+    const { gem, gemJoin, ilkDecimals } = await hardhatUtils.getIlkData(ilk)
     const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
-    const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
-        {
-            oraclePrice: oraclePriceUnits,
-            marketPrice: oraclePriceUnits,
-            OF: oasisFee,
-            FF: new BigNumber(0),
-            slippage,
-        },
-        {
-            currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
-            currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-ilkDecimals.toNumber()),
-            minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
-        },
-        {
-            requiredCollRatio: targetRatio.shiftedBy(-4),
-            providedCollateral: new BigNumber(0),
-            providedDai: new BigNumber(0),
-            withdrawDai: new BigNumber(0),
-            withdrawColl: new BigNumber(0),
-        },
-    )
 
-    const cdpData = {
+    const vaultInfo = {
+        currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
+        currentCollateral: new BigNumber(collateral.toString()).shiftedBy(ilkDecimals.toNumber() - 18),
+        minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
+    }
+
+    const desiredCdpState = {
+        requiredCollRatio: targetRatio.shiftedBy(-4),
+        providedCollateral: new BigNumber(0),
+        providedDai: new BigNumber(0),
+        withdrawDai: new BigNumber(0),
+        withdrawColl: new BigNumber(0),
+    }
+
+    const defaultCdpData = {
         gemJoin,
         fundsReceiver: proxyOwner,
         cdpId: vaultId.toFixed(),
         ilk,
-        requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
-        borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
         withdrawCollateral: 0,
         withdrawDai: 0,
         depositDai: 0,
         depositCollateral: 0,
-        skipFL,
         methodName: '',
     }
 
-    const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
-
     if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
+        const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
+            {
+                oraclePrice: oraclePriceUnits,
+                marketPrice: oraclePriceUnits,
+                OF: OAZO_FEE,
+                FF: LOAN_FEE,
+                slippage: slippage.div(100),
+            },
+            vaultInfo,
+            desiredCdpState,
+        )
+
+        const cdpData = {
+            ...defaultCdpData,
+            requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+            borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
+            skipFL,
+        }
+
+        const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(
+            new BigNumber(1).minus(slippage.div(100)),
+        )
         const exchangeData = {
             fromTokenAddress: hardhatUtils.addresses.DAI,
             toTokenAddress: gem,

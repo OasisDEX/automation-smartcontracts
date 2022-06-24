@@ -201,6 +201,30 @@ export class HardhatUtils {
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
     }
 
+    public async getIlkData(ilk: string) {
+        const ilkRegistry = new this.hre.ethers.Contract(
+            this.addresses.ILK_REGISTRY,
+            [
+                'function join(bytes32) view returns (address)',
+                'function gem(bytes32) view returns (address)',
+                'function dec(bytes32) view returns (uint256)',
+            ],
+            this.hre.ethers.provider,
+        )
+
+        const [gem, gemJoin, ilkDecimals] = await Promise.all([
+            ilkRegistry.gem(ilk),
+            ilkRegistry.join(ilk),
+            ilkRegistry.dec(ilk),
+        ])
+
+        return {
+            gem,
+            gemJoin,
+            ilkDecimals: ilkDecimals.toNumber(),
+        }
+    }
+
     public async getValidExecutionCallerOrOwner(executor: AutomationExecutor, signer: Signer) {
         if (await executor.callers(await signer.getAddress())) {
             return signer
