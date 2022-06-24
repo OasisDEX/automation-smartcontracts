@@ -67,7 +67,7 @@ describe('BasicSellCommand', () => {
     })
 
     afterEach(async () => {
-        await hre.ethers.provider.send('evm_revert', [snapshotId])
+      await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('isTriggerDataValid', () => {
@@ -202,7 +202,7 @@ describe('BasicSellCommand', () => {
                     hardhatUtils.addresses.WETH,
                     new BigNumber(cdpData.borrowCollateral).toFixed(0),
                     minToTokenAmount.toFixed(0),
-                    false,
+                    true,
                 ),
             }
 
@@ -220,7 +220,7 @@ describe('BasicSellCommand', () => {
                 triggerId,
                 0,
                 0,
-                0,
+                0
             )
         }
 
@@ -229,10 +229,10 @@ describe('BasicSellCommand', () => {
         })
 
         afterEach(async () => {
-            await hre.ethers.provider.send('evm_revert', [snapshotId])
+          await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it.only('executes the trigger', async () => {
+        it('executes the trigger', async () => {
             const { triggerId, triggerData } = await createTriggerForExecution(correctExecutionRatio, correctTargetRatio, false)
 
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
@@ -262,7 +262,7 @@ describe('BasicSellCommand', () => {
             expect(events.length).to.eq(1)
             const [event] = events
             expect(event.args.triggerData).to.eq(triggerData)
-            expect(event.args.commandAddress).to.eq(system.basicBuy!.address)
+            expect(event.args.commandAddress).to.eq(system.basicSell!.address)
             expect(event.args.cdpId).to.eq(testCdpId)
         })
     })

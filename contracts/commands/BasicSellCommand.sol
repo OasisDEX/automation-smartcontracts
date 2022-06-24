@@ -28,7 +28,6 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
-import { console } from "hardhat/console.sol";
 
 contract BasicSellCommand is ICommand, BaseMPACommand {
     using RatioUtils for uint256;
@@ -81,13 +80,6 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
 
         (, uint256 nextCollRatio, uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
 
-        console.log("nextCollRatio,  nextPrice", nextCollRatio, nextPrice);
-        console.log(
-            "decodedTriggerData.execCollRatio.wad(), decodedTriggerData.minSellPrice",
-            decodedTriggerData.execCollRatio.wad(),
-            decodedTriggerData.minSellPrice
-        );
-
         return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
             decodedTriggerData.minSellPrice < nextPrice);
     }
@@ -120,7 +112,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         );
 
         return
-            (collRatio > lowerTarget && collRatio < upperTarget) ||
-            (nextPrice < decodedTriggerData.minSellPrice);
+            (collRatio > lowerTarget.wad() && collRatio < upperTarget.wad()) &&
+            (nextPrice > decodedTriggerData.minSellPrice);
     }
 }
