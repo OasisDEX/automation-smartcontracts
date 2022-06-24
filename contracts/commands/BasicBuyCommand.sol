@@ -54,13 +54,13 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         liquidationRatioPercentage = _liquidationRatioPercentage;
     }
 
-    function getTriggerType(bytes memory triggerData)
+    function getBasicTriggerDataInfo(bytes memory triggerData)
         public
         pure
         override
-        returns (uint16 triggerType)
+        returns (uint256 cdpId, uint16 triggerType)
     {
-        (, triggerType, , , , , ) = decode(triggerData);
+        (cdpId, triggerType, , , , , ) = decode(triggerData);
     }
 
     function decode(bytes memory triggerData)

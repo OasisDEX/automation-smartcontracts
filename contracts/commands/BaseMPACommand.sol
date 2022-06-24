@@ -59,11 +59,11 @@ abstract contract BaseMPACommand {
         nextPrice = mcdView.getNextPrice(ilk);
     }
 
-    function getTriggerType(bytes memory triggerData)
+    function getBasicTriggerDataInfo(bytes memory triggerData)
         public
         pure
         virtual
-        returns (uint16 triggerType);
+        returns (uint256 cdpId, uint16 triggerType);
 
     function validateTriggerType(
         bytes memory triggerData,
@@ -71,7 +71,7 @@ abstract contract BaseMPACommand {
         uint16 expectedTriggerType,
         bytes4 expectedSelector
     ) public pure {
-        uint16 triggerType = getTriggerType(triggerData);
+        (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
         require(triggerType == expectedTriggerType, "basic-buy/type-not-supported");
 
         bytes4 selector = abi.decode(executionData, (bytes4));
@@ -86,11 +86,12 @@ abstract contract BaseMPACommand {
     }
 
     function reregisterTrigger(bytes memory triggerData, uint256 cdpId) internal {
+        (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
         (bool status, ) = msg.sender.delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(msg.sender).addTrigger.selector,
                 cdpId,
-                getTriggerType(triggerData),
+                triggerType,
                 0,
                 triggerData
             )

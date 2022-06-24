@@ -28,6 +28,7 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { console } from "hardhat/console.sol";
 
 contract BasicSellCommand is ICommand, BaseMPACommand {
     using RatioUtils for uint256;
@@ -42,13 +43,14 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         uint64 deviation;
     }
 
-    function getTriggerType(bytes memory triggerData)
+    function getBasicTriggerDataInfo(bytes memory triggerData)
         public
         pure
         override
-        returns (uint16 triggerType)
+        returns (uint256 cdpId, uint16 triggerType)
     {
-        return decode(triggerData).triggerType;
+        BasicSellTriggerData memory decoded = decode(triggerData);
+        return (decoded.cdpId, decoded.triggerType);
     }
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
@@ -62,7 +64,12 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         view
         returns (bool)
     {
-        return true;
+        BasicSellTriggerData memory decodedTrigger = decode(triggerData);
+
+        (uint256 lowerTarget, ) = decodedTrigger.targetCollRatio.bounds(decodedTrigger.deviation);
+        return (_cdpId == decodedTrigger.cdpId &&
+            decodedTrigger.triggerType == 4 &&
+            decodedTrigger.execCollRatio < lowerTarget);
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -72,14 +79,17 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
 
-        (uint256 collRatio, , uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
 
-        return
-            decodedTriggerData.execCollRatio > collRatio.wad() &&
-            decodedTriggerData.minSellPrice < nextPrice;
-        // is collateralisationRatio at nextPrice below triggersData execCollRatio value
-        // &&
-        // is OSM Next Price above triggersData value
+        console.log("nextCollRatio,  nextPrice", nextCollRatio, nextPrice);
+        console.log(
+            "decodedTriggerData.execCollRatio.wad(), decodedTriggerData.minSellPrice",
+            decodedTriggerData.execCollRatio.wad(),
+            decodedTriggerData.minSellPrice
+        );
+
+        return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
+            decodedTriggerData.minSellPrice < nextPrice);
     }
 
     function execute(

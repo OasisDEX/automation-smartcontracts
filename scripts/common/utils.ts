@@ -39,6 +39,11 @@ export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64'],
                 args,
             )
+        case TriggerType.BASIC_SELL:
+            return utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64'],
+                args,
+            )
         default:
             throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
     }
