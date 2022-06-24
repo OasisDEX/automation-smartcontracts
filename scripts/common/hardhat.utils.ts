@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { BigNumber, constants, Signer, utils } from 'ethers'
+import { BigNumber, constants, Contract, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
@@ -8,7 +8,6 @@ import { ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
-import { AutomationExecutor, McdView } from '../../typechain'
 
 export class HardhatUtils {
     public readonly addresses
@@ -225,7 +224,7 @@ export class HardhatUtils {
         }
     }
 
-    public async getValidExecutionCallerOrOwner(executor: AutomationExecutor, signer: Signer) {
+    public async getValidExecutionCallerOrOwner(executor: Contract, signer: Signer) {
         if (await executor.callers(await signer.getAddress())) {
             return signer
         }
@@ -243,7 +242,7 @@ export class HardhatUtils {
         return owner
     }
 
-    public async getValidMcdViewCallerOrOwner(mcdView: McdView, signer: Signer) {
+    public async getValidMcdViewCallerOrOwner(mcdView: Contract, signer: Signer) {
         if (await mcdView.whitelisted(await signer.getAddress())) {
             return signer
         }
@@ -256,7 +255,6 @@ export class HardhatUtils {
         const mcdViewOwner = await mcdView.owner()
         const owner = await this.impersonate(mcdViewOwner)
         console.log(`Impersonated McdView owner ${mcdViewOwner}...`)
-        // Fund the owner
         return owner
     }
 }
