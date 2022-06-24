@@ -7,22 +7,13 @@ import chalk from 'chalk'
 import { ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
+import { isLocalNetwork } from './utils'
+import { AutomationExecutor, McdView } from '../../typechain'
 
 export class HardhatUtils {
     public readonly addresses
     constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
         this.addresses = getAddressesFor(forked || this.hre.network.name)
-    }
-
-    public mpaServiceRegistry() {
-        return {
-            jug: this.addresses.MCD_JUG,
-            manager: this.addresses.CDP_MANAGER,
-            multiplyProxyActions: this.addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: this.addresses.MCD_FLASH,
-            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
-            exchange: '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B',
-        }
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
@@ -47,6 +38,17 @@ export class HardhatUtils {
         }
     }
 
+    public mpaServiceRegistry() {
+        return {
+            jug: this.addresses.MCD_JUG,
+            manager: this.addresses.CDP_MANAGER,
+            multiplyProxyActions: this.addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: this.addresses.MCD_FLASH,
+            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
+            exchange: '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B',
+        }
+    }
+
     public async getOrCreateProxy(address: string, signer?: Signer) {
         const proxyRegistry = await this.hre.ethers.getContractAt('IProxyRegistry', this.addresses.PROXY_REGISTRY)
 
@@ -60,18 +62,18 @@ export class HardhatUtils {
     }
 
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {
-        console.log(`🛰  Replacing Tx with nonce ${nonce}`)
+        console.log(`🛰 Replacing tx with nonce ${nonce}`)
         const tx = await signer.sendTransaction({
             value: 0,
             gasPrice: gasPriceInGwei * 1000_000_000,
             to: await signer.getAddress(),
         })
-        console.log(` 🛰  Tx sent ${tx.hash}`)
+        console.log(`🛰 Tx sent ${tx.hash}`)
     }
 
     public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
         if (!silent) {
-            console.log(` 🛰  Deploying: ${contractName}`)
+            console.log(`🛰 Deploying: ${contractName}`)
         }
 
         const contractArgs = _args || []
@@ -111,13 +113,11 @@ export class HardhatUtils {
     }
 
     public async sendEther(signer: Signer, to: string, amount: string) {
-        const value = utils.parseUnits(amount, 18)
         const txObj = await signer.populateTransaction({
             to,
-            value,
+            value: utils.parseUnits(amount, 18),
             gasLimit: 300000,
         })
-
         await signer.sendTransaction(txObj)
     }
 
@@ -199,5 +199,40 @@ export class HardhatUtils {
 
     private isEth(tokenAddr: string) {
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
+    }
+
+    public async getValidExecutionCallerOrOwner(executor: AutomationExecutor, signer: Signer) {
+        if (await executor.callers(await signer.getAddress())) {
+            return signer
+        }
+
+        if (!isLocalNetwork(this.hre.network.name)) {
+            throw new Error(
+                `Signer is not authorized to call the AutomationExecutor. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
+            )
+        }
+        const executionOwner = await executor.owner()
+        const owner = await this.impersonate(executionOwner)
+        console.log(`Impersonated AutomationExecutor owner ${executionOwner}...`)
+        // Fund the owner
+        await this.sendEther(this.hre.ethers.provider.getSigner(0), executionOwner, '10')
+        return owner
+    }
+
+    public async getValidMcdViewCallerOrOwner(mcdView: McdView, signer: Signer) {
+        if (await mcdView.whitelisted(await signer.getAddress())) {
+            return signer
+        }
+
+        if (!isLocalNetwork(this.hre.network.name)) {
+            throw new Error(
+                `Signer is not authorized to call the McdView. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
+            )
+        }
+        const mcdViewOwner = await mcdView.owner()
+        const owner = await this.impersonate(mcdViewOwner)
+        console.log(`Impersonated McdView owner ${mcdViewOwner}...`)
+        // Fund the owner
+        return owner
     }
 }

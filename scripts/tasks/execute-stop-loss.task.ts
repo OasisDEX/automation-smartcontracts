@@ -5,9 +5,8 @@ import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multi
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
     coalesceNetwork,
-    decodeTriggerData,
-    forgeUnoswapCallData,
-    generateExecutionData,
+    forgeUnoswapCalldata,
+    generateStopLossExecutionData,
     getEvents,
     getStartBlocksFor,
     HardhatUtils,
@@ -15,6 +14,8 @@ import {
     Network,
     bignumberToTopic,
     TriggerType,
+    decodeStopLossData,
+    ONE_INCH_V4_ROUTER,
 } from '../common'
 import { params } from './params'
 import { getQuote, getSwap } from '../common/one-inch'
@@ -67,48 +68,33 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             event.data,
             event.topics,
         )
-        const { vaultId, type: triggerType, stopLossLevel } = decodeTriggerData(triggerData)
+        const { vaultId, type: triggerType, stopLossLevel } = decodeStopLossData(triggerData)
         console.log(
             `Found trigger information. Command Address: ${commandAddress}. Vault ID: ${vaultId.toString()}. Trigger Type: ${triggerType.toString()}. Stop Loss Level: ${stopLossLevel.toString()}`,
         )
 
-        if (triggerType.gt(2)) {
-            throw new Error(`Trigger type \`${triggerType.toString()}\` is currently not supported`)
+        if (!triggerType.eq(1) && !triggerType.eq(2)) {
+            throw new Error(`Trigger type \`${triggerType.toString()}\` is not supported`)
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
 
-        let executorSigner: Signer = hre.ethers.provider.getSigner(0)
-        if (!(await executor.callers(await executorSigner.getAddress()))) {
-            if (!isLocalNetwork(network)) {
-                throw new Error(
-                    `Signer is not authorized to call the executor. Cannot impersonate on external network. Signer: ${await executorSigner.getAddress()}.`,
-                )
-            }
-            const executionOwner = await executor.owner()
-            executorSigner = await hardhatUtils.impersonate(executionOwner)
-            console.log(`Impersonated execution owner ${executionOwner}...`)
-            // Fund the owner
-            await hre.ethers.provider.getSigner(0).sendTransaction({
-                to: executionOwner,
-                value: EthersBN.from(10).pow(18),
-            })
-        }
+        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(
+            executor,
+            hre.ethers.provider.getSigner(0),
+        )
 
         console.log('Preparing exchange data...')
         const serviceRegistry = {
-            jug: addresses.MCD_JUG,
-            manager: addresses.CDP_MANAGER,
-            multiplyProxyActions: addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: addresses.MCD_FLASH,
+            ...hardhatUtils.mpaServiceRegistry(),
             feeRecepient:
                 network === Network.MAINNET
                     ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
         }
-        const { exchangeData, cdpData } = await getExecutionData(
+        const { exchangeData, cdpData } = await getExchangeAndCdpData(
             hardhatUtils,
             vaultId,
             isToCollateral,
@@ -120,7 +106,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             console.log('exchangeData', exchangeData)
         }
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
-        const executionData = generateExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
+        const executionData = generateStopLossExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
         const estimate = await executor
             .connect(executorSigner)
@@ -138,22 +124,24 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
 
         const gasPrice = await getGasPrice()
         console.log(`Starting trigger execution...`)
-        const tx = await executor.connect(executorSigner).execute(
-            executionData,
-            vaultId.toString(),
-            triggerData,
-            commandAddress,
-            args.trigger.toString(),
-            0,
-            0,
-            args.refund.toNumber(),
-            // to send forcefully even failed request
-            {
-                gasLimit: estimate,
-                maxFeePerGas: new BigNumber(gasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-                maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
-            },
-        )
+        const tx = await executor
+            .connect(executorSigner)
+            .execute(
+                executionData,
+                vaultId.toString(),
+                triggerData,
+                commandAddress,
+                args.trigger.toString(),
+                0,
+                0,
+                args.refund.toNumber(),
+                {
+                    // send the request forcefully even it fails
+                    gasLimit: estimate,
+                    maxFeePerGas: new BigNumber(gasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
+                    maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
+                },
+            )
         const receipt = await tx.wait()
 
         const triggerExecutedEvent = getEvents(receipt, bot.interface.getEvent('TriggerExecuted'))?.[0]
@@ -168,7 +156,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         )
     })
 
-async function getExecutionData(
+async function getExchangeAndCdpData(
     hardhatUtils: HardhatUtils,
     vaultId: BigNumber,
     isToCollateral: boolean,
@@ -254,8 +242,8 @@ async function getExecutionData(
             fromTokenAmount: collateral.toFixed(0),
             toTokenAmount: 0,
             minToTokenAmount: minToTokenAmount.toFixed(0),
-            exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
-            _exchangeCalldata: forgeUnoswapCallData(gem, collateral.toFixed(0), minToTokenAmount.toFixed(0)),
+            exchangeAddress: ONE_INCH_V4_ROUTER,
+            _exchangeCalldata: forgeUnoswapCalldata(gem, collateral.toFixed(0), minToTokenAmount.toFixed(0)),
         }
         return { exchangeData, cdpData }
     }

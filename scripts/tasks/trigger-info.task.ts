@@ -4,7 +4,8 @@ import { task, types } from 'hardhat/config'
 import {
     bignumberToTopic,
     coalesceNetwork,
-    decodeTriggerData,
+    decodeBasicTriggerData,
+    decodeStopLossData,
     getStartBlocksFor,
     HardhatUtils,
     Network,
@@ -45,15 +46,14 @@ task<TriggerInfoArgs>('trigger-info')
         }
 
         const [event] = events
-        const { commandAddress, triggerData /* cdpId */ } = bot.interface.decodeEventLog(
-            'TriggerAdded',
-            event.data,
-            event.topics,
-        )
-        const { vaultId, type: triggerType, stopLossLevel } = decodeTriggerData(triggerData)
-        console.log(
-            `Found trigger information\nCommand Address: ${commandAddress}\nVault ID: ${vaultId.toString()}\nTrigger Type: ${triggerType.toString()}\nStop Loss Level: ${stopLossLevel.toString()}`,
-        )
+        const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
+        const { vaultId, type: triggerType } = decodeBasicTriggerData(triggerData)
+        const info = [
+            `Command Address: ${commandAddress}`,
+            `Vault ID: ${vaultId.toString()}`,
+            `Trigger Type: ${triggerType.toString()}`,
+        ]
+        console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
 
         const closeCommand = await hre.ethers.getContractAt('CloseCommand', addresses.AUTOMATION_CLOSE_COMMAND)
         const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)

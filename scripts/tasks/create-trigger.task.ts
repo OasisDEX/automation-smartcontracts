@@ -12,6 +12,7 @@ import {
     bignumberToTopic,
     TriggerType,
     isLocalNetwork,
+    getCommandAddress,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
@@ -19,14 +20,20 @@ import { params } from './params'
 interface CreateTriggerArgs extends BaseTaskArgs {
     vault: BigNumber
     type: number
-    ratio: BigNumber
     noreplace: boolean
+    params: any[]
 }
 
-createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for a user')
-    .addParam('vault', 'The vault (cdp) ID', '', params.bignumber)
+createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
+    .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
-    .addParam('ratio', 'The collateralization ratio for stop loss (i.e. 170)', '', params.bignumber)
+    .addParam(
+        'params',
+        'The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info',
+        undefined,
+        types.json,
+        false,
+    )
     .addFlag('noreplace', 'The flag whether the task should replace previously created trigger')
     .setAction(async (args: CreateTriggerArgs, hre) => {
         const { name: network } = hre.network
@@ -40,9 +47,11 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for
         let triggerIdToReplace = 0
         if (!args.noreplace) {
             const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
+            const commandAddress = getCommandAddress(coalesceNetwork(args.forked || (network as Network)), args.type)
             const vaultIdTopic = bignumberToTopic(args.vault)
+            const commandAddressTopic = `0x${commandAddress.substring(2).padStart(64, '0')}`
             const topicFilters = [
-                [bot.interface.getEventTopic('TriggerAdded'), null, null, vaultIdTopic],
+                [bot.interface.getEventTopic('TriggerAdded'), null, commandAddressTopic, vaultIdTopic],
                 [bot.interface.getEventTopic('TriggerRemoved'), vaultIdTopic],
                 [bot.interface.getEventTopic('TriggerExecuted'), null, vaultIdTopic],
             ]
@@ -90,7 +99,8 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates a stop loss trigger for
             })
         }
 
-        const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, args.ratio.toNumber())
+        // if (new BigNumber()) {}
+        const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
             args.vault.toString(),
             args.type,

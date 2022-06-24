@@ -6,9 +6,10 @@ import {
     getEvents,
     HardhatUtils,
     encodeTriggerData,
-    forgeUnoswapCallData,
-    generateExecutionData,
+    forgeUnoswapCalldata,
+    generateStopLossExecutionData,
     TriggerType,
+    ONE_INCH_V4_ROUTER,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
@@ -109,8 +110,8 @@ describe('CloseCommand', async () => {
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
-                exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'
-                exchangeData._exchangeCalldata = forgeUnoswapCallData(
+                exchangeData.exchangeAddress = ONE_INCH_V4_ROUTER
+                exchangeData._exchangeCalldata = forgeUnoswapCalldata(
                     hardhatUtils.addresses.WETH,
                     exchangeData.fromTokenAmount,
                     exchangeData.minToTokenAmount,
@@ -134,7 +135,13 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage - 1,
                     )
 
-                    executionData = generateExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateStopLossExecutionData(
+                        MPAInstance,
+                        true,
+                        cdpData,
+                        exchangeData,
+                        serviceRegistry,
+                    )
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -194,7 +201,13 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage + 1,
                     )
 
-                    executionData = generateExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateStopLossExecutionData(
+                        MPAInstance,
+                        true,
+                        cdpData,
+                        exchangeData,
+                        serviceRegistry,
+                    )
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -320,8 +333,8 @@ describe('CloseCommand', async () => {
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
                 // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000) /* 2% slippage */.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
-                exchangeData.exchangeAddress = '0x1111111254fb6c44bac0bed2854e76f90643097d'
-                exchangeData._exchangeCalldata = forgeUnoswapCallData(
+                exchangeData.exchangeAddress = ONE_INCH_V4_ROUTER
+                exchangeData._exchangeCalldata = forgeUnoswapCalldata(
                     hardhatUtils.addresses.WETH,
                     exchangeData.fromTokenAmount,
                     exchangeData.minToTokenAmount,
@@ -345,7 +358,13 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage - 1,
                     )
 
-                    executionData = generateExecutionData(MPAInstance, false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateStopLossExecutionData(
+                        MPAInstance,
+                        false,
+                        cdpData,
+                        exchangeData,
+                        serviceRegistry,
+                    )
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
@@ -398,7 +417,13 @@ describe('CloseCommand', async () => {
                         currentCollRatioAsPercentage + 1,
                     )
 
-                    executionData = generateExecutionData(MPAInstance, false, cdpData, exchangeData, serviceRegistry)
+                    executionData = generateStopLossExecutionData(
+                        MPAInstance,
+                        false,
+                        cdpData,
+                        exchangeData,
+                        serviceRegistry,
+                    )
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
