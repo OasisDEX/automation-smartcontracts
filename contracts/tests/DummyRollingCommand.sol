@@ -29,7 +29,7 @@ contract DummyRollingCommand is DummyCommand {
     }
 
     function execute(
-        bytes calldata executionData,
+        bytes calldata,
         uint256 cdpId,
         bytes memory triggerData
     ) external override {

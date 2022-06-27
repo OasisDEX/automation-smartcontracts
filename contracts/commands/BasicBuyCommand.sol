@@ -33,6 +33,16 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
+    struct BasicBuyTriggerData {
+        uint256 cdpId;
+        uint16 triggerType;
+        uint256 execCollRatio;
+        uint256 targetCollRatio;
+        uint256 maxBuyPrice;
+        bool continuous;
+        uint64 deviation;
+    }
+
     address public immutable owner;
 
     // The parameter setting that is common for all users.
@@ -54,29 +64,8 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         liquidationRatioPercentage = _liquidationRatioPercentage;
     }
 
-    function getBasicTriggerDataInfo(bytes memory triggerData)
-        public
-        pure
-        override
-        returns (uint256 cdpId, uint16 triggerType)
-    {
-        (cdpId, triggerType, , , , , ) = decode(triggerData);
-    }
-
-    function decode(bytes memory triggerData)
-        public
-        pure
-        returns (
-            uint256 cdpId,
-            uint16 triggerType,
-            uint256 execCollRatio,
-            uint256 targetCollRatio,
-            uint256 maxBuyPrice,
-            bool continuous,
-            uint64 deviation
-        )
-    {
-        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool, uint64));
+    function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
+        return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -84,26 +73,20 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         view
         returns (bool)
     {
-        (
-            uint256 cdpId,
-            uint16 triggerType,
-            uint256 execCollRatio,
-            uint256 targetCollRatio,
-            ,
-            ,
-            uint64 deviation
-        ) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
+        bytes32 ilk = manager.ilks(decoded.cdpId);
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
-        (uint256 lowerTarget, uint256 upperTarget) = targetCollRatio.bounds(deviation);
+        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
+            decoded.deviation
+        );
         return
-            _cdpId == cdpId &&
-            triggerType == 3 &&
-            execCollRatio > upperTarget &&
+            _cdpId == decoded.cdpId &&
+            decoded.triggerType == 3 &&
+            decoded.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio;
     }
 
@@ -112,11 +95,14 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         view
         returns (bool)
     {
-        (, , uint256 execCollRatio, , uint256 maxBuyPrice, , ) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        (uint256 collRatio, , uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
+        (uint256 collRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
-        return collRatio != 0 && collRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
+        return
+            collRatio != 0 &&
+            collRatio >= decoded.execCollRatio.wad() &&
+            nextPrice <= decoded.maxBuyPrice;
     }
 
     function execute(
@@ -124,13 +110,15 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        validateTriggerType(triggerData, executionData, 3, MPALike.increaseMultiple.selector);
-        (, uint16 triggerType, , , , bool continuous, ) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
+
+        validateTriggerType(decoded.triggerType, 3);
+        validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
-        if (continuous) {
-            reregisterTrigger(triggerData, cdpId, triggerType);
+        if (decoded.continuous) {
+            recreateTrigger(cdpId, decoded.triggerType, triggerData);
         }
     }
 
@@ -139,24 +127,23 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         view
         returns (bool)
     {
-        (, , , uint256 targetRatio, , , uint64 deviation) = decode(triggerData);
-
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-
-        (uint256 collRatio, uint256 nextCollRatio, , bytes32 ilk) = getBasicVaultAndMarketInfo(
-            cdpId
-        );
+        BasicBuyTriggerData memory decoded = decode(triggerData);
+        (uint256 collRatio, uint256 nextCollRatio, , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
-        (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
-        return
-            (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
-            (collRatio < nextCollRatio &&
-                collRatio * 10**9 <
-                liquidationRatio.mul(RatioUtils.RATIO + liquidationRatioPercentage).div(
-                    RatioUtils.RATIO
-                ));
+        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
+            decoded.deviation
+        );
+
+        bool isWithinBounds = nextCollRatio <= upperTarget.wad() &&
+            nextCollRatio >= lowerTarget.wad();
+        bool isNearLiquidationRatio = collRatio < nextCollRatio &&
+            collRatio * 10**9 <
+            liquidationRatio.mul(RatioUtils.RATIO + liquidationRatioPercentage).div(
+                RatioUtils.RATIO
+            );
+        return isWithinBounds || isNearLiquidationRatio;
     }
 }
