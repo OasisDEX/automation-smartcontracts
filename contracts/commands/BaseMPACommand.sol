@@ -59,15 +59,6 @@ abstract contract BaseMPACommand {
         nextPrice = mcdView.getNextPrice(ilk);
     }
 
-    function getBasicTriggerDataInfo(bytes memory triggerData)
-        public
-        pure
-        virtual
-        returns (uint256 cdpId, uint16 triggerType)
-    {
-        (cdpId, triggerType) = abi.decode(triggerData, (uint256, uint16));
-    }
-
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
     }
