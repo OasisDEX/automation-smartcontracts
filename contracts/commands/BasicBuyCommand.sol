@@ -97,11 +97,10 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        (uint256 collRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
-
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
         return
-            collRatio != 0 &&
-            collRatio >= decoded.execCollRatio.wad() &&
+            nextCollRatio != 0 &&
+            nextCollRatio >= decoded.execCollRatio.wad() &&
             nextPrice <= decoded.maxBuyPrice;
     }
 

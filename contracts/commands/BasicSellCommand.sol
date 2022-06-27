@@ -97,14 +97,14 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         returns (bool)
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (uint256 collRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
         (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
             decodedTriggerData.deviation
         );
 
         return
-            (collRatio > lowerTarget.wad() && collRatio < upperTarget.wad()) &&
+            (nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) &&
             (nextPrice > decodedTriggerData.minSellPrice);
     }
 }
