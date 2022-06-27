@@ -114,9 +114,10 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
     {
         (, , uint256 execCollRatio, , uint256 maxBuyPrice, , ) = decode(triggerData);
 
-        (uint256 collRatio, , uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
 
-        return collRatio != 0 && collRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
+        return
+            nextCollRatio != 0 && nextCollRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
     }
 
     function execute(

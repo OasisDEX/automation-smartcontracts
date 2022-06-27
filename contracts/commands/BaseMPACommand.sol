@@ -54,7 +54,7 @@ abstract contract BaseMPACommand {
         ilk = manager.ilks(cdpId);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        collRatio = mcdView.getRatio(cdpId, true);
+        collRatio = mcdView.getRatio(cdpId, false);
         nextCollRatio = mcdView.getRatio(cdpId, true);
         nextPrice = mcdView.getNextPrice(ilk);
     }
