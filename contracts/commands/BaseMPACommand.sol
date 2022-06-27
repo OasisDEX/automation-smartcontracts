@@ -72,10 +72,10 @@ abstract contract BaseMPACommand {
         bytes4 expectedSelector
     ) public pure {
         (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
-        require(triggerType == expectedTriggerType, "basic-buy/type-not-supported");
+        require(triggerType == expectedTriggerType, "mpa-command-base/type-not-supported");
 
         bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == expectedSelector, "basic-buy/invalid-selector");
+        require(selector == expectedSelector, "mpa-command-base/invalid-selector");
     }
 
     function executeMPAMethod(bytes memory executionData) internal {
@@ -85,8 +85,11 @@ abstract contract BaseMPACommand {
         require(status, string(errorMsg));
     }
 
-    function reregisterTrigger(bytes memory triggerData, uint256 cdpId) internal {
-        (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
+    function reregisterTrigger(
+        bytes memory triggerData,
+        uint256 cdpId,
+        uint16 triggerType
+    ) internal {
         (bool status, ) = msg.sender.delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(msg.sender).addTrigger.selector,
@@ -96,6 +99,6 @@ abstract contract BaseMPACommand {
                 triggerData
             )
         );
-        require(status, "basic-buy/trigger-recreation-failed");
+        require(status, "mpa-command-base/trigger-recreation-failed");
     }
 }

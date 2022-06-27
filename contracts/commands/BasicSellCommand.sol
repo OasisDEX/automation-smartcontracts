@@ -95,7 +95,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         executeMPAMethod(executionData);
 
         if (decodedTriggerData.continuous) {
-            reregisterTrigger(triggerData, cdpId);
+            reregisterTrigger(triggerData, cdpId, decodedTriggerData.triggerType);
         }
     }
 

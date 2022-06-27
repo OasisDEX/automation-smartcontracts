@@ -130,7 +130,7 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         executeMPAMethod(executionData);
 
         if (continuous) {
-            reregisterTrigger(triggerData, cdpId);
+            reregisterTrigger(triggerData, cdpId, triggerType);
         }
     }
 
