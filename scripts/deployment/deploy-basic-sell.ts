@@ -18,6 +18,10 @@ async function main() {
 
     await ensureEntryInServiceRegistry(TriggerType.BASIC_SELL, deployed.address, system.serviceRegistry)
 
+    console.log('Adding BASIC_SELL to ServiceRegistry....')
+
+    await ensureEntryInServiceRegistry(TriggerType.BASIC_SELL, deployed.address, system.serviceRegistry)
+
     console.log(`BASIC_SELL entry added to ServiceRegistry....`)
 
     console.log(`Whitelisting BasicSellCommand on McdView....`)

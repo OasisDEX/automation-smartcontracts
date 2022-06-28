@@ -35,6 +35,7 @@ abstract contract BaseMPACommand {
     string public constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string public constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
     string public constant MCD_SPOT_KEY = "MCD_SPOT";
+    string public constant MCD_VAT_KEY = "MCD_VAT";
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -57,6 +58,12 @@ abstract contract BaseMPACommand {
         collRatio = mcdView.getRatio(cdpId, false);
         nextCollRatio = mcdView.getRatio(cdpId, true);
         nextPrice = mcdView.getNextPrice(ilk);
+    }
+
+    function getVaultDebt(uint256 cdpId) internal view returns (uint256) {
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        (, uint256 debt) = mcdView.getVaultInfo(cdpId);
+        return debt;
     }
 
     function getBasicTriggerDataInfo(bytes memory triggerData)

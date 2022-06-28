@@ -196,6 +196,9 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
+    if (logDebug) console.log('Adding MCD_VAT to ServiceRegistry....')
+    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VAT), addresses.MCD_VAT)
+
     if (logDebug) console.log('Adding MCD_SPOT to ServiceRegistry....')
     await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_SPOT), addresses.MCD_SPOT)
 

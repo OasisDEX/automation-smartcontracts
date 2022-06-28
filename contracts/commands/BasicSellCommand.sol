@@ -24,6 +24,7 @@ import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
+import { VatLike } from "../interfaces/VatLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
@@ -31,6 +32,8 @@ import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicSellCommand is ICommand, BaseMPACommand {
     using RatioUtils for uint256;
+    uint256 public constant RAD = 10**45;
+    uint256 public constant WAD = 10**18;
 
     struct BasicSellTriggerData {
         uint256 cdpId;
@@ -99,6 +102,19 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         }
     }
 
+    function getDustLimit(bytes32 ilk) internal view returns (uint256 dustLimit) {
+        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
+        (, , , , uint256 radDust) = vat.ilks(ilk);
+        uint256 wadDust = (radDust * WAD) / RAD;
+        return wadDust;
+    }
+
+    function getVaultInfo(uint256 cdpId) internal view returns (uint256 dustLimit) {
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        (, uint256 debt) = mcdView.getVaultInfo(cdpId);
+        return debt;
+    }
+
     function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
         external
         view
@@ -109,12 +125,19 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
             cdpId
         );
 
+        uint256 dust = getDustLimit(ilk);
+
+        (, uint256 maxUnconditionallyAcceptedDebt) = dust.bounds(decodedTriggerData.deviation);
+
+        uint256 vaultDebtAfter = getVaultInfo(cdpId);
+
         (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
             decodedTriggerData.deviation
         );
 
         return
-            (nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) &&
+            ((nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) ||
+                (vaultDebtAfter <= maxUnconditionallyAcceptedDebt)) &&
             (nextPrice > decodedTriggerData.minSellPrice);
     }
 }
