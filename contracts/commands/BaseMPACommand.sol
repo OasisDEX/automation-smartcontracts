@@ -66,19 +66,7 @@ abstract contract BaseMPACommand {
         return debt;
     }
 
-    function getBasicTriggerDataInfo(bytes memory triggerData)
-        public
-        pure
-        virtual
-        returns (uint256 cdpId, uint16 triggerType);
-
-    function validateTriggerType(
-        bytes memory triggerData,
-        bytes memory executionData,
-        uint16 expectedTriggerType,
-        bytes4 expectedSelector
-    ) public pure {
-        (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
+    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
     }
 

@@ -113,7 +113,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         returns (bool)
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
 
         uint256 dust = getDustLimit(ilk);
 
