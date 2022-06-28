@@ -41,7 +41,7 @@ abstract contract BaseMPACommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function getBasicVaultAndMarketInfo(uint256 cdpId)
+    function getVaultAndMarketInfo(uint256 cdpId)
         public
         view
         returns (
@@ -79,23 +79,25 @@ abstract contract BaseMPACommand {
         bytes4 expectedSelector
     ) public pure {
         (, uint16 triggerType) = getBasicTriggerDataInfo(triggerData);
-        require(triggerType == expectedTriggerType, "mpa-command-base/type-not-supported");
+        require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
+    }
 
+    function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == expectedSelector, "mpa-command-base/invalid-selector");
+        require(selector == expectedSelector, "base-mpa-command/invalid-selector");
     }
 
     function executeMPAMethod(bytes memory executionData) internal {
-        (bool status, bytes memory errorMsg) = serviceRegistry
+        (bool status, bytes memory reason) = serviceRegistry
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
-        require(status, string(errorMsg));
+        require(status, string(reason));
     }
 
-    function reregisterTrigger(
-        bytes memory triggerData,
+    function recreateTrigger(
         uint256 cdpId,
-        uint16 triggerType
+        uint16 triggerType,
+        bytes memory triggerData
     ) internal {
         (bool status, ) = msg.sender.delegatecall(
             abi.encodeWithSelector(
@@ -106,6 +108,6 @@ abstract contract BaseMPACommand {
                 triggerData
             )
         );
-        require(status, "mpa-command-base/trigger-recreation-failed");
+        require(status, "base-mpa-command/trigger-recreation-failed");
     }
 }

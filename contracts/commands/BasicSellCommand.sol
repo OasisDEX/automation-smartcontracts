@@ -45,16 +45,6 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         uint64 deviation;
     }
 
-    function getBasicTriggerDataInfo(bytes memory triggerData)
-        public
-        pure
-        override
-        returns (uint256 cdpId, uint16 triggerType)
-    {
-        BasicSellTriggerData memory decoded = decode(triggerData);
-        return (decoded.cdpId, decoded.triggerType);
-    }
-
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
     function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
@@ -63,7 +53,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
         external
-        view
+        pure
         returns (bool)
     {
         BasicSellTriggerData memory decodedTrigger = decode(triggerData);
@@ -81,7 +71,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
 
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getBasicVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
         return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
             decodedTriggerData.minSellPrice < nextPrice);
@@ -92,13 +82,15 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        validateTriggerType(triggerData, executionData, 4, MPALike.decreaseMultiple.selector);
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
+
+        validateTriggerType(decodedTriggerData.triggerType, 4);
+        validateSelector(MPALike.decreaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
         if (decodedTriggerData.continuous) {
-            reregisterTrigger(triggerData, cdpId, decodedTriggerData.triggerType);
+            recreateTrigger(cdpId, decodedTriggerData.triggerType, triggerData);
         }
     }
 
@@ -121,9 +113,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
         returns (bool)
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (, uint256 nextCollRatio, uint256 nextPrice, bytes32 ilk) = getBasicVaultAndMarketInfo(
-            cdpId
-        );
+        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
         uint256 dust = getDustLimit(ilk);
 
