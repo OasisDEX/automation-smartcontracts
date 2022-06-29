@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/ICommand.sol";
 import "../interfaces/BotLike.sol";
-import "../ServiceRegistry.sol";
 import "../AutomationBot.sol";
 import { DummyCommand } from "../tests/DummyCommand.sol";
 
@@ -11,20 +10,11 @@ contract DummyRollingCommand is DummyCommand {
     uint256 public immutable triggerType;
 
     constructor(
-        address _serviceRegistry,
         bool _initialCheckReturn,
         bool _finalCheckReturn,
         bool _revertsInExecute,
         bool _validTriggerData
-    )
-        DummyCommand(
-            _serviceRegistry,
-            _initialCheckReturn,
-            _finalCheckReturn,
-            _revertsInExecute,
-            _validTriggerData
-        )
-    {
+    ) DummyCommand(_initialCheckReturn, _finalCheckReturn, _revertsInExecute, _validTriggerData) {
         triggerType = 100;
     }
 

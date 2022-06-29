@@ -30,15 +30,8 @@ describe('AutomationBot', async () => {
 
         const system = await deploySystem({ utils, addCommands: false })
 
-        DummyCommandInstance = (await dummyCommandFactory.deploy(
-            system.serviceRegistry.address,
-            true,
-            true,
-            false,
-            true,
-        )) as DummyCommand
+        DummyCommandInstance = (await dummyCommandFactory.deploy(true, true, false, true)) as DummyCommand
         DummyRollingCommandInstance = (await dummyRollingCommandFactory.deploy(
-            system.serviceRegistry.address,
             true,
             true,
             false,
