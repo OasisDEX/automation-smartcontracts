@@ -1,7 +1,7 @@
 import { Contract, constants } from 'ethers'
 import { getCommandHash, HardhatUtils, TriggerType } from '../common'
 
-type ServiceRegistry = any
+type ServiceRegistry = Contract
 
 export async function deployCommand(ethers: any, utils: HardhatUtils, commandName: string): Promise<Contract> {
     const basicBuyFactory = await ethers.getContractFactory(commandName)
