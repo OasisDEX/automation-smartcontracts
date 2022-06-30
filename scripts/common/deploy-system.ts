@@ -167,8 +167,16 @@ export async function deploySystem({
     return system
 }
 
-export async function configureRegistryEntries(system: DeployedSystem, addresses: AddressRegistry, logDebug = false) {
+export async function configureRegistryEntries(
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    logDebug = false,
+    allowedReplacements: string[] = [],
+) {
     const ensureServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
+    if (allowedReplacements.length > 0) {
+        await Promise.all(allowedReplacements.map(hash => system.serviceRegistry.removeNamedService(hash)))
+    }
 
     if (system.closeCommand) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
