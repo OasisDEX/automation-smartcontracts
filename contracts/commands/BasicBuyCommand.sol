@@ -20,16 +20,16 @@ pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
-import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
+import { Ownable } from "../helpers/Ownable.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-contract BasicBuyCommand is ICommand, BaseMPACommand {
+contract BasicBuyCommand is BaseMPACommand, Ownable {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
@@ -43,8 +43,6 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
         uint64 deviation;
     }
 
-    address public immutable owner;
-
     // The parameter setting that is common for all users.
     // If the PSM experiences a major price difference between current
     // and next prices & it is not possible to fullfill the user's
@@ -55,9 +53,10 @@ contract BasicBuyCommand is ICommand, BaseMPACommand {
     // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
     uint256 public liquidationRatioPercentage = 100; // 1%
 
-    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
-        owner = msg.sender;
-    }
+    constructor(ServiceRegistry _serviceRegistry)
+        BaseMPACommand(_serviceRegistry)
+        Ownable(msg.sender)
+    {}
 
     function setLiquidationRatioPercentage(uint256 _liquidationRatioPercentage) external {
         require(msg.sender == owner, "basic-buy/only-owner");

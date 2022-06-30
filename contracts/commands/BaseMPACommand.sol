@@ -28,7 +28,7 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 
-abstract contract BaseMPACommand {
+abstract contract BaseMPACommand is ICommand {
     ServiceRegistry public immutable serviceRegistry;
 
     string public constant MCD_VIEW_KEY = "MCD_VIEW";
