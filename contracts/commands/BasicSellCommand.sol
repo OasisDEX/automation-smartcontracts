@@ -20,7 +20,6 @@ pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
-import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
@@ -30,7 +29,7 @@ import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-contract BasicSellCommand is ICommand, BaseMPACommand {
+contract BasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
 
     struct BasicSellTriggerData {
