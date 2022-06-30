@@ -175,7 +175,20 @@ export async function configureRegistryEntries(
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
     if (allowedReplacements.length > 0) {
-        await Promise.all(allowedReplacements.map(hash => system.serviceRegistry.removeNamedService(hash)))
+        const existingHashes = (
+            await Promise.all(
+                allowedReplacements.map(hash =>
+                    system.serviceRegistry.getServiceAddress(hash).then(address => ({
+                        hash,
+                        exists: address !== constants.AddressZero,
+                    })),
+                ),
+            )
+        )
+            .filter(x => x.exists)
+            .map(x => x.hash)
+
+        await Promise.all(existingHashes.map(hash => system.serviceRegistry.removeNamedService(hash)))
     }
 
     if (system.closeCommand) {
