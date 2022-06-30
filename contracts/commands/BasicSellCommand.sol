@@ -32,8 +32,6 @@ import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicSellCommand is ICommand, BaseMPACommand {
     using RatioUtils for uint256;
-    uint256 public constant RAD = 10**45;
-    uint256 public constant WAD = 10**18;
 
     struct BasicSellTriggerData {
         uint256 cdpId;
@@ -97,7 +95,7 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
     function getDustLimit(bytes32 ilk) internal view returns (uint256 dustLimit) {
         VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
         (, , , , uint256 radDust) = vat.ilks(ilk);
-        uint256 wadDust = (radDust * WAD) / RAD;
+        uint256 wadDust = radDust.radToWad();
         return wadDust;
     }
 

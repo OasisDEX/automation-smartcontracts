@@ -14,6 +14,8 @@ import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType } from './types'
 import { getCommandHash, getServiceNameHash } from './utils'
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000'
+
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
@@ -36,9 +38,11 @@ export interface DeploySystemArgs {
 
 const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
     return async (hash: string, address: string): Promise<void> => {
-        const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
-            gasLimit: '100000',
-        })
+        const existingAddress = await serviceRegistryInstance.getServiceAddress(hash)
+        if (existingAddress === XERO_ADDRESS)
+            const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
+                gasLimit: '100000',
+            })
         await receipt.wait()
     }
 }
