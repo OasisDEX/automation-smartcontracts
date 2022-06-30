@@ -66,6 +66,10 @@ abstract contract BaseMPACommand is ICommand {
         return debt;
     }
 
+    function beseFeeValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
+        return block.basefee < maxAcceptableBaseFeeInGwei * (10**9);
+    }
+
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
     }
