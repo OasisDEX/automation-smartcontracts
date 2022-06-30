@@ -1,8 +1,6 @@
 import { Contract, constants } from 'ethers'
 import { getCommandHash, HardhatUtils, TriggerType } from '../common'
 
-type ServiceRegistry = Contract
-
 export async function deployCommand(ethers: any, utils: HardhatUtils, commandName: string): Promise<Contract> {
     const basicBuyFactory = await ethers.getContractFactory(commandName)
     const basicBuyDeployment = await basicBuyFactory.deploy(utils.addresses.AUTOMATION_SERVICE_REGISTRY)
@@ -14,7 +12,7 @@ export async function deployCommand(ethers: any, utils: HardhatUtils, commandNam
 export async function ensureEntryInServiceRegistry(
     triggerType: TriggerType,
     address: string,
-    serviceRegistry: ServiceRegistry,
+    serviceRegistry: Contract,
 ) {
     const commandHash = getCommandHash(triggerType)
     const entry = await serviceRegistry.getServiceAddress(commandHash)
