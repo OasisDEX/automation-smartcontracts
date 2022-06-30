@@ -1,5 +1,7 @@
 import hre, { ethers } from 'hardhat'
-import { HardhatUtils, TriggerType, deployCommand, ensureEntryInServiceRegistry } from '../common'
+import { BasicSellCommand } from '../../typechain'
+import { HardhatUtils, TriggerType, deployCommand, ensureEntryInServiceRegistry, AddressRegistry } from '../common'
+import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -14,11 +16,9 @@ async function main() {
 
     console.log(`BasicSell Deployed: ${deployed.address}`)
 
-    console.log('Adding BASIC_SELL to ServiceRegistry....')
+    system.basicSell = deployed as BasicSellCommand
 
-    await ensureEntryInServiceRegistry(TriggerType.BASIC_SELL, deployed.address, system.serviceRegistry)
-
-    console.log(`BASIC_SELL entry added to ServiceRegistry....`)
+    await configureRegistryEntries(system, utils.addresses as AddressRegistry /* TODO: Check on USDC missing */)
 
     console.log(`Whitelisting BasicSellCommand on McdView....`)
     await (await system.mcdView.approve(deployed.address, true)).wait()
