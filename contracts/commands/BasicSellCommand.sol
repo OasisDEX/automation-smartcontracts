@@ -117,17 +117,15 @@ contract BasicSellCommand is ICommand, BaseMPACommand {
 
         uint256 dust = getDustLimit(ilk);
 
-        (, uint256 maxUnconditionallyAcceptedDebt) = dust.bounds(decodedTriggerData.deviation);
-
         uint256 vaultDebtAfter = getVaultInfo(cdpId);
+
+        (uint256 minPossibleDebt, ) = vaultDebtAfter.bounds(decodedTriggerData.deviation * 2);
 
         (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
             decodedTriggerData.deviation
         );
 
-        return
-            ((nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) ||
-                (vaultDebtAfter <= maxUnconditionallyAcceptedDebt)) &&
-            (nextPrice > decodedTriggerData.minSellPrice);
+        return ((nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) ||
+            (dust >= minPossibleDebt));
     }
 }
