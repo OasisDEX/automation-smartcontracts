@@ -150,11 +150,6 @@ describe('AutomationExecutor', async () => {
             const tx = AutomationExecutorInstance.connect(notOwner).removeCallers([caller])
             await expect(tx).to.be.revertedWith('executor/only-owner')
         })
-
-        it('should revert with executor/cannot-remove-owner if owner tries to remove themselves', async () => {
-            const tx = AutomationExecutorInstance.removeCallers([ownerAddress])
-            await expect(tx).to.be.revertedWith('executor/cannot-remove-owner')
-        })
     })
 
     describe('execute', async () => {
