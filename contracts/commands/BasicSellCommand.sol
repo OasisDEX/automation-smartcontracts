@@ -40,7 +40,7 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 minSellPrice;
         bool continuous;
         uint64 deviation;
-        uint32 baseFeeInGwei;
+        uint32 maxBaseFeeInGwei;
     }
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
@@ -74,7 +74,7 @@ contract BasicSellCommand is BaseMPACommand {
         return
             (decodedTrigger.execCollRatio.wad() > nextCollRatio &&
                 decodedTrigger.minSellPrice < nextPrice) &&
-            beseFeeValid(decodedTrigger.baseFeeInGwei);
+            beseFeeValid(decodedTrigger.maxBaseFeeInGwei);
     }
 
     function execute(

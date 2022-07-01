@@ -41,7 +41,7 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
         uint256 maxBuyPrice;
         bool continuous;
         uint64 deviation;
-        uint32 baseFeeInGwei;
+        uint32 maxBaseFeeInGwei;
     }
 
     // The parameter setting that is common for all users.
@@ -102,7 +102,7 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
             nextCollRatio != 0 &&
             nextCollRatio >= decoded.execCollRatio.wad() &&
             nextPrice <= decoded.maxBuyPrice &&
-            beseFeeValid(decoded.baseFeeInGwei);
+            beseFeeValid(decoded.maxBaseFeeInGwei);
     }
 
     function execute(
