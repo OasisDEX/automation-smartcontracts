@@ -100,11 +100,9 @@ contract AutomationExecutor {
         uint256 etherUsed = tx.gasprice *
             uint256(int256(initialGasAvailable - finalGasAvailable) - gasRefund);
 
-        if (address(this).balance > etherUsed) {
-            payable(msg.sender).transfer(etherUsed);
-        } else {
-            payable(msg.sender).transfer(address(this).balance);
-        }
+        payable(msg.sender).transfer(
+            address(this).balance > etherUsed ? etherUsed : address(this).balance
+        );
     }
 
     function swap(
@@ -121,12 +119,7 @@ contract AutomationExecutor {
             "executor/invalid-amount"
         );
 
-        uint256 allowance = fromToken.allowance(address(this), exchange);
-
-        if (amount > allowance) {
-            fromToken.safeIncreaseAllowance(exchange, type(uint256).max - allowance);
-        }
-
+        fromToken.safeApprove(exchange, amount);
         if (toDai) {
             IExchange(exchange).swapTokenForDai(
                 otherAsset,
@@ -158,6 +151,10 @@ contract AutomationExecutor {
 
     function unwrapWETH(uint256 amount) external onlyOwner {
         weth.withdraw(amount);
+    }
+
+    function revokeAllowance(IERC20 token, address target) external onlyOwner {
+        token.approve(target, 0);
     }
 
     receive() external payable {}
