@@ -8,7 +8,7 @@ interface WhitelistArgs {
     forked?: Network
 }
 
-task('whitelist', 'Creates a stop loss trigger for a user')
+task('whitelist', 'Whitelist caller on the executro')
     .addParam('caller', 'The caller address', '', params.address)
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: WhitelistArgs, hre) => {
@@ -26,7 +26,7 @@ task('whitelist', 'Creates a stop loss trigger for a user')
             signer,
         )
 
-        const tx = await executor.addCaller(args.caller)
+        const tx = await executor.addCallers([args.caller])
         await tx.wait()
         console.log(`The caller ${args.caller} is not whitelisted...`)
     })
