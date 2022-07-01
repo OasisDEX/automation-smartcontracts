@@ -88,7 +88,6 @@ contract AutomationExecutor {
         uint256 length = _callers.length;
         for (uint256 i = 0; i < length; ++i) {
             address caller = _callers[i];
-            require(caller != msg.sender, "executor/cannot-remove-owner");
             callers[caller] = false;
             emit CallerRemoved(caller);
         }

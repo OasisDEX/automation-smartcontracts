@@ -14,8 +14,14 @@ async function main() {
     const system = await utils.getDefaultSystem()
 
     // fetch the list of callers first to prevent script failing after deployment
-    const oldAutomationExecutorAddress = ''
-    const oldExecutor = await ethers.getContractAt('AutomationExecutor', oldAutomationExecutorAddress)
+    const oldAutomationExecutorAddress =
+        network === Network.MAINNET
+            ? '0x40A63b453502ab04DfDf86fB79a9FF2Ec337E188'
+            : '0x7C0d6D8D6EAe8bcb106aFDb3a21Df5C254C6c0b2'
+    const oldExecutor = await ethers.getContractAt(
+        ['function addCaller(address caller)', 'function callers(address caller) view returns (bool)'],
+        oldAutomationExecutorAddress,
+    )
     const callers = await getExecutorWhitelistedCallers(oldExecutor, startBlocks.AUTOMATION_BOT, network) // start from the same block the bot was deployed
 
     const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
@@ -30,9 +36,10 @@ async function main() {
     const executorHash = getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR)
     const entry = await system.serviceRegistry.getServiceAddress(executorHash)
     if (entry !== constants.AddressZero) {
-        console.log('Removing existing AUTOMATION_EXECUTOR entry...')
+        console.log('Updating existing AUTOMATION_EXECUTOR entry...')
         await (await system.serviceRegistry.updateNamedService(executorHash, AutomationExecutorInstance.address)).wait()
     } else {
+        console.log('Adding new AUTOMATION_EXECUTOR entry...')
         await (await system.serviceRegistry.addNamedService(executorHash, AutomationExecutorInstance.address)).wait()
     }
 

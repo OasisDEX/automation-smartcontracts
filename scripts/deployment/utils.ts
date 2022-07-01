@@ -1,6 +1,6 @@
 import axios from 'axios'
+import { Contract } from 'ethers'
 import { uniq } from 'lodash'
-import { AutomationExecutor } from '../../typechain'
 import { Network } from '../common'
 
 export interface EtherscanTransactionListResponse {
@@ -11,7 +11,7 @@ export interface EtherscanTransactionListResponse {
 }
 
 // NOTE: Paginate when the transaction count for the executor exceeds
-export async function getExecutorWhitelistedCallers(executor: AutomationExecutor, startBlock: number, network: string) {
+export async function getExecutorWhitelistedCallers(executor: Contract, startBlock: number, network: string) {
     if (!process.env.ETHERSCAN_API_KEY) {
         throw new Error(`Etherscan API Key must be set`)
     }
