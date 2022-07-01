@@ -78,7 +78,7 @@ contract AutomationExecutor {
         uint256 length = _callers.length;
         for (uint256 i = 0; i < length; ++i) {
             address caller = _callers[i];
-            require(!callers[caller], "swap/duplicate-whitelist");
+            require(!callers[caller], "executor/duplicate-whitelist");
             callers[caller] = true;
             emit CallerAdded(caller);
         }
@@ -88,7 +88,7 @@ contract AutomationExecutor {
         uint256 length = _callers.length;
         for (uint256 i = 0; i < length; ++i) {
             address caller = _callers[i];
-            require(caller != msg.sender, "swap/cannot-remove-owner");
+            require(caller != msg.sender, "executor/cannot-remove-owner");
             callers[caller] = false;
             emit CallerRemoved(caller);
         }
