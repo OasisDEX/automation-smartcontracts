@@ -28,6 +28,9 @@ import { ICommand } from "./interfaces/ICommand.sol";
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
 
+    event CallerAdded(address indexed caller);
+    event CallerRemoved(address indexed caller);
+
     BotLike public immutable bot;
     IERC20 public immutable dai;
     IWETH public immutable weth;
@@ -71,13 +74,24 @@ contract AutomationExecutor {
         exchange = newExchange;
     }
 
-    function addCaller(address caller) external onlyOwner {
-        callers[caller] = true;
+    function addCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(!callers[caller], "swap/duplicate-whitelist");
+            callers[caller] = true;
+            emit CallerAdded(caller);
+        }
     }
 
-    function removeCaller(address caller) external onlyOwner {
-        require(caller != msg.sender, "executor/cannot-remove-owner");
-        callers[caller] = false;
+    function removeCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(caller != msg.sender, "swap/cannot-remove-owner");
+            callers[caller] = false;
+            emit CallerRemoved(caller);
+        }
     }
 
     function execute(
@@ -154,7 +168,7 @@ contract AutomationExecutor {
     }
 
     function revokeAllowance(IERC20 token, address target) external onlyOwner {
-        token.approve(target, 0);
+        token.safeApprove(target, 0);
     }
 
     receive() external payable {}
