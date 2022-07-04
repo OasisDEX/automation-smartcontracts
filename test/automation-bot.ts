@@ -70,8 +70,19 @@ describe('AutomationBot', async () => {
         cdpId: number,
         operator: string,
         allow: number,
-    ) =>
-        proxy
+    ) => {
+        console.log(
+            proxy.interface.encodeFunctionData('execute', [
+                DssProxyActions.address,
+                DssProxyActions.interface.encodeFunctionData('cdpAllow', [
+                    hardhatUtils.addresses.CDP_MANAGER,
+                    cdpId,
+                    operator,
+                    allow,
+                ]),
+            ]),
+        )
+        return proxy
             .connect(signer)
             .execute(
                 DssProxyActions.address,
@@ -82,6 +93,7 @@ describe('AutomationBot', async () => {
                     allow,
                 ]),
             )
+    }
 
     beforeEach(async () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
