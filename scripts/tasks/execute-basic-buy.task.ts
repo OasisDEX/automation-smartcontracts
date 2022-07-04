@@ -13,6 +13,7 @@ import {
     ONE_INCH_V4_ROUTER,
 } from '../common'
 import { getGasPrice } from '../common/gas-price'
+import { getQuote, getSwap } from '../common/one-inch'
 import { params } from './params'
 
 interface BasicBuyArgs {
@@ -212,14 +213,15 @@ async function getExecutionData(
     }
 
     if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
+        const marketParams = {
+            oraclePrice: oraclePriceUnits,
+            marketPrice: oraclePriceUnits,
+            OF: OAZO_FEE,
+            FF: LOAN_FEE,
+            slippage: slippage.div(100),
+        }
         const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
-            {
-                oraclePrice: oraclePriceUnits,
-                marketPrice: oraclePriceUnits,
-                OF: OAZO_FEE,
-                FF: LOAN_FEE,
-                slippage: slippage.div(100),
-            },
+            marketParams,
             vaultInfo,
             desiredCdpState,
         )
@@ -252,5 +254,38 @@ async function getExecutionData(
         return { cdpData, exchangeData }
     }
 
-    throw new Error(`Network is not supported`)
+    console.log('Requesting quote from 1inch...')
+    const marketPrice = await getQuote(addresses.DAI, gem, new BigNumber(1).shiftedBy(18))
+
+    const marketParams = {
+        oraclePrice: oraclePriceUnits,
+        marketPrice,
+        OF: OAZO_FEE,
+        FF: LOAN_FEE,
+        slippage: slippage.div(100),
+    }
+    const { collateralDelta, debtDelta, skipFL } = getMultiplyParams(marketParams, vaultInfo, desiredCdpState)
+
+    const cdpData = {
+        ...defaultCdpData,
+        requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+        borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
+        skipFL,
+    }
+
+    console.log('Requesting swap from 1inch...')
+    const swap = await getSwap(gem, addresses.DAI, addresses.EXCHANGE, debtDelta.abs(), slippage)
+
+    const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage.div(100)))
+    const exchangeData = {
+        fromTokenAddress: hardhatUtils.addresses.DAI,
+        toTokenAddress: gem,
+        fromTokenAmount: cdpData.requiredDebt,
+        toTokenAmount: cdpData.borrowCollateral,
+        minToTokenAmount: minToTokenAmount.toFixed(0),
+        exchangeAddress: swap.tx.to,
+        _exchangeCalldata: swap.tx.data,
+    }
+
+    return { cdpData, exchangeData }
 }
