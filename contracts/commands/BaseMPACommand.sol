@@ -41,25 +41,6 @@ abstract contract BaseMPACommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function getVaultAndMarketInfo(uint256 cdpId)
-        public
-        view
-        returns (
-            uint256 collRatio,
-            uint256 nextCollRatio,
-            uint256 nextPrice,
-            bytes32 ilk
-        )
-    {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        ilk = manager.ilks(cdpId);
-
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        collRatio = mcdView.getRatio(cdpId, false);
-        nextCollRatio = mcdView.getRatio(cdpId, true);
-        nextPrice = mcdView.getNextPrice(ilk);
-    }
-
     function getVaultDebt(uint256 cdpId) internal view returns (uint256) {
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         (, uint256 debt) = mcdView.getVaultInfo(cdpId);

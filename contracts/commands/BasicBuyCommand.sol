@@ -96,11 +96,21 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (
+            uint256 collRatio,
+            uint256 nextCollRatio,
+            uint256 currPrice,
+            uint256 nextPrice,
+            uint256 liquidationRatio
+        ) = getVaultAndMarketInfo(cdpId);
         return
             nextCollRatio != 0 &&
             nextCollRatio >= decoded.execCollRatio.wad() &&
-            nextPrice <= decoded.maxBuyPrice;
+            nextPrice <= decoded.maxBuyPrice &&
+            collRatio >
+            liquidationRatio.add(nextCollRatio).sub(decoded.targetCollRatio).mul(currPrice).div(
+                nextPrice
+            );
     }
 
     function execute(
@@ -126,10 +136,13 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
         returns (bool)
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
-        (uint256 collRatio, uint256 nextCollRatio, , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
-
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
-        (, uint256 liquidationRatio) = spot.ilks(ilk);
+        (
+            uint256 collRatio,
+            uint256 nextCollRatio,
+            ,
+            ,
+            uint256 liquidationRatio
+        ) = getVaultAndMarketInfo(cdpId);
 
         (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
             decoded.deviation
@@ -143,5 +156,29 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
                 RatioUtils.RATIO
             );
         return isWithinBounds || isNearLiquidationRatio;
+    }
+
+    function getVaultAndMarketInfo(uint256 cdpId)
+        public
+        view
+        returns (
+            uint256 collRatio,
+            uint256 nextCollRatio,
+            uint256 currPrice,
+            uint256 nextPrice,
+            uint256 liquidationRatio
+        )
+    {
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        bytes32 ilk = manager.ilks(cdpId);
+
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        collRatio = mcdView.getRatio(cdpId, false);
+        nextCollRatio = mcdView.getRatio(cdpId, true);
+        currPrice = mcdView.getPrice(ilk);
+        nextPrice = mcdView.getNextPrice(ilk);
+
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, liquidationRatio) = spot.ilks(ilk);
     }
 }
