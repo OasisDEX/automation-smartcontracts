@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { task } from 'hardhat/config'
 import {
-    BaseArgs,
+    BaseExecutionArgs,
     decodeBasicSellData,
     prepareTriggerExecution,
     HardhatUtils,
@@ -12,7 +12,7 @@ import {
 } from '../common'
 import { params } from './params'
 
-interface BasicBuyArgs extends BaseArgs {
+interface BasicBuyArgs extends BaseExecutionArgs {
     slippage: BigNumber
     debug: boolean
 }
@@ -29,8 +29,7 @@ task('basic-sell')
         const hardhatUtils = new HardhatUtils(hre, args.forked)
         const { addresses } = hardhatUtils
 
-        const { triggerData, commandAddress, network, automationExecutor, automationBot } =
-            await prepareTriggerExecution(args, hre, hardhatUtils)
+        const { triggerData, commandAddress } = await prepareTriggerExecution(args, hardhatUtils)
 
         const {
             vaultId,

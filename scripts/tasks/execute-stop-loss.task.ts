@@ -13,13 +13,13 @@ import {
     decodeStopLossData,
     ONE_INCH_V4_ROUTER,
     prepareTriggerExecution,
-    BaseArgs,
+    BaseExecutionArgs,
     sendTransactionToExecutor,
 } from '../common'
 import { params } from './params'
 import { getQuote, getSwap } from '../common/one-inch'
 
-interface StopLossArgs extends BaseArgs {
+interface StopLossArgs extends BaseExecutionArgs {
     trigger: BigNumber
     slippage: BigNumber
     forked?: Network
@@ -41,7 +41,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const { addresses } = hardhatUtils
 
         const { triggerData, commandAddress, network, automationExecutor, automationBot } =
-            await prepareTriggerExecution(args, hre, hardhatUtils)
+            await prepareTriggerExecution(args, hardhatUtils)
 
         const { vaultId, type: triggerType, stopLossLevel } = decodeStopLossData(triggerData)
         console.log(

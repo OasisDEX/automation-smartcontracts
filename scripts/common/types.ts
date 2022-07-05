@@ -1,3 +1,5 @@
+import { BigNumber } from 'bignumber.js'
+
 export enum Network {
     MAINNET = 'mainnet',
     GOERLI = 'goerli',
@@ -42,4 +44,10 @@ export interface OneInchSwapResponse extends OneInchQuoteResponse {
         value: string
         gasPrice: string
     }
+}
+
+export interface BaseExecutionArgs {
+    trigger: BigNumber
+    forked?: Network
+    refund: BigNumber
 }

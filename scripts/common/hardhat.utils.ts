@@ -4,15 +4,15 @@ import { BigNumber, constants, Contract, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
-import { ETH_ADDRESS, getAddressesFor } from './addresses'
+import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 
 export class HardhatUtils {
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
-        this.addresses = getAddressesFor(forked || this.hre.network.name)
+    constructor(public readonly hre: HardhatRuntimeEnvironment, private readonly _forked?: Network) {
+        this.addresses = getAddressesFor(this._forked || this.hre.network.name)
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
@@ -35,6 +35,11 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_BASIC_BUY_COMMAND,
             ),
         }
+    }
+
+    public logNetworkInfo() {
+        const { name } = this.hre.network
+        console.log(`Network: ${name}. Using addresses from ${coalesceNetwork(this._forked || (name as Network))}\n`)
     }
 
     public mpaServiceRegistry() {

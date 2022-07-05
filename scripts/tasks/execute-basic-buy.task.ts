@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { task } from 'hardhat/config'
 import {
-    BaseArgs,
+    BaseExecutionArgs,
     decodeBasicBuyData,
     prepareTriggerExecution,
     HardhatUtils,
@@ -12,7 +12,7 @@ import {
 } from '../common'
 import { params } from './params'
 
-interface BasicBuyArgs extends BaseArgs {
+interface BasicBuyArgs extends BaseExecutionArgs {
     slippage: BigNumber
     debug: boolean
 }
@@ -31,8 +31,7 @@ task('basic-buy')
         const hardhatUtils = new HardhatUtils(hre, args.forked)
         const { addresses } = hardhatUtils
 
-        const { triggerData, commandAddress, network, automationExecutor, automationBot } =
-            await prepareTriggerExecution(args, hre, hardhatUtils)
+        const { triggerData, commandAddress } = await prepareTriggerExecution(args, hardhatUtils)
 
         const {
             vaultId,
@@ -67,7 +66,7 @@ task('basic-buy')
         const serviceRegistry = {
             ...hardhatUtils.mpaServiceRegistry(),
             feeRecepient:
-                network === Network.MAINNET
+                hre.network.name === Network.MAINNET
                     ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
