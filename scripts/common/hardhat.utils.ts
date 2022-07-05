@@ -11,8 +11,16 @@ import { isLocalNetwork } from './utils'
 
 export class HardhatUtils {
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, private readonly _forked?: Network) {
-        this.addresses = getAddressesFor(this._forked || this.hre.network.name)
+    constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
+        this.addresses = getAddressesFor(this.forked || this.hre.network.name)
+    }
+
+    public get targetNetwork() {
+        return coalesceNetwork(this.forked || (this.hre.network.name as Network))
+    }
+
+    public logNetworkInfo() {
+        console.log(`Network: ${this.hre.network.name}. Using addresses from ${this.targetNetwork}\n`)
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
@@ -35,11 +43,6 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_BASIC_BUY_COMMAND,
             ),
         }
-    }
-
-    public logNetworkInfo() {
-        const { name } = this.hre.network
-        console.log(`Network: ${name}. Using addresses from ${coalesceNetwork(this._forked || (name as Network))}\n`)
     }
 
     public mpaServiceRegistry() {
@@ -229,8 +232,10 @@ export class HardhatUtils {
         }
     }
 
-    public async getValidExecutionCallerOrOwner(executor: Contract, signer: Signer) {
-        if (await executor.callers(await signer.getAddress())) {
+    public async getValidExecutionCallerOrOwner(signer: Signer, executor?: Contract) {
+        const automationExecutor =
+            executor || (await this.hre.ethers.getContractAt('AutomationExecutor', this.addresses.AUTOMATION_EXECUTOR))
+        if (await automationExecutor.callers(await signer.getAddress())) {
             return signer
         }
 
@@ -239,7 +244,7 @@ export class HardhatUtils {
                 `Signer is not authorized to call the AutomationExecutor. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
             )
         }
-        const executionOwner = await executor.owner()
+        const executionOwner = await automationExecutor.owner()
         const owner = await this.impersonate(executionOwner)
         console.log(`Impersonated AutomationExecutor owner ${executionOwner}...`)
         // Fund the owner

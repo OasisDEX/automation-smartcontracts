@@ -3,7 +3,7 @@ import { task } from 'hardhat/config'
 import {
     BaseExecutionArgs,
     decodeBasicSellData,
-    prepareTriggerExecution,
+    getTriggerInfo,
     HardhatUtils,
     Network,
     sendTransactionToExecutor,
@@ -27,9 +27,10 @@ task('basic-sell')
     .addFlag('debug', 'Debug mode')
     .setAction(async (args: BasicBuyArgs, hre) => {
         const hardhatUtils = new HardhatUtils(hre, args.forked)
-        const { addresses } = hardhatUtils
+        hardhatUtils.logNetworkInfo()
 
-        const { triggerData, commandAddress } = await prepareTriggerExecution(args, hardhatUtils)
+        const { addresses } = hardhatUtils
+        const { triggerData, commandAddress } = await getTriggerInfo(args.trigger, hardhatUtils)
 
         const {
             vaultId,
@@ -56,15 +57,11 @@ task('basic-sell')
             throw new Error(`Trigger type \`${triggerType.toString()}\` is not supported`)
         }
 
-        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(
-            automationExecutor,
-            hre.ethers.provider.getSigner(0),
-        )
-
+        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(hre.ethers.provider.getSigner(0))
         const serviceRegistry = {
             ...hardhatUtils.mpaServiceRegistry(),
             feeRecepient:
-                network === Network.MAINNET
+                hre.network.name === Network.MAINNET
                     ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
@@ -87,8 +84,7 @@ task('basic-sell')
         ])
 
         await sendTransactionToExecutor(
-            automationExecutor,
-            automationBot,
+            hardhatUtils,
             executorSigner,
             executionData,
             commandAddress,

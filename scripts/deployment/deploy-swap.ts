@@ -1,7 +1,7 @@
 import hre, { ethers } from 'hardhat'
 import axios from 'axios'
 import { uniq } from 'lodash'
-import { AutomationServiceName, getServiceNameHash, getStartBlocksFor, HardhatUtils, Network } from '../common'
+import { AutomationServiceName, etherscanAPIUrl, getServiceNameHash, getStartBlocksFor, HardhatUtils } from '../common'
 import { AutomationExecutor } from '../../typechain'
 import { constants } from 'ethers'
 
@@ -18,8 +18,7 @@ async function getExecutorWhitelistedCallers(executor: AutomationExecutor, start
         throw new Error(`Etherscan API Key must be set`)
     }
 
-    const url = network === Network.MAINNET ? 'https://api.etherscan.io/api' : `https://api-${network}.etherscan.io/api`
-    const { data } = await axios.get<EtherscanTransactionListResponse>(url, {
+    const { data } = await axios.get<EtherscanTransactionListResponse>(etherscanAPIUrl(network), {
         params: {
             module: 'account',
             action: 'txlist',

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { Network } from './types'
 
 export interface EtherscanGasPrice {
     result: {
@@ -10,8 +11,12 @@ export interface EtherscanGasPrice {
     }
 }
 
-export async function getGasPrice() {
-    const { data } = await axios.get<EtherscanGasPrice>('https://api.etherscan.io/api', {
+export function etherscanAPIUrl(network: string) {
+    return network === Network.MAINNET ? 'https://api.etherscan.io/api' : `https://api-${network}.etherscan.io/api`
+}
+
+export async function getGasPrice(network: string) {
+    const { data } = await axios.get<EtherscanGasPrice>(etherscanAPIUrl(network), {
         params: {
             module: 'gastracker',
             action: 'gasoracle',

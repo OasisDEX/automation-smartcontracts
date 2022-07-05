@@ -12,7 +12,7 @@ import {
     TriggerType,
     decodeStopLossData,
     ONE_INCH_V4_ROUTER,
-    prepareTriggerExecution,
+    getTriggerInfo,
     BaseExecutionArgs,
     sendTransactionToExecutor,
 } from '../common'
@@ -20,9 +20,7 @@ import { params } from './params'
 import { getQuote, getSwap } from '../common/one-inch'
 
 interface StopLossArgs extends BaseExecutionArgs {
-    trigger: BigNumber
     slippage: BigNumber
-    forked?: Network
     debug: boolean
 }
 
@@ -38,10 +36,11 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addFlag('debug', 'Debug mode')
     .setAction(async (args: StopLossArgs, hre) => {
         const hardhatUtils = new HardhatUtils(hre, args.forked)
+        hardhatUtils.logNetworkInfo()
+
         const { addresses } = hardhatUtils
 
-        const { triggerData, commandAddress, network, automationExecutor, automationBot } =
-            await prepareTriggerExecution(args, hardhatUtils)
+        const { triggerData, commandAddress } = await getTriggerInfo(args.trigger, hardhatUtils)
 
         const { vaultId, type: triggerType, stopLossLevel } = decodeStopLossData(triggerData)
         console.log(
@@ -53,16 +52,13 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(
-            automationExecutor,
-            hre.ethers.provider.getSigner(0),
-        )
+        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(hre.ethers.provider.getSigner(0))
 
         console.log('Preparing exchange data...')
         const serviceRegistry = {
             ...hardhatUtils.mpaServiceRegistry(),
             feeRecepient:
-                network === Network.MAINNET
+                hre.network.name === Network.MAINNET
                     ? '0xC7b548AD9Cf38721810246C079b2d8083aba8909'
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
@@ -84,8 +80,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const executionData = generateStopLossExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
         await sendTransactionToExecutor(
-            automationExecutor,
-            automationBot,
+            hardhatUtils,
             executorSigner,
             executionData,
             commandAddress,

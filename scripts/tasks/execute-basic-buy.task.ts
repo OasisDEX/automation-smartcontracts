@@ -3,7 +3,7 @@ import { task } from 'hardhat/config'
 import {
     BaseExecutionArgs,
     decodeBasicBuyData,
-    prepareTriggerExecution,
+    getTriggerInfo,
     HardhatUtils,
     Network,
     sendTransactionToExecutor,
@@ -29,9 +29,11 @@ task('basic-buy')
     .addFlag('debug', 'Debug mode')
     .setAction(async (args: BasicBuyArgs, hre) => {
         const hardhatUtils = new HardhatUtils(hre, args.forked)
+        hardhatUtils.logNetworkInfo()
+
         const { addresses } = hardhatUtils
 
-        const { triggerData, commandAddress } = await prepareTriggerExecution(args, hardhatUtils)
+        const { triggerData, commandAddress } = await getTriggerInfo(args.trigger, hardhatUtils)
 
         const {
             vaultId,
@@ -58,10 +60,7 @@ task('basic-buy')
             throw new Error(`Trigger type \`${triggerType.toString()}\` is not supported`)
         }
 
-        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(
-            automationExecutor,
-            hre.ethers.provider.getSigner(0),
-        )
+        const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(hre.ethers.provider.getSigner(0))
 
         const serviceRegistry = {
             ...hardhatUtils.mpaServiceRegistry(),
@@ -89,8 +88,7 @@ task('basic-buy')
         ])
 
         await sendTransactionToExecutor(
-            automationExecutor,
-            automationBot,
+            hardhatUtils,
             executorSigner,
             executionData,
             commandAddress,
