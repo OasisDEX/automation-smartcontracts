@@ -68,7 +68,7 @@ contract BasicSellCommand is BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
 
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
         return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
             decodedTriggerData.minSellPrice < nextPrice);
@@ -110,7 +110,7 @@ contract BasicSellCommand is BaseMPACommand {
         returns (bool)
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (, uint256 nextCollRatio, uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, , , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
 
         uint256 dust = getDustLimit(ilk);
 
@@ -124,24 +124,5 @@ contract BasicSellCommand is BaseMPACommand {
 
         return ((nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) ||
             (dust >= minPossibleDebt));
-    }
-
-    function getVaultAndMarketInfo(uint256 cdpId)
-        public
-        view
-        returns (
-            uint256 collRatio,
-            uint256 nextCollRatio,
-            uint256 nextPrice,
-            bytes32 ilk
-        )
-    {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        ilk = manager.ilks(cdpId);
-
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        collRatio = mcdView.getRatio(cdpId, false);
-        nextCollRatio = mcdView.getRatio(cdpId, true);
-        nextPrice = mcdView.getNextPrice(ilk);
     }
 }

@@ -77,14 +77,13 @@ contract BasicBuyCommand is BaseMPACommand {
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
-
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 collRatio = mcdView.getRatio(cdpId, false);
-        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
-        uint256 currPrice = mcdView.getPrice(ilk);
-        uint256 nextPrice = mcdView.getNextPrice(ilk);
+        (
+            uint256 collRatio,
+            uint256 nextCollRatio,
+            uint256 currPrice,
+            uint256 nextPrice,
+            bytes32 ilk
+        ) = getVaultAndMarketInfo(cdpId);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
