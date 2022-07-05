@@ -92,13 +92,8 @@ contract BasicBuyCommand is BaseMPACommand {
             nextCollRatio != 0 &&
             nextCollRatio >= decoded.execCollRatio.wad() &&
             nextPrice <= decoded.maxBuyPrice &&
-            collRatio >
-            liquidationRatio
-                .radToWad()
-                .add(nextCollRatio)
-                .sub(decoded.targetCollRatio.wad())
-                .mul(currPrice)
-                .div(nextPrice);
+            decoded.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
+            liquidationRatio.radToWad();
     }
 
     function execute(
