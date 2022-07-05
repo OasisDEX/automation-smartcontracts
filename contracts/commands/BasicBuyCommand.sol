@@ -27,7 +27,6 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
-import "hardhat/console.sol";
 
 contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
