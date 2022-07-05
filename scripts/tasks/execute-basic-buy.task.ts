@@ -17,8 +17,6 @@ interface BasicBuyArgs extends BaseExecutionArgs {
     debug: boolean
 }
 
-const OAZO_FEE = new BigNumber(0.002)
-const LOAN_FEE = new BigNumber(0)
 const DEFAULT_SLIPPAGE_PCT = new BigNumber(0.5)
 
 task('basic-buy')
