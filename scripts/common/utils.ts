@@ -3,11 +3,14 @@ import { BytesLike, utils, Contract, Signer } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import { AutomationServiceName, Network, TriggerType } from './types'
 import { HardhatUtils } from './hardhat.utils'
-import { coalesceNetwork, getStartBlocksFor } from './addresses'
+import { coalesceNetwork, getStartBlocksFor, ONE_INCH_V4_ROUTER } from './addresses'
 import { getGasPrice } from './gas-price'
+import { getMultiplyParams } from '@oasisdex/multiply'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
+const OAZO_FEE = new BigNumber(0.002)
+const LOAN_FEE = new BigNumber(0)
 
 export function isLocalNetwork(network: string) {
     return [Network.HARDHAT, Network.LOCAL].includes(network as Network)
@@ -173,6 +176,103 @@ export function decodeStopLossData(data: string) {
         type: new BigNumber(type.toString()),
         stopLossLevel: new BigNumber(stopLossLevel.toString()),
     }
+}
+
+export async function getMPAExecutionData(
+    hardhatUtils: HardhatUtils,
+    vaultId: BigNumber,
+    targetRatio: BigNumber,
+    slippage: BigNumber,
+    isIncrease: boolean,
+    forked?: Network,
+) {
+    const { addresses, hre } = hardhatUtils
+
+    const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
+    const ilk = await cdpManager.ilks(vaultId.toString())
+
+    const vaultOwner = await cdpManager.owns(vaultId.toString())
+    const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
+    const proxyOwner = await proxy.owner()
+
+    const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
+    const mcdViewSigner = await hardhatUtils.getValidMcdViewCallerOrOwner(mcdView, hre.ethers.provider.getSigner(0))
+    const collRatio = await mcdView.connect(mcdViewSigner).getRatio(vaultId.toFixed(), true)
+    const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toFixed())
+    const oraclePrice = await mcdView.connect(mcdViewSigner).getNextPrice(ilk)
+
+    const { gem, gemJoin, ilkDecimals } = await hardhatUtils.getIlkData(ilk)
+    const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
+
+    const vaultInfo = {
+        currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
+        currentCollateral: new BigNumber(collateral.toString()).shiftedBy(ilkDecimals.toNumber() - 18),
+        minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
+    }
+
+    const desiredCdpState = {
+        requiredCollRatio: targetRatio.shiftedBy(-4),
+        providedCollateral: new BigNumber(0),
+        providedDai: new BigNumber(0),
+        withdrawDai: new BigNumber(0),
+        withdrawColl: new BigNumber(0),
+    }
+
+    const defaultCdpData = {
+        gemJoin,
+        fundsReceiver: proxyOwner,
+        cdpId: vaultId.toFixed(),
+        ilk,
+        withdrawCollateral: 0,
+        withdrawDai: 0,
+        depositDai: 0,
+        depositCollateral: 0,
+        methodName: '',
+    }
+
+    if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
+        const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
+            {
+                oraclePrice: oraclePriceUnits,
+                marketPrice: oraclePriceUnits,
+                OF: OAZO_FEE,
+                FF: LOAN_FEE,
+                slippage: slippage.div(100),
+            },
+            vaultInfo,
+            desiredCdpState,
+        )
+
+        const cdpData = {
+            ...defaultCdpData,
+            requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+            borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
+            skipFL,
+        }
+
+        const fromAmount = isIncrease ? cdpData.requiredDebt : cdpData.borrowCollateral
+        const toAmount = isIncrease ? cdpData.borrowCollateral : cdpData.requiredDebt
+
+        const minToTokenAmount = new BigNumber(toAmount).times(new BigNumber(1).minus(slippage.div(100)))
+        const exchangeData = {
+            fromTokenAddress: isIncrease ? hardhatUtils.addresses.DAI : gem,
+            toTokenAddress: isIncrease ? gem : hardhatUtils.addresses.DAI,
+            fromTokenAmount: fromAmount,
+            toTokenAmount: toAmount,
+            minToTokenAmount: minToTokenAmount.toFixed(0),
+            exchangeAddress: ONE_INCH_V4_ROUTER,
+            _exchangeCalldata: forgeUnoswapCalldata(
+                hardhatUtils.addresses.DAI,
+                new BigNumber(fromAmount).minus(oazoFee.shiftedBy(18)).toFixed(0),
+                minToTokenAmount.toFixed(0),
+                false,
+            ),
+        }
+
+        return { cdpData, exchangeData }
+    }
+
+    throw new Error(`Network is not supported`)
 }
 
 export function decodeBasicBuyData(data: string) {

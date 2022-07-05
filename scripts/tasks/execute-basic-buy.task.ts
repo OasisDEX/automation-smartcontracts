@@ -1,15 +1,14 @@
-import { getMultiplyParams } from '@oasisdex/multiply'
 import { BigNumber } from 'bignumber.js'
 import { task } from 'hardhat/config'
 import {
     BaseArgs,
     decodeBasicBuyData,
-    forgeUnoswapCalldata,
     prepareTriggerExecution,
     HardhatUtils,
     Network,
-    ONE_INCH_V4_ROUTER,
     sendTransactionToExecutor,
+    TriggerType,
+    getMPAExecutionData,
 } from '../common'
 import { params } from './params'
 
@@ -56,7 +55,7 @@ task('basic-buy')
         ]
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
 
-        if (!triggerType.eq(3)) {
+        if (!triggerType.eq(TriggerType.BASIC_BUY)) {
             throw new Error(`Trigger type \`${triggerType.toString()}\` is not supported`)
         }
 
@@ -73,11 +72,13 @@ task('basic-buy')
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
         }
-        const { exchangeData, cdpData } = await getExecutionData(
+
+        const { exchangeData, cdpData } = await getMPAExecutionData(
             hardhatUtils,
             vaultId,
             targetCollRatio,
             args.slippage,
+            false,
             args.forked,
         )
 
@@ -99,98 +100,3 @@ task('basic-buy')
             args,
         )
     })
-
-async function getExecutionData(
-    hardhatUtils: HardhatUtils,
-    vaultId: BigNumber,
-    targetRatio: BigNumber,
-    slippage: BigNumber,
-    forked?: Network,
-) {
-    const { addresses, hre } = hardhatUtils
-
-    const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
-    const ilk = await cdpManager.ilks(vaultId.toString())
-
-    const vaultOwner = await cdpManager.owns(vaultId.toString())
-    const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
-    const proxyOwner = await proxy.owner()
-
-    const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
-    const mcdViewSigner = await hardhatUtils.getValidMcdViewCallerOrOwner(mcdView, hre.ethers.provider.getSigner(0))
-    const collRatio = await mcdView.connect(mcdViewSigner).getRatio(vaultId.toFixed(), true)
-    const [collateral, debt] = await mcdView.getVaultInfo(vaultId.toFixed())
-    const oraclePrice = await mcdView.connect(mcdViewSigner).getNextPrice(ilk)
-
-    const { gem, gemJoin, ilkDecimals } = await hardhatUtils.getIlkData(ilk)
-    const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
-
-    const vaultInfo = {
-        currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
-        currentCollateral: new BigNumber(collateral.toString()).shiftedBy(ilkDecimals.toNumber() - 18),
-        minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
-    }
-
-    const desiredCdpState = {
-        requiredCollRatio: targetRatio.shiftedBy(-4),
-        providedCollateral: new BigNumber(0),
-        providedDai: new BigNumber(0),
-        withdrawDai: new BigNumber(0),
-        withdrawColl: new BigNumber(0),
-    }
-
-    const defaultCdpData = {
-        gemJoin,
-        fundsReceiver: proxyOwner,
-        cdpId: vaultId.toFixed(),
-        ilk,
-        withdrawCollateral: 0,
-        withdrawDai: 0,
-        depositDai: 0,
-        depositCollateral: 0,
-        methodName: '',
-    }
-
-    if (hre.network.name !== Network.MAINNET && forked !== Network.MAINNET) {
-        const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
-            {
-                oraclePrice: oraclePriceUnits,
-                marketPrice: oraclePriceUnits,
-                OF: OAZO_FEE,
-                FF: LOAN_FEE,
-                slippage: slippage.div(100),
-            },
-            vaultInfo,
-            desiredCdpState,
-        )
-
-        const cdpData = {
-            ...defaultCdpData,
-            requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
-            borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
-            skipFL,
-        }
-
-        const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(
-            new BigNumber(1).minus(slippage.div(100)),
-        )
-        const exchangeData = {
-            fromTokenAddress: hardhatUtils.addresses.DAI,
-            toTokenAddress: gem,
-            fromTokenAmount: cdpData.requiredDebt,
-            toTokenAmount: cdpData.borrowCollateral,
-            minToTokenAmount: minToTokenAmount.toFixed(0),
-            exchangeAddress: ONE_INCH_V4_ROUTER,
-            _exchangeCalldata: forgeUnoswapCalldata(
-                hardhatUtils.addresses.DAI,
-                new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
-                minToTokenAmount.toFixed(0),
-                false,
-            ),
-        }
-
-        return { cdpData, exchangeData }
-    }
-
-    throw new Error(`Network is not supported`)
-}

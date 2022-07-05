@@ -67,6 +67,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
         }
+
         const { exchangeData, cdpData } = await getExchangeAndCdpData(
             hardhatUtils,
             vaultId,
@@ -74,6 +75,7 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
             args.slippage,
             args.forked,
         )
+
         if (args.debug) {
             console.log('cpData', cdpData)
             console.log('exchangeData', exchangeData)
