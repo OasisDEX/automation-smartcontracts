@@ -52,10 +52,10 @@ library RatioUtils {
     }
 
     function radToWad(uint256 _rad) internal pure returns (uint256 _wad) {
-        _wad = (_rad * WAD) / RAD;
+        _wad = _rad.mul(WAD).div(RAD);
     }
 
     function wadToRad(uint256 _wad) internal pure returns (uint256 _rad) {
-        _rad = (_wad * RAD) / WAD;
+        _rad = _wad.mul(RAD).div(WAD);
     }
 }
