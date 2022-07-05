@@ -3,7 +3,7 @@ import { BigNumber } from 'bignumber.js'
 import { task } from 'hardhat/config'
 import {
     BaseArgs,
-    decodeBasicBuyData,
+    decodeBasicSellData,
     forgeUnoswapCalldata,
     prepareTriggerExecution,
     HardhatUtils,
@@ -22,7 +22,7 @@ const OAZO_FEE = new BigNumber(0.002)
 const LOAN_FEE = new BigNumber(0)
 const DEFAULT_SLIPPAGE_PCT = new BigNumber(0.5)
 
-task('basic-buy')
+task('basic-sell')
     .addParam('trigger', 'The trigger id', '', params.bignumber)
     .addOptionalParam('forked', 'Forked network')
     .addOptionalParam('refund', 'Gas refund amount', new BigNumber(0), params.bignumber)
@@ -40,17 +40,17 @@ task('basic-buy')
             type: triggerType,
             executionCollRatio,
             targetCollRatio,
-            maxBuyPrice,
+            minSellPrice,
             continuous,
             deviation,
-        } = decodeBasicBuyData(triggerData)
+        } = decodeBasicSellData(triggerData)
         const info = [
             `Command Address: ${commandAddress}`,
             `Vault ID: ${vaultId.toString()}`,
             `Trigger Type: ${triggerType.toString()}`,
             `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
             `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
-            `Max Buy Price: ${maxBuyPrice.shiftedBy(-18).toFixed(2)}`,
+            `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
             `Continuous: ${continuous}`,
             `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
         ]
@@ -73,6 +73,7 @@ task('basic-buy')
                     : await executorSigner.getAddress(),
             exchange: addresses.EXCHANGE,
         }
+
         const { exchangeData, cdpData } = await getExecutionData(
             hardhatUtils,
             vaultId,

@@ -4,26 +4,23 @@ import { task } from 'hardhat/config'
 import { getCloseToCollateralParams, getCloseToDaiParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import {
-    coalesceNetwork,
     forgeUnoswapCalldata,
     generateStopLossExecutionData,
-    getEvents,
-    getStartBlocksFor,
     HardhatUtils,
     isLocalNetwork,
     Network,
-    bignumberToTopic,
     TriggerType,
     decodeStopLossData,
     ONE_INCH_V4_ROUTER,
+    prepareTriggerExecution,
+    BaseArgs,
+    sendTransactionToExecutor,
 } from '../common'
 import { params } from './params'
 import { getQuote, getSwap } from '../common/one-inch'
-import { getGasPrice } from '../common/gas-price'
 
-interface StopLossArgs {
+interface StopLossArgs extends BaseArgs {
     trigger: BigNumber
-    refund: BigNumber
     slippage: BigNumber
     forked?: Network
     debug: boolean
@@ -40,34 +37,12 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
     .addOptionalParam('forked', 'Forked network')
     .addFlag('debug', 'Debug mode')
     .setAction(async (args: StopLossArgs, hre) => {
-        const { name: network } = hre.network
-        console.log(
-            `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,
-        )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
         const { addresses } = hardhatUtils
-        const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
-        const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
+        const { triggerData, commandAddress, network, automationExecutor, automationBot } =
+            await prepareTriggerExecution(args, hre, hardhatUtils)
 
-        const events = await hre.ethers.provider.getLogs({
-            address: addresses.AUTOMATION_BOT,
-            topics: [bot.interface.getEventTopic('TriggerAdded'), bignumberToTopic(args.trigger)],
-            fromBlock: startBlocks.AUTOMATION_BOT,
-        })
-
-        if (events.length !== 1) {
-            throw new Error(
-                `Error looking up events. Expected to find a single TriggerAdded Event. Received: ${events.length}`,
-            )
-        }
-
-        const [event] = events
-        const { commandAddress, triggerData /* cdpId */ } = bot.interface.decodeEventLog(
-            'TriggerAdded',
-            event.data,
-            event.topics,
-        )
         const { vaultId, type: triggerType, stopLossLevel } = decodeStopLossData(triggerData)
         console.log(
             `Found trigger information. Command Address: ${commandAddress}. Vault ID: ${vaultId.toString()}. Trigger Type: ${triggerType.toString()}. Stop Loss Level: ${stopLossLevel.toString()}`,
@@ -78,10 +53,8 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         }
         const isToCollateral = triggerType.eq(TriggerType.CLOSE_TO_COLLATERAL)
 
-        const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
-
         const executorSigner = await hardhatUtils.getValidExecutionCallerOrOwner(
-            executor,
+            automationExecutor,
             hre.ethers.provider.getSigner(0),
         )
 
@@ -108,51 +81,15 @@ task<StopLossArgs>('stop-loss', 'Triggers a stop loss on vault position')
         const mpa = await hre.ethers.getContractAt('MPALike', addresses.MULTIPLY_PROXY_ACTIONS)
         const executionData = generateStopLossExecutionData(mpa, isToCollateral, cdpData, exchangeData, serviceRegistry)
 
-        const estimate = await executor
-            .connect(executorSigner)
-            .estimateGas.execute(
-                executionData,
-                vaultId.toString(),
-                triggerData,
-                commandAddress,
-                args.trigger.toString(),
-                0,
-                0,
-                args.refund.toNumber(),
-            )
-        console.log(`Gas Estimate: ${estimate.toString()}`)
-
-        const gasPrice = await getGasPrice()
-        console.log(`Starting trigger execution...`)
-        const tx = await executor
-            .connect(executorSigner)
-            .execute(
-                executionData,
-                vaultId.toString(),
-                triggerData,
-                commandAddress,
-                args.trigger.toString(),
-                0,
-                0,
-                args.refund.toNumber(),
-                {
-                    // send the request forcefully even it fails
-                    gasLimit: estimate,
-                    maxFeePerGas: new BigNumber(gasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-                    maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
-                },
-            )
-        const receipt = await tx.wait()
-
-        const triggerExecutedEvent = getEvents(receipt, bot.interface.getEvent('TriggerExecuted'))?.[0]
-        if (!triggerExecutedEvent) {
-            throw new Error(`Failed to execute the trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
-        }
-
-        console.log(
-            `Successfully executed the trigger ${triggerExecutedEvent.args.triggerId.toString()} for vault ${triggerExecutedEvent.args.cdpId.toString()}. Execution Data: ${
-                triggerExecutedEvent.args.executionData
-            }`,
+        await sendTransactionToExecutor(
+            automationExecutor,
+            automationBot,
+            executorSigner,
+            executionData,
+            commandAddress,
+            vaultId,
+            triggerData,
+            args,
         )
     })
 
