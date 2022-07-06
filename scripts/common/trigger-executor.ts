@@ -77,7 +77,7 @@ export class TriggerExecutor {
         }
 
         const mpa = await this.ethers.getContractAt('MPALike', this.addresses.MULTIPLY_PROXY_ACTIONS)
-        const executionData = mpa.interface.encodeFunctionData(this.getMPAMethod(triggerType), [
+        const executionData = mpa.interface.encodeFunctionData(this.getMPAMethod(triggerType) as any, [
             exchangeData,
             cdpData,
             serviceRegistry,
