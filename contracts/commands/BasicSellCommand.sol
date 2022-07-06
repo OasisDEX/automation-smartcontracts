@@ -69,12 +69,17 @@ contract BasicSellCommand is BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTrigger = decode(triggerData);
 
-        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
-
+        (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
+        uint256 dustLimit = getDustLimit(ilk);
+        uint256 debt = getVaultDebt(cdpId);
+        uint256 wad = RatioUtils.WAD;
+        uint256 futureDebt = (debt * (wad - nextCollRatio + decodedTrigger.targetCollRatio.wad())) /
+            (wad - decodedTrigger.targetCollRatio.wad());
         return
             (decodedTrigger.execCollRatio.wad() > nextCollRatio &&
                 decodedTrigger.minSellPrice < nextPrice) &&
-            beseFeeValid(decodedTrigger.maxBaseFeeInGwei);
+            beseFeeValid(decodedTrigger.maxBaseFeeInGwei) &&
+            futureDebt > dustLimit;
     }
 
     function execute(
@@ -94,19 +99,6 @@ contract BasicSellCommand is BaseMPACommand {
         }
     }
 
-    function getDustLimit(bytes32 ilk) internal view returns (uint256 dustLimit) {
-        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
-        (, , , , uint256 radDust) = vat.ilks(ilk);
-        uint256 wadDust = radDust.radToWad();
-        return wadDust;
-    }
-
-    function getVaultInfo(uint256 cdpId) internal view returns (uint256 dustLimit) {
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        (, uint256 debt) = mcdView.getVaultInfo(cdpId);
-        return debt;
-    }
-
     function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
         external
         view
@@ -117,15 +109,12 @@ contract BasicSellCommand is BaseMPACommand {
 
         uint256 dust = getDustLimit(ilk);
 
-        uint256 vaultDebtAfter = getVaultInfo(cdpId);
-
-        (uint256 minPossibleDebt, ) = vaultDebtAfter.bounds(decodedTriggerData.deviation * 2);
+        uint256 vaultDebtAfter = getVaultDebt(cdpId);
 
         (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
             decodedTriggerData.deviation
         );
 
-        return ((nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad()) ||
-            (dust >= minPossibleDebt));
+        return (nextCollRatio > lowerTarget.wad() && nextCollRatio < upperTarget.wad());
     }
 }

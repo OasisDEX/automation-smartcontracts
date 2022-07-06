@@ -27,8 +27,10 @@ import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
+import { VatLike } from "../interfaces/VatLike.sol";
 
 abstract contract BaseMPACommand is ICommand {
+    using RatioUtils for uint256;
     ServiceRegistry public immutable serviceRegistry;
 
     string public constant MCD_VIEW_KEY = "MCD_VIEW";
@@ -86,6 +88,13 @@ abstract contract BaseMPACommand is ICommand {
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
         require(status, string(reason));
+    }
+
+    function getDustLimit(bytes32 ilk) internal view returns (uint256 dustLimit) {
+        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
+        (, , , , uint256 radDust) = vat.ilks(ilk);
+        uint256 wadDust = radDust.radToWad();
+        return wadDust;
     }
 
     function recreateTrigger(
