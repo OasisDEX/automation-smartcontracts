@@ -9,6 +9,7 @@ import { DsProxyLike, IERC20, MPALike } from '../typechain'
 
 const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
+const maxGweiPrice = 1000;
 
 function toRatio(units: number) {
     return new BigNumber(units).shiftedBy(4).toNumber()
@@ -79,6 +80,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
+                maxGweiPrice
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -93,6 +95,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
+                maxGweiPrice
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -107,6 +110,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
+                maxGweiPrice
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -130,6 +134,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
+                maxGweiPrice
             )
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
@@ -153,6 +158,7 @@ describe('BasicBuyCommand', () => {
                 new BigNumber(5000).shiftedBy(18).toFixed(),
                 continuous,
                 toRatio(0.5),
+                maxGweiPrice
             )
             const createTriggerTx = await createTrigger(triggerData)
             const receipt = await createTriggerTx.wait()

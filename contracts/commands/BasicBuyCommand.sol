@@ -40,6 +40,7 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 maxBuyPrice;
         bool continuous;
         uint64 deviation;
+        uint32 maxBaseFeeInGwei;
     }
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
@@ -92,6 +93,7 @@ contract BasicBuyCommand is BaseMPACommand {
             nextCollRatio != 0 &&
             nextCollRatio >= decoded.execCollRatio.wad() &&
             nextPrice <= decoded.maxBuyPrice &&
+            beseFeeValid(decoded.maxBaseFeeInGwei) &&
             decoded.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
             liquidationRatio.radToWad();
     }

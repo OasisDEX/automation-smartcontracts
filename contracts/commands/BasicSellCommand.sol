@@ -40,6 +40,7 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 minSellPrice;
         bool continuous;
         uint64 deviation;
+        uint32 maxBaseFeeInGwei;
     }
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
@@ -66,12 +67,14 @@ contract BasicSellCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
+        BasicSellTriggerData memory decodedTrigger = decode(triggerData);
 
         (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
-        return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
-            decodedTriggerData.minSellPrice < nextPrice);
+        return
+            (decodedTrigger.execCollRatio.wad() > nextCollRatio &&
+                decodedTrigger.minSellPrice < nextPrice) &&
+            beseFeeValid(decodedTrigger.maxBaseFeeInGwei);
     }
 
     function execute(
