@@ -1,8 +1,10 @@
+import { constants } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
     AutomationSwap,
     BasicBuyCommand,
+    BasicSellCommand,
     CloseCommand,
     McdUtils,
     McdView,
@@ -22,6 +24,7 @@ export interface DeployedSystem {
     mcdView: McdView
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
+    basicSell?: BasicSellCommand
 }
 
 export interface DeploySystemArgs {
@@ -34,10 +37,13 @@ export interface DeploySystemArgs {
 
 const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
     return async (hash: string, address: string): Promise<void> => {
-        const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
-            gasLimit: '100000',
-        })
-        await receipt.wait()
+        const existingAddress = await serviceRegistryInstance.getServiceAddress(hash)
+        if (existingAddress === constants.AddressZero) {
+            const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
+                gasLimit: '100000',
+            })
+            await receipt.wait()
+        }
     }
 }
 
@@ -50,6 +56,7 @@ export async function deploySystem({
 }: DeploySystemArgs): Promise<DeployedSystem> {
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
+    let BasicSellInstance: BasicSellCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -64,6 +71,7 @@ export async function deploySystem({
     const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
     const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
     const basicBuyFactory = await ethers.getContractFactory('BasicBuyCommand')
+    const basicSellFactory = await ethers.getContractFactory('BasicSellCommand')
 
     if (logDebug) console.log('Deploying ServiceRegistry....')
     const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
@@ -123,6 +131,10 @@ export async function deploySystem({
         if (logDebug) console.log('Deploying BasicBuy....')
         const basicBuyDeployment = await basicBuyFactory.deploy(ServiceRegistryInstance.address)
         BasicBuyInstance = await basicBuyDeployment.deployed()
+
+        if (logDebug) console.log('Deploying BasicSell....')
+        const basicSellDeployment = await basicSellFactory.deploy(ServiceRegistryInstance.address)
+        BasicSellInstance = await basicSellDeployment.deployed()
     }
 
     if (logDebug) {
@@ -135,6 +147,7 @@ export async function deploySystem({
         if (addCommands) {
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
+            console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
         }
     }
 
@@ -147,21 +160,43 @@ export async function deploySystem({
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
+        basicSell: BasicSellInstance,
     }
 
     await configureRegistryEntries(system, addresses as AddressRegistry, logDebug)
     return system
 }
 
-export async function configureRegistryEntries(system: DeployedSystem, addresses: AddressRegistry, logDebug = false) {
-    const addServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
+export async function configureRegistryEntries(
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    logDebug = false,
+    allowedReplacements: string[] = [],
+) {
+    const ensureServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
+    if (allowedReplacements.length > 0) {
+        const existingHashes = (
+            await Promise.all(
+                allowedReplacements.map(hash =>
+                    system.serviceRegistry.getServiceAddress(hash).then(address => ({
+                        hash,
+                        exists: address !== constants.AddressZero,
+                    })),
+                ),
+            )
+        )
+            .filter(x => x.exists)
+            .map(x => x.hash)
+
+        await Promise.all(existingHashes.map(hash => system.serviceRegistry.removeNamedService(hash)))
+    }
 
     if (system.closeCommand) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), system.closeCommand.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), system.closeCommand.address)
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
-        await addServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await (await system.mcdView.approve(system.closeCommand.address, true)).wait()
@@ -169,45 +204,56 @@ export async function configureRegistryEntries(system: DeployedSystem, addresses
 
     if (system.basicBuy) {
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
-        await addServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await (await system.mcdView.approve(system.basicBuy.address, true)).wait()
     }
 
+    if (system.basicSell) {
+        if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_SELL), system.basicSell.address)
+
+        if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
+        await (await system.mcdView.approve(system.basicSell.address, true)).wait()
+    }
+
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
+
+    if (logDebug) console.log('Adding MCD_VAT to ServiceRegistry....')
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VAT), addresses.MCD_VAT)
 
     if (logDebug) console.log('Adding MCD_SPOT to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_SPOT), addresses.MCD_SPOT)
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_SPOT), addresses.MCD_SPOT)
 
     if (logDebug) console.log('Adding AUTOMATION_BOT to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         system.automationBot.address,
     )
 
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
 
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
         addresses.MULTIPLY_PROXY_ACTIONS,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         system.automationExecutor.address,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_SWAP to ServiceRegistry....')
-    await addServiceRegistryEntry(
+    await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
         system.automationSwap.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
-    await addServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
 }

@@ -5,8 +5,9 @@ import { getMultiplyParams } from '@oasisdex/multiply'
 import BigNumber from 'bignumber.js'
 import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { DsProxyLike, MPALike } from '../typechain'
+import { DsProxyLike, IERC20, MPALike } from '../typechain'
 
+const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000;
 
@@ -15,11 +16,14 @@ function toRatio(units: number) {
 }
 
 // BLOCK_NUMBER=14997398
-describe('BasicBuyCommand', () => {
+describe('BasicSellCommand', () => {
+    const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+    const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
 
     let system: DeployedSystem
+    let DAIInstance: IERC20
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
     let proxyOwnerAddress: string
@@ -30,7 +34,7 @@ describe('BasicBuyCommand', () => {
     const createTrigger = async (triggerData: BytesLike) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BASIC_SELL,
             0,
             triggerData,
         ])
@@ -42,6 +46,7 @@ describe('BasicBuyCommand', () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
+        DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
         system = await deploySystem({ utils: hardhatUtils, addCommands: true })
@@ -63,47 +68,32 @@ describe('BasicBuyCommand', () => {
     })
 
     afterEach(async () => {
-        await hre.ethers.provider.send('evm_revert', [snapshotId])
+      await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('isTriggerDataValid', () => {
-        it('should fail if target coll ratio is higher than execution ratio', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.52)]
+        it('should fail if target coll ratio is lower than execution ratio', async () => {
+            
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
-                executionRatio,
-                targetRatio,
+                TriggerType.BASIC_SELL,
+                incorrectExecutionRatio,
+                incorrectTargetRatio,
                 0,
                 false,
                 0,
                 maxGweiPrice
-            )
-            await expect(createTrigger(triggerData)).to.be.reverted
-        })
-
-        it('should fail if target target coll ratio is lte liquidation ratio', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.45)]
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                executionRatio,
-                targetRatio,
-                0,
-                false,
-                0,
-                maxGweiPrice
+                
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BASIC_BUY,
-                executionRatio,
-                targetRatio,
+                TriggerType.BASIC_SELL,
+                correctExecutionRatio,
+                correctTargetRatio,
                 0,
                 false,
                 0,
@@ -113,21 +103,19 @@ describe('BasicBuyCommand', () => {
         })
 
         it('should fail if trigger type is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
-                [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, executionRatio, targetRatio, 0, false],
+                [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
-                executionRatio,
-                targetRatio,
+                TriggerType.BASIC_SELL,
+                correctExecutionRatio,
+                correctTargetRatio,
                 0,
                 false,
                 0,
@@ -145,14 +133,14 @@ describe('BasicBuyCommand', () => {
         async function createTriggerForExecution(
             executionRatio: BigNumber.Value,
             targetRatio: BigNumber.Value,
-            continuous: boolean,
+            continuous: boolean
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BASIC_SELL,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
-                new BigNumber(5000).shiftedBy(18).toFixed(),
+                new BigNumber(4000).shiftedBy(18).toFixed(),
                 continuous,
                 toRatio(0.5),
                 maxGweiPrice
@@ -171,7 +159,7 @@ describe('BasicBuyCommand', () => {
             const oasisFee = new BigNumber(0.002)
 
             const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
-            const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
+            const { collateralDelta, debtDelta, skipFL } = getMultiplyParams(
                 {
                     oraclePrice: oraclePriceUnits,
                     marketPrice: oraclePriceUnits,
@@ -208,23 +196,23 @@ describe('BasicBuyCommand', () => {
                 methodName: '',
             }
 
-            const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
+            const minToTokenAmount = new BigNumber(cdpData.requiredDebt).times(new BigNumber(1).minus(slippage))
             const exchangeData = {
-                fromTokenAddress: hardhatUtils.addresses.DAI,
-                toTokenAddress: hardhatUtils.addresses.WETH,
-                fromTokenAmount: cdpData.requiredDebt,
-                toTokenAmount: cdpData.borrowCollateral,
+                fromTokenAddress: hardhatUtils.addresses.WETH,
+                toTokenAddress: hardhatUtils.addresses.DAI,
+                fromTokenAmount: cdpData.borrowCollateral,
+                toTokenAmount: minToTokenAmount.toFixed(0),
                 minToTokenAmount: minToTokenAmount.toFixed(0),
                 exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
                 _exchangeCalldata: forgeUnoswapCallData(
-                    hardhatUtils.addresses.DAI,
-                    new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
+                    hardhatUtils.addresses.WETH,
+                    new BigNumber(cdpData.borrowCollateral).toFixed(0),
                     minToTokenAmount.toFixed(0),
-                    false,
+                    true,
                 ),
             }
 
-            const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
+            const executionData = MPAInstance.interface.encodeFunctionData('decreaseMultiple', [
                 exchangeData,
                 cdpData,
                 hardhatUtils.mpaServiceRegistry(),
@@ -234,11 +222,11 @@ describe('BasicBuyCommand', () => {
                 executionData,
                 testCdpId,
                 triggerData,
-                system.basicBuy!.address,
+                system.basicSell!.address,
                 triggerId,
                 0,
                 0,
-                0,
+                0
             )
         }
 
@@ -247,20 +235,18 @@ describe('BasicBuyCommand', () => {
         })
 
         afterEach(async () => {
-            await hre.ethers.provider.send('evm_revert', [snapshotId])
+          await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
         it('executes the trigger', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
-            const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
+            const { triggerId, triggerData } = await createTriggerForExecution(correctExecutionRatio, correctTargetRatio, false)
 
-            await expect(executeTrigger(triggerId, targetRatio, triggerData)).not.to.be.reverted
+            await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
         })
 
         it('does not recreate the trigger if `continuous` is set to false', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const executionRatio = correctExecutionRatio
+            const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
@@ -271,8 +257,8 @@ describe('BasicBuyCommand', () => {
         })
 
         it('recreates the trigger if `continuous` is set to true', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const executionRatio = correctExecutionRatio
+            const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
@@ -282,7 +268,7 @@ describe('BasicBuyCommand', () => {
             expect(events.length).to.eq(1)
             const [event] = events
             expect(event.args.triggerData).to.eq(triggerData)
-            expect(event.args.commandAddress).to.eq(system.basicBuy!.address)
+            expect(event.args.commandAddress).to.eq(system.basicSell!.address)
             expect(event.args.cdpId).to.eq(testCdpId)
         })
     })

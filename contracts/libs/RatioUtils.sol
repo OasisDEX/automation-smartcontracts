@@ -27,6 +27,7 @@ library RatioUtils {
     uint256 public constant RATIO = 10**4;
     uint256 public constant WAD = 10**18;
     uint256 public constant RAY = 10**27;
+    uint256 public constant RAD = 10**45;
 
     // convert base units to ratio
     function toRatio(uint256 units) internal pure returns (uint256) {
@@ -48,5 +49,13 @@ library RatioUtils {
     {
         uint256 offset = ratio.mul(deviation).div(RATIO.mul(100));
         return (ratio.sub(offset), ratio.add(offset));
+    }
+
+    function radToWad(uint256 _rad) internal pure returns (uint256 _wad) {
+        _wad = _rad.mul(WAD).div(RAD);
+    }
+
+    function wadToRad(uint256 _wad) internal pure returns (uint256 _rad) {
+        _rad = _wad.mul(RAD).div(WAD);
     }
 }

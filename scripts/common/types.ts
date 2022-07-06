@@ -13,6 +13,7 @@ export enum TriggerType {
     CLOSE_TO_COLLATERAL = 1,
     CLOSE_TO_DAI = 2,
     BASIC_BUY = 3,
+    BASIC_SELL = 4,
 }
 
 export enum AutomationServiceName {
@@ -22,6 +23,7 @@ export enum AutomationServiceName {
     AUTOMATION_EXECUTOR = 'AUTOMATION_EXECUTOR',
     AUTOMATION_SWAP = 'AUTOMATION_SWAP',
     MCD_VIEW = 'MCD_VIEW',
+    MCD_VAT = 'MCD_VAT',
     MCD_UTILS = 'MCD_UTILS',
     MULTIPLY_PROXY_ACTIONS = 'MULTIPLY_PROXY_ACTIONS',
 }

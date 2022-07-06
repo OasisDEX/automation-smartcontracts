@@ -36,7 +36,12 @@ export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...
             return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
         case TriggerType.BASIC_BUY:
             return utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64'],
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
+                args,
+            )
+        case TriggerType.BASIC_SELL:
+            return utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
                 args,
             )
         default:
