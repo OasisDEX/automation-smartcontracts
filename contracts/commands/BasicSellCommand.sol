@@ -68,7 +68,7 @@ contract BasicSellCommand is BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
 
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
 
         return (decodedTriggerData.execCollRatio.wad() > nextCollRatio &&
             decodedTriggerData.minSellPrice < nextPrice);
@@ -110,7 +110,7 @@ contract BasicSellCommand is BaseMPACommand {
         returns (bool)
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (, uint256 nextCollRatio, uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
+        (, uint256 nextCollRatio, , , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
 
         uint256 dust = getDustLimit(ilk);
 

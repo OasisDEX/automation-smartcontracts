@@ -47,6 +47,7 @@ abstract contract BaseMPACommand is ICommand {
         returns (
             uint256 collRatio,
             uint256 nextCollRatio,
+            uint256 currPrice,
             uint256 nextPrice,
             bytes32 ilk
         )
@@ -57,6 +58,7 @@ abstract contract BaseMPACommand is ICommand {
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         collRatio = mcdView.getRatio(cdpId, false);
         nextCollRatio = mcdView.getRatio(cdpId, true);
+        currPrice = mcdView.getPrice(ilk);
         nextPrice = mcdView.getNextPrice(ilk);
     }
 
