@@ -99,7 +99,7 @@ export class TriggerExecutor {
             case TriggerType.BASIC_BUY:
             case TriggerType.BASIC_SELL: {
                 const [, , , target] = decodeTriggerData(triggerType, triggerData)
-                return await this.getMPAExecutionData(
+                return await this.getBasicBuySellExecutionData(
                     vault,
                     new BigNumber(target.toString()),
                     slippage,
@@ -155,7 +155,7 @@ export class TriggerExecutor {
         return { triggerData, commandAddress }
     }
 
-    private async getMPAExecutionData(
+    private async getBasicBuySellExecutionData(
         vaultId: BigNumber,
         targetRatio: BigNumber,
         slippage: BigNumber,
@@ -179,7 +179,7 @@ export class TriggerExecutor {
 
         const vaultInfo = {
             currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
-            currentCollateral: new BigNumber(collateral.toString()).shiftedBy(ilkDecimals.toNumber() - 18),
+            currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-ilkDecimals),
             minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
         }
 
@@ -219,7 +219,7 @@ export class TriggerExecutor {
             const cdpData = {
                 ...defaultCdpData,
                 requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
-                borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
+                borrowCollateral: collateralDelta.shiftedBy(ilkDecimals).abs().toFixed(0),
                 skipFL,
             }
 
@@ -261,7 +261,7 @@ export class TriggerExecutor {
         const cdpData = {
             ...defaultCdpData,
             requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
-            borrowCollateral: collateralDelta.shiftedBy(ilkDecimals.toNumber()).abs().toFixed(0),
+            borrowCollateral: collateralDelta.shiftedBy(ilkDecimals).abs().toFixed(0),
             skipFL,
         }
 
@@ -370,7 +370,7 @@ export class TriggerExecutor {
         }
         const vaultInfoForClosing: VaultInfoForClosing = {
             currentDebt: debt.shiftedBy(-18),
-            currentCollateral: collateral.shiftedBy(-ilkDecimals.toNumber()),
+            currentCollateral: collateral.shiftedBy(-ilkDecimals),
         }
 
         const closeParams = isToCollateral
@@ -382,14 +382,14 @@ export class TriggerExecutor {
             gem,
             this.addresses.DAI,
             this.addresses.EXCHANGE,
-            closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()),
+            closeParams.fromTokenAmount.shiftedBy(ilkDecimals),
             slippage,
         )
 
         const exchangeData = {
             fromTokenAddress: gem,
             toTokenAddress: this.addresses.DAI,
-            fromTokenAmount: closeParams.fromTokenAmount.shiftedBy(ilkDecimals.toNumber()).toFixed(0),
+            fromTokenAmount: closeParams.fromTokenAmount.shiftedBy(ilkDecimals).toFixed(0),
             toTokenAmount: closeParams.toTokenAmount.shiftedBy(18).toFixed(0),
             minToTokenAmount: closeParams.minToTokenAmount.shiftedBy(18).toFixed(0),
             exchangeAddress: swap.tx.to,

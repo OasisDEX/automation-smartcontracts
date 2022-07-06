@@ -228,7 +228,7 @@ export class HardhatUtils {
         return {
             gem,
             gemJoin,
-            ilkDecimals: ilkDecimals.toNumber(),
+            ilkDecimals: ilkDecimals.toNumber() as number,
         }
     }
 
