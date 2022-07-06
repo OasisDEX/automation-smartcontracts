@@ -23,13 +23,12 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
-import { Ownable } from "../helpers/Ownable.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-contract BasicBuyCommand is BaseMPACommand, Ownable {
+contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
@@ -44,25 +43,7 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
         uint32 maxBaseFeeInGwei;
     }
 
-    // The parameter setting that is common for all users.
-    // If the PSM experiences a major price difference between current
-    // and next prices & it is not possible to fullfill the user's
-    // target collateralization ratio at the next price without bringing
-    // the collateralization ratio at the current price under the liquidation ratio,
-    // the trigger will be correctly executed if the current
-    // collateralization ratio within the `liquidation ratio` and
-    // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
-    uint256 public liquidationRatioPercentage = 100; // 1%
-
-    constructor(ServiceRegistry _serviceRegistry)
-        BaseMPACommand(_serviceRegistry)
-        Ownable(msg.sender)
-    {}
-
-    function setLiquidationRatioPercentage(uint256 _liquidationRatioPercentage) external {
-        require(msg.sender == owner, "basic-buy/only-owner");
-        liquidationRatioPercentage = _liquidationRatioPercentage;
-    }
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
     function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
@@ -97,12 +78,24 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        (, uint256 nextCollRatio, uint256 nextPrice, ) = getVaultAndMarketInfo(cdpId);
+        (
+            uint256 collRatio,
+            uint256 nextCollRatio,
+            uint256 currPrice,
+            uint256 nextPrice,
+            bytes32 ilk
+        ) = getVaultAndMarketInfo(cdpId);
+
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, uint256 liquidationRatio) = spot.ilks(ilk);
+
         return
             nextCollRatio != 0 &&
             nextCollRatio >= decoded.execCollRatio.wad() &&
             nextPrice <= decoded.maxBuyPrice &&
-            beseFeeValid(decoded.maxBaseFeeInGwei);
+            beseFeeValid(decoded.maxBaseFeeInGwei) &&
+            decoded.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
+            liquidationRatio.radToWad();
     }
 
     function execute(
@@ -128,22 +121,14 @@ contract BasicBuyCommand is BaseMPACommand, Ownable {
         returns (bool)
     {
         BasicBuyTriggerData memory decoded = decode(triggerData);
-        (uint256 collRatio, uint256 nextCollRatio, , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
 
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
-        (, uint256 liquidationRatio) = spot.ilks(ilk);
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 
         (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
             decoded.deviation
         );
 
-        bool isWithinBounds = nextCollRatio <= upperTarget.wad() &&
-            nextCollRatio >= lowerTarget.wad();
-        bool isNearLiquidationRatio = collRatio < nextCollRatio &&
-            collRatio * 10**9 <
-            liquidationRatio.mul(RatioUtils.RATIO + liquidationRatioPercentage).div(
-                RatioUtils.RATIO
-            );
-        return isWithinBounds || isNearLiquidationRatio;
+        return nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad();
     }
 }
