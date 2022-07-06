@@ -50,4 +50,6 @@ export interface BaseExecutionArgs {
     trigger: BigNumber
     forked?: Network
     refund: BigNumber
+    slippage: BigNumber
+    debug: boolean
 }

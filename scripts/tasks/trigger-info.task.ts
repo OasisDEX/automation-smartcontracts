@@ -8,6 +8,7 @@ import {
     getStartBlocksFor,
     HardhatUtils,
     Network,
+    triggerDataToInfo,
 } from '../common'
 import { params } from './params'
 
@@ -46,12 +47,8 @@ task<TriggerInfoArgs>('trigger-info')
 
         const [event] = events
         const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
-        const { vaultId, type: triggerType } = decodeBasicTriggerData(triggerData)
-        const info = [
-            `Command Address: ${commandAddress}`,
-            `Vault ID: ${vaultId.toString()}`,
-            `Trigger Type: ${triggerType.toString()}`,
-        ]
+
+        const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
 
         const closeCommand = await hre.ethers.getContractAt('CloseCommand', addresses.AUTOMATION_CLOSE_COMMAND)
@@ -62,6 +59,7 @@ task<TriggerInfoArgs>('trigger-info')
             blockTag: args.block || 'latest',
         }
 
+        const { vaultId } = decodeBasicTriggerData(triggerData)
         const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
         const ilk = await cdpManager.ilks(vaultId.toString())
         const price = await mcdView.getPrice(ilk, opts)
