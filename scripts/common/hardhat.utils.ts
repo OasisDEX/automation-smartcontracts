@@ -4,15 +4,23 @@ import { BigNumber, constants, Contract, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
-import { ETH_ADDRESS, getAddressesFor } from './addresses'
+import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 
 export class HardhatUtils {
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
-        this.addresses = getAddressesFor(forked || this.hre.network.name)
+    constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
+        this.addresses = getAddressesFor(this.forked || this.hre.network.name)
+    }
+
+    public get targetNetwork() {
+        return coalesceNetwork(this.forked || (this.hre.network.name as Network))
+    }
+
+    public logNetworkInfo() {
+        console.log(`Network: ${this.hre.network.name}. Using addresses from ${this.targetNetwork}\n`)
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
@@ -220,12 +228,14 @@ export class HardhatUtils {
         return {
             gem,
             gemJoin,
-            ilkDecimals: ilkDecimals.toNumber(),
+            ilkDecimals: ilkDecimals.toNumber() as number,
         }
     }
 
-    public async getValidExecutionCallerOrOwner(executor: Contract, signer: Signer) {
-        if (await executor.callers(await signer.getAddress())) {
+    public async getValidExecutionCallerOrOwner(signer: Signer, executor?: Contract) {
+        const automationExecutor =
+            executor || (await this.hre.ethers.getContractAt('AutomationExecutor', this.addresses.AUTOMATION_EXECUTOR))
+        if (await automationExecutor.callers(await signer.getAddress())) {
             return signer
         }
 
@@ -234,7 +244,7 @@ export class HardhatUtils {
                 `Signer is not authorized to call the AutomationExecutor. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
             )
         }
-        const executionOwner = await executor.owner()
+        const executionOwner = await automationExecutor.owner()
         const owner = await this.impersonate(executionOwner)
         console.log(`Impersonated AutomationExecutor owner ${executionOwner}...`)
         // Fund the owner

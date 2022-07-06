@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { Network } from './types'
 
 export interface EtherscanGasPrice {
     result: {
@@ -8,6 +9,10 @@ export interface EtherscanGasPrice {
         FastGasPrice: string
         suggestBaseFee: string
     }
+}
+
+export function etherscanAPIUrl(network: string) {
+    return network === Network.MAINNET ? 'https://api.etherscan.io/api' : `https://api-${network}.etherscan.io/api`
 }
 
 export async function getGasPrice() {

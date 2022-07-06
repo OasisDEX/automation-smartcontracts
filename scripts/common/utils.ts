@@ -16,7 +16,7 @@ export function getServiceNameHash(service: AutomationServiceName) {
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
-    const filteredEvents = receipt.events?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
+    const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
     return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
@@ -84,6 +84,19 @@ export function decodeBasicBuyData(data: string) {
     }
 }
 
+export function decodeBasicSellData(data: string) {
+    const [vault, type, exec, target, minPrice, cont, deviation] = decodeTriggerData(TriggerType.BASIC_SELL, data)
+    return {
+        vaultId: new BigNumber(vault.toString()),
+        type: new BigNumber(type.toString()),
+        executionCollRatio: new BigNumber(exec.toString()),
+        targetCollRatio: new BigNumber(target.toString()),
+        minSellPrice: new BigNumber(minPrice.toString()),
+        continuous: cont,
+        deviation: new BigNumber(deviation.toString()),
+    }
+}
+
 export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
     const iface = new utils.Interface([
         'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
@@ -111,4 +124,45 @@ export function generateStopLossExecutionData(
 
 export function bignumberToTopic(id: BigNumber.Value): string {
     return '0x' + new BigNumber(id).toString(16).padStart(64, '0')
+}
+
+export function triggerDataToInfo(triggerData: string, commandAddress: string) {
+    const { vaultId, type } = decodeBasicTriggerData(triggerData)
+    const triggerType = type.toNumber()
+    const baseInfo = [
+        `Vault ID: ${vaultId.toString()}`,
+        `Trigger Type: ${triggerType}`,
+        `Command Address: ${commandAddress}`,
+    ]
+    switch (triggerType) {
+        case TriggerType.CLOSE_TO_COLLATERAL:
+        case TriggerType.CLOSE_TO_DAI: {
+            const { stopLossLevel } = decodeStopLossData(triggerData)
+            return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
+        }
+        case TriggerType.BASIC_BUY: {
+            const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation } =
+                decodeBasicBuyData(triggerData)
+            return baseInfo.concat([
+                `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Max Buy Price: ${maxBuyPrice.shiftedBy(-18).toFixed(2)}`,
+                `Continuous: ${continuous}`,
+                `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+            ])
+        }
+        case TriggerType.BASIC_SELL: {
+            const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation } =
+                decodeBasicSellData(triggerData)
+            return [
+                `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
+                `Continuous: ${continuous}`,
+                `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+            ]
+        }
+        default:
+            throw new Error(`Trigger Type ${triggerType} is not supported.`)
+    }
 }
