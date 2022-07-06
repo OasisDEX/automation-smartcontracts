@@ -1,5 +1,5 @@
 import { ContractReceipt } from '@ethersproject/contracts'
-import { BigNumber as EthersBN, BytesLike, utils, Contract } from 'ethers'
+import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import { AutomationServiceName, Network, TriggerType } from './types'
 

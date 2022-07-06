@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { Contract } from 'ethers'
 import { uniq } from 'lodash'
-import { Network } from '../common'
+import { coalesceNetwork, Network } from '../common'
 
 export interface EtherscanTransactionListResponse {
     result: {
@@ -16,7 +16,10 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
         throw new Error(`Etherscan API Key must be set`)
     }
 
-    const url = network === Network.MAINNET ? 'https://api.etherscan.io/api' : `https://api-${network}.etherscan.io/api`
+    const url =
+        coalesceNetwork(network as Network) === Network.MAINNET
+            ? 'https://api.etherscan.io/api'
+            : `https://api-${network}.etherscan.io/api`
     const { data } = await axios.get<EtherscanTransactionListResponse>(url, {
         params: {
             module: 'account',
@@ -27,14 +30,14 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
         },
     })
 
-    const addCallerSighash = executor.interface.getSighash('addCaller').toLowerCase()
+    const addCallerSighash = executor.interface.getSighash('addCallers').toLowerCase()
     const addedCallers = data.result
         .filter(
             ({ to, input }) =>
                 to?.toLowerCase() === executor.address.toLowerCase() &&
                 input?.toLowerCase()?.startsWith(addCallerSighash),
         )
-        .map(({ input }) => executor.interface.decodeFunctionData('addCaller', input!).caller)
+        .flatMap(({ input }) => executor.interface.decodeFunctionData('addCallers', input!)._callers)
 
     const whitelistedCallers = (
         await Promise.all(uniq(addedCallers).map(async caller => ((await executor.callers(caller)) ? caller : null)))
