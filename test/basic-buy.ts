@@ -5,9 +5,8 @@ import { getMultiplyParams } from '@oasisdex/multiply'
 import BigNumber from 'bignumber.js'
 import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { DsProxyLike, IERC20, MPALike } from '../typechain'
+import { DsProxyLike, MPALike } from '../typechain'
 
-const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000;
 
@@ -21,7 +20,6 @@ describe('BasicBuyCommand', () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     let system: DeployedSystem
-    let DAIInstance: IERC20
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
     let proxyOwnerAddress: string
@@ -44,7 +42,6 @@ describe('BasicBuyCommand', () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
-        DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
         system = await deploySystem({ utils: hardhatUtils, addCommands: true })

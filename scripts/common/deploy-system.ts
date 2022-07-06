@@ -105,7 +105,7 @@ export async function deploySystem({
         addresses.DAI,
     )
     const AutomationSwapInstance = await automationSwapDeployment.deployed()
-    await AutomationExecutorInstance.addCaller(AutomationSwapInstance.address)
+    await AutomationExecutorInstance.addCallers([AutomationSwapInstance.address])
 
     let McdViewInstance: McdView
     const signer = ethers.provider.getSigner(0)

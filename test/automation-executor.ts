@@ -125,13 +125,13 @@ describe('AutomationExecutor', async () => {
         it('should be able to whitelist new callers', async () => {
             const caller = generateRandomAddress()
             expect(await AutomationExecutorInstance.callers(caller)).to.be.false
-            await AutomationExecutorInstance.addCaller(caller)
+            await AutomationExecutorInstance.addCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
         })
 
         it('should revert with executor/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
-            const tx = AutomationExecutorInstance.connect(notOwner).addCaller(caller)
+            const tx = AutomationExecutorInstance.connect(notOwner).addCallers([caller])
             await expect(tx).to.be.revertedWith('executor/only-owner')
         })
     })
@@ -139,21 +139,16 @@ describe('AutomationExecutor', async () => {
     describe('removeCaller', () => {
         it('should be able to whitelist new callers', async () => {
             const caller = generateRandomAddress()
-            await AutomationExecutorInstance.addCaller(caller)
+            await AutomationExecutorInstance.addCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
-            await AutomationExecutorInstance.removeCaller(caller)
+            await AutomationExecutorInstance.removeCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.false
         })
 
         it('should revert with executor/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
-            const tx = AutomationExecutorInstance.connect(notOwner).removeCaller(caller)
+            const tx = AutomationExecutorInstance.connect(notOwner).removeCallers([caller])
             await expect(tx).to.be.revertedWith('executor/only-owner')
-        })
-
-        it('should revert with executor/cannot-remove-owner if owner tries to remove themselves', async () => {
-            const tx = AutomationExecutorInstance.removeCaller(ownerAddress)
-            await expect(tx).to.be.revertedWith('executor/cannot-remove-owner')
         })
     })
 
