@@ -21,6 +21,7 @@ interface TriggerInfoArgs {
 
 task<TriggerInfoArgs>('trigger-info')
     .addParam('trigger', 'The trigger id', undefined, params.bignumber)
+    .addOptionalParam('forked', 'Forked network')
     .addOptionalParam('block', 'The block number to query at', undefined, types.int)
     .setAction(async (args: TriggerInfoArgs, hre) => {
         const { name: network } = hre.network

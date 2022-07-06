@@ -75,7 +75,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
-        const swapGasPrices = await getGasPrice(hardhatUtils.targetNetwork)
+        const swapGasPrices = await getGasPrice()
         const tx = await executor
             .connect(signer)
             .swap(
@@ -115,7 +115,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             return
         }
 
-        const unwrapGasPrice = await getGasPrice(hardhatUtils.targetNetwork)
+        const unwrapGasPrice = await getGasPrice()
         const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter)
         const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
             gasLimit: unwrapGasEstimate.mul(11).div(10),

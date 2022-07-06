@@ -423,16 +423,18 @@ export class TriggerExecutor {
             ]),
         }
 
-        const estimate = executorSigner.estimateGas(transactionData)
+        const estimate = await executorSigner.estimateGas(transactionData)
         console.log(`Gas Estimate: ${estimate.toString()}`)
+        const adjustedGasEstimate = estimate.mul(120).div(100)
+        console.log(`Adjusted Gas Estimate: ${adjustedGasEstimate.toString()}`)
 
-        const gasPrice = await getGasPrice(this.hardhatUtils.targetNetwork)
+        const gasPrice = await getGasPrice()
         console.log(`Starting trigger execution...`)
         const tx = await executorSigner.sendTransaction({
             ...transactionData,
-            gasLimit: estimate,
-            maxFeePerGas: new BigNumber(gasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-            maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
+            gasLimit: adjustedGasEstimate,
+            maxFeePerGas: new BigNumber(gasPrice.suggestBaseFee).plus(2).shiftedBy(9).toNumber(),
+            maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toNumber(),
         })
         console.log(`Execution Transaction Hash: ${tx.hash}`)
         const receipt = await tx.wait()

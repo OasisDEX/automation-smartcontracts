@@ -16,7 +16,7 @@ export function getServiceNameHash(service: AutomationServiceName) {
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
-    const filteredEvents = receipt.events?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
+    const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
     return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
