@@ -73,7 +73,7 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 dustLimit = getDustLimit(ilk);
         uint256 debt = getVaultDebt(cdpId);
         uint256 wad = RatioUtils.WAD;
-        uint256 futureDebt = (debt * (wad - nextCollRatio + decodedTrigger.targetCollRatio.wad())) /
+        uint256 futureDebt = (debt * wad - debt * nextCollRatio) /
             (wad - decodedTrigger.targetCollRatio.wad());
         return
             (decodedTrigger.execCollRatio.wad() > nextCollRatio &&
