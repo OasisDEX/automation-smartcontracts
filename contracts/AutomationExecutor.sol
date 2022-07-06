@@ -28,6 +28,9 @@ import { ICommand } from "./interfaces/ICommand.sol";
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
 
+    event CallerAdded(address indexed caller);
+    event CallerRemoved(address indexed caller);
+
     BotLike public immutable bot;
     IERC20 public immutable dai;
     IWETH public immutable weth;
@@ -71,13 +74,23 @@ contract AutomationExecutor {
         exchange = newExchange;
     }
 
-    function addCaller(address caller) external onlyOwner {
-        callers[caller] = true;
+    function addCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            require(!callers[caller], "executor/duplicate-whitelist");
+            callers[caller] = true;
+            emit CallerAdded(caller);
+        }
     }
 
-    function removeCaller(address caller) external onlyOwner {
-        require(caller != msg.sender, "executor/cannot-remove-owner");
-        callers[caller] = false;
+    function removeCallers(address[] calldata _callers) external onlyOwner {
+        uint256 length = _callers.length;
+        for (uint256 i = 0; i < length; ++i) {
+            address caller = _callers[i];
+            callers[caller] = false;
+            emit CallerRemoved(caller);
+        }
     }
 
     function execute(
@@ -100,11 +113,9 @@ contract AutomationExecutor {
         uint256 etherUsed = tx.gasprice *
             uint256(int256(initialGasAvailable - finalGasAvailable) - gasRefund);
 
-        if (address(this).balance > etherUsed) {
-            payable(msg.sender).transfer(etherUsed);
-        } else {
-            payable(msg.sender).transfer(address(this).balance);
-        }
+        payable(msg.sender).transfer(
+            address(this).balance > etherUsed ? etherUsed : address(this).balance
+        );
     }
 
     function swap(
@@ -121,12 +132,7 @@ contract AutomationExecutor {
             "executor/invalid-amount"
         );
 
-        uint256 allowance = fromToken.allowance(address(this), exchange);
-
-        if (amount > allowance) {
-            fromToken.safeIncreaseAllowance(exchange, type(uint256).max - allowance);
-        }
-
+        fromToken.safeApprove(exchange, amount);
         if (toDai) {
             IExchange(exchange).swapTokenForDai(
                 otherAsset,
@@ -158,6 +164,10 @@ contract AutomationExecutor {
 
     function unwrapWETH(uint256 amount) external onlyOwner {
         weth.withdraw(amount);
+    }
+
+    function revokeAllowance(IERC20 token, address target) external onlyOwner {
+        token.safeApprove(target, 0);
     }
 
     receive() external payable {}
