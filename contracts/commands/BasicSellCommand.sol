@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BasicBuyCommand.sol
+/// BasicSellCommand.sol
 
 // Copyright (C) 2021-2021 Oazo Apps Limited
 
@@ -18,15 +18,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
-import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
-import { SpotterLike } from "../interfaces/SpotterLike.sol";
-import { VatLike } from "../interfaces/VatLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicSellCommand is BaseMPACommand {
@@ -106,10 +100,6 @@ contract BasicSellCommand is BaseMPACommand {
     {
         BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
         (, uint256 nextCollRatio, , , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
-
-        uint256 dust = getDustLimit(ilk);
-
-        uint256 vaultDebtAfter = getVaultDebt(cdpId);
 
         (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
             decodedTriggerData.deviation

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BasicBuyCommand.sol
+/// BaseMPACommand.sol
 
 // Copyright (C) 2021-2021 Oazo Apps Limited
 
@@ -19,12 +19,9 @@
 
 pragma solidity ^0.8.0;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
-import { MPALike } from "../interfaces/MPALike.sol";
-import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";

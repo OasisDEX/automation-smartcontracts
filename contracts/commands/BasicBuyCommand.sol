@@ -25,7 +25,6 @@ import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicBuyCommand is BaseMPACommand {
@@ -79,7 +78,7 @@ contract BasicBuyCommand is BaseMPACommand {
         BasicBuyTriggerData memory decoded = decode(triggerData);
 
         (
-            uint256 collRatio,
+            ,
             uint256 nextCollRatio,
             uint256 currPrice,
             uint256 nextPrice,
