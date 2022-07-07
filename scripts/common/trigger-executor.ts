@@ -428,7 +428,17 @@ export class TriggerExecutor {
             ]),
         }
 
-        const estimate = await executorSigner.estimateGas(transactionData)
+        let estimate = EthersBN.from(2000000)
+        try {
+            estimate = await executorSigner.estimateGas(transactionData)
+        } catch (ex) {
+            console.log(`Gas Estimate failed!`)
+            if (!args.debug) {
+                throw ex
+            } else {
+                console.log(`Debug, using default`, estimate.toString())
+            }
+        }
         console.log(`Gas Estimate: ${estimate.toString()}`)
         const adjustedGasEstimate = estimate.mul(120).div(100)
         console.log(`Adjusted Gas Estimate: ${adjustedGasEstimate.toString()}`)
