@@ -20,60 +20,32 @@ pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
-import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
+import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-contract BasicBuyCommand is ICommand {
+contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
-    string private constant MCD_VIEW_KEY = "MCD_VIEW";
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
-    string private constant MCD_SPOT_KEY = "MCD_SPOT";
-
-    ServiceRegistry public immutable serviceRegistry;
-    address public immutable owner;
-
-    // The parameter setting that is common for all users.
-    // If the PSM experiences a major price difference between current
-    // and next prices & it is not possible to fullfill the user's
-    // target collateralization ratio at the next price without bringing
-    // the collateralization ratio at the current price under the liquidation ratio,
-    // the trigger will be correctly executed if the current
-    // collateralization ratio within the `liquidation ratio` and
-    // `liquidation ratio * (1 + liquidationRatioPercentage)` bounds
-    uint256 public liquidationRatioPercentage = 100; // 1%
-
-    constructor(ServiceRegistry _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
-        owner = msg.sender;
+    struct BasicBuyTriggerData {
+        uint256 cdpId;
+        uint16 triggerType;
+        uint256 execCollRatio;
+        uint256 targetCollRatio;
+        uint256 maxBuyPrice;
+        bool continuous;
+        uint64 deviation;
+        uint32 maxBaseFeeInGwei;
     }
 
-    function setLiquidationRatioPercentage(uint256 _liquidationRatioPercentage) external {
-        require(msg.sender == owner, "basic-buy/only-owner");
-        liquidationRatioPercentage = _liquidationRatioPercentage;
-    }
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
-    function decode(bytes memory triggerData)
-        public
-        pure
-        returns (
-            uint256 cdpId,
-            uint16 triggerType,
-            uint256 execCollRatio,
-            uint256 targetCollRatio,
-            uint256 maxBuyPrice,
-            bool continuous,
-            uint64 deviation
-        )
-    {
-        return abi.decode(triggerData, (uint256, uint16, uint256, uint256, uint256, bool, uint64));
+    function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
+        return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -81,26 +53,20 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (
-            uint256 cdpId,
-            uint16 triggerType,
-            uint256 execCollRatio,
-            uint256 targetCollRatio,
-            ,
-            ,
-            uint64 deviation
-        ) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
+        bytes32 ilk = manager.ilks(decoded.cdpId);
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
-        (uint256 lowerTarget, uint256 upperTarget) = targetCollRatio.bounds(deviation);
+        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
+            decoded.deviation
+        );
         return
-            _cdpId == cdpId &&
-            triggerType == 3 &&
-            execCollRatio > upperTarget &&
+            _cdpId == decoded.cdpId &&
+            decoded.triggerType == 3 &&
+            decoded.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio;
     }
 
@@ -109,16 +75,26 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , uint256 execCollRatio, , uint256 maxBuyPrice, , ) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
+        (
+            ,
+            uint256 nextCollRatio,
+            uint256 currPrice,
+            uint256 nextPrice,
+            bytes32 ilk
+        ) = getVaultAndMarketInfo(cdpId);
 
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 collRatio = mcdView.getRatio(cdpId, true);
-        uint256 nextPrice = mcdView.getNextPrice(ilk);
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, uint256 liquidationRatio) = spot.ilks(ilk);
 
-        return collRatio != 0 && collRatio >= execCollRatio.wad() && nextPrice <= maxBuyPrice;
+        return
+            nextCollRatio != 0 &&
+            nextCollRatio >= decoded.execCollRatio.wad() &&
+            nextPrice <= decoded.maxBuyPrice &&
+            beseFeeValid(decoded.maxBaseFeeInGwei) &&
+            decoded.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
+            liquidationRatio.radToWad();
     }
 
     function execute(
@@ -126,28 +102,15 @@ contract BasicBuyCommand is ICommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        (, uint16 triggerType, , , , bool continuous, ) = decode(triggerData);
-        require(triggerType == 3, "basic-buy/type-not-supported");
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
-        bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == MPALike.increaseMultiple.selector, "basic-buy/invalid-selector");
+        validateTriggerType(decoded.triggerType, 3);
+        validateSelector(MPALike.increaseMultiple.selector, executionData);
 
-        (bool status, bytes memory errorMsg) = serviceRegistry
-            .getRegisteredService(MPA_KEY)
-            .delegatecall(executionData);
-        require(status, "basic-buy/execution-failed");
+        executeMPAMethod(executionData);
 
-        if (continuous) {
-            (status, ) = msg.sender.delegatecall(
-                abi.encodeWithSelector(
-                    AutomationBot(msg.sender).addTrigger.selector,
-                    cdpId,
-                    triggerType,
-                    0,
-                    triggerData
-                )
-            );
-            require(status, "basic-buy/trigger-recreation-failed");
+        if (decoded.continuous) {
+            recreateTrigger(cdpId, decoded.triggerType, triggerData);
         }
     }
 
@@ -156,24 +119,15 @@ contract BasicBuyCommand is ICommand {
         view
         returns (bool)
     {
-        (, , , uint256 targetRatio, , , uint64 deviation) = decode(triggerData);
+        BasicBuyTriggerData memory decoded = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 collRatio = mcdView.getRatio(cdpId, false);
         uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(cdpId);
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
-        (, uint256 liquidationRatio) = spot.ilks(ilk);
+        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
+            decoded.deviation
+        );
 
-        (uint256 lowerTarget, uint256 upperTarget) = targetRatio.bounds(deviation);
-        return
-            (nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad()) ||
-            (collRatio < nextCollRatio &&
-                collRatio * 10**9 <
-                liquidationRatio.mul(RatioUtils.RATIO + liquidationRatioPercentage).div(
-                    RatioUtils.RATIO
-                ));
+        return nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad();
     }
 }
