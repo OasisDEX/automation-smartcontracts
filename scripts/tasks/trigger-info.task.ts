@@ -63,19 +63,24 @@ task<TriggerInfoArgs>('trigger-info')
         const { vaultId } = decodeBasicTriggerData(triggerData)
         const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
         const ilk = await cdpManager.ilks(vaultId.toString())
+        const { ilkDecimals } = await hardhatUtils.getIlkData(ilk)
+        const [coll, debt] = await mcdView.getVaultInfo(vaultId.toString())
         const price = await mcdView.getPrice(ilk, opts)
         const nextPrice = await mcdView.getNextPrice(ilk, opts)
         const collRatio = await mcdView.getRatio(vaultId.toString(), false, opts)
         const nextCollRatio = await mcdView.getRatio(vaultId.toString(), true, opts)
 
-        console.log(
-            `\nInfo At Block: ${opts.blockTag}\nIs Execution Legal: ${isExecutionLegal}\nPrice: ${toBaseUnits(
-                price,
-            )}\nNext Price: ${toBaseUnits(nextPrice)}\nColl Ratio: ${toBaseUnits(
-                collRatio,
-                16,
-            )}\nNext Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
-        )
+        const vaultInfo = [
+            `Info At Block: ${opts.blockTag}`,
+            `Is Execution Legal: ${isExecutionLegal}`,
+            `Collateral: ${toBaseUnits(coll, ilkDecimals)}`,
+            `Debt: ${toBaseUnits(debt)}`,
+            `Price: ${toBaseUnits(price)}`,
+            `Next Price: ${toBaseUnits(nextPrice)}`,
+            `Coll Ratio: ${toBaseUnits(collRatio, 16)}`,
+            `Next Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
+        ]
+        console.log(`\n${vaultInfo.join('\n')}`)
     })
 
 function toBaseUnits(val: EthersBN, decimals = 18) {
