@@ -241,8 +241,10 @@ export class TriggerExecutor {
                 minToTokenAmount: minToTokenAmount.toFixed(0),
                 exchangeAddress: ONE_INCH_V4_ROUTER,
                 _exchangeCalldata: forgeUnoswapCalldata(
-                    this.hardhatUtils.addresses.DAI,
-                    new BigNumber(fromTokenAmount).minus(oazoFee.shiftedBy(18)).toFixed(0),
+                    fromTokenAddress,
+                    new BigNumber(fromTokenAmount)
+                        .minus(isIncrease ? oazoFee.shiftedBy(18) : new BigNumber(0))
+                        .toFixed(0),
                     minToTokenAmount.toFixed(0),
                     false,
                 ),
@@ -274,10 +276,11 @@ export class TriggerExecutor {
             ? [this.hardhatUtils.addresses.DAI, gem, cdpData.requiredDebt, cdpData.borrowCollateral]
             : [gem, this.hardhatUtils.addresses.DAI, cdpData.borrowCollateral, cdpData.requiredDebt]
 
+        const minToTokenAmount = new BigNumber(toTokenAmount).times(new BigNumber(1).minus(slippage.div(100)))
+
         console.log('Requesting swap from 1inch...')
         const swap = await getSwap(fromTokenAddress, toTokenAddress, this.addresses.EXCHANGE, debtDelta.abs(), slippage)
 
-        const minToTokenAmount = new BigNumber(toTokenAmount).times(new BigNumber(1).minus(slippage.div(100)))
         const exchangeData = {
             fromTokenAddress,
             toTokenAddress,
