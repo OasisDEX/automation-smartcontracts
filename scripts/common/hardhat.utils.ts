@@ -1,6 +1,6 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { BigNumber, constants, Contract, Signer, utils } from 'ethers'
+import { BigNumber, CallOverrides, constants, Contract, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
@@ -208,7 +208,7 @@ export class HardhatUtils {
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
     }
 
-    public async getIlkData(ilk: string) {
+    public async getIlkData(ilk: string, opts?: CallOverrides) {
         const ilkRegistry = new this.hre.ethers.Contract(
             this.addresses.ILK_REGISTRY,
             [
@@ -220,9 +220,9 @@ export class HardhatUtils {
         )
 
         const [gem, gemJoin, ilkDecimals] = await Promise.all([
-            ilkRegistry.gem(ilk),
-            ilkRegistry.join(ilk),
-            ilkRegistry.dec(ilk),
+            ilkRegistry.gem(ilk, opts),
+            ilkRegistry.join(ilk, opts),
+            ilkRegistry.dec(ilk, opts),
         ])
 
         return {

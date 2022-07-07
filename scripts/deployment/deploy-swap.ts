@@ -23,7 +23,7 @@ async function main() {
     )
     const AutomationSwapInstance = await automationSwapDeployment.deployed()
 
-    await system.automationExecutor.addCallers([AutomationSwapInstance.address])
+    await (await system.automationExecutor.addCallers([AutomationSwapInstance.address])).wait()
 
     const swapHash = getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP)
     const entry = await system.serviceRegistry.getServiceAddress(swapHash)
