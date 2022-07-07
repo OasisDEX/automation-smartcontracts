@@ -54,6 +54,10 @@ export class TriggerExecutor {
 
         const executorSigner = await this.hardhatUtils.getValidExecutionCallerOrOwner(this.provider.getSigner(0))
 
+        if (args.debug) {
+            console.log('getExchangeAndCdpData execution')
+        }
+
         const { exchangeData, cdpData } = await this.getExchangeAndCdpData(
             vaultId,
             triggerType,
@@ -175,6 +179,7 @@ export class TriggerExecutor {
         const oraclePrice = await mcdView.connect(mcdViewSigner).getNextPrice(ilk)
 
         const { gem, gemJoin, ilkDecimals } = await this.hardhatUtils.getIlkData(ilk)
+
         const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
 
         const vaultInfo = {

@@ -209,6 +209,10 @@ export class HardhatUtils {
     }
 
     public async getIlkData(ilk: string, opts?: CallOverrides) {
+        if (!opts) {
+            opts = {}
+        }
+
         const ilkRegistry = new this.hre.ethers.Contract(
             this.addresses.ILK_REGISTRY,
             [

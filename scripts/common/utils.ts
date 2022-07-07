@@ -75,7 +75,10 @@ export function decodeStopLossData(data: string) {
 }
 
 export function decodeBasicBuyData(data: string) {
-    const [vault, type, exec, target, maxPrice, cont, deviation] = decodeTriggerData(TriggerType.BASIC_BUY, data)
+    const [vault, type, exec, target, maxPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
+        TriggerType.BASIC_BUY,
+        data,
+    )
     return {
         vaultId: new BigNumber(vault.toString()),
         type: new BigNumber(type.toString()),
@@ -84,11 +87,15 @@ export function decodeBasicBuyData(data: string) {
         maxBuyPrice: new BigNumber(maxPrice.toString()),
         continuous: cont,
         deviation: new BigNumber(deviation.toString()),
+        maxBaseFee: new BigNumber(maxBaseFee.toString()),
     }
 }
 
 export function decodeBasicSellData(data: string) {
-    const [vault, type, exec, target, minPrice, cont, deviation] = decodeTriggerData(TriggerType.BASIC_SELL, data)
+    const [vault, type, exec, target, minPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
+        TriggerType.BASIC_SELL,
+        data,
+    )
     return {
         vaultId: new BigNumber(vault.toString()),
         type: new BigNumber(type.toString()),
@@ -97,6 +104,7 @@ export function decodeBasicSellData(data: string) {
         minSellPrice: new BigNumber(minPrice.toString()),
         continuous: cont,
         deviation: new BigNumber(deviation.toString()),
+        maxBaseFee: new BigNumber(maxBaseFee.toString()),
     }
 }
 
@@ -144,7 +152,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
             return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
         }
         case TriggerType.BASIC_BUY: {
-            const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation } =
+            const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicBuyData(triggerData)
             return baseInfo.concat([
                 `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
@@ -152,10 +160,11 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `Max Buy Price: ${maxBuyPrice.shiftedBy(-18).toFixed(2)}`,
                 `Continuous: ${continuous}`,
                 `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+                `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
         case TriggerType.BASIC_SELL: {
-            const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation } =
+            const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicSellData(triggerData)
             return [
                 `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
@@ -163,6 +172,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
                 `Continuous: ${continuous}`,
                 `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+                `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ]
         }
         default:

@@ -40,6 +40,7 @@ const addresses = {
         AUTOMATION_MCD_UTILS: '0x68Ff2d96EDD4aFfcE9CBE82BF55F0B70acb483Ea',
         AUTOMATION_CLOSE_COMMAND: '0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b',
         AUTOMATION_BASIC_BUY_COMMAND: constants.AddressZero, // TODO:
+        AUTOMATION_BASIC_SELL_COMMAND: '0x7c86781A95b7E55E6C2F7297Ae6773e1dbcEAb13',
     },
     [Network.GOERLI]: {
         CDP_MANAGER: '0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032',
@@ -66,6 +67,7 @@ const addresses = {
         AUTOMATION_MCD_UTILS: '0xc27F0A5e6c6f2819d953eE04F2FABdF680D5130c',
         AUTOMATION_CLOSE_COMMAND: '0x31285A87fB70a62b5AaA43199e53221c197E1e3f',
         AUTOMATION_BASIC_BUY_COMMAND: '0x7c86781A95b7E55E6C2F7297Ae6773e1dbcEAb13',
+        AUTOMATION_BASIC_SELL_COMMAND: '0x7c86781A95b7E55E6C2F7297Ae6773e1dbcEAb13',
     },
 }
 
@@ -114,6 +116,8 @@ export function getCommandAddress(network: string | Network, type: TriggerType) 
             return addresses.AUTOMATION_CLOSE_COMMAND
         case TriggerType.BASIC_BUY:
             return addresses.AUTOMATION_BASIC_BUY_COMMAND
+        case TriggerType.BASIC_SELL:
+            return addresses.AUTOMATION_BASIC_SELL_COMMAND
         default:
             throw new Error(`Cannot get command address. Trigger Type: ${type}`)
     }

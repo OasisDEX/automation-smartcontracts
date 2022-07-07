@@ -121,7 +121,9 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             return
         }
 
-        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData)
+        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData, {
+            gasLimit: 2000000,
+        })
         const receipt = await tx.wait()
 
         const [triggerAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerAdded'))
