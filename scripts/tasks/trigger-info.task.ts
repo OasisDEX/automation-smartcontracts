@@ -61,6 +61,9 @@ task<TriggerInfoArgs>('trigger-info')
         }
 
         const { vaultId } = decodeBasicTriggerData(triggerData)
+        const vaultOwner = await cdpManager.owns(vaultId.toString())
+        const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
+        const proxyOwner = await proxy.owner()
         const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
         const ilk = await cdpManager.ilks(vaultId.toString())
         const { ilkDecimals } = await hardhatUtils.getIlkData(ilk)
@@ -73,6 +76,7 @@ task<TriggerInfoArgs>('trigger-info')
         const vaultInfo = [
             `Info At Block: ${opts.blockTag}`,
             `Is Execution Legal: ${isExecutionLegal}`,
+            `Vault Owner: ${proxyOwner}`,
             `Collateral: ${toBaseUnits(coll, ilkDecimals)}`,
             `Debt: ${toBaseUnits(debt)}`,
             `Price: ${toBaseUnits(price)}`,
