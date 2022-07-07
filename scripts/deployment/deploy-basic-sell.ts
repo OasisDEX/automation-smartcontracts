@@ -19,7 +19,7 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    const deployed = await deployCommand(ethers, utils, 'BasicSellCommand')
+    const deployed = await deployCommand(hre.ethers, utils, 'BasicSellCommand')
 
     console.log(`BasicSell Deployed: ${deployed.address}`)
 

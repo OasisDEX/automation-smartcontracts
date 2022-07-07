@@ -13,7 +13,7 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    const deployed = await deployCommand(ethers, utils, 'BasicBuyCommand')
+    const deployed = await deployCommand(hre.ethers, utils, 'BasicBuyCommand')
 
     system.basicBuy = deployed as BasicBuyCommand
 
