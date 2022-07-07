@@ -34,9 +34,11 @@ function getTriggerDataTypes(triggerType: TriggerType) {
         case TriggerType.CLOSE_TO_DAI:
             return ['uint256', 'uint16', 'uint256']
         case TriggerType.BASIC_BUY:
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64']
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         case TriggerType.BASIC_SELL:
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64']
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
