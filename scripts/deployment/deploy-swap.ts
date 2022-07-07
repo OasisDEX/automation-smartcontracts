@@ -27,16 +27,14 @@ async function main() {
 
     const swapHash = getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP)
     const entry = await system.serviceRegistry.getServiceAddress(swapHash)
+
     if (entry !== constants.AddressZero) {
-        console.log('Removing existing AUTOMATION_SWAP entry...')
-        await (await system.serviceRegistry.removeNamedService(swapHash)).wait()
+        console.log('Updating existing AUTOMATION_SWAP entry...')
+        await (await system.serviceRegistry.updateNamedService(swapHash, automationSwapDeployment.address)).wait()
+    } else {
+        console.log('Adding AUTOMATION_SWAP entry...')
+        await (await system.serviceRegistry.addNamedService(swapHash, automationSwapDeployment.address)).wait()
     }
-    await (
-        await system.serviceRegistry.addNamedService(
-            getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
-            automationSwapDeployment.address,
-        )
-    ).wait()
 
     await (await AutomationSwapInstance.addCallers(callers)).wait()
     console.log(`AutomationSwap Deployed: ${automationSwapDeployment.address}`)
