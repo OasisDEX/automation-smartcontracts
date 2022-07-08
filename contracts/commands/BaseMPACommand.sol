@@ -35,7 +35,7 @@ abstract contract BaseMPACommand is ICommand {
     string public constant MCD_SPOT_KEY = "MCD_SPOT";
     string public constant MCD_VAT_KEY = "MCD_VAT";
 
-    uint256 public constant MIN_ALLOWED_DEVIATION = 5000;
+    uint256 public constant MIN_ALLOWED_DEVIATION = 50;
 
     ServiceRegistry public immutable serviceRegistry;
 
