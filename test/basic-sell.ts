@@ -127,7 +127,7 @@ describe('BasicSellCommand', () => {
                 correctTargetRatio,
                 0,
                 false,
-                toRatio(0.5),
+                50,
                 maxGweiPrice,
             )
             const tx = createTrigger(triggerData)
@@ -151,7 +151,7 @@ describe('BasicSellCommand', () => {
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(4000).shiftedBy(18).toFixed(),
                 continuous,
-                toRatio(0.5),
+                50,
                 maxGweiPrice,
             )
             const createTriggerTx = await createTrigger(triggerData)

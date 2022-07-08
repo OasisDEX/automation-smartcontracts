@@ -1,4 +1,3 @@
-import { ethers } from 'ethers'
 import hre from 'hardhat'
 import { BasicBuyCommand } from '../../typechain'
 import { AddressRegistry, deployCommand, getCommandHash, HardhatUtils, TriggerType } from '../common'
