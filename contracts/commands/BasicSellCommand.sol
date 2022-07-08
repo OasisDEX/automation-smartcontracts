@@ -18,8 +18,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import { RatioUtils } from "../libs/RatioUtils.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
+import { VatLike } from "../interfaces/VatLike.sol";
+import { RatioUtils } from "../libs/RatioUtils.sol";
+import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
@@ -48,12 +50,14 @@ contract BasicSellCommand is BaseMPACommand {
         pure
         returns (bool)
     {
-        BasicSellTriggerData memory decodedTrigger = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        (uint256 lowerTarget, ) = decodedTrigger.targetCollRatio.bounds(decodedTrigger.deviation);
-        return (_cdpId == decodedTrigger.cdpId &&
-            decodedTrigger.triggerType == 4 &&
-            decodedTrigger.execCollRatio < lowerTarget);
+        (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
+        return
+            _cdpId == trigger.cdpId &&
+            trigger.triggerType == 4 &&
+            trigger.execCollRatio <= lowerTarget &&
+            deviationIsValid(trigger.deviation);
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -61,21 +65,20 @@ contract BasicSellCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicSellTriggerData memory decodedTrigger = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
         (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
         uint256 dustLimit = getDustLimit(ilk);
         uint256 debt = getVaultDebt(cdpId);
         uint256 wad = RatioUtils.WAD;
-        uint256 futureDebt = uint256(
-            (int256(debt * wad) - int256(debt * nextCollRatio)) /
-                (int256(wad) - int256(decodedTrigger.targetCollRatio.wad()))
-        );
+        uint256 futureDebt = (debt * nextCollRatio - debt * wad) /
+            (trigger.targetCollRatio.wad() - wad);
+
         return
-            (decodedTrigger.execCollRatio.wad() > nextCollRatio &&
-                decodedTrigger.minSellPrice < nextPrice) &&
-            beseFeeValid(decodedTrigger.maxBaseFeeInGwei) &&
-            futureDebt > dustLimit;
+            trigger.execCollRatio.wad() > nextCollRatio &&
+            trigger.minSellPrice < nextPrice &&
+            futureDebt > dustLimit &&
+            baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 
     function execute(
@@ -83,15 +86,15 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        validateTriggerType(decodedTriggerData.triggerType, 4);
+        validateTriggerType(trigger.triggerType, 4);
         validateSelector(MPALike.decreaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
-        if (decodedTriggerData.continuous) {
-            recreateTrigger(cdpId, decodedTriggerData.triggerType, triggerData);
+        if (trigger.continuous) {
+            recreateTrigger(cdpId, trigger.triggerType, triggerData);
         }
     }
 
@@ -100,13 +103,21 @@ contract BasicSellCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicSellTriggerData memory decodedTriggerData = decode(triggerData);
-        (, uint256 nextCollRatio, , , bytes32 ilk) = getVaultAndMarketInfo(cdpId);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        (uint256 lowerTarget, uint256 upperTarget) = decodedTriggerData.targetCollRatio.bounds(
-            decodedTriggerData.deviation
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
+
+        (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
+            trigger.deviation
         );
 
-        return (nextCollRatio >= lowerTarget.wad() && nextCollRatio <= upperTarget.wad());
+        return nextCollRatio >= lowerTarget.wad() && nextCollRatio <= upperTarget.wad();
+    }
+
+    function getDustLimit(bytes32 ilk) internal view returns (uint256) {
+        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
+        (, , , , uint256 radDust) = vat.ilks(ilk);
+        return radDust.radToWad();
     }
 }

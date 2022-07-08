@@ -8,7 +8,7 @@ import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const maxGweiPrice = 1000;
+const maxGweiPrice = 1000
 
 function toRatio(units: number) {
     return new BigNumber(units).shiftedBy(4).toNumber()
@@ -77,7 +77,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
+                maxGweiPrice,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -92,7 +92,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
+                maxGweiPrice,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -107,7 +107,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
+                maxGweiPrice,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -121,7 +121,7 @@ describe('BasicBuyCommand', () => {
             await expect(createTrigger(triggerData)).to.be.reverted
         })
 
-        it('should successfully create the trigger', async () => {
+        it('should fail if deviation is less the minimum', async () => {
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId,
@@ -131,7 +131,22 @@ describe('BasicBuyCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData)).to.be.reverted
+        })
+
+        it('should successfully create the trigger', async () => {
+            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                executionRatio,
+                targetRatio,
+                0,
+                false,
+                50,
+                maxGweiPrice,
             )
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
@@ -154,8 +169,8 @@ describe('BasicBuyCommand', () => {
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),
                 continuous,
-                toRatio(0.5),
-                maxGweiPrice
+                50,
+                maxGweiPrice,
             )
             const createTriggerTx = await createTrigger(triggerData)
             const receipt = await createTriggerTx.wait()

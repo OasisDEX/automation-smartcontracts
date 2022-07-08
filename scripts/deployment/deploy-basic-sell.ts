@@ -1,13 +1,6 @@
-import hre, { ethers } from 'hardhat'
+import hre from 'hardhat'
 import { BasicSellCommand } from '../../typechain'
-import {
-    HardhatUtils,
-    deployCommand,
-    ensureEntryInServiceRegistry,
-    AddressRegistry,
-    getCommandHash,
-    TriggerType,
-} from '../common'
+import { HardhatUtils, deployCommand, AddressRegistry, getCommandHash, TriggerType } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
