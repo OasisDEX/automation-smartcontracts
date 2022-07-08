@@ -7,9 +7,8 @@ import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, Trigg
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, IERC20, MPALike } from '../typechain'
 
-const EXCHANGE_ADDRESS = '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const maxGweiPrice = 1000;
+const maxGweiPrice = 1000
 
 function toRatio(units: number) {
     return new BigNumber(units).shiftedBy(4).toNumber()
@@ -23,7 +22,6 @@ describe('BasicSellCommand', () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     let system: DeployedSystem
-    let DAIInstance: IERC20
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
     let proxyOwnerAddress: string
@@ -46,7 +44,6 @@ describe('BasicSellCommand', () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
-        DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
         system = await deploySystem({ utils: hardhatUtils, addCommands: true })
@@ -68,12 +65,11 @@ describe('BasicSellCommand', () => {
     })
 
     afterEach(async () => {
-      await hre.ethers.provider.send('evm_revert', [snapshotId])
+        await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('isTriggerDataValid', () => {
         it('should fail if target coll ratio is lower than execution ratio', async () => {
-            
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_SELL,
@@ -82,8 +78,7 @@ describe('BasicSellCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
-                
+                maxGweiPrice,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -97,7 +92,21 @@ describe('BasicSellCommand', () => {
                 0,
                 false,
                 0,
-                maxGweiPrice
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData)).to.be.reverted
+        })
+
+        it('should fail if deviation is less the minimum', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_SELL,
+                correctExecutionRatio,
+                correctTargetRatio,
+                0,
+                false,
+                0,
+                maxGweiPrice,
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -118,8 +127,8 @@ describe('BasicSellCommand', () => {
                 correctTargetRatio,
                 0,
                 false,
-                0,
-                maxGweiPrice
+                toRatio(0.5),
+                maxGweiPrice,
             )
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
@@ -133,7 +142,7 @@ describe('BasicSellCommand', () => {
         async function createTriggerForExecution(
             executionRatio: BigNumber.Value,
             targetRatio: BigNumber.Value,
-            continuous: boolean
+            continuous: boolean,
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
@@ -143,7 +152,7 @@ describe('BasicSellCommand', () => {
                 new BigNumber(4000).shiftedBy(18).toFixed(),
                 continuous,
                 toRatio(0.5),
-                maxGweiPrice
+                maxGweiPrice,
             )
             const createTriggerTx = await createTrigger(triggerData)
             const receipt = await createTriggerTx.wait()
@@ -226,7 +235,7 @@ describe('BasicSellCommand', () => {
                 triggerId,
                 0,
                 0,
-                0
+                0,
             )
         }
 
@@ -235,11 +244,15 @@ describe('BasicSellCommand', () => {
         })
 
         afterEach(async () => {
-          await hre.ethers.provider.send('evm_revert', [snapshotId])
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
         it('executes the trigger', async () => {
-            const { triggerId, triggerData } = await createTriggerForExecution(correctExecutionRatio, correctTargetRatio, false)
+            const { triggerId, triggerData } = await createTriggerForExecution(
+                correctExecutionRatio,
+                correctTargetRatio,
+                false,
+            )
 
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
         })

@@ -25,17 +25,19 @@ import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
-import { VatLike } from "../interfaces/VatLike.sol";
 
 abstract contract BaseMPACommand is ICommand {
     using RatioUtils for uint256;
-    ServiceRegistry public immutable serviceRegistry;
 
     string public constant MCD_VIEW_KEY = "MCD_VIEW";
     string public constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string public constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
     string public constant MCD_SPOT_KEY = "MCD_SPOT";
     string public constant MCD_VAT_KEY = "MCD_VAT";
+
+    uint256 public constant MIN_ALLOWED_DEVIATION = 5000;
+
+    ServiceRegistry public immutable serviceRegistry;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -68,8 +70,12 @@ abstract contract BaseMPACommand is ICommand {
         return debt;
     }
 
-    function beseFeeValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
-        return block.basefee < maxAcceptableBaseFeeInGwei * (10**9);
+    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
+        return block.basefee <= maxAcceptableBaseFeeInGwei * (10**9);
+    }
+
+    function deviationIsValid(uint256 deviation) public pure returns (bool) {
+        return deviation >= MIN_ALLOWED_DEVIATION;
     }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
@@ -86,13 +92,6 @@ abstract contract BaseMPACommand is ICommand {
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
         require(status, string(reason));
-    }
-
-    function getDustLimit(bytes32 ilk) internal view returns (uint256 dustLimit) {
-        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
-        (, , , , uint256 radDust) = vat.ilks(ilk);
-        uint256 wadDust = radDust.radToWad();
-        return wadDust;
     }
 
     function recreateTrigger(
