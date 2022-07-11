@@ -221,31 +221,35 @@ export class TriggerExecutor {
                 desiredCdpState,
             )
 
+            const requiredDebt = debtDelta.shiftedBy(18).abs()
+
             const cdpData = {
                 ...defaultCdpData,
-                requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+                requiredDebt: requiredDebt.toFixed(0),
                 borrowCollateral: collateralDelta.shiftedBy(ilkDecimals).abs().toFixed(0),
                 skipFL,
             }
 
-            const [fromTokenAddress, toTokenAddress, fromTokenAmount, toTokenAmount] = isIncrease
+            const [fromTokenAddress, toTokenAddress, fromTokenAmount, minToTokenAmount] = isIncrease
                 ? [this.hardhatUtils.addresses.DAI, gem, cdpData.requiredDebt, cdpData.borrowCollateral]
                 : [gem, this.hardhatUtils.addresses.DAI, cdpData.borrowCollateral, cdpData.requiredDebt]
 
-            const minToTokenAmount = new BigNumber(toTokenAmount).times(new BigNumber(1).minus(slippage.div(100)))
+            console.log('Slippage', slippage.toFixed(5))
+
+            const toTokenAmount = new BigNumber(minToTokenAmount).div(new BigNumber(1).minus(slippage.div(100)))
             const exchangeData = {
                 fromTokenAddress,
                 toTokenAddress,
                 fromTokenAmount,
-                toTokenAmount,
-                minToTokenAmount: minToTokenAmount.toFixed(0),
+                toTokenAmount: toTokenAmount.toFixed(0),
+                minToTokenAmount: minToTokenAmount,
                 exchangeAddress: ONE_INCH_V4_ROUTER,
                 _exchangeCalldata: forgeUnoswapCalldata(
                     fromTokenAddress,
                     new BigNumber(fromTokenAmount)
                         .minus(isIncrease ? oazoFee.shiftedBy(18) : new BigNumber(0))
                         .toFixed(0),
-                    minToTokenAmount.toFixed(0),
+                    minToTokenAmount,
                     false,
                 ),
             }

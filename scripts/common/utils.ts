@@ -172,14 +172,14 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
         case TriggerType.BASIC_SELL: {
             const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicSellData(triggerData)
-            return [
+            return baseInfo.concat([
                 `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
                 `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
                 `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
                 `Continuous: ${continuous}`,
                 `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
-            ]
+            ])
         }
         default:
             throw new Error(`Trigger Type ${triggerType} is not supported.`)
