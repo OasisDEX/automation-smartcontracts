@@ -2,12 +2,12 @@ import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import { CallOverrides, constants, Contract, ethers, Signer, utils } from 'ethers'
 import R from 'ramda'
+import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 import { getGasPrice } from './etherscan'
-import BigNumber from 'bignumber.js'
 
 export class HardhatUtils {
     public readonly addresses
