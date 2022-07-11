@@ -2,13 +2,15 @@ import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
 import { CallOverrides, constants, Contract, ethers, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import R from 'ramda'
+import axios from 'axios'
+import NodeCache from 'node-cache'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
-import { Network } from './types'
+import { EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
-import { getGasPrice } from './etherscan'
 
 export class HardhatUtils {
+    private readonly _cache = new NodeCache()
     public readonly addresses
     constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
         this.addresses = getAddressesFor(this.forked || this.hre.network.name)
@@ -252,10 +254,27 @@ export class HardhatUtils {
     }
 
     public async getGasSettings() {
-        const { suggestBaseFee } = await getGasPrice()
+        const { suggestBaseFee } = await this.getGasPrice()
         return {
             maxFeePerGas: EthersBN.from((parseFloat(suggestBaseFee) + 2) * 1e9),
             maxPriorityFeePerGas: EthersBN.from(2).mul(1e9),
         }
+    }
+
+    public async getGasPrice(): Promise<EtherscanGasPrice['result']> {
+        const cached = this._cache.get<EtherscanGasPrice['result']>('gasprice')
+        if (cached) {
+            return cached
+        }
+
+        const { data } = await axios.get<EtherscanGasPrice>('https://api.etherscan.io/api', {
+            params: {
+                module: 'gastracker',
+                action: 'gasoracle',
+                apikey: process.env.ETHERSCAN_API_KEY,
+            },
+        })
+        this._cache.set('gasprice', data.result, 10)
+        return data.result
     }
 }

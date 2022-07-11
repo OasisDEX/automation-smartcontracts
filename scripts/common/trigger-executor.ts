@@ -3,7 +3,6 @@ import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/in
 import BigNumber from 'bignumber.js'
 import { BytesLike, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import { getStartBlocksFor, ONE_INCH_V4_ROUTER } from './addresses'
-import { getGasPrice } from './etherscan'
 import { HardhatUtils } from './hardhat.utils'
 import { getQuote, getSwap } from './one-inch'
 import { BaseExecutionArgs, Network, TriggerType } from './types'
@@ -450,7 +449,7 @@ export class TriggerExecutor {
         const adjustedGasEstimate = estimate.mul(120).div(100)
         console.log(`Adjusted Gas Estimate: ${adjustedGasEstimate.toString()}`)
 
-        const gasPrice = await getGasPrice()
+        const gasPrice = await this.hardhatUtils.getGasPrice()
         console.log(`Starting trigger execution...`)
         const tx = await executorSigner.sendTransaction({
             ...transactionData,
