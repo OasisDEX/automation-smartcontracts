@@ -1,13 +1,13 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { BigNumber, CallOverrides, constants, Contract, Signer, utils } from 'ethers'
+import { CallOverrides, constants, Contract, ethers, Signer, utils } from 'ethers'
 import R from 'ramda'
-import fs from 'fs'
-import chalk from 'chalk'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
+import { getGasPrice } from './etherscan'
+import BigNumber from 'bignumber.js'
 
 export class HardhatUtils {
     public readonly addresses
@@ -49,6 +49,18 @@ export class HardhatUtils {
         }
     }
 
+    public async deployContract<F extends ethers.ContractFactory, C extends Contract>(
+        _factory: F | Promise<F>,
+        params: Parameters<F['deploy']>,
+    ): Promise<C> {
+        const factory = await _factory
+
+        const settings = this.targetNetwork === Network.MAINNET ? await this.getGasSettings() : {}
+
+        const deployment = await factory.deploy(...params, settings)
+        return (await deployment.deployed()) as C
+    }
+
     public mpaServiceRegistry() {
         return {
             jug: this.addresses.MCD_JUG,
@@ -80,42 +92,6 @@ export class HardhatUtils {
             to: await signer.getAddress(),
         })
         console.log(`🛰 Tx sent ${tx.hash}`)
-    }
-
-    public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
-        if (!silent) {
-            console.log(`🛰 Deploying: ${contractName}`)
-        }
-
-        const contractArgs = _args || []
-        const contractArtifacts = await this.hre.ethers.getContractFactory(contractName, {
-            libraries: libraries,
-        })
-        const deployed = await contractArtifacts.deploy(...contractArgs, overrides)
-        const encoded = this.abiEncodeArgs(deployed, contractArgs)
-        fs.writeFileSync(`artifacts/${contractName}.address`, deployed.address)
-
-        if (!silent) {
-            let extraGasInfo = ''
-            if (deployed?.deployTransaction) {
-                const gasUsed = deployed.deployTransaction.gasLimit.mul(
-                    deployed.deployTransaction.gasPrice as BigNumber,
-                )
-                extraGasInfo = '(' + utils.formatEther(gasUsed) + ' ETH)'
-            }
-
-            console.log(
-                ` 📄 ${chalk.cyan(contractName)} deployed to ${chalk.magenta(deployed.address)} ${chalk.grey(
-                    extraGasInfo,
-                )} in block ${chalk.yellow(deployed.deployTransaction.blockNumber)}`,
-            )
-        }
-
-        if (encoded?.length > 2) {
-            fs.writeFileSync(`artifacts/${contractName}.args`, encoded.slice(2))
-        }
-
-        return deployed
     }
 
     public async send(tokenAddr: string, to: string, amount: number) {
@@ -274,5 +250,13 @@ export class HardhatUtils {
         const owner = await this.impersonate(mcdViewOwner)
         console.log(`Impersonated McdView owner ${mcdViewOwner}...`)
         return owner
+    }
+
+    public async getGasSettings() {
+        const { suggestBaseFee } = await getGasPrice()
+        return {
+            maxFeePerGas: new BigNumber(suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
+            maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
+        }
     }
 }

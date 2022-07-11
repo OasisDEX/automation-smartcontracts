@@ -35,13 +35,11 @@ export interface DeploySystemArgs {
     addressOverrides?: Partial<AddressRegistry>
 }
 
-const createServiceRegistry = (serviceRegistryInstance: ServiceRegistry) => {
+const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry) => {
     return async (hash: string, address: string): Promise<void> => {
-        const existingAddress = await serviceRegistryInstance.getServiceAddress(hash)
+        const existingAddress = await serviceRegistry.getServiceAddress(hash)
         if (existingAddress === constants.AddressZero) {
-            const receipt = await serviceRegistryInstance.addNamedService(hash, address, {
-                gasLimit: '100000',
-            })
+            const receipt = await serviceRegistry.addNamedService(hash, address, await utils.getGasSettings())
             await receipt.wait()
         }
     }
@@ -63,78 +61,70 @@ export async function deploySystem({
     const { ethers } = utils.hre
     const addresses = { ...utils.addresses, ...addressOverrides }
 
-    const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
-    const automationBotFactory = await ethers.getContractFactory('AutomationBot')
-    const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
-    const automationSwapFactory = await ethers.getContractFactory('AutomationSwap')
-    const mcdViewFactory = await ethers.getContractFactory('McdView')
-    const mcdUtilsFactory = await ethers.getContractFactory('McdUtils')
-    const closeCommandFactory = await ethers.getContractFactory('CloseCommand')
-    const basicBuyFactory = await ethers.getContractFactory('BasicBuyCommand')
-    const basicSellFactory = await ethers.getContractFactory('BasicSellCommand')
-
     if (logDebug) console.log('Deploying ServiceRegistry....')
-    const serviceRegistryDeployment = await serviceRegistryFactory.deploy(delay)
-    const ServiceRegistryInstance = await serviceRegistryDeployment.deployed()
+    const ServiceRegistryInstance: ServiceRegistry = await utils.deployContract(
+        ethers.getContractFactory('ServiceRegistry'),
+        [delay],
+    )
 
     if (logDebug) console.log('Deploying McdUtils....')
-    const mcdUtilsDeployment = await mcdUtilsFactory.deploy(
+    const McdUtilsInstance: McdUtils = await utils.deployContract(ethers.getContractFactory('McdUtils'), [
         ServiceRegistryInstance.address,
         addresses.DAI,
         addresses.DAI_JOIN,
         addresses.MCD_JUG,
-    )
-    const McdUtilsInstance = await mcdUtilsDeployment.deployed()
+    ])
 
     if (logDebug) console.log('Deploying AutomationBot....')
-    const automationBotDeployment = await automationBotFactory.deploy(ServiceRegistryInstance.address)
-    const AutomationBotInstance = await automationBotDeployment.deployed()
+    const AutomationBotInstance: AutomationBot = await utils.deployContract(
+        ethers.getContractFactory('AutomationBot'),
+        [ServiceRegistryInstance.address],
+    )
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
-    const automationExecutorDeployment = await automationExecutorFactory.deploy(
-        AutomationBotInstance.address,
-        addresses.DAI,
-        addresses.WETH,
-        utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
+    const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
+        ethers.getContractFactory('AutomationExecutor'),
+        [
+            AutomationBotInstance.address,
+            addresses.DAI,
+            addresses.WETH,
+            utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
+        ],
     )
-    const AutomationExecutorInstance = await automationExecutorDeployment.deployed()
 
     if (logDebug) console.log('Deploying AutomationSwap....')
-    const automationSwapDeployment = await automationSwapFactory.deploy(
-        AutomationExecutorInstance.address,
-        addresses.DAI,
+    const AutomationSwapInstance: AutomationSwap = await utils.deployContract(
+        ethers.getContractFactory('AutomationSwap'),
+        [AutomationExecutorInstance.address, addresses.DAI],
     )
-    const AutomationSwapInstance = await automationSwapDeployment.deployed()
     await AutomationExecutorInstance.addCallers([AutomationSwapInstance.address])
 
-    let McdViewInstance: McdView
-    const signer = ethers.provider.getSigner(0)
-    if (deployMcdView) {
-        if (logDebug) console.log('Deploying McdView....')
-        const mcdViewDeployment = await mcdViewFactory.deploy(
-            addresses.MCD_VAT,
-            addresses.CDP_MANAGER,
-            addresses.MCD_SPOT,
-            addresses.OSM_MOM,
-            await signer.getAddress(),
-        )
-        McdViewInstance = await mcdViewDeployment.deployed()
-    } else {
-        McdViewInstance = await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, signer)
-    }
+    if (deployMcdView && logDebug) console.log('Deploying McdView....')
+    const McdViewInstance: McdView = deployMcdView
+        ? await utils.deployContract(ethers.getContractFactory('McdView'), [
+              addresses.MCD_VAT,
+              addresses.CDP_MANAGER,
+              addresses.MCD_SPOT,
+              addresses.OSM_MOM,
+              await ethers.provider.getSigner(0).getAddress(),
+          ])
+        : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, ethers.provider.getSigner(0))
 
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand....')
-        const closeCommandDeployment = await closeCommandFactory.deploy(ServiceRegistryInstance.address)
-        CloseCommandInstance = await closeCommandDeployment.deployed()
+        CloseCommandInstance = (await utils.deployContract(ethers.getContractFactory('CloseCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as CloseCommand
 
         if (logDebug) console.log('Deploying BasicBuy....')
-        const basicBuyDeployment = await basicBuyFactory.deploy(ServiceRegistryInstance.address)
-        BasicBuyInstance = await basicBuyDeployment.deployed()
+        BasicBuyInstance = (await utils.deployContract(ethers.getContractFactory('BasicBuyCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as BasicBuyCommand
 
         if (logDebug) console.log('Deploying BasicSell....')
-        const basicSellDeployment = await basicSellFactory.deploy(ServiceRegistryInstance.address)
-        BasicSellInstance = await basicSellDeployment.deployed()
+        BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as BasicSellCommand
     }
 
     if (logDebug) {
@@ -163,32 +153,33 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
     }
 
-    await configureRegistryEntries(system, addresses as AddressRegistry, logDebug)
+    await configureRegistryEntries(utils, system, addresses as AddressRegistry, logDebug)
     return system
 }
 
 export async function configureRegistryEntries(
+    utils: HardhatUtils,
     system: DeployedSystem,
     addresses: AddressRegistry,
     logDebug = false,
     allowedReplacements: string[] = [],
 ) {
-    const ensureServiceRegistryEntry = createServiceRegistry(system.serviceRegistry)
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry)
     if (allowedReplacements.length > 0) {
         const existingHashes = (
             await Promise.all(
-                allowedReplacements.map(hash =>
-                    system.serviceRegistry.getServiceAddress(hash).then(address => ({
-                        hash,
-                        exists: address !== constants.AddressZero,
-                    })),
-                ),
+                allowedReplacements.map(async hash => ({
+                    hash,
+                    exists: (await system.serviceRegistry.getServiceAddress(hash)) !== constants.AddressZero,
+                })),
             )
         )
             .filter(x => x.exists)
             .map(x => x.hash)
 
-        await Promise.all(existingHashes.map(hash => system.serviceRegistry.removeNamedService(hash)))
+        for (const hash of existingHashes) {
+            await (await system.serviceRegistry.removeNamedService(hash, await utils.getGasSettings())).wait()
+        }
     }
 
     if (system.closeCommand) {
@@ -199,7 +190,7 @@ export async function configureRegistryEntries(
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
-        await (await system.mcdView.approve(system.closeCommand.address, true)).wait()
+        await (await system.mcdView.approve(system.closeCommand.address, true, await utils.getGasSettings())).wait()
     }
 
     if (system.basicBuy) {
@@ -207,7 +198,7 @@ export async function configureRegistryEntries(
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
-        await (await system.mcdView.approve(system.basicBuy.address, true)).wait()
+        await (await system.mcdView.approve(system.basicBuy.address, true, await utils.getGasSettings())).wait()
     }
 
     if (system.basicSell) {
@@ -215,7 +206,7 @@ export async function configureRegistryEntries(
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_SELL), system.basicSell.address)
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
-        await (await system.mcdView.approve(system.basicSell.address, true)).wait()
+        await (await system.mcdView.approve(system.basicSell.address, true, await utils.getGasSettings())).wait()
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
