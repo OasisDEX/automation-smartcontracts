@@ -1,8 +1,7 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { CallOverrides, constants, Contract, ethers, Signer, utils } from 'ethers'
+import { CallOverrides, constants, Contract, ethers, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import R from 'ramda'
-import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
@@ -255,8 +254,8 @@ export class HardhatUtils {
     public async getGasSettings() {
         const { suggestBaseFee } = await getGasPrice()
         return {
-            maxFeePerGas: new BigNumber(suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-            maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
+            maxFeePerGas: EthersBN.from((parseFloat(suggestBaseFee) + 2) * 1e9),
+            maxPriorityFeePerGas: EthersBN.from(2).mul(1e9),
         }
     }
 }
