@@ -16,10 +16,6 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
         throw new Error(`Etherscan API Key must be set`)
     }
 
-    const url =
-        coalesceNetwork(network as Network) === Network.MAINNET
-            ? 'https://api.etherscan.io/api'
-            : `https://api-${network}.etherscan.io/api`
     const { data } = await axios.get<EtherscanTransactionListResponse>(etherscanAPIUrl(network), {
         params: {
             module: 'account',
