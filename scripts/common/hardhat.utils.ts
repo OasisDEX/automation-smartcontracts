@@ -55,10 +55,7 @@ export class HardhatUtils {
         params: Parameters<F['deploy']>,
     ): Promise<C> {
         const factory = await _factory
-
-        const settings = this.targetNetwork === Network.MAINNET ? await this.getGasSettings() : {}
-
-        const deployment = await factory.deploy(...params, settings)
+        const deployment = await factory.deploy(...params, await this.getGasSettings())
         return (await deployment.deployed()) as C
     }
 
@@ -254,6 +251,10 @@ export class HardhatUtils {
     }
 
     public async getGasSettings() {
+        if (this.hre.network.name !== Network.MAINNET) {
+            return {}
+        }
+
         const { suggestBaseFee } = await this.getGasPrice()
         return {
             maxFeePerGas: EthersBN.from((parseFloat(suggestBaseFee) + 2) * 1e9),
