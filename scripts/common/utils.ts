@@ -165,7 +165,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
                 `Max Buy Price: ${maxBuyPrice.shiftedBy(-18).toFixed(2)}`,
                 `Continuous: ${continuous}`,
-                `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+                `Deviation: ${deviation.shiftedBy(-2).toFixed()}%`,
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
@@ -177,7 +177,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
                 `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
                 `Continuous: ${continuous}`,
-                `Deviation: ${deviation.shiftedBy(-4).toFixed()}%`,
+                `Deviation: ${deviation.shiftedBy(-2).toFixed()}%`,
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
