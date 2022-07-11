@@ -19,10 +19,10 @@
 pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
+import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
@@ -53,21 +53,22 @@ contract BasicBuyCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicBuyTriggerData memory decoded = decode(triggerData);
+        BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(decoded.cdpId);
+        bytes32 ilk = manager.ilks(trigger.cdpId);
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
-        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
-            decoded.deviation
+        (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
+            trigger.deviation
         );
         return
-            _cdpId == decoded.cdpId &&
-            decoded.triggerType == 3 &&
-            decoded.execCollRatio > upperTarget &&
-            lowerTarget.ray() > liquidationRatio;
+            _cdpId == trigger.cdpId &&
+            trigger.triggerType == 3 &&
+            trigger.execCollRatio > upperTarget &&
+            lowerTarget.ray() > liquidationRatio &&
+            deviationIsValid(trigger.deviation);
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
@@ -75,7 +76,7 @@ contract BasicBuyCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicBuyTriggerData memory decoded = decode(triggerData);
+        BasicBuyTriggerData memory trigger = decode(triggerData);
 
         (
             ,
@@ -89,12 +90,11 @@ contract BasicBuyCommand is BaseMPACommand {
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
         return
-            nextCollRatio != 0 &&
-            nextCollRatio >= decoded.execCollRatio.wad() &&
-            nextPrice <= decoded.maxBuyPrice &&
-            beseFeeValid(decoded.maxBaseFeeInGwei) &&
-            decoded.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
-            liquidationRatio.radToWad();
+            nextCollRatio >= trigger.execCollRatio.wad() &&
+            nextPrice <= trigger.maxBuyPrice &&
+            trigger.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
+            liquidationRatio.radToWad() &&
+            baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 
     function execute(
@@ -102,15 +102,15 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external {
-        BasicBuyTriggerData memory decoded = decode(triggerData);
+        BasicBuyTriggerData memory trigger = decode(triggerData);
 
-        validateTriggerType(decoded.triggerType, 3);
+        validateTriggerType(trigger.triggerType, 3);
         validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
-        if (decoded.continuous) {
-            recreateTrigger(cdpId, decoded.triggerType, triggerData);
+        if (trigger.continuous) {
+            recreateTrigger(cdpId, trigger.triggerType, triggerData);
         }
     }
 
@@ -119,13 +119,13 @@ contract BasicBuyCommand is BaseMPACommand {
         view
         returns (bool)
     {
-        BasicBuyTriggerData memory decoded = decode(triggerData);
+        BasicBuyTriggerData memory trigger = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 
-        (uint256 lowerTarget, uint256 upperTarget) = decoded.targetCollRatio.bounds(
-            decoded.deviation
+        (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
+            trigger.deviation
         );
 
         return nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad();

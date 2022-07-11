@@ -42,6 +42,10 @@ export class HardhatUtils {
                 'BasicBuyCommand',
                 this.addresses.AUTOMATION_BASIC_BUY_COMMAND,
             ),
+            basicSell: await this.hre.ethers.getContractAt(
+                'BasicSellCommand',
+                this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
+            ),
         }
     }
 

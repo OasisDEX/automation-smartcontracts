@@ -47,6 +47,14 @@ task('verify-automation')
                 address: addresses.AUTOMATION_CLOSE_COMMAND,
                 constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
             },
+            {
+                address: addresses.AUTOMATION_BASIC_BUY_COMMAND,
+                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
+            },
+            {
+                address: addresses.AUTOMATION_BASIC_SELL_COMMAND,
+                constructorArguments: [addresses.AUTOMATION_SERVICE_REGISTRY],
+            },
         ]
 
         for (const { address, constructorArguments } of contracts) {
