@@ -16,7 +16,7 @@ export function getServiceNameHash(service: AutomationServiceName) {
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
-    const filteredEvents = receipt.events?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
+    const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
     return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
 }
 
@@ -28,39 +28,95 @@ export function generateRandomAddress() {
     return utils.hexlify(utils.randomBytes(20))
 }
 
-export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
-    const args = [vaultId, triggerType, ...rest]
+function getTriggerDataTypes(triggerType: TriggerType) {
     switch (triggerType) {
         case TriggerType.CLOSE_TO_COLLATERAL:
         case TriggerType.CLOSE_TO_DAI:
-            return utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], args)
+            return ['uint256', 'uint16', 'uint256']
         case TriggerType.BASIC_BUY:
-            return utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
-                args,
-            )
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         case TriggerType.BASIC_SELL:
-            return utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
-                args,
-            )
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         default:
-            throw new Error(`Error encoding data. Unsupported trigger type: ${triggerType}`)
+            throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
 }
 
-export function decodeTriggerData(data: string) {
-    const [id, type, stopLossLevel] = utils.defaultAbiCoder.decode(['uint256', 'uint16', 'uint256'], data)
+export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
+    const args = [vaultId, triggerType, ...rest]
+    const types = getTriggerDataTypes(triggerType)
+    return utils.defaultAbiCoder.encode(types, args)
+}
+
+export function decodeBasicTriggerData(data: string) {
+    const [vault, type] = utils.defaultAbiCoder.decode(['uint256', 'uint16'], data)
     return {
-        vaultId: new BigNumber(id.toString()),
+        vaultId: new BigNumber(vault.toString()),
+        type: new BigNumber(type.toString()),
+    }
+}
+
+export function decodeTriggerData(triggerType: TriggerType, data: string) {
+    const types = getTriggerDataTypes(triggerType)
+    const decoded = utils.defaultAbiCoder.decode(types, data)
+    return decoded
+}
+
+export function decodeStopLossData(data: string) {
+    // trigger type does not matter
+    const [vault, type, stopLossLevel] = decodeTriggerData(TriggerType.CLOSE_TO_DAI, data)
+    return {
+        vaultId: new BigNumber(vault.toString()),
         type: new BigNumber(type.toString()),
         stopLossLevel: new BigNumber(stopLossLevel.toString()),
     }
 }
 
-export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
+export function decodeBasicBuyData(data: string) {
+    const [vault, type, exec, target, maxPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
+        TriggerType.BASIC_BUY,
+        data,
+    )
+    return {
+        vaultId: new BigNumber(vault.toString()),
+        type: new BigNumber(type.toString()),
+        executionCollRatio: new BigNumber(exec.toString()),
+        targetCollRatio: new BigNumber(target.toString()),
+        maxBuyPrice: new BigNumber(maxPrice.toString()),
+        continuous: cont,
+        deviation: new BigNumber(deviation.toString()),
+        maxBaseFee: new BigNumber(maxBaseFee.toString()),
+    }
+}
+
+export function decodeBasicSellData(data: string) {
+    const [vault, type, exec, target, minPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
+        TriggerType.BASIC_SELL,
+        data,
+    )
+    return {
+        vaultId: new BigNumber(vault.toString()),
+        type: new BigNumber(type.toString()),
+        executionCollRatio: new BigNumber(exec.toString()),
+        targetCollRatio: new BigNumber(target.toString()),
+        minSellPrice: new BigNumber(minPrice.toString()),
+        continuous: cont,
+        deviation: new BigNumber(deviation.toString()),
+        maxBaseFee: new BigNumber(maxBaseFee.toString()),
+    }
+}
+
+export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
     const iface = new utils.Interface([
         'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
+    ])
+    console.log('forgeUnoswapCalldata ', [
+        fromToken,
+        fromAmount,
+        toAmount,
+        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
     ])
     return iface.encodeFunctionData('unoswap', [
         fromToken,
@@ -70,7 +126,7 @@ export function forgeUnoswapCallData(fromToken: string, fromAmount: string, toAm
     ])
 }
 
-export function generateExecutionData(
+export function generateStopLossExecutionData(
     mpa: Contract,
     toCollateral: boolean,
     cdpData: any,
@@ -85,4 +141,47 @@ export function generateExecutionData(
 
 export function bignumberToTopic(id: BigNumber.Value): string {
     return '0x' + new BigNumber(id).toString(16).padStart(64, '0')
+}
+
+export function triggerDataToInfo(triggerData: string, commandAddress: string) {
+    const { vaultId, type } = decodeBasicTriggerData(triggerData)
+    const triggerType = type.toNumber()
+    const baseInfo = [
+        `Vault ID: ${vaultId.toString()}`,
+        `Trigger Type: ${triggerType}`,
+        `Command Address: ${commandAddress}`,
+    ]
+    switch (triggerType) {
+        case TriggerType.CLOSE_TO_COLLATERAL:
+        case TriggerType.CLOSE_TO_DAI: {
+            const { stopLossLevel } = decodeStopLossData(triggerData)
+            return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
+        }
+        case TriggerType.BASIC_BUY: {
+            const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation, maxBaseFee } =
+                decodeBasicBuyData(triggerData)
+            return baseInfo.concat([
+                `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Max Buy Price: ${maxBuyPrice.shiftedBy(-18).toFixed(2)}`,
+                `Continuous: ${continuous}`,
+                `Deviation: ${deviation.shiftedBy(-2).toFixed()}%`,
+                `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
+            ])
+        }
+        case TriggerType.BASIC_SELL: {
+            const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
+                decodeBasicSellData(triggerData)
+            return baseInfo.concat([
+                `Execution Ratio: ${executionCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Target Ratio: ${targetCollRatio.shiftedBy(-2).toFixed()}%`,
+                `Min Sell Price: ${minSellPrice.shiftedBy(-18).toFixed(2)}`,
+                `Continuous: ${continuous}`,
+                `Deviation: ${deviation.shiftedBy(-2).toFixed()}%`,
+                `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
+            ])
+        }
+        default:
+            throw new Error(`Trigger Type ${triggerType} is not supported.`)
+    }
 }

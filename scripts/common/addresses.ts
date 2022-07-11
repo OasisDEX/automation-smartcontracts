@@ -1,7 +1,8 @@
 import { constants } from 'ethers'
-import { isSupportedNetwork, Network } from './types'
+import { isSupportedNetwork, Network, TriggerType } from './types'
 
 export const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+export const ONE_INCH_V4_ROUTER = '0x1111111254fb6c44bac0bed2854e76f90643097d'
 
 const startBlocks = {
     [Network.MAINNET]: {
@@ -39,7 +40,7 @@ const addresses = {
         AUTOMATION_MCD_UTILS: '0x68Ff2d96EDD4aFfcE9CBE82BF55F0B70acb483Ea',
         AUTOMATION_CLOSE_COMMAND: '0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b',
         AUTOMATION_BASIC_BUY_COMMAND: constants.AddressZero, // TODO:
-        AUTOMATION_BASIC_SELL_COMMAND: constants.AddressZero, // TODO:
+        AUTOMATION_BASIC_SELL_COMMAND: constants.AddressZero,
     },
     [Network.GOERLI]: {
         CDP_MANAGER: '0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032',
@@ -104,4 +105,20 @@ export function getStartBlocksFor(network: string | Network) {
     }
 
     return startBlocks[coalesceNetwork(network)]
+}
+
+export function getCommandAddress(network: string | Network, type: TriggerType) {
+    const addresses = getAddressesFor(network)
+
+    switch (type) {
+        case TriggerType.CLOSE_TO_COLLATERAL:
+        case TriggerType.CLOSE_TO_DAI:
+            return addresses.AUTOMATION_CLOSE_COMMAND
+        case TriggerType.BASIC_BUY:
+            return addresses.AUTOMATION_BASIC_BUY_COMMAND
+        case TriggerType.BASIC_SELL:
+            return addresses.AUTOMATION_BASIC_SELL_COMMAND
+        default:
+            throw new Error(`Cannot get command address. Trigger Type: ${type}`)
+    }
 }

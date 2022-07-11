@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js'
 import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
 
 const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
+const ONE_INCH_PROTOCOLS = ['UNISWAP_V3', 'PMM4', 'UNISWAP_V2', 'SUSHI', 'CURVE', 'PSM']
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
     const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
@@ -33,7 +34,7 @@ export async function getSwap(
         slippage: slippage.toString(),
         disableEstimate: true,
         allowPartialFill: false,
-        protocols: 'UNISWAP_V3,PMM4,UNISWAP_V2,SUSHI,CURVE,PSM',
+        protocols: ONE_INCH_PROTOCOLS.join(','),
     }
 
     if (debug) console.log('One inch params', params)

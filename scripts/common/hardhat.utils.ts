@@ -1,28 +1,26 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { BigNumber, constants, Signer, utils } from 'ethers'
+import { BigNumber, CallOverrides, constants, Contract, Signer, utils } from 'ethers'
 import R from 'ramda'
 import fs from 'fs'
 import chalk from 'chalk'
-import { ETH_ADDRESS, getAddressesFor } from './addresses'
+import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { Network } from './types'
 import { DeployedSystem } from './deploy-system'
+import { isLocalNetwork } from './utils'
 
 export class HardhatUtils {
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, forked?: Network) {
-        this.addresses = getAddressesFor(forked || this.hre.network.name)
+    constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
+        this.addresses = getAddressesFor(this.forked || this.hre.network.name)
     }
 
-    public mpaServiceRegistry() {
-        return {
-            jug: this.addresses.MCD_JUG,
-            manager: this.addresses.CDP_MANAGER,
-            multiplyProxyActions: this.addresses.MULTIPLY_PROXY_ACTIONS,
-            lender: this.addresses.MCD_FLASH,
-            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
-            exchange: '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B',
-        }
+    public get targetNetwork() {
+        return coalesceNetwork(this.forked || (this.hre.network.name as Network))
+    }
+
+    public logNetworkInfo() {
+        console.log(`Network: ${this.hre.network.name}. Using addresses from ${this.targetNetwork}\n`)
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
@@ -51,6 +49,17 @@ export class HardhatUtils {
         }
     }
 
+    public mpaServiceRegistry() {
+        return {
+            jug: this.addresses.MCD_JUG,
+            manager: this.addresses.CDP_MANAGER,
+            multiplyProxyActions: this.addresses.MULTIPLY_PROXY_ACTIONS,
+            lender: this.addresses.MCD_FLASH,
+            feeRecepient: '0x79d7176aE8F93A04bC73b9BC710d4b44f9e362Ce',
+            exchange: '0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B',
+        }
+    }
+
     public async getOrCreateProxy(address: string, signer?: Signer) {
         const proxyRegistry = await this.hre.ethers.getContractAt('IProxyRegistry', this.addresses.PROXY_REGISTRY)
 
@@ -64,18 +73,18 @@ export class HardhatUtils {
     }
 
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {
-        console.log(`🛰  Replacing Tx with nonce ${nonce}`)
+        console.log(`🛰 Replacing tx with nonce ${nonce}`)
         const tx = await signer.sendTransaction({
             value: 0,
             gasPrice: gasPriceInGwei * 1000_000_000,
             to: await signer.getAddress(),
         })
-        console.log(` 🛰  Tx sent ${tx.hash}`)
+        console.log(`🛰 Tx sent ${tx.hash}`)
     }
 
     public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
         if (!silent) {
-            console.log(` 🛰  Deploying: ${contractName}`)
+            console.log(`🛰 Deploying: ${contractName}`)
         }
 
         const contractArgs = _args || []
@@ -115,13 +124,11 @@ export class HardhatUtils {
     }
 
     public async sendEther(signer: Signer, to: string, amount: string) {
-        const value = utils.parseUnits(amount, 18)
         const txObj = await signer.populateTransaction({
             to,
-            value,
+            value: utils.parseUnits(amount, 18),
             gasLimit: 300000,
         })
-
         await signer.sendTransaction(txObj)
     }
 
@@ -203,5 +210,69 @@ export class HardhatUtils {
 
     private isEth(tokenAddr: string) {
         return tokenAddr.toLowerCase() === ETH_ADDRESS.toLowerCase()
+    }
+
+    public async getIlkData(ilk: string, opts?: CallOverrides) {
+        if (!opts) {
+            opts = {}
+        }
+
+        const ilkRegistry = new this.hre.ethers.Contract(
+            this.addresses.ILK_REGISTRY,
+            [
+                'function join(bytes32) view returns (address)',
+                'function gem(bytes32) view returns (address)',
+                'function dec(bytes32) view returns (uint256)',
+            ],
+            this.hre.ethers.provider,
+        )
+
+        const [gem, gemJoin, ilkDecimals] = await Promise.all([
+            ilkRegistry.gem(ilk, opts),
+            ilkRegistry.join(ilk, opts),
+            ilkRegistry.dec(ilk, opts),
+        ])
+
+        return {
+            gem,
+            gemJoin,
+            ilkDecimals: ilkDecimals.toNumber() as number,
+        }
+    }
+
+    public async getValidExecutionCallerOrOwner(signer: Signer, executor?: Contract) {
+        const automationExecutor =
+            executor || (await this.hre.ethers.getContractAt('AutomationExecutor', this.addresses.AUTOMATION_EXECUTOR))
+        if (await automationExecutor.callers(await signer.getAddress())) {
+            return signer
+        }
+
+        if (!isLocalNetwork(this.hre.network.name)) {
+            throw new Error(
+                `Signer is not authorized to call the AutomationExecutor. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
+            )
+        }
+        const executionOwner = await automationExecutor.owner()
+        const owner = await this.impersonate(executionOwner)
+        console.log(`Impersonated AutomationExecutor owner ${executionOwner}...`)
+        // Fund the owner
+        await this.sendEther(this.hre.ethers.provider.getSigner(0), executionOwner, '10')
+        return owner
+    }
+
+    public async getValidMcdViewCallerOrOwner(mcdView: Contract, signer: Signer) {
+        if (await mcdView.whitelisted(await signer.getAddress())) {
+            return signer
+        }
+
+        if (!isLocalNetwork(this.hre.network.name)) {
+            throw new Error(
+                `Signer is not authorized to call the McdView. Cannot impersonate on external network. Signer: ${await signer.getAddress()}.`,
+            )
+        }
+        const mcdViewOwner = await mcdView.owner()
+        const owner = await this.impersonate(mcdViewOwner)
+        console.log(`Impersonated McdView owner ${mcdViewOwner}...`)
+        return owner
     }
 }

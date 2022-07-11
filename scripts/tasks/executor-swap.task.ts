@@ -1,9 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer } from 'ethers'
 import { task } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network } from '../common'
-import { getGasPrice } from '../common/gas-price'
-import { getSwap } from '../common/one-inch'
+import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network, getGasPrice, getSwap } from '../common'
 import { params } from './params'
 
 interface ExecutorSwapArgs {

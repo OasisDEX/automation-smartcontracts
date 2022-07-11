@@ -4,10 +4,11 @@ import { task, types } from 'hardhat/config'
 import {
     bignumberToTopic,
     coalesceNetwork,
-    decodeTriggerData,
+    decodeBasicTriggerData,
     getStartBlocksFor,
     HardhatUtils,
     Network,
+    triggerDataToInfo,
 } from '../common'
 import { params } from './params'
 
@@ -20,6 +21,7 @@ interface TriggerInfoArgs {
 
 task<TriggerInfoArgs>('trigger-info')
     .addParam('trigger', 'The trigger id', undefined, params.bignumber)
+    .addOptionalParam('forked', 'Forked network')
     .addOptionalParam('block', 'The block number to query at', undefined, types.int)
     .setAction(async (args: TriggerInfoArgs, hre) => {
         const { name: network } = hre.network
@@ -45,15 +47,10 @@ task<TriggerInfoArgs>('trigger-info')
         }
 
         const [event] = events
-        const { commandAddress, triggerData /* cdpId */ } = bot.interface.decodeEventLog(
-            'TriggerAdded',
-            event.data,
-            event.topics,
-        )
-        const { vaultId, type: triggerType, stopLossLevel } = decodeTriggerData(triggerData)
-        console.log(
-            `Found trigger information\nCommand Address: ${commandAddress}\nVault ID: ${vaultId.toString()}\nTrigger Type: ${triggerType.toString()}\nStop Loss Level: ${stopLossLevel.toString()}`,
-        )
+        const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
+
+        const info = triggerDataToInfo(triggerData, commandAddress)
+        console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
 
         const closeCommand = await hre.ethers.getContractAt('CloseCommand', addresses.AUTOMATION_CLOSE_COMMAND)
         const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
@@ -63,21 +60,31 @@ task<TriggerInfoArgs>('trigger-info')
             blockTag: args.block || 'latest',
         }
 
+        const { vaultId } = decodeBasicTriggerData(triggerData)
+        const vaultOwner = await cdpManager.owns(vaultId.toString(), opts)
+        const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
+        const proxyOwner = await proxy.owner(opts)
         const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
-        const ilk = await cdpManager.ilks(vaultId.toString())
+        const ilk = await cdpManager.ilks(vaultId.toString(), opts)
+        const { ilkDecimals } = await hardhatUtils.getIlkData(ilk, opts)
+        const [coll, debt] = await mcdView.getVaultInfo(vaultId.toString(), opts)
         const price = await mcdView.getPrice(ilk, opts)
         const nextPrice = await mcdView.getNextPrice(ilk, opts)
         const collRatio = await mcdView.getRatio(vaultId.toString(), false, opts)
         const nextCollRatio = await mcdView.getRatio(vaultId.toString(), true, opts)
 
-        console.log(
-            `\nInfo At Block: ${opts.blockTag}\nIs Execution Legal: ${isExecutionLegal}\nPrice: ${toBaseUnits(
-                price,
-            )}\nNext Price: ${toBaseUnits(nextPrice)}\nColl Ratio: ${toBaseUnits(
-                collRatio,
-                16,
-            )}\nNext Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
-        )
+        const vaultInfo = [
+            `Info At Block: ${opts.blockTag}`,
+            `Is Execution Legal: ${isExecutionLegal}`,
+            `Vault Owner: ${proxyOwner}`,
+            `Collateral: ${toBaseUnits(coll, ilkDecimals)}`,
+            `Debt: ${toBaseUnits(debt)}`,
+            `Price: ${toBaseUnits(price)}`,
+            `Next Price: ${toBaseUnits(nextPrice)}`,
+            `Coll Ratio: ${toBaseUnits(collRatio, 16)}`,
+            `Next Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
+        ]
+        console.log(`\n${vaultInfo.join('\n')}`)
     })
 
 function toBaseUnits(val: EthersBN, decimals = 18) {

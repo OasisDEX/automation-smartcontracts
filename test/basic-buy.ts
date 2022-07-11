@@ -3,7 +3,14 @@ import { BytesLike, utils } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import BigNumber from 'bignumber.js'
-import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
+import {
+    encodeTriggerData,
+    forgeUnoswapCalldata,
+    getEvents,
+    HardhatUtils,
+    ONE_INCH_V4_ROUTER,
+    TriggerType,
+} from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
 
@@ -14,7 +21,6 @@ function toRatio(units: number) {
     return new BigNumber(units).shiftedBy(4).toNumber()
 }
 
-// BLOCK_NUMBER=14997398
 describe('BasicBuyCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
@@ -230,8 +236,8 @@ describe('BasicBuyCommand', () => {
                 fromTokenAmount: cdpData.requiredDebt,
                 toTokenAmount: cdpData.borrowCollateral,
                 minToTokenAmount: minToTokenAmount.toFixed(0),
-                exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
-                _exchangeCalldata: forgeUnoswapCallData(
+                exchangeAddress: ONE_INCH_V4_ROUTER,
+                _exchangeCalldata: forgeUnoswapCalldata(
                     hardhatUtils.addresses.DAI,
                     new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
                     minToTokenAmount.toFixed(0),

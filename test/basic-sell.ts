@@ -3,7 +3,7 @@ import { BytesLike, utils } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import BigNumber from 'bignumber.js'
-import { encodeTriggerData, forgeUnoswapCallData, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
+import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, IERC20, MPALike } from '../typechain'
 
@@ -213,7 +213,7 @@ describe('BasicSellCommand', () => {
                 toTokenAmount: minToTokenAmount.toFixed(0),
                 minToTokenAmount: minToTokenAmount.toFixed(0),
                 exchangeAddress: '0x1111111254fb6c44bac0bed2854e76f90643097d',
-                _exchangeCalldata: forgeUnoswapCallData(
+                _exchangeCalldata: forgeUnoswapCalldata(
                     hardhatUtils.addresses.WETH,
                     new BigNumber(cdpData.borrowCollateral).toFixed(0),
                     minToTokenAmount.toFixed(0),
