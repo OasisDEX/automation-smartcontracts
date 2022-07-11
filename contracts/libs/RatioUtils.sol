@@ -47,7 +47,7 @@ library RatioUtils {
         pure
         returns (uint256 lower, uint256 upper)
     {
-        uint256 offset = ratio.mul(deviation).div(RATIO.mul(100));
+        uint256 offset = ratio.mul(deviation).div(RATIO);
         return (ratio.sub(offset), ratio.add(offset));
     }
 
