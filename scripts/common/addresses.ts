@@ -1,4 +1,3 @@
-import { constants } from 'ethers'
 import { isSupportedNetwork, Network, TriggerType } from './types'
 
 export const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
@@ -6,9 +5,11 @@ export const ONE_INCH_V4_ROUTER = '0x1111111254fb6c44bac0bed2854e76f90643097d'
 
 const startBlocks = {
     [Network.MAINNET]: {
+        SERVICE_REGISTRY: 14583409,
         AUTOMATION_BOT: 14583413,
     },
     [Network.GOERLI]: {
+        SERVICE_REGISTRY: 6707330,
         AUTOMATION_BOT: 6707333,
     },
 }
@@ -39,8 +40,8 @@ const addresses = {
         AUTOMATION_MCD_VIEW: '0x55Dc2Be8020bCa72E58e665dC931E03B749ea5E0',
         AUTOMATION_MCD_UTILS: '0x68Ff2d96EDD4aFfcE9CBE82BF55F0B70acb483Ea',
         AUTOMATION_CLOSE_COMMAND: '0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b',
-        AUTOMATION_BASIC_BUY_COMMAND: constants.AddressZero, // TODO:
-        AUTOMATION_BASIC_SELL_COMMAND: constants.AddressZero,
+        AUTOMATION_BASIC_BUY_COMMAND: '0x05Fb55553e54AFB33A5ACC1f23B1f4FFfD0d1Af9',
+        AUTOMATION_BASIC_SELL_COMMAND: '0xA6Bd41B821972e83d30598C5683efBbe6Ad70fB8',
     },
     [Network.GOERLI]: {
         CDP_MANAGER: '0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032',

@@ -4,6 +4,7 @@ import { CallOverrides, constants, Contract, ethers, Signer, utils, BigNumber as
 import R from 'ramda'
 import axios from 'axios'
 import NodeCache from 'node-cache'
+import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
@@ -256,9 +257,11 @@ export class HardhatUtils {
         }
 
         const { suggestBaseFee } = await this.getGasPrice()
+        const maxPriorityFeePerGas = new BigNumber(2).shiftedBy(9).toFixed(0)
+        const maxFeePerGas = new BigNumber(suggestBaseFee).shiftedBy(9).plus(maxPriorityFeePerGas).toFixed(0)
         return {
-            maxFeePerGas: EthersBN.from((parseFloat(suggestBaseFee) + 2) * 1e9),
-            maxPriorityFeePerGas: EthersBN.from(2).mul(1e9),
+            maxFeePerGas: EthersBN.from(maxFeePerGas),
+            maxPriorityFeePerGas: EthersBN.from(maxPriorityFeePerGas),
         }
     }
 

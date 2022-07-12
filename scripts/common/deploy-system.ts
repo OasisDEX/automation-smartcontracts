@@ -37,6 +37,10 @@ export interface DeploySystemArgs {
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry) => {
     return async (hash: string, address: string): Promise<void> => {
+        if (address === constants.AddressZero) {
+            console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
+            return
+        }
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
         if (existingAddress === constants.AddressZero) {
             const receipt = await serviceRegistry.addNamedService(hash, address, await utils.getGasSettings())
@@ -153,7 +157,7 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
     }
 
-    await configureRegistryEntries(utils, system, addresses as AddressRegistry, logDebug)
+    await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
     return system
 }
 
@@ -161,10 +165,17 @@ export async function configureRegistryEntries(
     utils: HardhatUtils,
     system: DeployedSystem,
     addresses: AddressRegistry,
-    logDebug = false,
     allowedReplacements: string[] = [],
+    logDebug = false,
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry)
+    const ensureMcdViewWhitelist = async (address: string) => {
+        const isWhitelisted = await system.mcdView.whitelisted(address)
+        if (!isWhitelisted) {
+            await (await system.mcdView.approve(address, true, await utils.getGasSettings())).wait()
+        }
+    }
+
     if (allowedReplacements.length > 0) {
         const existingHashes = (
             await Promise.all(
@@ -182,7 +193,7 @@ export async function configureRegistryEntries(
         }
     }
 
-    if (system.closeCommand) {
+    if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), system.closeCommand.address)
 
@@ -190,23 +201,23 @@ export async function configureRegistryEntries(
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
-        await (await system.mcdView.approve(system.closeCommand.address, true, await utils.getGasSettings())).wait()
+        await ensureMcdViewWhitelist(system.closeCommand.address)
     }
 
-    if (system.basicBuy) {
+    if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
-        await (await system.mcdView.approve(system.basicBuy.address, true, await utils.getGasSettings())).wait()
+        await ensureMcdViewWhitelist(system.basicBuy.address)
     }
 
-    if (system.basicSell) {
+    if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_SELL), system.basicSell.address)
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
-        await (await system.mcdView.approve(system.basicSell.address, true, await utils.getGasSettings())).wait()
+        await ensureMcdViewWhitelist(system.basicSell.address)
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')

@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { BasicSellCommand } from '../../typechain'
-import { HardhatUtils, deployCommand, AddressRegistry, getCommandHash, TriggerType } from '../common'
+import { HardhatUtils, AddressRegistry, getCommandHash, TriggerType } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
@@ -12,22 +12,14 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    const deployed = await deployCommand(hre.ethers, utils, 'BasicSellCommand')
+    system.basicSell = (await utils.deployContract(hre.ethers.getContractFactory('BasicSellCommand'), [
+        utils.addresses.AUTOMATION_SERVICE_REGISTRY,
+    ])) as BasicSellCommand
+    console.log(`BasicSell Deployed: ${system.basicSell!.address}`)
 
-    console.log(`BasicSell Deployed: ${deployed.address}`)
-
-    system.basicSell = deployed as BasicSellCommand
-
-    await configureRegistryEntries(
-        system,
-        utils.addresses as AddressRegistry,
-        false,
-        [getCommandHash(TriggerType.BASIC_SELL)] /* TODO: Check on USDC missing */,
-    )
-
-    console.log(`Whitelisting BasicSellCommand on McdView....`)
-    await (await system.mcdView.approve(deployed.address, true)).wait()
-    console.log(`BasicSellCommand whitelisted on McdView`)
+    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
+        getCommandHash(TriggerType.BASIC_SELL),
+    ])
 }
 
 main().catch(error => {
