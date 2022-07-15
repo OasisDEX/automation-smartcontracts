@@ -63,6 +63,15 @@ contract AutomationBotAggregator {
         return validatorAddress;
     }
 
+    function getTriggersGroupHash(
+        uint256 cdpId,
+        uint256 groupTypeId,
+        uint256[] memory triggerIds
+    ) private pure returns (bytes32) {
+        bytes32 triggersGroupHash = keccak256(abi.encodePacked(cdpId, groupTypeId, triggerIds));
+        return triggersGroupHash;
+    }
+
     function addTriggerGroup(
         uint256 groupTypeId,
         uint256[] memory replacedTriggerId,
@@ -100,21 +109,18 @@ contract AutomationBotAggregator {
         BotAggregatorLike(automationAggregatorBot).addRecord(cdpIds[0], groupTypeId, triggerIds);
     }
 
-    function getTriggersGroupHash(
-        uint256 cdpId,
-        uint256 groupTypeId,
-        uint256[] memory triggerIds
-    ) private pure returns (bytes32) {
-        bytes32 triggersGroupHash = keccak256(abi.encodePacked(cdpId, groupTypeId, triggerIds));
-        return triggersGroupHash;
-    }
-
     function addRecord(
         uint256 cdpId,
         uint256 groupTypeId,
         uint256[] memory triggerIds
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        // TODO - check
+        require(
+            AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
+            "aggregator/no-permissions"
+        );
 
         triggerGroupCounter = triggerGroupCounter + 1;
         activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(
