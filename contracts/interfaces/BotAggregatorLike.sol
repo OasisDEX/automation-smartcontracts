@@ -22,4 +22,11 @@ interface BotAggregatorLike {
         uint256 groupTypeId,
         uint256[] memory triggerIds
     ) external;
+
+    function removeRecord(
+        uint256 cdpId,
+        uint256 groupId,
+        uint256[] memory triggerIds,
+        uint256 groupTypeId
+    ) external;
 }
