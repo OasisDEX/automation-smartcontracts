@@ -1,6 +1,7 @@
 import { constants } from 'ethers'
 import {
     AutomationBot,
+    AutomationBotAggregator,
     AutomationExecutor,
     AutomationSwap,
     BasicBuyCommand,
@@ -19,6 +20,7 @@ export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
+    automationBotAggregator: AutomationBotAggregator
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
     mcdView: McdView
@@ -65,6 +67,7 @@ export async function deploySystem({
 
     const serviceRegistryFactory = await ethers.getContractFactory('ServiceRegistry')
     const automationBotFactory = await ethers.getContractFactory('AutomationBot')
+    const automationBotAggregatorFactory = await ethers.getContractFactory('AutomationBotAggregator')
     const automationExecutorFactory = await ethers.getContractFactory('AutomationExecutor')
     const automationSwapFactory = await ethers.getContractFactory('AutomationSwap')
     const mcdViewFactory = await ethers.getContractFactory('McdView')
@@ -89,6 +92,11 @@ export async function deploySystem({
     if (logDebug) console.log('Deploying AutomationBot....')
     const automationBotDeployment = await automationBotFactory.deploy(ServiceRegistryInstance.address)
     const AutomationBotInstance = await automationBotDeployment.deployed()
+
+    const automationBotAggregatorDeployment = await automationBotAggregatorFactory.deploy(
+        ServiceRegistryInstance.address,
+    )
+    const AutomationBotAggregatorInstance = await automationBotAggregatorDeployment.deployed()
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const automationExecutorDeployment = await automationExecutorFactory.deploy(
@@ -155,6 +163,7 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
+        automationBotAggregator: AutomationBotAggregatorInstance,
         automationExecutor: AutomationExecutorInstance,
         automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,

@@ -25,6 +25,7 @@ import "./interfaces/IValidator.sol";
 import "./interfaces/BotAggregatorLike.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBotAggregator {
     struct TriggerGroupRecord {
@@ -63,11 +64,12 @@ contract AutomationBotAggregator {
         return validatorAddress;
     }
 
+    // TODO: change to private
     function getTriggersGroupHash(
         uint256 cdpId,
         uint256 groupTypeId,
         uint256[] memory triggerIds
-    ) private pure returns (bytes32) {
+    ) public pure returns (bytes32) {
         bytes32 triggersGroupHash = keccak256(abi.encodePacked(cdpId, groupTypeId, triggerIds));
         return triggersGroupHash;
     }
@@ -116,7 +118,7 @@ contract AutomationBotAggregator {
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        // TODO - check
+        // TODO - check msg.sender
         require(
             AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
             "aggregator/no-permissions"
