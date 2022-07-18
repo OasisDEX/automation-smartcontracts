@@ -58,4 +58,12 @@ library RatioUtils {
     function wadToRad(uint256 _wad) internal pure returns (uint256 _rad) {
         _rad = _wad.mul(RAD).div(WAD);
     }
+
+    function rayToWad(uint256 _rad) internal pure returns (uint256 _wad) {
+        _wad = _rad.mul(WAD).div(RAY);
+    }
+
+    function wadToRay(uint256 _wad) internal pure returns (uint256 _rad) {
+        _rad = _wad.mul(RAY).div(WAD);
+    }
 }
