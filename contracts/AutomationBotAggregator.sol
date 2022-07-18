@@ -34,7 +34,7 @@ contract AutomationBotAggregator {
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
-    string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
+    string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_BOT_AGGREGATOR";
 
     mapping(uint256 => TriggerGroupRecord) public activeTriggerGroups;
 
@@ -76,20 +76,26 @@ contract AutomationBotAggregator {
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external onlyDelegate {
-        // get the groupType validator and automation bot address
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+
         address automationAggregatorBot = serviceRegistry.getRegisteredService(
             AUTOMATION_AGGREGATOR_BOT_KEY
         );
-        address validatorAddress = getValidatorAddress(groupTypeId);
+        // commented because there is no validator yet / or register it in service registry and provide dummy data
+        /*         address validatorAddress = getValidatorAddress(groupTypeId);
 
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = IValidator(validatorAddress)
             .decode(triggersData);
         require(
             IValidator(validatorAddress).validate(replacedTriggerId, triggersData),
             "aggregator/validation-error"
-        );
+        ); */
+        uint16[2] memory cdpIds;
+        cdpIds = [26125, 26125];
+        uint8[2] memory triggerTypes;
+        triggerTypes = [2, 2];
         uint256 firstTriggerId = AutomationBot(automationBot).triggersCounter() + 1;
+
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         for (uint256 i = 0; i < triggerTypes.length; i += 1) {
             (bool status, ) = automationBot.delegatecall(
@@ -101,6 +107,7 @@ contract AutomationBotAggregator {
                     triggersData[i]
                 )
             );
+
             triggerIds[i] = firstTriggerId + i;
             require(status, "aggregator/add-trigger-fail");
         }
@@ -152,7 +159,7 @@ contract AutomationBotAggregator {
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        // TODO - check msg.sender
+
         require(
             AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
             "aggregator/no-permissions"

@@ -242,6 +242,12 @@ export async function configureRegistryEntries(
         system.automationBot.address,
     )
 
+    if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
+        system.automationBotAggregator.address,
+    )
+
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
 
