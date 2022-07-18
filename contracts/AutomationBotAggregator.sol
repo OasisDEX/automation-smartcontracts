@@ -23,7 +23,6 @@ import "./interfaces/BotAggregatorLike.sol";
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/IValidator.sol";
 import "./ServiceRegistry.sol";
-import "hardhat/console.sol";
 
 contract AutomationBotAggregator {
     struct TriggerGroupRecord {
@@ -173,8 +172,7 @@ contract AutomationBotAggregator {
             cdpId,
             groupTypeId
         );
-        console.log("groupId - addRecord", triggerGroupCounter);
-        console.logBytes32(activeTriggerGroups[triggerGroupCounter].triggerGroupHash);
+
         emit TriggerGroupAdded(triggerGroupCounter, groupTypeId, triggerIds);
     }
 
@@ -193,6 +191,7 @@ contract AutomationBotAggregator {
             triggerGroupHash == groupIdRecord.triggerGroupHash,
             "aggregator/invalid-trigger-group"
         );
+
         require(
             AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
             "aggregator/no-permissions"
