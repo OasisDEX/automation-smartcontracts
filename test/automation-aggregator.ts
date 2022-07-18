@@ -109,14 +109,14 @@ describe('AutomationBot', async () => {
 
     describe('getTriggersGroupHash', async () => {
         it('should return the same hash as created offchain', async () => {
-            expect(await AutomationBotAggregatorInstance.getTriggersGroupHash('15', '12', ['342', '321'])).to.eql(
+            expect(await AutomationBotAggregatorInstance.getTriggerGroupHash('15', '12', ['342', '321'])).to.eql(
                 utils.solidityKeccak256(['uint256', 'uint256', 'uint256[]'], ['15', '12', ['342', '321']]),
             )
         })
     })
     describe('addTriggerGroup', async () => {
         const groupTypeId = 0
-        const triggerType = [1, 2]
+        const triggerType = [2, 2]
         const replacedTriggerId = [0, 0]
         const triggersData = [
             utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
@@ -139,8 +139,20 @@ describe('AutomationBot', async () => {
             ])
             await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
             const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
-            console.log(counterAfter)
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
+        })
+        it('should not create a trigger group when called by not the owner', async () => {
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const counterBefore = await AutomationBotAggregatorInstance.triggerGroupCounter()
+            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+                groupTypeId,
+                replacedTriggerId,
+                triggersData,
+            ])
+            await expect(notOwnerProxy.connect(notOwner).execute(AutomationBotAggregatorInstance.address, dataToSupply))
+                .to.be.reverted
+            const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
+            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber())
         })
         it('should emit TriggerGroupAdded (from AutomationBotAggregator) if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -153,8 +165,38 @@ describe('AutomationBot', async () => {
 
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(events.length).to.be.equal(1)
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
+        })
+    })
+    describe('removeTriggerGroup', async () => {
+        const groupTypeId = 0
+        const triggerType = [2, 2]
+        const replacedTriggerId = [0, 0]
+
+        const triggersData = [
+            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
+            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[1], 103]),
+        ]
+
+        it('should successfully remove a trigger group through DSProxy', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+                groupTypeId,
+                replacedTriggerId,
+                triggersData,
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, 1, triggerIds, false],
+            )
+            await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
+                .to.not.be.reverted
         })
     })
 })
