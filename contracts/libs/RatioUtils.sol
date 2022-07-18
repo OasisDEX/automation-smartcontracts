@@ -51,11 +51,11 @@ library RatioUtils {
         return (ratio.sub(offset), ratio.add(offset));
     }
 
-    function radToWad(uint256 _rad) internal pure returns (uint256 _wad) {
-        _wad = _rad.mul(WAD).div(RAD);
+    function rayToWad(uint256 ray) internal pure returns (uint256 wad) {
+        wad = ray.mul(WAD).div(RAY);
     }
 
-    function wadToRad(uint256 _wad) internal pure returns (uint256 _rad) {
-        _rad = _wad.mul(RAD).div(WAD);
+    function radToWad(uint256 rad) internal pure returns (uint256 wad) {
+        wad = rad.mul(WAD).div(RAD);
     }
 }
