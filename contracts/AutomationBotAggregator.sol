@@ -48,7 +48,7 @@ contract AutomationBotAggregator {
     }
 
     modifier onlyDelegate() {
-        require(address(this) != self, "bot/only-delegate");
+        require(address(this) != self, "aggregator/only-delegate");
         _;
     }
 
@@ -65,9 +65,18 @@ contract AutomationBotAggregator {
         uint256 cdpId,
         uint256 groupId,
         uint256[] memory triggerIds
-    ) public view returns (bytes32) {
+    ) public pure returns (bytes32) {
         bytes32 triggerGroupHash = keccak256(abi.encodePacked(cdpId, groupId, triggerIds));
         return triggerGroupHash;
+    }
+
+    function isCdpAllowed(
+        uint256 cdpId,
+        address operator,
+        ManagerLike manager
+    ) public view returns (bool) {
+        address cdpOwner = manager.owns(cdpId);
+        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
     // TODO: @halaprix move to validator
@@ -124,7 +133,7 @@ contract AutomationBotAggregator {
             triggerIds[i] = firstTriggerId + i;
             require(status, "aggregator/add-trigger-fail");
         }
-        // self call -> store, increment counter and emit
+
         BotAggregatorLike(automationAggregatorBot).addRecord(cdpIds[0], groupTypeId, triggerIds);
     }
 
@@ -159,12 +168,8 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
-        require(
-            AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
-            "aggregator/no-permissions"
-        );
+        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
         triggerGroupCounter = triggerGroupCounter + 1;
         activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(
@@ -181,7 +186,6 @@ contract AutomationBotAggregator {
         uint256 groupId,
         uint256[] memory triggerIds
     ) external {
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         TriggerGroupRecord memory groupIdRecord = activeTriggerGroups[groupId];
@@ -192,10 +196,7 @@ contract AutomationBotAggregator {
             "aggregator/invalid-trigger-group"
         );
 
-        require(
-            AutomationBot(automationBot).isCdpAllowed(cdpId, msg.sender, manager),
-            "aggregator/no-permissions"
-        );
+        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
         activeTriggerGroups[groupId] = TriggerGroupRecord(0, 0, 0);
 

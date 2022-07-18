@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -154,6 +154,10 @@ describe('AutomationBot', async () => {
             const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber())
         })
+        it('should revert when called not by the delegate ', async () => {
+            const tx = AutomationBotAggregatorInstance.addTriggerGroup(groupTypeId, replacedTriggerId, triggersData)
+            await expect(tx).to.be.revertedWith('aggregator/only-delegate')
+        })
         it('should emit TriggerGroupAdded (from AutomationBotAggregator) if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
@@ -167,6 +171,37 @@ describe('AutomationBot', async () => {
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
         })
+        it('should be able to be used by a user with permissions', async () => {
+            const [signer] = await hre.ethers.getSigners()
+            const signerAddress = await signer.getAddress()
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+                groupTypeId,
+                replacedTriggerId,
+                triggersData,
+            ])
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            await tx.wait()
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+
+            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
+            await expect(tx1).to.be.reverted
+
+            const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
+            await expect(cdpAllowTx).not.to.be.reverted
+
+            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
+
+            await expect(tx2).not.to.be.reverted
+
+            const receipt = await (await tx2).wait()
+            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
+            expect(events.length).to.be.equal(1)
+        })
     })
     describe('removeTriggerGroup', async () => {
         const groupTypeId = 0
@@ -177,26 +212,148 @@ describe('AutomationBot', async () => {
             utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
             utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[1], 103]),
         ]
-
-        it('should successfully remove a trigger group through DSProxy', async () => {
+        let triggerGroupId = 0
+        before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
                 triggersData,
             ])
-            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
+            const txReceipt = await tx.wait()
+            const [event] = getEvents(
+                txReceipt,
+                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
+            )
+            triggerGroupId = event.args.groupId.toNumber()
+        })
+
+        it('should successfully remove a trigger group through DSProxy', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const triggerCounter = await AutomationBotInstance.triggersCounter()
 
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'removeTriggerGroup',
-                [testCdpId, 1, triggerIds, false],
+                [testCdpId, triggerGroupId, triggerIds, false],
             )
             await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
                 .to.not.be.reverted
+        })
+        it('should fail to remove a not existing trigger group', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, triggerGroupId + 1, triggerIds, false],
+            )
+            await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
+                .to.be.reverted
+        })
+        it('should only remove approval if last param set to true - test FALSE', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, triggerGroupId, triggerIds, false],
+            )
+            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove)
+            const status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(true)
+        })
+        it('should only remove approval if last param set to true - test TRUE', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, triggerGroupId, triggerIds, true],
+            )
+            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove)
+            const status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false)
+        })
+        it('should revert if called not through delegatecall', async () => {
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const tx = AutomationBotAggregatorInstance.removeTriggerGroup(testCdpId, triggerGroupId, triggerIds, true)
+            await expect(tx).to.be.revertedWith('aggregator/only-delegate')
+        })
+
+        it('should not remove a trigger group by non owner DSProxy', async () => {
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, triggerGroupId, triggerIds, false],
+            )
+            await expect(
+                ownerProxy.connect(notOwner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove),
+            ).to.be.reverted
+        })
+        it('should not remove a trigger group not owned by owner', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
+
+            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'removeTriggerGroup',
+                [testCdpId, 0, triggerIds, false],
+            )
+            await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
+                .to.be.reverted
+        })
+    })
+    describe('cdpAllowed', async () => {
+        before(async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
+                testCdpId,
+                2,
+                0,
+                '0x',
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+        })
+
+        it('should return false for bad operator address', async () => {
+            const status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                '0x1234123412341234123412341234123412341234',
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false, 'approval returned for random address')
+        })
+
+        it('should return true for correct operator address', async () => {
+            const status = await AutomationBotInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(true, 'approval do not exist for AutomationBot')
         })
     })
 })
