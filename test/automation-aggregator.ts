@@ -85,9 +85,7 @@ describe('AutomationAggregatorBot', async () => {
     })
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
-        const triggerType = [TriggerType.BASIC_SELL, TriggerType.BASIC_BUY]
         const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
-        const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
 
         // basic buy
         const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
@@ -203,7 +201,6 @@ describe('AutomationAggregatorBot', async () => {
         const replacedTriggerId = [0, 0]
 
         const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
-        const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
 
         // basic buy
         const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
