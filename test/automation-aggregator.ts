@@ -1,12 +1,18 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, HardhatUtils } from '../scripts/common'
+import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
 import { TriggerGroupId, TriggerType } from '../scripts/common'
+import BigNumber from 'bignumber.js'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const maxGweiPrice = 1000
+
+function toRatio(units: number) {
+    return new BigNumber(units).shiftedBy(4).toNumber()
+}
 
 describe('AutomationAggregatorBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
@@ -79,12 +85,35 @@ describe('AutomationAggregatorBot', async () => {
     })
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
-        const triggerType = [2, 2]
+        const triggerType = [TriggerType.BASIC_SELL, TriggerType.BASIC_BUY]
+        const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+        const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
+
+        // basic buy
+        const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
+        const bbTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.BASIC_BUY,
+            executionRatio,
+            targetRatio,
+            0,
+            false,
+            50,
+            maxGweiPrice,
+        )
+        // basic sell
+        const bsTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.BASIC_SELL,
+            correctExecutionRatio,
+            correctTargetRatio,
+            0,
+            false,
+            50,
+            maxGweiPrice,
+        )
+
         const replacedTriggerId = [0, 0]
-        const triggersData = [
-            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
-            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[1], 103]),
-        ]
 
         it('should successfully create a trigger group through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -98,7 +127,7 @@ describe('AutomationAggregatorBot', async () => {
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
             const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
@@ -112,13 +141,16 @@ describe('AutomationAggregatorBot', async () => {
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             await expect(notOwnerProxy.connect(notOwner).execute(AutomationBotAggregatorInstance.address, dataToSupply))
                 .to.be.reverted
         })
         it('should revert when called not by the delegate ', async () => {
-            const tx = AutomationBotAggregatorInstance.addTriggerGroup(groupTypeId, replacedTriggerId, triggersData)
+            const tx = AutomationBotAggregatorInstance.addTriggerGroup(groupTypeId, replacedTriggerId, [
+                bbTriggerData,
+                bsTriggerData,
+            ])
             await expect(tx).to.be.revertedWith('aggregator/only-delegate')
         })
         it('should emit TriggerGroupAdded (from AutomationBotAggregator) if called by user being an owner of proxy', async () => {
@@ -126,7 +158,7 @@ describe('AutomationAggregatorBot', async () => {
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
 
@@ -142,7 +174,7 @@ describe('AutomationAggregatorBot', async () => {
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
             await tx.wait()
@@ -168,20 +200,42 @@ describe('AutomationAggregatorBot', async () => {
     })
     describe('removeTriggerGroup', async () => {
         const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
-        const triggerType = [2, 2]
         const replacedTriggerId = [0, 0]
 
-        const triggersData = [
-            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
-            utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[1], 103]),
-        ]
+        const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+        const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
+
+        // basic buy
+        const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
+        const bbTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.BASIC_BUY,
+            executionRatio,
+            targetRatio,
+            0,
+            false,
+            50,
+            maxGweiPrice,
+        )
+        // basic sell
+        const bsTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.BASIC_SELL,
+            correctExecutionRatio,
+            correctTargetRatio,
+            0,
+            false,
+            50,
+            maxGweiPrice,
+        )
+
         let triggerGroupId = 0
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
             const txReceipt = await tx.wait()
@@ -292,17 +346,38 @@ describe('AutomationAggregatorBot', async () => {
     describe('cdpAllowed', async () => {
         before(async () => {
             const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
-            const triggerType = [2, 2]
             const replacedTriggerId = [0, 0]
-            const triggersData = [
-                utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[0], 101]),
-                utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, triggerType[1], 103]),
-            ]
+            const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+
+            // basic buy
+            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
+            const bbTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                executionRatio,
+                targetRatio,
+                0,
+                false,
+                50,
+                maxGweiPrice,
+            )
+            // basic sell
+            const bsTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_SELL,
+                correctExecutionRatio,
+                correctTargetRatio,
+                0,
+                false,
+                50,
+                maxGweiPrice,
+            )
+
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
-                triggersData,
+                [bbTriggerData, bsTriggerData],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
         })
