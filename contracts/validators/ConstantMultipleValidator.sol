@@ -32,7 +32,6 @@ contract ConstantMultipleValidator is IValidator {
         serviceRegistry = _serviceRegistry;
     }
 
-    // TODO: move the decode() from AutomationBotAggregator
     function decode(bytes[] memory triggersData)
         public
         pure
