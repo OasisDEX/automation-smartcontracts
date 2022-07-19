@@ -18,15 +18,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "./AutomationBot.sol";
-import "./interfaces/BotAggregatorLike.sol";
-import "./interfaces/ManagerLike.sol";
-import "./interfaces/IValidator.sol";
-import "./ServiceRegistry.sol";
+import { AutomationBot } from "./AutomationBot.sol";
+import { ManagerLike } from "./interfaces/ManagerLike.sol";
+import { IValidator } from "./interfaces/IValidator.sol";
+import { ServiceRegistry } from "./ServiceRegistry.sol";
 
 contract AutomationBotAggregator {
     struct TriggerGroupRecord {
-        bytes32 triggerGroupHash;
+        bytes32 hash;
         uint256 cdpId;
     }
 
@@ -36,7 +35,7 @@ contract AutomationBotAggregator {
 
     mapping(uint256 => TriggerGroupRecord) public activeTriggerGroups;
 
-    uint256 public triggerGroupCounter = 0;
+    uint256 public triggerGroupCounter;
 
     ServiceRegistry public immutable serviceRegistry;
     address public immutable self;
@@ -60,12 +59,12 @@ contract AutomationBotAggregator {
     }
 
     function getTriggerGroupHash(
-        uint256 cdpId,
         uint256 groupId,
+        uint256 cdpId,
         uint256[] memory triggerIds
     ) public pure returns (bytes32) {
-        bytes32 triggerGroupHash = keccak256(abi.encodePacked(cdpId, groupId, triggerIds));
-        return triggerGroupHash;
+        bytes32 hash = keccak256(abi.encodePacked(groupId, cdpId, triggerIds));
+        return hash;
     }
 
     function isCdpAllowed(
@@ -77,30 +76,17 @@ contract AutomationBotAggregator {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    // TODO: @halaprix move to validator
-    function decode(bytes[] memory triggersData)
-        public
-        pure
-        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
-    {
-        uint256[] memory _cdpIds = new uint256[](triggersData.length);
-        uint256[] memory _triggerTypes = new uint256[](triggersData.length);
-        for (uint256 i = 0; i < triggersData.length; i += 1) {
-            (_cdpIds[i], _triggerTypes[i]) = abi.decode(triggersData[i], (uint256, uint16));
-        }
-
-        return (_cdpIds, _triggerTypes);
-    }
-
     function addTriggerGroup(
         uint16 groupTypeId,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external onlyDelegate {
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        AutomationBot automationBot = AutomationBot(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
+        );
 
-        address automationAggregatorBot = serviceRegistry.getRegisteredService(
-            AUTOMATION_AGGREGATOR_BOT_KEY
+        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
         );
 
         address validatorAddress = getValidatorAddress(groupTypeId);
@@ -112,11 +98,11 @@ contract AutomationBotAggregator {
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = IValidator(validatorAddress)
             .decode(triggersData);
 
-        uint256 firstTriggerId = AutomationBot(automationBot).triggersCounter() + 1;
+        uint256 firstTriggerId = automationBot.triggersCounter() + 1;
 
         uint256[] memory triggerIds = new uint256[](triggersData.length);
-        for (uint256 i = 0; i < triggerTypes.length; i += 1) {
-            (bool status, ) = automationBot.delegatecall(
+        for (uint256 i = 0; i < triggerTypes.length; i++) {
+            (bool status, ) = address(automationBot).delegatecall(
                 abi.encodeWithSelector(
                     AutomationBot(automationBot).addTrigger.selector,
                     cdpIds[i],
@@ -130,7 +116,7 @@ contract AutomationBotAggregator {
             require(status, "aggregator/add-trigger-fail");
         }
 
-        BotAggregatorLike(automationAggregatorBot).addRecord(cdpIds[0], groupTypeId, triggerIds);
+        automationAggregatorBot.addRecord(cdpIds[0], groupTypeId, triggerIds);
     }
 
     function removeTriggerGroup(
@@ -139,13 +125,15 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds,
         bool removeAllowance
     ) external onlyDelegate {
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        address automationAggregatorBot = serviceRegistry.getRegisteredService(
-            AUTOMATION_AGGREGATOR_BOT_KEY
+        AutomationBot automationBot = AutomationBot(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
+        );
+        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
         );
 
-        for (uint256 i = 0; i < triggerIds.length; i += 1) {
-            (bool status, ) = automationBot.delegatecall(
+        for (uint256 i = 0; i < triggerIds.length; i++) {
+            (bool status, ) = address(automationBot).delegatecall(
                 abi.encodeWithSelector(
                     AutomationBot(automationBot).removeTrigger.selector,
                     cdpId,
@@ -155,7 +143,7 @@ contract AutomationBotAggregator {
             );
             require(status, "aggregator/remove-trigger-fail");
         }
-        BotAggregatorLike(automationAggregatorBot).removeRecord(cdpId, groupId, triggerIds);
+        automationAggregatorBot.removeRecord(cdpId, groupId, triggerIds);
     }
 
     function addRecord(
@@ -167,13 +155,12 @@ contract AutomationBotAggregator {
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
-        triggerGroupCounter = triggerGroupCounter + 1;
-        activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(
-            getTriggerGroupHash(cdpId, triggerGroupCounter, triggerIds),
-            cdpId
-        );
+        triggerGroupCounter++;
 
-        emit TriggerGroupAdded(triggerGroupCounter, groupTypeId, triggerIds);
+        bytes32 hash = getTriggerGroupHash(triggerGroupCounter, cdpId, triggerIds);
+        activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(hash, cdpId);
+
+        emit TriggerGroupAdded(triggerGroupCounter, groupTypeId, triggerIds, hash);
     }
 
     function removeRecord(
@@ -184,12 +171,9 @@ contract AutomationBotAggregator {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         TriggerGroupRecord memory groupIdRecord = activeTriggerGroups[groupId];
-        bytes32 triggerGroupHash = getTriggerGroupHash(cdpId, groupId, triggerIds);
+        bytes32 hash = getTriggerGroupHash(groupId, cdpId, triggerIds);
 
-        require(
-            triggerGroupHash == groupIdRecord.triggerGroupHash,
-            "aggregator/invalid-trigger-group"
-        );
+        require(hash == groupIdRecord.hash, "aggregator/invalid-trigger-group");
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
@@ -200,5 +184,10 @@ contract AutomationBotAggregator {
 
     event TriggerGroupRemoved(uint256 groupId, uint256[] triggerIds);
 
-    event TriggerGroupAdded(uint256 groupId, uint16 groupTypeId, uint256[] triggerIds);
+    event TriggerGroupAdded(
+        uint256 groupId,
+        uint16 groupTypeId,
+        uint256[] triggerIds,
+        bytes32 hash
+    );
 }

@@ -78,8 +78,8 @@ describe('AutomationAggregatorBot', async () => {
 
     describe('getTriggersGroupHash', async () => {
         it('should return the same hash as created offchain', async () => {
-            expect(await AutomationBotAggregatorInstance.getTriggerGroupHash('15', '12', ['342', '321'])).to.eql(
-                utils.solidityKeccak256(['uint256', 'uint256', 'uint256[]'], ['15', '12', ['342', '321']]),
+            expect(await AutomationBotAggregatorInstance.getTriggerGroupHash('12', '15', ['342', '321'])).to.eql(
+                utils.solidityKeccak256(['uint256', 'uint256', 'uint256[]'], ['12', '15', ['342', '321']]),
             )
         })
     })
