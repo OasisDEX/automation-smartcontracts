@@ -6,13 +6,13 @@ import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
 interface RemoveTriggerArgs extends BaseTaskArgs {
-    id: BigNumber
+    trigger: BigNumber
     allowance: boolean
     forked?: Network
 }
 
 createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
-    .addParam('id', 'The trigger ID', '', params.bignumber)
+    .addParam('trigger', 'The trigger ID', '', params.bignumber)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
     .setAction(async (args: RemoveTriggerArgs, hre) => {
         const { name: network } = hre.network
@@ -23,15 +23,16 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
-        const triggerInfo = await bot.activeTriggers(args.id.toString())
+        const triggerInfo = await bot.activeTriggers(args.trigger.toString())
         if (triggerInfo.cdpId.eq(0)) {
-            throw new Error(`Trigger with id ${args.id.toString()} is not active`)
+            throw new Error(`Trigger with id ${args.trigger.toString()} is not active`)
         }
 
         const vault = triggerInfo.cdpId.toString()
         console.log(`Vault: ${vault}`)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
+        console.log(`Address: ${await signer.getAddress()}`)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
         const proxyAddress = await cdpManager.owns(vault)
@@ -49,7 +50,7 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
 
         const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
             vault,
-            args.id.toString(),
+            args.trigger.toString(),
             args.allowance,
         ])
 
@@ -73,5 +74,5 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log([`Trigger with id ${args.id.toString()} was succesfully removed`].concat(info).join('\n'))
+        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n'))
     })
