@@ -21,13 +21,9 @@ pragma solidity ^0.8.0;
 
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { IValidator } from "../interfaces/IValidator.sol";
-import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
-import "../interfaces/BotLike.sol";
 
-abstract contract ConstantMulipleValidator is IValidator {
+contract ConstantMultipleValidator is IValidator {
     using RatioUtils for uint256;
 
     ServiceRegistry public immutable serviceRegistry;
@@ -36,16 +32,22 @@ abstract contract ConstantMulipleValidator is IValidator {
         serviceRegistry = _serviceRegistry;
     }
 
+    // TODO: move the decode() from AutomationBotAggregator
     function decode(bytes[] memory triggersData)
         public
-        view
+        pure
         returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
     {
-        uint256[] memory dummy1 = new uint256[](0);
-        uint256[] memory dummy2 = new uint256[](0);
-        return (dummy1, dummy2);
+        uint256[] memory _cdpIds = new uint256[](triggersData.length);
+        uint256[] memory _triggerTypes = new uint256[](triggersData.length);
+        for (uint256 i = 0; i < triggersData.length; i += 1) {
+            (_cdpIds[i], _triggerTypes[i]) = abi.decode(triggersData[i], (uint256, uint16));
+        }
+
+        return (_cdpIds, _triggerTypes);
     }
 
+    // TODO: add Constant multiple trigger validations
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
         external
         view

@@ -1,7 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerType } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupId } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
@@ -24,6 +24,10 @@ export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragmen
 
 export function getCommandHash(triggerType: TriggerType) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Command', triggerType]))
+}
+
+export function getValidatorHash(triggerGroupId: TriggerGroupId) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Validator', triggerGroupId]))
 }
 
 export function generateRandomAddress() {

@@ -42,6 +42,7 @@ const addresses = {
         AUTOMATION_BASIC_BUY_COMMAND: constants.AddressZero, // TODO:
         AUTOMATION_BASIC_SELL_COMMAND: constants.AddressZero,
         AUTOMATION_BOT_AGGREGATOR: constants.AddressZero,
+        CONSTANT_MULTIPLE_VALIDATOR: constants.AddressZero,
     },
     [Network.GOERLI]: {
         CDP_MANAGER: '0xdcBf58c9640A7bd0e062f8092d70fb981Bb52032',
@@ -70,6 +71,7 @@ const addresses = {
         AUTOMATION_BASIC_BUY_COMMAND: '0x98b2b67795171380a4bfb5B8cD2F59aEA768b3ED',
         AUTOMATION_BASIC_SELL_COMMAND: '0x3da3e38bBe1100DE5247617b4554115C0e452416',
         AUTOMATION_BOT_AGGREGATOR: constants.AddressZero,
+        CONSTANT_MULTIPLE_VALIDATOR: constants.AddressZero,
     },
 }
 

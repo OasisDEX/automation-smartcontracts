@@ -28,7 +28,6 @@ contract AutomationBotAggregator {
     struct TriggerGroupRecord {
         bytes32 triggerGroupHash;
         uint256 cdpId;
-        uint16 groupTypeId;
     }
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -60,7 +59,6 @@ contract AutomationBotAggregator {
         return validatorAddress;
     }
 
-    // TODO: change to private pure
     function getTriggerGroupHash(
         uint256 cdpId,
         uint256 groupId,
@@ -105,16 +103,14 @@ contract AutomationBotAggregator {
             AUTOMATION_AGGREGATOR_BOT_KEY
         );
 
-        // TODO: replace decode with IValidator(validatorAddress).decode
         address validatorAddress = getValidatorAddress(groupTypeId);
-        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
 
-        /*         require(
+        require(
             IValidator(validatorAddress).validate(replacedTriggerId, triggersData),
             "aggregator/validation-error"
         );
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = IValidator(validatorAddress)
-            .decode(triggersData); */
+            .decode(triggersData);
 
         uint256 firstTriggerId = AutomationBot(automationBot).triggersCounter() + 1;
 
@@ -174,8 +170,7 @@ contract AutomationBotAggregator {
         triggerGroupCounter = triggerGroupCounter + 1;
         activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(
             getTriggerGroupHash(cdpId, triggerGroupCounter, triggerIds),
-            cdpId,
-            groupTypeId
+            cdpId
         );
 
         emit TriggerGroupAdded(triggerGroupCounter, groupTypeId, triggerIds);
@@ -198,12 +193,12 @@ contract AutomationBotAggregator {
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
-        activeTriggerGroups[groupId] = TriggerGroupRecord(0, 0, 0);
+        activeTriggerGroups[groupId] = TriggerGroupRecord(0, 0);
 
-        emit TriggerGroupRemoved(triggerGroupCounter, groupIdRecord.groupTypeId, triggerIds);
+        emit TriggerGroupRemoved(groupId, triggerIds);
     }
 
-    event TriggerGroupRemoved(uint256 groupId, uint16 groupTypeId, uint256[] triggerIds);
+    event TriggerGroupRemoved(uint256 groupId, uint256[] triggerIds);
 
     event TriggerGroupAdded(uint256 groupId, uint16 groupTypeId, uint256[] triggerIds);
 }

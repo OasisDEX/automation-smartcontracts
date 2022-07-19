@@ -35,6 +35,10 @@ export class HardhatUtils {
                 'AutomationBotAggregator',
                 this.addresses.AUTOMATION_BOT_AGGREGATOR,
             ),
+            constantMultipleValidator: await this.hre.ethers.getContractAt(
+                'ConstantMultipleValidator',
+                this.addresses.CONSTANT_MULTIPLE_VALIDATOR,
+            ),
             automationExecutor: await this.hre.ethers.getContractAt(
                 'AutomationExecutor',
                 this.addresses.AUTOMATION_EXECUTOR,

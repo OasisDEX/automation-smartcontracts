@@ -1,5 +1,5 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.0;
 
 interface IValidator {
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
