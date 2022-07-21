@@ -60,3 +60,13 @@ export interface BaseExecutionArgs {
     slippage: BigNumber
     debug: boolean
 }
+
+export interface EtherscanGasPrice {
+    result: {
+        LastBlock: string
+        SafeGasPrice: string
+        ProposeGasPrice: string
+        FastGasPrice: string
+        suggestBaseFee: string
+    }
+}

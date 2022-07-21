@@ -93,7 +93,7 @@ contract BasicBuyCommand is BaseMPACommand {
             nextCollRatio >= trigger.execCollRatio.wad() &&
             nextPrice <= trigger.maxBuyPrice &&
             trigger.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
-            liquidationRatio.radToWad() &&
+            liquidationRatio.rayToWad() &&
             baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 

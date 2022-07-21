@@ -118,18 +118,8 @@ export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAm
     const iface = new utils.Interface([
         'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
     ])
-    console.log('forgeUnoswapCalldata ', [
-        fromToken,
-        fromAmount,
-        toAmount,
-        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
-    ])
-    return iface.encodeFunctionData('unoswap', [
-        fromToken,
-        fromAmount,
-        toAmount,
-        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
-    ])
+    const pool = `0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`
+    return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
 }
 
 export function generateStopLossExecutionData(
