@@ -27,20 +27,20 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
+struct BasicBuyTriggerData {
+    uint256 cdpId;
+    uint16 triggerType;
+    uint256 execCollRatio;
+    uint256 targetCollRatio;
+    uint256 maxBuyPrice;
+    bool continuous;
+    uint64 deviation;
+    uint32 maxBaseFeeInGwei;
+}
+
 contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
     using RatioUtils for uint256;
-
-    struct BasicBuyTriggerData {
-        uint256 cdpId;
-        uint16 triggerType;
-        uint256 execCollRatio;
-        uint256 targetCollRatio;
-        uint256 maxBuyPrice;
-        bool continuous;
-        uint64 deviation;
-        uint32 maxBaseFeeInGwei;
-    }
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
