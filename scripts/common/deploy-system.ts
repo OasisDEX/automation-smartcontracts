@@ -14,7 +14,7 @@ import {
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupId } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
 import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
 
 export interface DeployedSystem {
@@ -257,7 +257,7 @@ export async function configureRegistryEntries(
     )
     if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getValidatorHash(TriggerGroupId.CONSTANT_MULTIPLE),
+        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
         system.constantMultipleValidator.address,
     )
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')

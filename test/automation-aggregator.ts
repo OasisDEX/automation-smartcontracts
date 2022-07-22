@@ -1,10 +1,10 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
+import { encodeTriggerData, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
-import { TriggerGroupId, TriggerType } from '../scripts/common'
+import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
@@ -84,7 +84,7 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('addTriggerGroup', async () => {
-        const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
+        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
 
         // basic buy
@@ -197,7 +197,7 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('removeTriggerGroup', async () => {
-        const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
+        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const replacedTriggerId = [0, 0]
 
         const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
@@ -342,7 +342,7 @@ describe('AutomationAggregatorBot', async () => {
     })
     describe('cdpAllowed', async () => {
         before(async () => {
-            const groupTypeId = TriggerGroupId.CONSTANT_MULTIPLE
+            const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
             const replacedTriggerId = [0, 0]
             const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
 
@@ -382,7 +382,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should return false for bad operator address', async () => {
             const status = await AutomationBotAggregatorInstance.isCdpAllowed(
                 testCdpId,
-                '0x1234123412341234123412341234123412341234',
+                generateRandomAddress(),
                 hardhatUtils.addresses.CDP_MANAGER,
             )
             expect(status).to.equal(false, 'approval returned for random address')
@@ -394,7 +394,7 @@ describe('AutomationAggregatorBot', async () => {
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
             )
-            expect(status).to.equal(true, 'approval do not exist for AutomationBot')
+            expect(status).to.equal(true, 'approval does not exist for AutomationBot')
         })
     })
 })

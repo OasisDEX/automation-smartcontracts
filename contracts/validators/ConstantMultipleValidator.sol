@@ -39,7 +39,7 @@ contract ConstantMultipleValidator is IValidator {
     {
         uint256[] memory _cdpIds = new uint256[](triggersData.length);
         uint256[] memory _triggerTypes = new uint256[](triggersData.length);
-        for (uint256 i = 0; i < triggersData.length; i += 1) {
+        for (uint256 i = 0; i < triggersData.length; i++) {
             (_cdpIds[i], _triggerTypes[i]) = abi.decode(triggersData[i], (uint256, uint16));
         }
 
@@ -54,10 +54,8 @@ contract ConstantMultipleValidator is IValidator {
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
-        for (uint256 i = 0; i < triggersData.length - 1; i++) {
-            require(cdpIds[i] == cdpIds[i + 1], "validator/different-cdpids");
-            // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
-        }
+        require(cdpIds[0] == cdpIds[1], "validator/different-cdpids");
+        // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
 
         return true;
     }

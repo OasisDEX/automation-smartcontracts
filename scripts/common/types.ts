@@ -18,7 +18,7 @@ export enum TriggerType {
     BASIC_SELL = 4,
 }
 
-export enum TriggerGroupId {
+export enum TriggerGroupType {
     CONSTANT_MULTIPLE = 1,
 }
 
