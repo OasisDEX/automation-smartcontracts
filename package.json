@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
+    "test:aggregator": "npx hardhat test test/automation-aggregator.ts",
     "build": "npx hardhat compile",
     "clean": "rm -rf artifacts cache typechain",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/*.sol contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
