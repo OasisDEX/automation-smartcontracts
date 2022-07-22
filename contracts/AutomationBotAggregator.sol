@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// AutomationBot.sol
+/// AutomationBotAggregator.sol
 
 // Copyright (C) 2022 Oazo Apps Limited
 
@@ -16,6 +16,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.13;
 
 import { AutomationBot } from "./AutomationBot.sol";
@@ -104,7 +105,7 @@ contract AutomationBotAggregator {
             );
 
             triggerIds[i] = firstTriggerId + i;
-            require(status, "aggregator/add-trigger-fail");
+            require(status, "aggregator/add-trigger-failed");
         }
 
         automationAggregatorBot.addRecord(cdpIds[0], groupType, triggerIds);
@@ -132,7 +133,7 @@ contract AutomationBotAggregator {
                     removeAllowance && i == triggerIds.length - 1
                 )
             );
-            require(status, "aggregator/remove-trigger-fail");
+            require(status, "aggregator/remove-trigger-failed");
         }
 
         automationAggregatorBot.removeRecord(cdpId, groupId, triggerIds);
