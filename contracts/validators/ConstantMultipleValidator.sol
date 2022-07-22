@@ -46,15 +46,17 @@ contract ConstantMultipleValidator is IValidator {
         return (_cdpIds, _triggerTypes);
     }
 
-    // TODO: add Constant multiple trigger validations
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
         external
-        view
+        pure
         returns (bool)
     {
-        for (uint256 i = 0; i < replacedTriggerId.length; i += 1) {
-            // check if CDPids are different
-            // check if first trigger is buy and second sell etc etc
+        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
+        require(triggersData.length == 2, "validator/wrong-trigger-count");
+        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
+        for (uint256 i = 0; i < triggersData.length - 1; i++) {
+            require(cdpIds[i] == cdpIds[i + 1], "validator/different-cdpids");
+            // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
         }
 
         return true;
