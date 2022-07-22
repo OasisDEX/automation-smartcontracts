@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BaseMPACommand.sol
+/// ConstantMultipleValidator.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2022 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
