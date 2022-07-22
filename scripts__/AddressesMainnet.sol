@@ -1,0 +1,27 @@
+pragma solidity ^0.8.0;
+
+library AddressesMainnet {
+    address public constant CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
+    address public constant ILK_REGISTRY = 0x5a464C28D19848f44199D003BeF5ecc87d090F87;
+    address public constant MCD_VAT = 0x35D1b3F3D7966A1DFe207aa4514C12a259A0492B;
+    address public constant MCD_JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
+    address public constant OSM_MOM = 0x76416A4d5190d071bfed309861527431304aA14f;
+    address public constant MCD_SPOT = 0x65C79fcB50Ca1594B025960e539eD7A9a6D434A3;
+    address public constant MCD_JOIN_ETH_A = 0x2F0b23f53734252Bda2277357e97e1517d6B042A;
+    address public constant MCD_FLASH = 0x1EB4CF3A948E7D72A198fe073cCb8C7a948cD853;
+    address public constant PROXY_REGISTRY = 0x4678f0a6958e4D2Bc4F1BAF7Bc52E8F3564f3fE4;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address public constant DAI_JOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
+    address public constant DSS_PROXY_ACTIONS = 0x82ecD135Dce65Fbc6DbdD0e4237E0AF93FFD5038;
+    address public constant MULTIPLY_PROXY_ACTIONS = 0x2a49Eae5CCa3f050eBEC729Cf90CC910fADAf7A2;
+    address public constant ZERO_FEE_EXCHANGE = 0x99E4484Dac819aA74B347208752306615213d324;
+    address public constant EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
+    address public constant AUTOMATION_SERVICE_REGISTRY =
+        0x9b4Ae7b164d195df9C4Da5d08Be88b2848b2EaDA;
+    address public constant AUTOMATION_BOT = 0x6E87a7A0A03E51A741075fDf4D1FCce39a4Df01b;
+    address public constant AUTOMATION_EXECUTOR = 0x40A63b453502ab04DfDf86fB79a9FF2Ec337E188;
+    address public constant AUTOMATION_MCD_VIEW = 0x55Dc2Be8020bCa72E58e665dC931E03B749ea5E0;
+    address public constant AUTOMATION_MCD_UTILS = 0x68Ff2d96EDD4aFfcE9CBE82BF55F0B70acb483Ea;
+    address public constant AUTOMATION_CLOSE_COMMAND = 0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b;
+}

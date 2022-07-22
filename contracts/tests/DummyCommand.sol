@@ -3,23 +3,19 @@ pragma solidity ^0.8.0;
 
 import "../interfaces/ICommand.sol";
 import "../interfaces/BotLike.sol";
-import "../ServiceRegistry.sol";
 
 contract DummyCommand is ICommand {
-    address public serviceRegistry;
     bool public initialCheckReturn;
     bool public finalCheckReturn;
     bool public revertsInExecute;
     bool public validTriggerData;
 
     constructor(
-        address _serviceRegistry,
         bool _initialCheckReturn,
         bool _finalCheckReturn,
         bool _revertsInExecute,
         bool _validTriggerData
     ) {
-        serviceRegistry = _serviceRegistry;
         initialCheckReturn = _initialCheckReturn;
         finalCheckReturn = _finalCheckReturn;
         revertsInExecute = _revertsInExecute;
