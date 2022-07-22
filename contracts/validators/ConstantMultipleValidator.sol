@@ -54,7 +54,7 @@ contract ConstantMultipleValidator is IValidator {
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
-        require(cdpIds[0] == cdpIds[1], "validator/different-cdpids");
+        require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
         // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
 
         return true;
