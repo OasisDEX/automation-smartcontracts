@@ -1,18 +1,21 @@
 import hre from 'hardhat'
-import { BytesLike, utils } from 'ethers'
+import { BytesLike, utils, BigNumber as EtherBN } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
-import BigNumber from 'bignumber.js'
-import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, TriggerType } from '../scripts/common'
+import { BigNumber } from 'bignumber.js'
+import {
+    encodeTriggerData,
+    forgeUnoswapCalldata,
+    getEvents,
+    HardhatUtils,
+    toRatio,
+    TriggerType,
+} from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { DsProxyLike, IERC20, MPALike } from '../typechain'
+import { DsProxyLike, MPALike } from '../typechain'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
-
-function toRatio(units: number) {
-    return new BigNumber(units).shiftedBy(4).toNumber()
-}
 
 // BLOCK_NUMBER=14997398
 describe('BasicSellCommand', () => {
@@ -143,6 +146,7 @@ describe('BasicSellCommand', () => {
             executionRatio: BigNumber.Value,
             targetRatio: BigNumber.Value,
             continuous: boolean,
+            maxBaseFee = maxGweiPrice,
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
@@ -152,7 +156,7 @@ describe('BasicSellCommand', () => {
                 new BigNumber(4000).shiftedBy(18).toFixed(),
                 continuous,
                 50,
-                maxGweiPrice,
+                maxBaseFee,
             )
             const createTriggerTx = await createTrigger(triggerData)
             const receipt = await createTriggerTx.wait()
@@ -205,7 +209,9 @@ describe('BasicSellCommand', () => {
                 methodName: '',
             }
 
-            const minToTokenAmount = new BigNumber(cdpData.requiredDebt).times(new BigNumber(1).minus(slippage))
+            const minToTokenAmount = new BigNumber(cdpData.requiredDebt)
+                .times(new BigNumber(1).minus(slippage))
+                .times(new BigNumber(1).minus(oasisFee))
             const exchangeData = {
                 fromTokenAddress: hardhatUtils.addresses.WETH,
                 toTokenAddress: hardhatUtils.addresses.DAI,
@@ -255,6 +261,37 @@ describe('BasicSellCommand', () => {
             )
 
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
+        })
+
+        it.only('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
+            await (
+                await usersProxy
+                    .connect(await hardhatUtils.impersonate(proxyOwnerAddress))
+                    .execute(
+                        system.mcdUtils.address,
+                        system.mcdUtils.interface.encodeFunctionData('drawDebt', [
+                            EtherBN.from(10).pow(18).mul(1_010_000),
+                            testCdpId,
+                            hardhatUtils.addresses.CDP_MANAGER,
+                            proxyOwnerAddress,
+                        ]),
+                    )
+            ).wait()
+
+            const ratio = await system.mcdView.getRatio(testCdpId, false)
+            const nextRatio = await system.mcdView.getRatio(testCdpId, true)
+
+            const manager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+            const ilk = await manager.ilks(testCdpId)
+            const spot = await hre.ethers.getContractAt('SpotterLike', hardhatUtils.addresses.MCD_SPOT)
+            const [, liqRatio] = await spot.ilks(ilk)
+            expect(ratio).to.be.gt(liqRatio.div(1e9))
+            expect(nextRatio).to.be.lt(liqRatio.div(1e9))
+
+            const executionRatio = toRatio(1.45)
+            const targetRatio = toRatio(1.5)
+            const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false, 0)
+            await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
         it('does not recreate the trigger if `continuous` is set to false', async () => {
