@@ -263,7 +263,7 @@ describe('BasicSellCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
         })
 
-        it.only('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
+        it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
             await (
                 await usersProxy
                     .connect(await hardhatUtils.impersonate(proxyOwnerAddress))
