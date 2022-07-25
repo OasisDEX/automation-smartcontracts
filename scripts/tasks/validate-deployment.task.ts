@@ -1,5 +1,5 @@
 import { task } from 'hardhat/config'
-import { AutomationServiceName, HardhatUtils } from '../common'
+import { AutomationServiceName, getCommandHash, getServiceNameHash, HardhatUtils, TriggerType } from '../common'
 
 // Requires ServiceRegistry address to be configured correctly
 task('validate-deployment', 'Validate the current deployment')
@@ -17,30 +17,57 @@ task('validate-deployment', 'Validate the current deployment')
         const services = [
             {
                 name: AutomationServiceName.AUTOMATION_BOT,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
                 addressFromConfig: addresses.AUTOMATION_BOT,
             },
             {
                 name: AutomationServiceName.AUTOMATION_EXECUTOR,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
                 addressFromConfig: addresses.AUTOMATION_EXECUTOR,
             },
             {
                 name: AutomationServiceName.AUTOMATION_SWAP,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
                 addressFromConfig: addresses.AUTOMATION_SWAP,
             },
             {
                 name: AutomationServiceName.MCD_UTILS,
+                hash: getServiceNameHash(AutomationServiceName.MCD_UTILS),
                 addressFromConfig: addresses.AUTOMATION_MCD_UTILS,
             },
             {
                 name: AutomationServiceName.MCD_VIEW,
+                hash: getServiceNameHash(AutomationServiceName.MCD_VIEW),
                 addressFromConfig: addresses.AUTOMATION_MCD_VIEW,
             },
             {
+                name: 'TriggerType.CLOSE_TO_COLLATERAL',
+                hash: getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
+                addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
+            },
+            {
+                name: 'TriggerType.CLOSE_TO_DAI',
+                hash: getCommandHash(TriggerType.CLOSE_TO_DAI),
+                addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
+            },
+            {
+                name: 'TriggerType.BASIC_BUY',
+                hash: getCommandHash(TriggerType.BASIC_BUY),
+                addressFromConfig: addresses.AUTOMATION_BASIC_BUY_COMMAND,
+            },
+            {
+                name: 'TriggerType.BASIC_SELL',
+                hash: getCommandHash(TriggerType.BASIC_SELL),
+                addressFromConfig: addresses.AUTOMATION_BASIC_SELL_COMMAND,
+            },
+            {
                 name: AutomationServiceName.CDP_MANAGER,
+                hash: getServiceNameHash(AutomationServiceName.CDP_MANAGER),
                 addressFromConfig: addresses.CDP_MANAGER,
             },
             {
                 name: AutomationServiceName.MULTIPLY_PROXY_ACTIONS,
+                hash: getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
                 addressFromConfig: addresses.MULTIPLY_PROXY_ACTIONS,
             },
         ]
@@ -48,7 +75,7 @@ task('validate-deployment', 'Validate the current deployment')
         const updatedServices = await Promise.all(
             services.map(async service => ({
                 ...service,
-                addressFromServiceRegistry: await serviceRegistry.getRegisteredService(service.name),
+                addressFromServiceRegistry: await serviceRegistry.getServiceAddress(service.hash),
             })),
         )
 
