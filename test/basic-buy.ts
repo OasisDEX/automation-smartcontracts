@@ -9,6 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     ONE_INCH_V4_ROUTER,
+    toRatio,
     TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
@@ -16,10 +17,6 @@ import { DsProxyLike, MPALike } from '../typechain'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
-
-function toRatio(units: number) {
-    return new BigNumber(units).shiftedBy(4).toNumber()
-}
 
 describe('BasicBuyCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
