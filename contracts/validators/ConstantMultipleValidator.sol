@@ -16,8 +16,18 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 pragma solidity ^0.8.0;
+
+struct GenericTriggerData {
+    uint256 cdpId;
+    uint16 triggerType;
+    uint256 execCollRatio;
+    uint256 targetCollRatio;
+    uint256 bsPrice;
+    bool continuous;
+    uint64 deviation;
+    uint32 maxBaseFeeInGwei;
+}
 
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { IValidator } from "../interfaces/IValidator.sol";
@@ -51,11 +61,41 @@ contract ConstantMultipleValidator is IValidator {
         pure
         returns (bool)
     {
-        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggersData.length == 2, "validator/wrong-trigger-count");
+
+        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
+
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
-        // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
+
+        GenericTriggerData memory buyTriggerData = abi.decode(
+            triggersData[0],
+            (GenericTriggerData)
+        );
+        GenericTriggerData memory sellTriggerData = abi.decode(
+            triggersData[1],
+            (GenericTriggerData)
+        );
+
+        require(
+            buyTriggerData.continuous == sellTriggerData.continuous == true,
+            "validator/continous-not-true"
+        );
+
+        require(
+            buyTriggerData.maxBaseFeeInGwei == sellTriggerData.maxBaseFeeInGwei,
+            "validator/max-fee-not-equal"
+        );
+
+        require(
+            buyTriggerData.deviation == sellTriggerData.deviation,
+            "validator/deviation-not-equal"
+        );
+
+        require(
+            buyTriggerData.targetCollRatio == sellTriggerData.targetCollRatio,
+            "validator/coll-ratio-not-equal"
+        );
 
         return true;
     }
