@@ -1,5 +1,13 @@
 import { task } from 'hardhat/config'
-import { AutomationServiceName, getCommandHash, getServiceNameHash, HardhatUtils, TriggerType } from '../common'
+import {
+    AutomationServiceName,
+    getCommandHash,
+    getServiceNameHash,
+    getValidatorHash,
+    HardhatUtils,
+    TriggerGroupType,
+    TriggerType,
+} from '../common'
 
 // Requires ServiceRegistry address to be configured correctly
 task('validate-deployment', 'Validate the current deployment')
@@ -69,6 +77,16 @@ task('validate-deployment', 'Validate the current deployment')
                 name: AutomationServiceName.MULTIPLY_PROXY_ACTIONS,
                 hash: getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
                 addressFromConfig: addresses.MULTIPLY_PROXY_ACTIONS,
+            },
+            {
+                name: AutomationServiceName.AUTOMATION_AGGREGATOR_BOT,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_AGGREGATOR_BOT),
+                addressFromConfig: addresses.AUTOMATION_AGGREGATOR_BOT,
+            },
+            {
+                name: AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR,
+                hash: getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+                addressFromConfig: addresses.CONSTANT_MULTIPLE_VALIDATOR,
             },
         ]
 

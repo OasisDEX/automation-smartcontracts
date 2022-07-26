@@ -240,9 +240,9 @@ export async function configureRegistryEntries(
         system.automationBot.address,
     )
 
-    if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')
+    if (logDebug) console.log('Adding AUTOMATION_AGGREGATOR_BOT to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
+        getServiceNameHash(AutomationServiceName.AUTOMATION_AGGREGATOR_BOT),
         system.automationBotAggregator.address,
     )
     if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')

@@ -32,7 +32,7 @@ contract AutomationBotAggregator {
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
-    string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_BOT_AGGREGATOR";
+    string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
 
     mapping(uint256 => TriggerGroupRecord) public activeTriggerGroups;
 
