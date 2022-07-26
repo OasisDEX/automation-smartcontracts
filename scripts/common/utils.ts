@@ -47,7 +47,7 @@ function getTriggerDataTypes(triggerType: TriggerType) {
             // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         case TriggerType.BASIC_SELL:
-            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 minSellPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)

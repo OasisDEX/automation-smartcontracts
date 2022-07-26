@@ -39,16 +39,23 @@ export interface DeploySystemArgs {
     addressOverrides?: Partial<AddressRegistry>
 }
 
-const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry) => {
+const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {
         if (address === constants.AddressZero) {
             console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
             return
         }
+
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
+        const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
-            const receipt = await serviceRegistry.addNamedService(hash, address, await utils.getGasSettings())
-            await receipt.wait()
+            await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
+        } else if (overwrite.includes(hash)) {
+            await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
+        } else {
+            console.log(
+                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}`,
+            )
         }
     }
 }
@@ -180,31 +187,14 @@ export async function configureRegistryEntries(
     utils: HardhatUtils,
     system: DeployedSystem,
     addresses: AddressRegistry,
-    allowedReplacements: string[] = [],
+    overwrite: string[] = [],
     logDebug = false,
 ) {
-    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry)
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
     const ensureMcdViewWhitelist = async (address: string) => {
         const isWhitelisted = await system.mcdView.whitelisted(address)
         if (!isWhitelisted) {
             await (await system.mcdView.approve(address, true, await utils.getGasSettings())).wait()
-        }
-    }
-
-    if (allowedReplacements.length > 0) {
-        const existingHashes = (
-            await Promise.all(
-                allowedReplacements.map(async hash => ({
-                    hash,
-                    exists: (await system.serviceRegistry.getServiceAddress(hash)) !== constants.AddressZero,
-                })),
-            )
-        )
-            .filter(x => x.exists)
-            .map(x => x.hash)
-
-        for (const hash of existingHashes) {
-            await (await system.serviceRegistry.removeNamedService(hash, await utils.getGasSettings())).wait()
         }
     }
 
