@@ -84,7 +84,7 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.AUTOMATION_AGGREGATOR_BOT,
             },
             {
-                name: AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR,
+                name: 'TriggerGroupType.CONSTANT_MULTIPLE',
                 hash: getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
                 addressFromConfig: addresses.CONSTANT_MULTIPLE_VALIDATOR,
             },
