@@ -1,6 +1,8 @@
 import { constants } from 'ethers'
 import {
     AutomationBot,
+    AutomationBotAggregator,
+    ConstantMultipleValidator,
     AutomationExecutor,
     AutomationSwap,
     BasicBuyCommand,
@@ -12,13 +14,15 @@ import {
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType } from './types'
-import { getCommandHash, getServiceNameHash } from './utils'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
+import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
+    automationBotAggregator: AutomationBotAggregator
+    constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
     mcdView: McdView
@@ -92,6 +96,15 @@ export async function deploySystem({
         [ServiceRegistryInstance.address],
     )
 
+    const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
+        ethers.getContractFactory('AutomationBotAggregator'),
+        [ServiceRegistryInstance.address],
+    )
+    const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
+        ethers.getContractFactory('ConstantMultipleValidator'),
+        [ServiceRegistryInstance.address],
+    )
+
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
@@ -156,6 +169,8 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
+        automationBotAggregator: AutomationBotAggregatorInstance,
+        constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
         automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,
@@ -223,6 +238,22 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         system.automationBot.address,
+    )
+
+    if (logDebug) console.log('Adding AUTOMATION_AGGREGATOR_BOT to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_AGGREGATOR_BOT),
+        system.automationBotAggregator.address,
+    )
+    if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+        system.constantMultipleValidator.address,
+    )
+    if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR),
+        system.constantMultipleValidator.address,
     )
 
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')

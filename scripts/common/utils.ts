@@ -1,7 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerType } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
@@ -21,11 +21,17 @@ export function getServiceNameHash(service: AutomationServiceName) {
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
     const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
-    return filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data })) || []
+    return (
+        filteredEvents?.map(x => ({ ...iface.parseLog(x), topics: x.topics, data: x.data, address: x.address })) || []
+    )
 }
 
 export function getCommandHash(triggerType: TriggerType) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Command', triggerType]))
+}
+
+export function getValidatorHash(triggerGroupType: TriggerGroupType) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Validator', triggerGroupType]))
 }
 
 export function generateRandomAddress() {
