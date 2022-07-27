@@ -212,12 +212,10 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds
     ) external onlyCdpAllowed(cdpId) {
         require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
-        for (uint256 i = 0; i < triggerIds.length; i++) {
-            require(triggerGroup[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
-        }
 
         activeGroups[groupId] = 0;
         for (uint256 i = 0; i < triggerIds.length; i++) {
+            require(triggerGroup[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
             triggerGroup[triggerIds[i]] = 0;
         }
 
