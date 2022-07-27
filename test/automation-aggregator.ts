@@ -76,13 +76,6 @@ describe('AutomationAggregatorBot', async () => {
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
-    describe('getTriggersGroupHash', async () => {
-        it('should return the same hash as created offchain', async () => {
-            expect(await AutomationBotAggregatorInstance.getTriggerGroupHash('12', '15')).to.eql(
-                utils.solidityKeccak256(['uint256', 'uint256'], ['12', '15']),
-            )
-        })
-    })
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]

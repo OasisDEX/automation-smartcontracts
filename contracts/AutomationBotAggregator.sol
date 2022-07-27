@@ -52,11 +52,6 @@ contract AutomationBotAggregator {
         return serviceRegistry.getServiceAddress(validatorHash);
     }
 
-    function getTriggerGroupHash(uint256 groupId, uint256 cdpId) public pure returns (bytes32) {
-        bytes32 hash = keccak256(abi.encodePacked(groupId, cdpId));
-        return hash;
-    }
-
     function isCdpAllowed(
         uint256 cdpId,
         address operator,
