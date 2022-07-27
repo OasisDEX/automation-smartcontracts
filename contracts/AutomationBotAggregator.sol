@@ -191,7 +191,7 @@ contract AutomationBotAggregator {
         require(group.triggers[triggerHash] != 0, "aggregator/no-trigger");
         group.triggers[triggerHash] = newTriggerId;
         triggerGroup[newTriggerId] = groupId;
-        emit TriggerGroupUpdated(groupId, cdpId, triggerHash, newTriggerId);
+        emit TriggerGroupUpdated(groupId, cdpId, newTriggerId);
     }
 
     function removeRecord(uint256 cdpId, uint256 groupId) external onlyCdpAllowed(cdpId) {
@@ -217,11 +217,6 @@ contract AutomationBotAggregator {
         uint16 indexed groupType,
         uint256[] triggerIds
     );
-    event TriggerGroupUpdated(
-        uint256 indexed groupId,
-        uint256 indexed cdpId,
-        bytes32 triggerHash,
-        uint256 triggerId
-    );
+    event TriggerGroupUpdated(uint256 indexed groupId, uint256 indexed cdpId, uint256 triggerId);
     event TriggerGroupRemoved(uint256 indexed groupId, uint256 indexed cdpId);
 }
