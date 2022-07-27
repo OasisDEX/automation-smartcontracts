@@ -29,8 +29,8 @@ contract AutomationBotAggregator {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
 
-    mapping(uint256 => uint256) public activeGroups;
-    mapping(uint256 => uint256) public groupTriggers;
+    mapping(uint256 => uint256) public activeGroups; // groupId => cdpId
+    mapping(uint256 => uint256) public triggerGroup; // triggerId => groupId
     uint256 public triggerGroupCounter;
 
     ServiceRegistry public immutable serviceRegistry;
