@@ -128,7 +128,7 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 triggerId = automationAggregatorBot.triggerIdMap(
             getTriggersHash(cdpId, triggerData, commandAddress)
         );
-        if (triggerId != 0) {
+        if (triggerId != 0 && automationAggregatorBot.triggerGroup(triggerId) != 0) {
             automationAggregatorBot.replaceGroupTrigger(
                 cdpId,
                 automationAggregatorBot.triggerGroup(triggerId),

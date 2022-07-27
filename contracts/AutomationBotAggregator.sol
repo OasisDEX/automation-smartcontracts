@@ -31,7 +31,7 @@ contract AutomationBotAggregator {
 
     mapping(uint256 => uint256) public activeGroups; // groupId => cdpId
     mapping(uint256 => uint256) public triggerGroup; // triggerId => groupId
-    mapping(bytes32 => uint256) public triggerIdMap; // triggerId => groupId
+    mapping(bytes32 => uint256) public triggerIdMap; // triggerHash => triggerId
 
     uint256 public triggerGroupCounter;
 
