@@ -135,10 +135,7 @@ contract AutomationBotAggregator {
         automationAggregatorBot.removeRecord(cdpId, groupId);
     }
 
-    function addRecord(
-        uint256 cdpId,
-        uint16 groupType
-    ) external {
+    function addRecord(uint256 cdpId, uint16 groupType) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
@@ -149,10 +146,7 @@ contract AutomationBotAggregator {
         emit TriggerGroupAdded(triggerGroupCounter, groupType, cdpId);
     }
 
-    function removeRecord(
-        uint256 cdpId,
-        uint256 groupId
-    ) external {
+    function removeRecord(uint256 cdpId, uint256 groupId) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         TriggerGroupRecord memory groupIdRecord = activeTriggerGroups[groupId];
