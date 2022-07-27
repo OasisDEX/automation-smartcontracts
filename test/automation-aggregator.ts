@@ -428,6 +428,7 @@ describe('AutomationAggregatorBot', async () => {
 
         let triggerGroupId = 0
         let triggerGroupId2 = 0
+        let triggerIds = [] as number[]
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
@@ -449,21 +450,20 @@ describe('AutomationAggregatorBot', async () => {
                 txReceipt2,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
             )
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
             triggerGroupId = event.args.groupId.toNumber()
             triggerGroupId2 = event2.args.groupId.toNumber()
-        })
-
-        it('should successfully update a trigger through DSProxy', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const triggerCounter = await AutomationBotInstance.triggersCounter()
-
-            const triggerIds = [
+            triggerIds = [
                 Number(triggerCounter) - 3,
                 Number(triggerCounter) - 2,
                 Number(triggerCounter) - 1,
                 Number(triggerCounter),
             ]
+        })
+
+        it('should successfully update a trigger through DSProxy', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
                 [testCdpId, triggerGroupId, triggerIds[0], TriggerType.BASIC_BUY, bbTriggerData],
@@ -473,24 +473,13 @@ describe('AutomationAggregatorBot', async () => {
                 .execute(AutomationBotAggregatorInstance.address, dataToSupplyReplace)
             const receipt = await tx.wait()
 
-            const events = getEvents(
-                receipt,
-                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupReplaced'),
-            )
+            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'))
 
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
         })
         it('should not update a trigger with wrong TriggerType', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const triggerCounter = await AutomationBotInstance.triggersCounter()
-
-            const triggerIds = [
-                Number(triggerCounter) - 3,
-                Number(triggerCounter) - 2,
-                Number(triggerCounter) - 1,
-                Number(triggerCounter),
-            ]
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
                 [testCdpId, triggerGroupId, triggerIds[0], TriggerType.BASIC_SELL, bsTriggerData],
@@ -502,14 +491,6 @@ describe('AutomationAggregatorBot', async () => {
         it('should not update a trigger with wrong trigger id but same cdp', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const triggerCounter = await AutomationBotInstance.triggersCounter()
-
-            const triggerIds = [
-                Number(triggerCounter) - 3,
-                Number(triggerCounter) - 2,
-                Number(triggerCounter) - 1,
-                Number(triggerCounter),
-            ]
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
                 [testCdpId, triggerGroupId, triggerIds[2], TriggerType.BASIC_SELL, bsTriggerData],
