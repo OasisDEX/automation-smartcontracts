@@ -55,6 +55,7 @@ describe('AutomationAggregatorBot', async () => {
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
+        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         system = await deploySystem({ utils, addCommands: true })
