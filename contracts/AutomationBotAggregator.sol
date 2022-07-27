@@ -147,6 +147,9 @@ contract AutomationBotAggregator {
         AutomationBot automationBot = AutomationBot(
             serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
         );
+        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
+        );
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
         require(activeGroups[groupId] == cdpId);
         require(groupTriggers[triggerId] == groupId);
@@ -163,6 +166,10 @@ contract AutomationBotAggregator {
         require(status, "aggregator/replace-trigger-failed");
         groupTriggers[automationBot.triggersCounter()] = groupId;
 
+        automationAggregatorBot.updateRecord(groupId, triggerId);
+    }
+
+    function updateRecord(uint256 groupId, uint256 triggerId) external {
         emit TriggerGroupReplaced(groupId, triggerId);
     }
 
