@@ -117,7 +117,7 @@ contract BasicBuyCommand is BaseMPACommand {
     ) external {
         BasicBuyTriggerData memory trigger = decode(triggerData);
         AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT_KEY")
+            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
         );
         validateTriggerType(trigger.triggerType, 3);
         validateSelector(MPALike.increaseMultiple.selector, executionData);

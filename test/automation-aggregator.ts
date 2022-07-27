@@ -15,7 +15,7 @@ import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
 function toRatio(units: number) {
@@ -123,7 +123,7 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
-            0,
+            5000,
             false,
             50,
             maxGweiPrice,
@@ -134,7 +134,7 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
-            0,
+            5000,
             false,
             50,
             maxGweiPrice,
@@ -442,27 +442,6 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('replaceGroupTrigger', async () => {
-        async function createTriggerForExecution(
-            executionRatio: BigNumber.Value,
-            targetRatio: BigNumber.Value,
-            continuous: boolean,
-        ) {
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                new BigNumber(executionRatio).toFixed(),
-                new BigNumber(targetRatio).toFixed(),
-                new BigNumber(5000).shiftedBy(18).toFixed(),
-                continuous,
-                50,
-                maxGweiPrice,
-            )
-            const createTriggerTx = await createTrigger(triggerData)
-            const receipt = await createTriggerTx.wait()
-            const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            return { triggerId: event.args.triggerId.toNumber(), triggerData }
-        }
-
         async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
             const collRatio = await system.mcdView.getRatio(testCdpId, true)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
@@ -544,7 +523,6 @@ describe('AutomationAggregatorBot', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const replacedTriggerId = [0, 0]
 
-        // current coll ratio : 1.859946411122229468
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
         const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
 
@@ -554,7 +532,7 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
-            0,
+            '4472665974900000000000',
             false,
             50,
             maxGweiPrice,
@@ -565,14 +543,13 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
-            0,
+            '4472665974900000000000',
             false,
             50,
             maxGweiPrice,
         )
 
         let triggerGroupId = 0
-        let triggerGroupId2 = 0
         let triggerIds = [] as number[]
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -582,22 +559,17 @@ describe('AutomationAggregatorBot', async () => {
                 [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
-            const tx2 = await ownerProxy
-                .connect(owner)
-                .execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
+            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
             const txReceipt = await tx.wait()
-            const txReceipt2 = await tx2.wait()
+
             const [event] = getEvents(
                 txReceipt,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
             )
-            const [event2] = getEvents(
-                txReceipt2,
-                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
-            )
+
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             triggerGroupId = event.args.groupId.toNumber()
-            triggerGroupId2 = event2.args.groupId.toNumber()
+
             triggerIds = [
                 Number(triggerCounter) - 3,
                 Number(triggerCounter) - 2,
@@ -605,7 +577,18 @@ describe('AutomationAggregatorBot', async () => {
                 Number(triggerCounter),
             ]
         })
+        // TODO: fails - event is not emitted - why
+        it('should successfully replace a trigger and update group through executor', async () => {
+            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const tx = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
 
+            const receipt = await (await tx).wait()
+            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'))
+
+            console.log(receipt.events?.find(e => e.address === AutomationBotAggregatorInstance.address))
+
+            expect(events.length).to.eq(1)
+        })
         it('should successfully update a trigger through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
@@ -622,19 +605,7 @@ describe('AutomationAggregatorBot', async () => {
 
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
         })
-        it('should successfully update a trigger through executor', async () => {
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
 
-            const tx2 = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
-
-            const receipt2 = await (await tx2).wait()
-            console.log(receipt2)
-            const events2 = getEvents(
-                receipt2,
-                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'),
-            )
-            expect(events2.length).to.eq(1)
-        })
         it('should not update a trigger with wrong TriggerType', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
