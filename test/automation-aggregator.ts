@@ -78,15 +78,17 @@ describe('AutomationAggregatorBot', async () => {
 
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-        const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+
+        // current coll ratio : 1.859946411122229468
+        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2), toRatio(1.8)]
 
         // basic buy
-        const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
         const bbTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            executionRatio,
-            targetRatio,
+            buyExecutionRatio,
+            buyTargetRatio,
             0,
             false,
             50,
@@ -96,8 +98,8 @@ describe('AutomationAggregatorBot', async () => {
         const bsTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_SELL,
-            correctExecutionRatio,
-            correctTargetRatio,
+            sellExecutionRatio,
+            sellTargetRatio,
             0,
             false,
             50,
@@ -193,15 +195,16 @@ describe('AutomationAggregatorBot', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const replacedTriggerId = [0, 0]
 
-        const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+        // current coll ratio : 1.859946411122229468
+        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2), toRatio(1.8)]
 
         // basic buy
-        const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
         const bbTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            executionRatio,
-            targetRatio,
+            buyExecutionRatio,
+            buyTargetRatio,
             0,
             false,
             50,
@@ -211,8 +214,8 @@ describe('AutomationAggregatorBot', async () => {
         const bsTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_SELL,
-            correctExecutionRatio,
-            correctTargetRatio,
+            sellExecutionRatio,
+            sellTargetRatio,
             0,
             false,
             50,
@@ -333,20 +336,21 @@ describe('AutomationAggregatorBot', async () => {
                 .to.be.reverted
         })
     })
-
     describe('cdpAllowed', async () => {
         before(async () => {
             const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
             const replacedTriggerId = [0, 0]
-            const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+
+            // current coll ratio : 1.859946411122229468
+            const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+            const [buyExecutionRatio, buyTargetRatio] = [toRatio(2), toRatio(1.8)]
 
             // basic buy
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const bbTriggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_BUY,
-                executionRatio,
-                targetRatio,
+                buyExecutionRatio,
+                buyTargetRatio,
                 0,
                 false,
                 50,
@@ -356,8 +360,8 @@ describe('AutomationAggregatorBot', async () => {
             const bsTriggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_SELL,
-                correctExecutionRatio,
-                correctTargetRatio,
+                sellExecutionRatio,
+                sellTargetRatio,
                 0,
                 false,
                 50,
@@ -395,15 +399,16 @@ describe('AutomationAggregatorBot', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const replacedTriggerId = [0, 0]
 
-        const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+        // current coll ratio : 1.859946411122229468
+        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2), toRatio(1.8)]
 
         // basic buy
-        const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
         const bbTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_BUY,
-            executionRatio,
-            targetRatio,
+            buyExecutionRatio,
+            buyTargetRatio,
             0,
             false,
             50,
@@ -413,8 +418,8 @@ describe('AutomationAggregatorBot', async () => {
         const bsTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BASIC_SELL,
-            correctExecutionRatio,
-            correctTargetRatio,
+            sellExecutionRatio,
+            sellTargetRatio,
             0,
             false,
             50,

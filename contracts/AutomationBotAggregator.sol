@@ -138,6 +138,13 @@ contract AutomationBotAggregator {
         AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
             serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
         );
+        (bytes32 oldHash, ) = automationBot.activeTriggers(triggerId);
+        bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+        bytes32 newHash = keccak256(
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+        );
+        require(oldHash == newHash, "aggregator/wrong-replacement-data");
         require(
             automationAggregatorBot.activeGroups(groupId) == cdpId,
             "aggregator/inactive-group"
