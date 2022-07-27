@@ -25,18 +25,12 @@ import { IValidator } from "./interfaces/IValidator.sol";
 import { ServiceRegistry } from "./ServiceRegistry.sol";
 
 contract AutomationBotAggregator {
-    struct TriggerGroupRecord {
-        bytes32 hash;
-        uint256 cdpId;
-    }
-
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
 
-    mapping(uint256 => TriggerGroupRecord) public activeTriggerGroups;
-    mapping(uint256 => uint256) activeGroups;
-    mapping(uint256 => uint256) groupTriggers;
+    mapping(uint256 => uint256) public activeGroups;
+    mapping(uint256 => uint256) public groupTriggers;
     uint256 public triggerGroupCounter;
 
     ServiceRegistry public immutable serviceRegistry;
@@ -142,18 +136,22 @@ contract AutomationBotAggregator {
         uint256 triggerId,
         uint256 triggerType,
         bytes memory triggerData
-    ) public {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+    ) external {
         AutomationBot automationBot = AutomationBot(
             serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
         );
         AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
             serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
         );
-        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
-        require(activeGroups[groupId] == cdpId);
-        require(groupTriggers[triggerId] == groupId);
-        groupTriggers[triggerId] = 0;
+        require(
+            automationAggregatorBot.activeGroups(groupId) == cdpId,
+            "aggregator/inactive-group"
+        );
+        require(
+            automationAggregatorBot.groupTriggers(triggerId) == groupId,
+            "aggregator/inactive-trigger"
+        );
+
         (bool status, ) = address(automationBot).delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(automationBot).addTrigger.selector,
@@ -163,14 +161,27 @@ contract AutomationBotAggregator {
                 triggerData
             )
         );
-        require(status, "aggregator/replace-trigger-failed");
-        groupTriggers[automationBot.triggersCounter()] = groupId;
+        require(status, "aggregator/replace-trigger-fail");
 
-        automationAggregatorBot.updateRecord(groupId, triggerId);
+        automationAggregatorBot.updateRecord(
+            cdpId,
+            groupId,
+            automationBot.triggersCounter(),
+            triggerId
+        );
     }
 
-    function updateRecord(uint256 groupId, uint256 triggerId) external {
-        emit TriggerGroupReplaced(groupId, triggerId);
+    function updateRecord(
+        uint256 cdpId,
+        uint256 groupId,
+        uint256 newTriggerId,
+        uint256 oldTriggerId
+    ) external {
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
+        groupTriggers[oldTriggerId] = 0;
+        groupTriggers[newTriggerId] = groupId;
+        emit TriggerGroupReplaced(groupId, newTriggerId);
     }
 
     function addRecord(
@@ -182,8 +193,7 @@ contract AutomationBotAggregator {
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
         triggerGroupCounter++;
-        bytes32 hash = getTriggerGroupHash(triggerGroupCounter, cdpId);
-        activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(hash, cdpId);
+
         activeGroups[triggerGroupCounter] = cdpId;
         for (uint256 i = 0; i < triggerIds.length; i++) {
             groupTriggers[triggerIds[i]] = triggerGroupCounter;
@@ -198,15 +208,15 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-
-        TriggerGroupRecord memory groupIdRecord = activeTriggerGroups[groupId];
-        bytes32 hash = getTriggerGroupHash(groupId, cdpId);
-        require(hash == groupIdRecord.hash, "aggregator/invalid-trigger-group");
-        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
-        activeTriggerGroups[groupId] = TriggerGroupRecord(0, 0);
-        activeGroups[triggerGroupCounter] = cdpId;
+        require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            groupTriggers[triggerIds[i]] = triggerGroupCounter;
+            require(groupTriggers[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
+        }
+        require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
+
+        activeGroups[groupId] = 0;
+        for (uint256 i = 0; i < triggerIds.length; i++) {
+            groupTriggers[triggerIds[i]] = 0;
         }
 
         emit TriggerGroupRemoved(groupId);
