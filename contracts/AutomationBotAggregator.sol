@@ -131,7 +131,7 @@ contract AutomationBotAggregator {
         uint256 triggerId,
         uint256 triggerType,
         bytes memory triggerData
-    ) external {
+    ) external onlyDelegate {
         AutomationBot automationBot = AutomationBot(
             serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
         );
