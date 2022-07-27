@@ -1,11 +1,19 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { Contract, Signer, utils } from 'ethers'
-import { encodeTriggerData, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
-import { deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
+import { BytesLike, Contract, Signer, utils } from 'ethers'
+import {
+    encodeTriggerData,
+    forgeUnoswapCalldata,
+    generateRandomAddress,
+    getEvents,
+    HardhatUtils,
+    ONE_INCH_V4_ROUTER,
+} from '../scripts/common'
+import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
+import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
+import { getMultiplyParams } from '@oasisdex/multiply'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const maxGweiPrice = 1000
@@ -24,20 +32,42 @@ describe('AutomationAggregatorBot', async () => {
     let ownerProxyUserAddress: string
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
+
+    let system: DeployedSystem
+    let MPAInstance: MPALike
+    let usersProxy: DsProxyLike
+    let proxyOwnerAddress: string
+    let receiverAddress: string
+    let executorAddress: string
     let snapshotId: string
+    const ethAIlk = utils.formatBytes32String('ETH-A')
+
+    const createTrigger = async (triggerData: BytesLike) => {
+        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
+            testCdpId,
+            TriggerType.BASIC_BUY,
+            0,
+            triggerData,
+        ])
+        const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
+        return usersProxy.connect(signer).execute(system.automationBot.address, data)
+    }
 
     before(async () => {
+        executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
-        const system = await deploySystem({ utils, addCommands: true })
+        system = await deploySystem({ utils, addCommands: true })
 
         AutomationBotInstance = system.automationBot
         AutomationBotAggregatorInstance = system.automationBotAggregator
 
+        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
+
         DssProxyActions = new Contract(hardhatUtils.addresses.DSS_PROXY_ACTIONS, [
             'function cdpAllow(address,uint,address,uint)',
         ])
-
+        await system.mcdView.approve(executorAddress, true)
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManager.owns(testCdpId)
@@ -47,6 +77,9 @@ describe('AutomationAggregatorBot', async () => {
         const otherProxyAddress = await cdpManager.owns(1)
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
+        const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+        const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
+        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
     })
 
     const executeCdpAllow = async (
@@ -408,6 +441,105 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('replaceGroupTrigger', async () => {
+        async function createTriggerForExecution(
+            executionRatio: BigNumber.Value,
+            targetRatio: BigNumber.Value,
+            continuous: boolean,
+        ) {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                new BigNumber(executionRatio).toFixed(),
+                new BigNumber(targetRatio).toFixed(),
+                new BigNumber(5000).shiftedBy(18).toFixed(),
+                continuous,
+                50,
+                maxGweiPrice,
+            )
+            const createTriggerTx = await createTrigger(triggerData)
+            const receipt = await createTriggerTx.wait()
+            const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            return { triggerId: event.args.triggerId.toNumber(), triggerData }
+        }
+
+        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
+            const collRatio = await system.mcdView.getRatio(testCdpId, true)
+            const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
+            const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
+            const slippage = new BigNumber(0.01)
+            const oasisFee = new BigNumber(0.002)
+
+            const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
+            const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
+                {
+                    oraclePrice: oraclePriceUnits,
+                    marketPrice: oraclePriceUnits,
+                    OF: oasisFee,
+                    FF: new BigNumber(0),
+                    slippage,
+                },
+                {
+                    currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
+                    currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-18),
+                    minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
+                },
+                {
+                    requiredCollRatio: targetRatio.shiftedBy(-4),
+                    providedCollateral: new BigNumber(0),
+                    providedDai: new BigNumber(0),
+                    withdrawDai: new BigNumber(0),
+                    withdrawColl: new BigNumber(0),
+                },
+            )
+
+            const cdpData = {
+                gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
+                fundsReceiver: receiverAddress,
+                cdpId: testCdpId,
+                ilk: ethAIlk,
+                requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+                borrowCollateral: collateralDelta.shiftedBy(18).abs().toFixed(0),
+                withdrawCollateral: 0,
+                withdrawDai: 0,
+                depositDai: 0,
+                depositCollateral: 0,
+                skipFL,
+                methodName: '',
+            }
+
+            const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
+            const exchangeData = {
+                fromTokenAddress: hardhatUtils.addresses.DAI,
+                toTokenAddress: hardhatUtils.addresses.WETH,
+                fromTokenAmount: cdpData.requiredDebt,
+                toTokenAmount: cdpData.borrowCollateral,
+                minToTokenAmount: minToTokenAmount.toFixed(0),
+                exchangeAddress: ONE_INCH_V4_ROUTER,
+                _exchangeCalldata: forgeUnoswapCalldata(
+                    hardhatUtils.addresses.DAI,
+                    new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
+                    minToTokenAmount.toFixed(0),
+                    false,
+                ),
+            }
+
+            const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
+                exchangeData,
+                cdpData,
+                hardhatUtils.mpaServiceRegistry(),
+            ])
+
+            return system.automationExecutor.execute(
+                executionData,
+                testCdpId,
+                triggerData,
+                system.basicBuy!.address,
+                triggerId,
+                0,
+                0,
+                0,
+            )
+        }
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
         const replacedTriggerId = [0, 0]
 
@@ -488,6 +620,19 @@ describe('AutomationAggregatorBot', async () => {
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'))
 
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
+        })
+        it('should successfully update a trigger through executor', async () => {
+            const targetRatio = new BigNumber(1.8).shiftedBy(4)
+
+            const tx2 = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
+
+            const receipt2 = await (await tx2).wait()
+            console.log(receipt2)
+            const events2 = getEvents(
+                receipt2,
+                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'),
+            )
+            expect(events2.length).to.eq(1)
         })
         it('should not update a trigger with wrong TriggerType', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
