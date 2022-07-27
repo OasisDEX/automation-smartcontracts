@@ -30,6 +30,7 @@ import { BaseMPACommand } from "./BaseMPACommand.sol";
 struct BasicBuyTriggerData {
     uint256 cdpId;
     uint16 triggerType;
+    uint64 groupId;
     uint256 execCollRatio;
     uint256 targetCollRatio;
     uint256 maxBuyPrice;

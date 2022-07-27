@@ -36,7 +36,9 @@ contract AutomationBotAggregator {
 
     mapping(uint256 => TriggerGroupRecord) public activeTriggerGroups;
 
-    uint256 public triggerGroupCounter = 0;
+    mapping(uint256 => uint64) public parentGoup; //default 0;
+
+    uint64 public triggerGroupCounter = 0;
 
     ServiceRegistry public immutable serviceRegistry;
     address public immutable self;
@@ -145,6 +147,7 @@ contract AutomationBotAggregator {
         );
 
         for (uint256 i = 0; i < triggerIds.length; i += 1) {
+            require(parentGoup[triggerIds[i]] == groupId, "aggregator/bad-group");
             (bool status, ) = automationBot.delegatecall(
                 abi.encodeWithSelector(
                     AutomationBot(automationBot).removeTrigger.selector,
@@ -168,6 +171,10 @@ contract AutomationBotAggregator {
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
 
         triggerGroupCounter = triggerGroupCounter + 1;
+        for (uint256 i = 0; i < triggerIds.length; i++) {
+            parentGoup[triggerIds[i]] = triggerGroupCounter;
+        }
+
         activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(
             getTriggerGroupHash(cdpId, triggerGroupCounter, triggerIds),
             cdpId
