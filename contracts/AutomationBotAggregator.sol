@@ -57,12 +57,8 @@ contract AutomationBotAggregator {
         return serviceRegistry.getServiceAddress(validatorHash);
     }
 
-    function getTriggerGroupHash(
-        uint256 groupId,
-        uint256 cdpId,
-        uint256[] memory triggerIds
-    ) public pure returns (bytes32) {
-        bytes32 hash = keccak256(abi.encodePacked(groupId, cdpId, triggerIds));
+    function getTriggerGroupHash(uint256 groupId, uint256 cdpId) public pure returns (bytes32) {
+        bytes32 hash = keccak256(abi.encodePacked(groupId, cdpId));
         return hash;
     }
 
@@ -108,7 +104,7 @@ contract AutomationBotAggregator {
             require(status, "aggregator/add-trigger-failed");
         }
 
-        automationAggregatorBot.addRecord(cdpIds[0], groupType, triggerIds);
+        automationAggregatorBot.addRecord(cdpIds[0], groupType);
     }
 
     function removeTriggerGroup(
@@ -136,46 +132,43 @@ contract AutomationBotAggregator {
             require(status, "aggregator/remove-trigger-failed");
         }
 
-        automationAggregatorBot.removeRecord(cdpId, groupId, triggerIds);
+        automationAggregatorBot.removeRecord(cdpId, groupId);
     }
 
     function addRecord(
         uint256 cdpId,
-        uint16 groupType,
-        uint256[] memory triggerIds
+        uint16 groupType
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
         triggerGroupCounter++;
-        bytes32 hash = getTriggerGroupHash(triggerGroupCounter, cdpId, triggerIds);
+        bytes32 hash = getTriggerGroupHash(triggerGroupCounter, cdpId);
         activeTriggerGroups[triggerGroupCounter] = TriggerGroupRecord(hash, cdpId);
 
-        emit TriggerGroupAdded(triggerGroupCounter, groupType, cdpId, triggerIds);
+        emit TriggerGroupAdded(triggerGroupCounter, groupType, cdpId);
     }
 
     function removeRecord(
         uint256 cdpId,
-        uint256 groupId,
-        uint256[] memory triggerIds
+        uint256 groupId
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         TriggerGroupRecord memory groupIdRecord = activeTriggerGroups[groupId];
-        bytes32 hash = getTriggerGroupHash(groupId, cdpId, triggerIds);
+        bytes32 hash = getTriggerGroupHash(groupId, cdpId);
         require(hash == groupIdRecord.hash, "aggregator/invalid-trigger-group");
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
         activeTriggerGroups[groupId] = TriggerGroupRecord(0, 0);
 
-        emit TriggerGroupRemoved(groupId, triggerIds);
+        emit TriggerGroupRemoved(groupId);
     }
 
-    event TriggerGroupRemoved(uint256 indexed groupId, uint256[] indexed triggerIds);
+    event TriggerGroupRemoved(uint256 indexed groupId);
 
     event TriggerGroupAdded(
         uint256 indexed groupId,
         uint16 indexed groupType,
-        uint256 indexed cdpId,
-        uint256[] triggerIds
+        uint256 indexed cdpId
     );
 }
