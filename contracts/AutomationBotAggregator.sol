@@ -173,10 +173,13 @@ contract AutomationBotAggregator {
         uint256 oldTriggerId
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+
         require(isCdpAllowed(cdpId, msg.sender, manager), "aggregator/no-permissions");
+
         groupTriggers[oldTriggerId] = 0;
         groupTriggers[newTriggerId] = groupId;
-        emit TriggerGroupReplaced(groupId, newTriggerId);
+
+        emit TriggerGroupReplaced(groupId, oldTriggerId, newTriggerId);
     }
 
     function addRecord(
@@ -226,5 +229,5 @@ contract AutomationBotAggregator {
 
     event TriggerGroupRemoved(uint256 indexed groupId);
 
-    event TriggerGroupReplaced(uint256 indexed groupId, uint256 triggerId);
+    event TriggerGroupReplaced(uint256 indexed groupId, uint256 oldTriggerId, uint256 newTriggerId);
 }
