@@ -20,6 +20,7 @@ pragma solidity ^0.8.0;
 
 import { MPALike } from "../interfaces/MPALike.sol";
 import { VatLike } from "../interfaces/VatLike.sol";
+import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
@@ -75,11 +76,16 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 futureDebt = (debt * nextCollRatio - debt * wad) /
             (trigger.targetCollRatio.wad() - wad);
 
+        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        (, uint256 liquidationRatio) = spot.ilks(ilk);
+        bool validBaseFeeOrNearLiquidation = baseFeeIsValid(trigger.maxBaseFeeInGwei) ||
+            nextCollRatio <= liquidationRatio.rayToWad();
+
         return
             trigger.execCollRatio.wad() > nextCollRatio &&
             trigger.minSellPrice < nextPrice &&
             futureDebt > dustLimit &&
-            baseFeeIsValid(trigger.maxBaseFeeInGwei);
+            validBaseFeeOrNearLiquidation;
     }
 
     function execute(

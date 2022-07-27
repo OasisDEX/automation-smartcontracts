@@ -19,7 +19,6 @@
 pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "hardhat/console.sol";
 
 library RatioUtils {
     using SafeMath for uint256;
@@ -49,6 +48,14 @@ library RatioUtils {
     {
         uint256 offset = ratio.mul(deviation).div(RATIO);
         return (ratio.sub(offset), ratio.add(offset));
+    }
+
+    function rayToWad(uint256 _ray) internal pure returns (uint256 _wad) {
+        _wad = _ray.mul(WAD).div(RAY);
+    }
+
+    function wadToRay(uint256 _wad) internal pure returns (uint256 _ray) {
+        _ray = _wad.mul(RAY).div(WAD);
     }
 
     function radToWad(uint256 _rad) internal pure returns (uint256 _wad) {

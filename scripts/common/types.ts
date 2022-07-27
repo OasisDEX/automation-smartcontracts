@@ -18,7 +18,7 @@ export enum TriggerType {
     BASIC_SELL = 4,
 }
 
-export enum TriggerGroupId {
+export enum TriggerGroupType {
     CONSTANT_MULTIPLE = 1,
 }
 
@@ -26,7 +26,7 @@ export enum AutomationServiceName {
     CDP_MANAGER = 'CDP_MANAGER',
     MCD_SPOT = 'MCD_SPOT',
     AUTOMATION_BOT = 'AUTOMATION_BOT',
-    AUTOMATION_BOT_AGGREGATOR = 'AUTOMATION_BOT_AGGREGATOR',
+    AUTOMATION_AGGREGATOR_BOT = 'AUTOMATION_AGGREGATOR_BOT',
     CONSTANT_MULTIPLE_VALIDATOR = 'CONSTANT_MULTIPLE_VALIDATOR',
     AUTOMATION_EXECUTOR = 'AUTOMATION_EXECUTOR',
     AUTOMATION_SWAP = 'AUTOMATION_SWAP',
@@ -59,4 +59,14 @@ export interface BaseExecutionArgs {
     refund: BigNumber
     slippage: BigNumber
     debug: boolean
+}
+
+export interface EtherscanGasPrice {
+    result: {
+        LastBlock: string
+        SafeGasPrice: string
+        ProposeGasPrice: string
+        FastGasPrice: string
+        suggestBaseFee: string
+    }
 }

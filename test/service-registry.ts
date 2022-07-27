@@ -6,19 +6,21 @@ import hre from 'hardhat'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractReceipt } from '@ethersproject/contracts'
 import { expect } from 'chai'
-import { ServiceRegistry } from '../typechain'
+import { ServiceRegistry, ServiceRegistry__factory as ServiceRegistryFactory } from '../typechain'
 import { HardhatUtils } from '../scripts/common'
 
 // npx hardhat test test\service-registry.js --network local
 
 describe('ServiceRegistry', async () => {
     const hardhatUtils = new HardhatUtils(hre)
+    let serviceRegistryFactory: ServiceRegistryFactory
     let trustedRegistryInstance: ServiceRegistry
 
     let owner: Signer
     let notOwner: Signer
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
+        serviceRegistryFactory = await hre.ethers.getContractFactory('ServiceRegistry')
     })
 
     describe('getServiceNameHash', async () => {
@@ -27,13 +29,7 @@ describe('ServiceRegistry', async () => {
 
         beforeEach(async () => {
             hash = hre.ethers.utils.keccak256(hre.ethers.utils.toUtf8Bytes(testedName))
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
         })
         it('should return correct hash of a name', async () => {
             const computedHash = await trustedRegistryInstance.getServiceNameHash(testedName)
@@ -43,13 +39,7 @@ describe('ServiceRegistry', async () => {
 
     describe('transferOwnership', async () => {
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
         })
 
         it('should fail if called not by owner', async () => {
@@ -127,13 +117,7 @@ describe('ServiceRegistry', async () => {
 
     describe('changeRequiredDelay', async () => {
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
         })
 
         it('should fail if called not by owner', async () => {
@@ -206,13 +190,7 @@ describe('ServiceRegistry', async () => {
         const supposedHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6209'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
         })
 
         it('should fail if called not by owner', async () => {
@@ -298,13 +276,7 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await owner.getAddress())
             await hardhatUtils.timeTravel(3000)
@@ -391,13 +363,7 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
             const instance = trustedRegistryInstance.connect(owner)
             await instance.addNamedService(supposedHash, await owner.getAddress())
             await hardhatUtils.timeTravel(3000)
@@ -442,13 +408,7 @@ describe('ServiceRegistry', async () => {
         const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
-            trustedRegistryInstance = (await hardhatUtils.deploy(
-                'ServiceRegistry',
-                [1000],
-                {},
-                {},
-                true,
-            )) as ServiceRegistry
+            trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
             const instance = trustedRegistryInstance.connect(owner)
             const tx = await instance.addNamedService(someExistingHash, await owner.getAddress())
             const txResult = await tx.wait()

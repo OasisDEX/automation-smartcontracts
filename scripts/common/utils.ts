@@ -1,10 +1,14 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupId } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
+
+export function toRatio(units: BigNumber.Value) {
+    return new BigNumber(units).shiftedBy(4).toNumber()
+}
 
 export function isLocalNetwork(network: string) {
     return [Network.HARDHAT, Network.LOCAL].includes(network as Network)
@@ -26,8 +30,8 @@ export function getCommandHash(triggerType: TriggerType) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Command', triggerType]))
 }
 
-export function getValidatorHash(triggerGroupId: TriggerGroupId) {
-    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Validator', triggerGroupId]))
+export function getValidatorHash(triggerGroupType: TriggerGroupType) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Validator', triggerGroupType]))
 }
 
 export function generateRandomAddress() {
@@ -43,7 +47,7 @@ function getTriggerDataTypes(triggerType: TriggerType) {
             // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         case TriggerType.BASIC_SELL:
-            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
+            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 minSellPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
@@ -118,18 +122,8 @@ export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAm
     const iface = new utils.Interface([
         'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
     ])
-    console.log('forgeUnoswapCalldata ', [
-        fromToken,
-        fromAmount,
-        toAmount,
-        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
-    ])
-    return iface.encodeFunctionData('unoswap', [
-        fromToken,
-        fromAmount,
-        toAmount,
-        [`0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`],
-    ])
+    const pool = `0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`
+    return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
 }
 
 export function generateStopLossExecutionData(

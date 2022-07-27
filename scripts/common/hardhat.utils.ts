@@ -1,15 +1,17 @@
 import '@nomiclabs/hardhat-ethers'
 import { HardhatRuntimeEnvironment } from 'hardhat/types/runtime'
-import { BigNumber, CallOverrides, constants, Contract, Signer, utils } from 'ethers'
+import { CallOverrides, constants, Contract, ethers, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import R from 'ramda'
-import fs from 'fs'
-import chalk from 'chalk'
+import axios from 'axios'
+import NodeCache from 'node-cache'
+import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
-import { Network } from './types'
+import { EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 
 export class HardhatUtils {
+    private readonly _cache = new NodeCache()
     public readonly addresses
     constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
         this.addresses = getAddressesFor(this.forked || this.hre.network.name)
@@ -33,7 +35,7 @@ export class HardhatUtils {
             automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
             automationBotAggregator: await this.hre.ethers.getContractAt(
                 'AutomationBotAggregator',
-                this.addresses.AUTOMATION_BOT_AGGREGATOR,
+                this.addresses.AUTOMATION_AGGREGATOR_BOT,
             ),
             constantMultipleValidator: await this.hre.ethers.getContractAt(
                 'ConstantMultipleValidator',
@@ -55,6 +57,15 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
         }
+    }
+
+    public async deployContract<F extends ethers.ContractFactory, C extends Contract>(
+        _factory: F | Promise<F>,
+        params: Parameters<F['deploy']>,
+    ): Promise<C> {
+        const factory = await _factory
+        const deployment = await factory.deploy(...params, await this.getGasSettings())
+        return (await deployment.deployed()) as C
     }
 
     public mpaServiceRegistry() {
@@ -88,42 +99,6 @@ export class HardhatUtils {
             to: await signer.getAddress(),
         })
         console.log(`🛰 Tx sent ${tx.hash}`)
-    }
-
-    public async deploy(contractName: string, _args: any[] = [], overrides = {}, libraries = {}, silent: boolean) {
-        if (!silent) {
-            console.log(`🛰 Deploying: ${contractName}`)
-        }
-
-        const contractArgs = _args || []
-        const contractArtifacts = await this.hre.ethers.getContractFactory(contractName, {
-            libraries: libraries,
-        })
-        const deployed = await contractArtifacts.deploy(...contractArgs, overrides)
-        const encoded = this.abiEncodeArgs(deployed, contractArgs)
-        fs.writeFileSync(`artifacts/${contractName}.address`, deployed.address)
-
-        if (!silent) {
-            let extraGasInfo = ''
-            if (deployed?.deployTransaction) {
-                const gasUsed = deployed.deployTransaction.gasLimit.mul(
-                    deployed.deployTransaction.gasPrice as BigNumber,
-                )
-                extraGasInfo = '(' + utils.formatEther(gasUsed) + ' ETH)'
-            }
-
-            console.log(
-                ` 📄 ${chalk.cyan(contractName)} deployed to ${chalk.magenta(deployed.address)} ${chalk.grey(
-                    extraGasInfo,
-                )} in block ${chalk.yellow(deployed.deployTransaction.blockNumber)}`,
-            )
-        }
-
-        if (encoded?.length > 2) {
-            fs.writeFileSync(`artifacts/${contractName}.args`, encoded.slice(2))
-        }
-
-        return deployed
     }
 
     public async send(tokenAddr: string, to: string, amount: number) {
@@ -282,5 +257,36 @@ export class HardhatUtils {
         const owner = await this.impersonate(mcdViewOwner)
         console.log(`Impersonated McdView owner ${mcdViewOwner}...`)
         return owner
+    }
+
+    public async getGasSettings() {
+        if (this.hre.network.name !== Network.MAINNET) {
+            return {}
+        }
+
+        const { suggestBaseFee } = await this.getGasPrice()
+        const maxPriorityFeePerGas = new BigNumber(2).shiftedBy(9).toFixed(0)
+        const maxFeePerGas = new BigNumber(suggestBaseFee).shiftedBy(9).plus(maxPriorityFeePerGas).toFixed(0)
+        return {
+            maxFeePerGas: EthersBN.from(maxFeePerGas),
+            maxPriorityFeePerGas: EthersBN.from(maxPriorityFeePerGas),
+        }
+    }
+
+    public async getGasPrice(): Promise<EtherscanGasPrice['result']> {
+        const cached = this._cache.get<EtherscanGasPrice['result']>('gasprice')
+        if (cached) {
+            return cached
+        }
+
+        const { data } = await axios.get<EtherscanGasPrice>('https://api.etherscan.io/api', {
+            params: {
+                module: 'gastracker',
+                action: 'gasoracle',
+                apikey: process.env.ETHERSCAN_API_KEY,
+            },
+        })
+        this._cache.set('gasprice', data.result, 10)
+        return data.result
     }
 }

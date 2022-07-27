@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BaseMPACommand.sol
+/// ConstantMultipleValidator.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2022 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -39,23 +39,23 @@ contract ConstantMultipleValidator is IValidator {
     {
         uint256[] memory _cdpIds = new uint256[](triggersData.length);
         uint256[] memory _triggerTypes = new uint256[](triggersData.length);
-        for (uint256 i = 0; i < triggersData.length; i += 1) {
+        for (uint256 i = 0; i < triggersData.length; i++) {
             (_cdpIds[i], _triggerTypes[i]) = abi.decode(triggersData[i], (uint256, uint16));
         }
 
         return (_cdpIds, _triggerTypes);
     }
 
-    // TODO: add Constant multiple trigger validations
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
         external
-        view
+        pure
         returns (bool)
     {
-        for (uint256 i = 0; i < replacedTriggerId.length; i += 1) {
-            // check if CDPids are different
-            // check if first trigger is buy and second sell etc etc
-        }
+        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
+        require(triggersData.length == 2, "validator/wrong-trigger-count");
+        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
+        require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
+        // TODO: add more Constant Multiple trigger validations, including replacedTriggerId
 
         return true;
     }

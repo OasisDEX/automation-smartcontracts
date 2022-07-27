@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { Contract } from 'ethers'
 import { uniq } from 'lodash'
-import { coalesceNetwork, etherscanAPIUrl, Network } from '../common'
+import { etherscanAPIUrl } from '../common'
 
 export interface EtherscanTransactionListResponse {
     result: {

@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer } from 'ethers'
 import { task } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network, getGasPrice, getSwap } from '../common'
+import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network, getSwap } from '../common'
 import { params } from './params'
 
 interface ExecutorSwapArgs {
@@ -75,7 +75,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
-        const swapGasPrices = await getGasPrice()
+        const swapGasPrices = await hardhatUtils.getGasPrice()
         const tx = await executor
             .connect(signer)
             .swap(
@@ -115,7 +115,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             return
         }
 
-        const unwrapGasPrice = await getGasPrice()
+        const unwrapGasPrice = await hardhatUtils.getGasPrice()
         const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter)
         const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
             gasLimit: unwrapGasEstimate.mul(11).div(10),
