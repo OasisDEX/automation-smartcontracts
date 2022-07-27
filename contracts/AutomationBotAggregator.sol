@@ -31,6 +31,8 @@ contract AutomationBotAggregator {
 
     mapping(uint256 => uint256) public activeGroups; // groupId => cdpId
     mapping(uint256 => uint256) public triggerGroup; // triggerId => groupId
+    mapping(bytes32 => uint256) public triggerIdMap; // triggerId => groupId
+
     uint256 public triggerGroupCounter;
 
     ServiceRegistry public immutable serviceRegistry;
@@ -50,6 +52,26 @@ contract AutomationBotAggregator {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         require(isCdpAllowed(cdpId, msg.sender, manager), "bot/no-permissions");
         _;
+    }
+
+    function getTriggersHash(
+        uint256 cdpId,
+        bytes memory triggerData,
+        address commandAddress
+    ) private view returns (bytes32) {
+        bytes32 triggersHash = keccak256(
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+        );
+
+        return triggersHash;
+    }
+
+    function getCommandAddress(uint256 triggerType) public view returns (address) {
+        bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
+
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+
+        return commandAddress;
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (address) {
@@ -100,7 +122,13 @@ contract AutomationBotAggregator {
             require(status, "aggregator/add-trigger-failed");
         }
 
-        automationAggregatorBot.addRecord(cdpIds[0], groupType, triggerIds);
+        automationAggregatorBot.addRecord(
+            cdpIds[0],
+            groupType,
+            triggerIds,
+            triggerTypes,
+            triggersData
+        );
     }
 
     function removeTriggerGroup(
@@ -175,7 +203,9 @@ contract AutomationBotAggregator {
             cdpId,
             groupId,
             automationBot.triggersCounter(),
-            triggerId
+            triggerId,
+            triggerType,
+            triggerData
         );
     }
 
@@ -183,23 +213,30 @@ contract AutomationBotAggregator {
         uint256 cdpId,
         uint256 groupId,
         uint256 newTriggerId,
-        uint256 oldTriggerId
+        uint256 oldTriggerId,
+        uint256 triggerType,
+        bytes memory triggerData
     ) external onlyCdpAllowed(cdpId) {
         triggerGroup[oldTriggerId] = 0;
         triggerGroup[newTriggerId] = groupId;
-
+        address commandAddress = getCommandAddress(triggerType);
+        triggerIdMap[getTriggersHash(cdpId, triggerData, commandAddress)] = newTriggerId;
         emit TriggerGroupUpdated(groupId, oldTriggerId, newTriggerId);
     }
 
     function addRecord(
         uint256 cdpId,
         uint16 groupType,
-        uint256[] memory triggerIds
+        uint256[] memory triggerIds,
+        uint256[] memory triggerTypes,
+        bytes[] memory triggersData
     ) external onlyCdpAllowed(cdpId) {
         triggerGroupCounter++;
-
         activeGroups[triggerGroupCounter] = cdpId;
+
         for (uint256 i = 0; i < triggerIds.length; i++) {
+            address commandAddress = getCommandAddress(triggerTypes[i]);
+            triggerIdMap[getTriggersHash(cdpId, triggersData[i], commandAddress)] = triggerIds[i];
             triggerGroup[triggerIds[i]] = triggerGroupCounter;
         }
 

@@ -175,14 +175,26 @@ describe('AutomationAggregatorBot', async () => {
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
 
-            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
+            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(
+                testCdpId,
+                groupTypeId,
+                triggerIds,
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
+                [bbTriggerData, bsTriggerData],
+            )
             await expect(tx1).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
+            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(
+                testCdpId,
+                groupTypeId,
+                triggerIds,
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
+                [bbTriggerData, bsTriggerData],
+            )
 
             await expect(tx2).not.to.be.reverted
 
