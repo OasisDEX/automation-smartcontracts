@@ -156,7 +156,7 @@ contract AutomationBotAggregator {
             "aggregator/inactive-group"
         );
         require(
-            automationAggregatorBot.groupTriggers(triggerId) == groupId,
+            automationAggregatorBot.triggerGroup(triggerId) == groupId,
             "aggregator/inactive-trigger"
         );
 
@@ -185,8 +185,8 @@ contract AutomationBotAggregator {
         uint256 newTriggerId,
         uint256 oldTriggerId
     ) external onlyCdpAllowed(cdpId) {
-        groupTriggers[oldTriggerId] = 0;
-        groupTriggers[newTriggerId] = groupId;
+        triggerGroup[oldTriggerId] = 0;
+        triggerGroup[newTriggerId] = groupId;
 
         emit TriggerGroupUpdated(groupId, oldTriggerId, newTriggerId);
     }
@@ -200,7 +200,7 @@ contract AutomationBotAggregator {
 
         activeGroups[triggerGroupCounter] = cdpId;
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            groupTriggers[triggerIds[i]] = triggerGroupCounter;
+            triggerGroup[triggerIds[i]] = triggerGroupCounter;
         }
 
         emit TriggerGroupAdded(triggerGroupCounter, groupType, cdpId, triggerIds);
@@ -213,12 +213,12 @@ contract AutomationBotAggregator {
     ) external onlyCdpAllowed(cdpId) {
         require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            require(groupTriggers[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
+            require(triggerGroup[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
         }
 
         activeGroups[groupId] = 0;
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            groupTriggers[triggerIds[i]] = 0;
+            triggerGroup[triggerIds[i]] = 0;
         }
 
         emit TriggerGroupRemoved(groupId);
