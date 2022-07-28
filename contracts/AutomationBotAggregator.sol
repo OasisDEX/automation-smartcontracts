@@ -131,7 +131,7 @@ contract AutomationBotAggregator {
             require(groupId == aggregator.triggerGroup(triggerHash), "aggregator/invalid-group");
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
-                    AutomationBot(bot).removeTrigger.selector,
+                    bot.removeTrigger.selector,
                     cdpId,
                     triggerIds[i],
                     removeAllowance && i == triggerIds.length - 1
