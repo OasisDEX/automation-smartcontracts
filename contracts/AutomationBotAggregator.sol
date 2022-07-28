@@ -23,7 +23,6 @@ import { AutomationBot } from "./AutomationBot.sol";
 import { ManagerLike } from "./interfaces/ManagerLike.sol";
 import { IValidator } from "./interfaces/IValidator.sol";
 import { ServiceRegistry } from "./ServiceRegistry.sol";
-import "hardhat/console.sol";
 
 contract AutomationBotAggregator {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -218,8 +217,6 @@ contract AutomationBotAggregator {
         uint256 triggerType,
         bytes memory triggerData
     ) external onlyCdpAllowed(cdpId) {
-        console.log(msg.sender);
-        console.log(address(this));
         triggerGroup[oldTriggerId] = 0;
         triggerGroup[newTriggerId] = groupId;
         address commandAddress = getCommandAddress(triggerType);

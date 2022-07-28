@@ -130,12 +130,17 @@ contract BasicBuyCommand is BaseMPACommand {
         );
         if (trigger.continuous) {
             if (triggerId != 0 && automationAggregatorBot.triggerGroup(triggerId) != 0) {
-                automationAggregatorBot.replaceGroupTrigger(
-                    cdpId,
-                    automationAggregatorBot.triggerGroup(triggerId),
-                    triggerId,
-                    trigger.triggerType,
-                    triggerData
+                (bool status, ) = address(automationAggregatorBot).delegatecall(
+                    abi.encodeWithSelector(
+                        AutomationBotAggregator(automationAggregatorBot)
+                            .replaceGroupTrigger
+                            .selector,
+                        cdpId,
+                        automationAggregatorBot.triggerGroup(triggerId),
+                        triggerId,
+                        trigger.triggerType,
+                        triggerData
+                    )
                 );
             } else {
                 recreateTrigger(cdpId, trigger.triggerType, triggerData);

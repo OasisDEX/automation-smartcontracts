@@ -124,7 +124,7 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             5000,
-            false,
+            true,
             50,
             maxGweiPrice,
         )
@@ -135,7 +135,7 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             5000,
-            false,
+            true,
             50,
             maxGweiPrice,
         )
@@ -252,7 +252,7 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            false,
+            true,
             50,
             maxGweiPrice,
         )
@@ -263,7 +263,7 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            false,
+            true,
             50,
             maxGweiPrice,
         )
@@ -398,7 +398,7 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
-                false,
+                true,
                 50,
                 maxGweiPrice,
             )
@@ -409,7 +409,7 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
+                true,
                 50,
                 maxGweiPrice,
             )
@@ -533,7 +533,7 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             '4472665974900000000000',
-            false,
+            true,
             50,
             maxGweiPrice,
         )
@@ -544,7 +544,7 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             '4472665974900000000000',
-            false,
+            true,
             50,
             maxGweiPrice,
         )
