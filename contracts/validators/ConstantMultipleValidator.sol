@@ -44,7 +44,7 @@ contract ConstantMultipleValidator is IValidator {
 
     function decode(bytes[] memory triggersData)
         public
-        view
+        pure
         returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
     {
         uint256[] memory _cdpIds = new uint256[](triggersData.length);
@@ -58,7 +58,7 @@ contract ConstantMultipleValidator is IValidator {
 
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
         external
-        view
+        pure
         returns (bool)
     {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
