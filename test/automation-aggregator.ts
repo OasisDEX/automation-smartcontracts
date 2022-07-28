@@ -585,8 +585,6 @@ describe('AutomationAggregatorBot', async () => {
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'))
 
-            console.log(receipt.events?.find(e => e.address === AutomationBotAggregatorInstance.address))
-
             expect(events.length).to.eq(1)
         })
         it('should successfully update a trigger through DSProxy', async () => {

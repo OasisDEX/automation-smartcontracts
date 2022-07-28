@@ -89,28 +89,34 @@ contract AutomationBotAggregator {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
+    function getBotAndAggregator()
+        internal
+        view
+        returns (AutomationBot bot, AutomationBotAggregator aggregator)
+    {
+        bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
+        aggregator = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
+        );
+    }
+
     function addTriggerGroup(
         uint16 groupType,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external onlyDelegate {
-        AutomationBot automationBot = AutomationBot(
-            serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
-        );
-        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
-        );
+        (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
         IValidator validator = IValidator(getValidatorAddress(groupType));
 
         require(validator.validate(replacedTriggerId, triggersData), "aggregator/validation-error");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
 
-        uint256 firstTriggerId = automationBot.triggersCounter() + 1;
+        uint256 firstTriggerId = bot.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         for (uint256 i = 0; i < triggerTypes.length; i++) {
-            (bool status, ) = address(automationBot).delegatecall(
+            (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
-                    AutomationBot(automationBot).addTrigger.selector,
+                    AutomationBot(bot).addTrigger.selector,
                     cdpIds[i],
                     triggerTypes[i],
                     replacedTriggerId[i],
@@ -122,13 +128,7 @@ contract AutomationBotAggregator {
             require(status, "aggregator/add-trigger-failed");
         }
 
-        automationAggregatorBot.addRecord(
-            cdpIds[0],
-            groupType,
-            triggerIds,
-            triggerTypes,
-            triggersData
-        );
+        aggregator.addRecord(cdpIds[0], groupType, triggerIds, triggerTypes, triggersData);
     }
 
     function removeTriggerGroup(
@@ -137,17 +137,12 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds,
         bool removeAllowance
     ) external onlyDelegate {
-        AutomationBot automationBot = AutomationBot(
-            serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
-        );
-        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
-        );
+        (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            (bool status, ) = address(automationBot).delegatecall(
+            (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
-                    AutomationBot(automationBot).removeTrigger.selector,
+                    AutomationBot(bot).removeTrigger.selector,
                     cdpId,
                     triggerIds[i],
                     removeAllowance && i == triggerIds.length - 1
@@ -156,7 +151,7 @@ contract AutomationBotAggregator {
             require(status, "aggregator/remove-trigger-failed");
         }
 
-        automationAggregatorBot.removeRecord(cdpId, groupId, triggerIds);
+        aggregator.removeRecord(cdpId, groupId, triggerIds);
     }
 
     function replaceGroupTrigger(
@@ -166,31 +161,20 @@ contract AutomationBotAggregator {
         uint256 triggerType,
         bytes memory triggerData
     ) external onlyDelegate {
-        AutomationBot automationBot = AutomationBot(
-            serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY)
-        );
-        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
-        );
-        (bytes32 oldHash, ) = automationBot.activeTriggers(triggerId);
+        (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
+        (bytes32 oldHash, ) = bot.activeTriggers(triggerId);
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
         bytes32 newHash = keccak256(
             abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
         );
         require(oldHash == newHash, "aggregator/wrong-replacement-data");
-        require(
-            automationAggregatorBot.activeGroups(groupId) == cdpId,
-            "aggregator/inactive-group"
-        );
-        require(
-            automationAggregatorBot.triggerGroup(triggerId) == groupId,
-            "aggregator/inactive-trigger"
-        );
+        require(aggregator.activeGroups(groupId) == cdpId, "aggregator/inactive-group");
+        require(aggregator.triggerGroup(triggerId) == groupId, "aggregator/inactive-trigger");
 
-        (bool status, ) = address(automationBot).delegatecall(
+        (bool status, ) = address(bot).delegatecall(
             abi.encodeWithSelector(
-                AutomationBot(automationBot).addTrigger.selector,
+                AutomationBot(bot).addTrigger.selector,
                 cdpId,
                 triggerType,
                 triggerId,
@@ -199,10 +183,10 @@ contract AutomationBotAggregator {
         );
         require(status, "aggregator/replace-trigger-fail");
 
-        automationAggregatorBot.updateRecord(
+        aggregator.updateRecord(
             cdpId,
             groupId,
-            automationBot.triggersCounter(),
+            bot.triggersCounter(),
             triggerId,
             triggerType,
             triggerData
