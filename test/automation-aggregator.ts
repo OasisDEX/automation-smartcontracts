@@ -35,23 +35,10 @@ describe('AutomationAggregatorBot', async () => {
 
     let system: DeployedSystem
     let MPAInstance: MPALike
-    let usersProxy: DsProxyLike
-    let proxyOwnerAddress: string
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
     const ethAIlk = utils.formatBytes32String('ETH-A')
-
-    const createTrigger = async (triggerData: BytesLike) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            0,
-            triggerData,
-        ])
-        const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
-        return usersProxy.connect(signer).execute(system.automationBot.address, data)
-    }
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
@@ -554,7 +541,7 @@ describe('AutomationAggregatorBot', async () => {
                 txReceipt,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
             )
-
+            console.log('gas used - addTriggerGroup', txReceipt.gasUsed.toNumber())
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             triggerGroupId = event.args.groupId.toNumber()
 
