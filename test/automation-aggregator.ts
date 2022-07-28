@@ -209,26 +209,14 @@ describe('AutomationAggregatorBot', async () => {
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
 
-            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(
-                testCdpId,
-                groupTypeId,
-                triggerIds,
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-                [bbTriggerData, bsTriggerData],
-            )
+            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
             await expect(tx1).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(
-                testCdpId,
-                groupTypeId,
-                triggerIds,
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-                [bbTriggerData, bsTriggerData],
-            )
+            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
 
             await expect(tx2).not.to.be.reverted
 
@@ -376,7 +364,7 @@ describe('AutomationAggregatorBot', async () => {
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'removeTriggerGroup',
-                [testCdpId, 0, triggerIds, false],
+                [testCdpId, 2, triggerIds, false],
             )
             await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
                 .to.be.reverted
@@ -577,7 +565,7 @@ describe('AutomationAggregatorBot', async () => {
                 Number(triggerCounter),
             ]
         })
-        // TODO: fails - event is not emitted - why
+
         it('should successfully replace a trigger and update group through executor', async () => {
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const tx = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
@@ -592,13 +580,14 @@ describe('AutomationAggregatorBot', async () => {
 
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
-                [testCdpId, triggerGroupId, triggerIds[0], TriggerType.BASIC_BUY, bbTriggerData],
+                [testCdpId, TriggerType.BASIC_BUY, bbTriggerData, triggerGroupId],
             )
             const tx = await ownerProxy
                 .connect(owner)
                 .execute(AutomationBotAggregatorInstance.address, dataToSupplyReplace)
+            console.log(tx)
             const receipt = await tx.wait()
-
+            console.log(receipt)
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupUpdated'))
 
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
@@ -609,7 +598,7 @@ describe('AutomationAggregatorBot', async () => {
 
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
-                [testCdpId, triggerGroupId, triggerIds[0], TriggerType.BASIC_SELL, bsTriggerData],
+                [testCdpId, TriggerType.BASIC_BUY, bbTriggerData, triggerGroupId],
             )
             await expect(
                 ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyReplace),
@@ -620,7 +609,7 @@ describe('AutomationAggregatorBot', async () => {
 
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
-                [testCdpId, triggerGroupId, triggerIds[2], TriggerType.BASIC_SELL, bsTriggerData],
+                [testCdpId, TriggerType.BASIC_BUY, bbTriggerData, triggerGroupId],
             )
             await expect(
                 ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyReplace),

@@ -125,23 +125,20 @@ contract BasicBuyCommand is BaseMPACommand {
         executeMPAMethod(executionData);
         bytes32 commandHash = keccak256(abi.encode("Command", trigger.triggerType));
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
-        uint256 triggerId = automationAggregatorBot.triggerIdMap(
-            getTriggersHash(cdpId, triggerData, commandAddress)
-        );
+        bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
         if (trigger.continuous) {
-            if (triggerId != 0 && automationAggregatorBot.triggerGroup(triggerId) != 0) {
+            if (automationAggregatorBot.triggerGroup(triggerHash) != 0) {
                 (bool status, ) = address(automationAggregatorBot).delegatecall(
                     abi.encodeWithSelector(
-                        AutomationBotAggregator(automationAggregatorBot)
-                            .replaceGroupTrigger
-                            .selector,
+                        automationAggregatorBot.replaceGroupTrigger.selector,
                         cdpId,
-                        automationAggregatorBot.triggerGroup(triggerId),
-                        triggerId,
                         trigger.triggerType,
-                        triggerData
+                        triggerData,
+                        automationAggregatorBot.triggerGroup(triggerHash)
                     )
                 );
+
+                require(status, "aggregator/add-trigger-failed");
             } else {
                 recreateTrigger(cdpId, trigger.triggerType, triggerData);
             }

@@ -23,6 +23,7 @@ import { AutomationBot } from "./AutomationBot.sol";
 import { ManagerLike } from "./interfaces/ManagerLike.sol";
 import { IValidator } from "./interfaces/IValidator.sol";
 import { ServiceRegistry } from "./ServiceRegistry.sol";
+import "hardhat/console.sol";
 
 contract AutomationBotAggregator {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -30,8 +31,7 @@ contract AutomationBotAggregator {
     string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
 
     mapping(uint256 => uint256) public activeGroups; // groupId => cdpId
-    mapping(uint256 => uint256) public triggerGroup; // triggerId => groupId
-    mapping(bytes32 => uint256) public triggerIdMap; // triggerHash => triggerId
+    mapping(bytes32 => uint256) public triggerGroup; // triggerHash => groupId
 
     uint256 public triggerGroupCounter;
 
@@ -128,7 +128,7 @@ contract AutomationBotAggregator {
             require(status, "aggregator/add-trigger-failed");
         }
 
-        aggregator.addRecord(cdpIds[0], groupType, triggerIds, triggerTypes, triggersData);
+        aggregator.addRecord(cdpIds[0], groupType, triggerIds);
     }
 
     function removeTriggerGroup(
@@ -138,8 +138,10 @@ contract AutomationBotAggregator {
         bool removeAllowance
     ) external onlyDelegate {
         (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
-
+        console.log("remove T - 1");
         for (uint256 i = 0; i < triggerIds.length; i++) {
+            (bytes32 triggerHash, ) = bot.activeTriggers(triggerIds[i]);
+            require(groupId == aggregator.triggerGroup(triggerHash), "aggregator/invalid-group");
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
                     AutomationBot(bot).removeTrigger.selector,
@@ -150,84 +152,74 @@ contract AutomationBotAggregator {
             );
             require(status, "aggregator/remove-trigger-failed");
         }
-
+        console.log("remove T - 2");
         aggregator.removeRecord(cdpId, groupId, triggerIds);
     }
 
     function replaceGroupTrigger(
         uint256 cdpId,
-        uint256 groupId,
-        uint256 triggerId,
         uint256 triggerType,
-        bytes memory triggerData
+        bytes memory triggerData,
+        uint256 groupId
     ) external onlyDelegate {
         (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
-        (bytes32 oldHash, ) = bot.activeTriggers(triggerId);
+
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
         bytes32 newHash = keccak256(
             abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
         );
-        require(oldHash == newHash, "aggregator/wrong-replacement-data");
+
         require(aggregator.activeGroups(groupId) == cdpId, "aggregator/inactive-group");
-        require(aggregator.triggerGroup(triggerId) == groupId, "aggregator/inactive-trigger");
+        require(aggregator.triggerGroup(newHash) == groupId, "aggregator/inactive-trigger");
 
         (bool status, ) = address(bot).delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(bot).addTrigger.selector,
                 cdpId,
                 triggerType,
-                triggerId,
+                0,
                 triggerData
             )
         );
         require(status, "aggregator/replace-trigger-fail");
 
-        aggregator.updateRecord(
-            cdpId,
-            groupId,
-            bot.triggersCounter(),
-            triggerId,
-            triggerType,
-            triggerData
-        );
+        aggregator.updateRecord(cdpId, groupId, bot.triggersCounter());
     }
 
     function updateRecord(
         uint256 cdpId,
         uint256 groupId,
-        uint256 newTriggerId,
-        uint256 oldTriggerId,
-        uint256 triggerType,
-        bytes memory triggerData
+        uint256 newTriggerId
     ) external onlyCdpAllowed(cdpId) {
-        triggerGroup[oldTriggerId] = 0;
-        triggerGroup[newTriggerId] = groupId;
-        address commandAddress = getCommandAddress(triggerType);
-        triggerIdMap[getTriggersHash(cdpId, triggerData, commandAddress)] = newTriggerId;
+        AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
+        (, uint256 triggerCdpId) = bot.activeTriggers(newTriggerId);
+        require(activeGroups[groupId] == cdpId && cdpId == triggerCdpId, "aggregator/cdp-mismatch");
 
-        emit TriggerGroupUpdated(groupId, oldTriggerId, newTriggerId);
+        emit TriggerGroupUpdated(groupId, cdpId, newTriggerId);
     }
 
+    // add validation not ot add two groups that are the same
     function addRecord(
         uint256 cdpId,
         uint16 groupType,
-        uint256[] memory triggerIds,
-        uint256[] memory triggerTypes,
-        bytes[] memory triggersData
+        uint256[] memory triggerIds
     ) external onlyCdpAllowed(cdpId) {
-        triggerGroupCounter++;
-        activeGroups[triggerGroupCounter] = cdpId;
-
+        uint256 groupId = triggerGroupCounter++;
+        activeGroups[groupId] = cdpId;
+        AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            address commandAddress = getCommandAddress(triggerTypes[i]);
-
-            triggerIdMap[getTriggersHash(cdpId, triggersData[i], commandAddress)] = triggerIds[i];
-
-            triggerGroup[triggerIds[i]] = triggerGroupCounter;
+            uint256 triggerId = triggerIds[i];
+            (bytes32 triggerHash, uint256 triggerCdpId) = bot.activeTriggers(triggerId);
+            /*         require(
+                triggerGroup[triggerHash] == triggerGroupCounter,
+                "aggregator/inactive-trigger"
+            ); */
+            require(triggerCdpId == cdpId, "aggregator/cdp-mismatch");
+            triggerGroup[triggerHash] = groupId;
         }
 
-        emit TriggerGroupAdded(triggerGroupCounter, groupType, cdpId, triggerIds);
+        emit TriggerGroupAdded(groupId, groupType, cdpId, triggerIds);
     }
 
     function removeRecord(
@@ -235,15 +227,22 @@ contract AutomationBotAggregator {
         uint256 groupId,
         uint256[] memory triggerIds
     ) external onlyCdpAllowed(cdpId) {
+        console.log("remove R - 1");
         require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
-
+        console.log("remove R - 2");
         activeGroups[groupId] = 0;
+        AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            require(triggerGroup[triggerIds[i]] == groupId, "aggregator/inactive-trigger");
-            triggerGroup[triggerIds[i]] = 0;
+            console.log("remove R - 3");
+            (bytes32 triggerHash, ) = bot.activeTriggers(triggerIds[i]);
+            console.log(triggerGroup[triggerHash]);
+            console.log(groupId);
+            require(triggerGroup[triggerHash] == groupId, "aggregator/inactive-trigger");
+
+            triggerGroup[triggerHash] = 0;
         }
 
-        emit TriggerGroupRemoved(groupId);
+        emit TriggerGroupRemoved(groupId, cdpId);
     }
 
     event TriggerGroupAdded(
@@ -253,7 +252,7 @@ contract AutomationBotAggregator {
         uint256[] triggerIds
     );
 
-    event TriggerGroupRemoved(uint256 indexed groupId);
+    event TriggerGroupRemoved(uint256 indexed groupId, uint256 indexed cdpId);
 
-    event TriggerGroupUpdated(uint256 indexed groupId, uint256 oldTriggerId, uint256 newTriggerId);
+    event TriggerGroupUpdated(uint256 indexed groupId, uint256 indexed cdpId, uint256 newTriggerId);
 }
