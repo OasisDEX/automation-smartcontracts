@@ -581,7 +581,7 @@ describe('AutomationBot', async () => {
 
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
-            console.log('gas used - addTrigger', txRes.gasUsed.toNumber())
+
             const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             triggerId = event.args.triggerId.toNumber()
         })

@@ -18,10 +18,8 @@ describe('ConstantMultipleValidator', async () => {
 
     let AutomationBotInstance: AutomationBot
     let AutomationBotAggregatorInstance: AutomationBotAggregator
-
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
-
     let snapshotId: string
 
     before(async () => {
