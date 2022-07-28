@@ -138,7 +138,6 @@ contract AutomationBotAggregator {
         bool removeAllowance
     ) external onlyDelegate {
         (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
-        console.log("remove T - 1");
         for (uint256 i = 0; i < triggerIds.length; i++) {
             (bytes32 triggerHash, ) = bot.activeTriggers(triggerIds[i]);
             require(groupId == aggregator.triggerGroup(triggerHash), "aggregator/invalid-group");
@@ -152,7 +151,7 @@ contract AutomationBotAggregator {
             );
             require(status, "aggregator/remove-trigger-failed");
         }
-        console.log("remove T - 2");
+
         aggregator.removeRecord(cdpId, groupId, triggerIds);
     }
 
@@ -211,10 +210,7 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < triggerIds.length; i++) {
             uint256 triggerId = triggerIds[i];
             (bytes32 triggerHash, uint256 triggerCdpId) = bot.activeTriggers(triggerId);
-            /*         require(
-                triggerGroup[triggerHash] == triggerGroupCounter,
-                "aggregator/inactive-trigger"
-            ); */
+            require(triggerGroup[triggerHash] == 0, "aggregator/inactive-trigger");
             require(triggerCdpId == cdpId, "aggregator/cdp-mismatch");
             triggerGroup[triggerHash] = groupId;
         }
@@ -227,18 +223,12 @@ contract AutomationBotAggregator {
         uint256 groupId,
         uint256[] memory triggerIds
     ) external onlyCdpAllowed(cdpId) {
-        console.log("remove R - 1");
         require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
-        console.log("remove R - 2");
         activeGroups[groupId] = 0;
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            console.log("remove R - 3");
             (bytes32 triggerHash, ) = bot.activeTriggers(triggerIds[i]);
-            console.log(triggerGroup[triggerHash]);
-            console.log(groupId);
             require(triggerGroup[triggerHash] == groupId, "aggregator/inactive-trigger");
-
             triggerGroup[triggerHash] = 0;
         }
 
