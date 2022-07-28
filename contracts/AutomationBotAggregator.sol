@@ -53,16 +53,14 @@ contract AutomationBotAggregator {
         _;
     }
 
-    function getTriggersHash(
+    function getTriggerHash(
         uint256 cdpId,
         bytes memory triggerData,
         address commandAddress
     ) private view returns (bytes32) {
-        bytes32 triggersHash = keccak256(
+        return keccak256(
             abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
         );
-
-        return triggersHash;
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (address) {
