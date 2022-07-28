@@ -171,19 +171,20 @@ contract AutomationBotAggregator {
         );
         require(status, "aggregator/replace-trigger-fail");
 
-        aggregator.updateRecord(cdpId, groupId, bot.triggersCounter());
+        aggregator.updateRecord(cdpId, groupId, bot.triggersCounter(), triggerType);
     }
 
     function updateRecord(
         uint256 cdpId,
         uint256 groupId,
-        uint256 newTriggerId
+        uint256 newTriggerId,
+        uint256 triggerType
     ) external onlyCdpAllowed(cdpId) {
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
         (, uint256 triggerCdpId) = bot.activeTriggers(newTriggerId);
         require(activeGroups[groupId] == cdpId && cdpId == triggerCdpId, "aggregator/cdp-mismatch");
 
-        emit TriggerGroupUpdated(groupId, cdpId, newTriggerId);
+        emit TriggerGroupUpdated(groupId, cdpId, newTriggerId, triggerType);
     }
 
     function addRecord(
@@ -231,5 +232,10 @@ contract AutomationBotAggregator {
 
     event TriggerGroupRemoved(uint256 indexed groupId, uint256 indexed cdpId);
 
-    event TriggerGroupUpdated(uint256 indexed groupId, uint256 indexed cdpId, uint256 newTriggerId);
+    event TriggerGroupUpdated(
+        uint256 indexed groupId,
+        uint256 indexed cdpId,
+        uint256 newTriggerId,
+        uint256 triggerType
+    );
 }
