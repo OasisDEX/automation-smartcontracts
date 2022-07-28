@@ -23,7 +23,6 @@ import { AutomationBot } from "./AutomationBot.sol";
 import { ManagerLike } from "./interfaces/ManagerLike.sol";
 import { IValidator } from "./interfaces/IValidator.sol";
 import { ServiceRegistry } from "./ServiceRegistry.sol";
-import "hardhat/console.sol";
 
 contract AutomationBotAggregator {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -66,14 +65,6 @@ contract AutomationBotAggregator {
         return triggersHash;
     }
 
-    function getCommandAddress(uint256 triggerType) public view returns (address) {
-        bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
-
-        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
-
-        return commandAddress;
-    }
-
     function getValidatorAddress(uint16 groupType) public view returns (address) {
         bytes32 validatorHash = keccak256(abi.encode("Validator", groupType));
 
@@ -107,10 +98,8 @@ contract AutomationBotAggregator {
     ) external onlyDelegate {
         (AutomationBot bot, AutomationBotAggregator aggregator) = getBotAndAggregator();
         IValidator validator = IValidator(getValidatorAddress(groupType));
-
         require(validator.validate(replacedTriggerId, triggersData), "aggregator/validation-error");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
-
         uint256 firstTriggerId = bot.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         for (uint256 i = 0; i < triggerTypes.length; i++) {
@@ -123,7 +112,6 @@ contract AutomationBotAggregator {
                     triggersData[i]
                 )
             );
-
             triggerIds[i] = firstTriggerId + i;
             require(status, "aggregator/add-trigger-failed");
         }
@@ -209,7 +197,7 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < triggerIds.length; i++) {
             uint256 triggerId = triggerIds[i];
             (bytes32 triggerHash, uint256 triggerCdpId) = bot.activeTriggers(triggerId);
-            require(triggerGroup[triggerHash] == 0, "aggregator/inactive-trigger");
+            require(triggerGroup[triggerHash] == 0, "aggregator/trigger-exists");
             require(triggerCdpId == cdpId, "aggregator/cdp-mismatch");
             triggerGroup[triggerHash] = groupId;
         }

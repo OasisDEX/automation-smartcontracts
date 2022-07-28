@@ -1,7 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { Contract, Signer, utils } from 'ethers'
-import { encodeTriggerData, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
+import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
@@ -19,10 +18,10 @@ describe('ConstantMultipleValidator', async () => {
 
     let AutomationBotInstance: AutomationBot
     let AutomationBotAggregatorInstance: AutomationBotAggregator
-    let DssProxyActions: Contract
+
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
-    let notOwnerProxy: DsProxyLike
+
     let snapshotId: string
 
     before(async () => {
@@ -33,18 +32,11 @@ describe('ConstantMultipleValidator', async () => {
         AutomationBotInstance = system.automationBot
         AutomationBotAggregatorInstance = system.automationBotAggregator
 
-        DssProxyActions = new Contract(hardhatUtils.addresses.DSS_PROXY_ACTIONS, [
-            'function cdpAllow(address,uint,address,uint)',
-        ])
-
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
         const proxyAddress = await cdpManager.owns(testCdpId)
         ownerProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         ownerProxyUserAddress = await ownerProxy.owner()
-
-        const otherProxyAddress = await cdpManager.owns(1)
-        notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
     })
 
     beforeEach(async () => {
@@ -65,7 +57,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.CM_BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -76,7 +68,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic sell
         let bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.CM_BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             0,

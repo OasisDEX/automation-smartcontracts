@@ -44,7 +44,7 @@ contract ConstantMultipleValidator is IValidator {
 
     function decode(bytes[] memory triggersData)
         public
-        pure
+        view
         returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
     {
         uint256[] memory _cdpIds = new uint256[](triggersData.length);
@@ -58,16 +58,13 @@ contract ConstantMultipleValidator is IValidator {
 
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
         external
-        pure
+        view
         returns (bool)
     {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
-
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
-        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
-
+        require(triggerTypes[0] == 5 && triggerTypes[1] == 6, "validator/wrong-trigger-type");
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
-
         GenericTriggerData memory buyTriggerData = abi.decode(
             triggersData[0],
             (GenericTriggerData)
@@ -76,27 +73,22 @@ contract ConstantMultipleValidator is IValidator {
             triggersData[1],
             (GenericTriggerData)
         );
-
         require(
             buyTriggerData.continuous == sellTriggerData.continuous == true,
             "validator/continous-not-true"
         );
-
         require(
             buyTriggerData.maxBaseFeeInGwei == sellTriggerData.maxBaseFeeInGwei,
             "validator/max-fee-not-equal"
         );
-
         require(
             buyTriggerData.deviation == sellTriggerData.deviation,
             "validator/deviation-not-equal"
         );
-
         require(
             buyTriggerData.targetCollRatio == sellTriggerData.targetCollRatio,
             "validator/coll-ratio-not-equal"
         );
-
         return true;
     }
 }

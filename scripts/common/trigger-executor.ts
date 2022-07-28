@@ -100,7 +100,9 @@ export class TriggerExecutor {
             case TriggerType.CLOSE_TO_DAI:
                 return this.getStopLossExecutionData(vault, triggerType === TriggerType.CLOSE_TO_COLLATERAL, slippage)
             case TriggerType.BASIC_BUY:
-            case TriggerType.BASIC_SELL: {
+            case TriggerType.BASIC_SELL:
+            case TriggerType.CM_BASIC_SELL:
+            case TriggerType.CM_BASIC_BUY: {
                 const [, , , target] = decodeTriggerData(triggerType, triggerData)
                 return await this.getBasicBuySellExecutionData(
                     vault,
@@ -121,9 +123,12 @@ export class TriggerExecutor {
             case TriggerType.CLOSE_TO_DAI:
                 return 'closeVaultExitDai'
             case TriggerType.BASIC_BUY:
+            case TriggerType.CM_BASIC_BUY:
                 return 'increaseMultiple'
             case TriggerType.BASIC_SELL:
+            case TriggerType.CM_BASIC_SELL:
                 return 'decreaseMultiple'
+
             default:
                 throw new Error(`Trigger type ${triggerType} is not supported`)
         }

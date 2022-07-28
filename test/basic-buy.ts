@@ -154,6 +154,7 @@ describe('BasicBuyCommand', () => {
             const tx = createTrigger(triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
+            console.log('gas used - addTrigger - BB', receipt.gasUsed.toNumber())
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(event.args.triggerData).to.eq(triggerData)
         })

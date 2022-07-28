@@ -160,6 +160,7 @@ describe('BasicSellCommand', () => {
             )
             const createTriggerTx = await createTrigger(triggerData)
             const receipt = await createTriggerTx.wait()
+            console.log('gas used - addTrigger - BS', receipt.gasUsed.toNumber())
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
         }

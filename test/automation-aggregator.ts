@@ -35,23 +35,10 @@ describe('AutomationAggregatorBot', async () => {
 
     let system: DeployedSystem
     let MPAInstance: MPALike
-    let usersProxy: DsProxyLike
-    let proxyOwnerAddress: string
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
     const ethAIlk = utils.formatBytes32String('ETH-A')
-
-    const createTrigger = async (triggerData: BytesLike) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            0,
-            triggerData,
-        ])
-        const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
-        return usersProxy.connect(signer).execute(system.automationBot.address, data)
-    }
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
@@ -120,7 +107,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.CM_BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             5000,
@@ -131,7 +118,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.CM_BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             5000,
@@ -236,7 +223,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.CM_BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -247,7 +234,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.CM_BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             0,
@@ -382,7 +369,7 @@ describe('AutomationAggregatorBot', async () => {
             // basic buy
             const bbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.CM_BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
@@ -393,7 +380,7 @@ describe('AutomationAggregatorBot', async () => {
             // basic sell
             const bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.CM_BASIC_SELL,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
@@ -501,7 +488,7 @@ describe('AutomationAggregatorBot', async () => {
                 executionData,
                 testCdpId,
                 triggerData,
-                system.basicBuy!.address,
+                system.cmBasicBuy!.address,
                 triggerId,
                 0,
                 0,
@@ -517,7 +504,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.CM_BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             '4472665974900000000000',
@@ -528,7 +515,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.CM_BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             '4472665974900000000000',
@@ -554,7 +541,7 @@ describe('AutomationAggregatorBot', async () => {
                 txReceipt,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
             )
-
+            console.log('gas used - addTriggerGroup', txReceipt.gasUsed.toNumber())
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             triggerGroupId = event.args.groupId.toNumber()
 
@@ -575,7 +562,7 @@ describe('AutomationAggregatorBot', async () => {
 
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
-                [testCdpId, TriggerType.BASIC_BUY, bbTriggerData, triggerGroupId],
+                [testCdpId, TriggerType.CM_BASIC_BUY, bbTriggerData, triggerGroupId],
             )
             const tx = await ownerProxy
                 .connect(owner)
@@ -593,7 +580,7 @@ describe('AutomationAggregatorBot', async () => {
 
             const dataToSupplyReplace = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'replaceGroupTrigger',
-                [testCdpId, TriggerType.BASIC_SELL, bbTriggerData, triggerGroupId],
+                [testCdpId, TriggerType.CM_BASIC_SELL, bbTriggerData, triggerGroupId],
             )
             await expect(
                 ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyReplace),

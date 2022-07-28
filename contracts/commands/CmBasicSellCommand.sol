@@ -25,8 +25,9 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
-contract BasicSellCommand is BaseMPACommand {
+contract CmBasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
 
     struct BasicSellTriggerData {
@@ -46,6 +47,18 @@ contract BasicSellCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
+    function getTriggersHash(
+        uint256 cdpId,
+        bytes memory triggerData,
+        address commandAddress
+    ) private view returns (bytes32) {
+        bytes32 triggersHash = keccak256(
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+        );
+
+        return triggersHash;
+    }
+
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
         external
         pure
@@ -56,7 +69,7 @@ contract BasicSellCommand is BaseMPACommand {
         (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
         return
             _cdpId == trigger.cdpId &&
-            trigger.triggerType == 4 &&
+            trigger.triggerType == 6 &&
             trigger.execCollRatio <= lowerTarget &&
             deviationIsValid(trigger.deviation);
     }
@@ -93,14 +106,32 @@ contract BasicSellCommand is BaseMPACommand {
         bytes memory triggerData
     ) external {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
-        validateTriggerType(trigger.triggerType, 4);
-        validateSelector(MPALike.decreaseMultiple.selector, executionData);
+        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
+        );
+        validateTriggerType(trigger.triggerType, 6);
+        validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
-
+        bytes32 commandHash = keccak256(abi.encode("Command", trigger.triggerType));
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+        bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
         if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            if (automationAggregatorBot.triggerGroup(triggerHash) != 0) {
+                (bool status, ) = address(automationAggregatorBot).delegatecall(
+                    abi.encodeWithSelector(
+                        automationAggregatorBot.replaceGroupTrigger.selector,
+                        cdpId,
+                        trigger.triggerType,
+                        triggerData,
+                        automationAggregatorBot.triggerGroup(triggerHash)
+                    )
+                );
+
+                require(status, "aggregator/add-trigger-failed");
+            } else {
+                recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            }
         }
     }
 
