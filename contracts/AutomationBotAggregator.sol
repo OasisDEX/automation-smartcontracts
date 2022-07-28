@@ -198,7 +198,6 @@ contract AutomationBotAggregator {
         emit TriggerGroupUpdated(groupId, cdpId, newTriggerId);
     }
 
-    // add validation not ot add two groups that are the same
     function addRecord(
         uint256 cdpId,
         uint16 groupType,
