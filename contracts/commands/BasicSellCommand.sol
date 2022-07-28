@@ -25,6 +25,7 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
 contract BasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
@@ -44,6 +45,18 @@ contract BasicSellCommand is BaseMPACommand {
 
     function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
         return abi.decode(triggerData, (BasicSellTriggerData));
+    }
+
+    function getTriggersHash(
+        uint256 cdpId,
+        bytes memory triggerData,
+        address commandAddress
+    ) private view returns (bytes32) {
+        bytes32 triggersHash = keccak256(
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+        );
+
+        return triggersHash;
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -93,14 +106,30 @@ contract BasicSellCommand is BaseMPACommand {
         bytes memory triggerData
     ) external {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
-        validateTriggerType(trigger.triggerType, 4);
-        validateSelector(MPALike.decreaseMultiple.selector, executionData);
+        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
+        );
+        validateTriggerType(trigger.triggerType, 3);
+        validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
-
+        bytes32 commandHash = keccak256(abi.encode("Command", trigger.triggerType));
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+        uint256 triggerId = automationAggregatorBot.triggerIdMap(
+            getTriggersHash(cdpId, triggerData, commandAddress)
+        );
         if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            if (triggerId != 0 && automationAggregatorBot.triggerGroup(triggerId) != 0) {
+                automationAggregatorBot.replaceGroupTrigger(
+                    cdpId,
+                    automationAggregatorBot.triggerGroup(triggerId),
+                    triggerId,
+                    trigger.triggerType,
+                    triggerData
+                );
+            } else {
+                recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            }
         }
     }
 
