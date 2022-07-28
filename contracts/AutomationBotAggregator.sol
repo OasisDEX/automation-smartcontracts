@@ -103,7 +103,7 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < triggerTypes.length; i++) {
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
-                    AutomationBot(bot).addTrigger.selector,
+                    bot.addTrigger.selector,
                     cdpIds[i],
                     triggerTypes[i],
                     replacedTriggerId[i],
