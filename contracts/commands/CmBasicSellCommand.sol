@@ -106,7 +106,7 @@ contract CmBasicSellCommand is BaseMPACommand {
         bytes memory triggerData
     ) external {
         BasicSellTriggerData memory trigger = decode(triggerData);
-        AutomationBotAggregator automationAggregatorBot = AutomationBotAggregator(
+        AutomationBotAggregator aggregator = AutomationBotAggregator(
             serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
         );
         validateTriggerType(trigger.triggerType, 6);
@@ -117,14 +117,14 @@ contract CmBasicSellCommand is BaseMPACommand {
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
         bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
         if (trigger.continuous) {
-            if (automationAggregatorBot.triggerGroup(triggerHash) != 0) {
-                (bool status, ) = address(automationAggregatorBot).delegatecall(
+            if (aggregator.triggerGroup(triggerHash) != 0) {
+                (bool status, ) = address(aggregator).delegatecall(
                     abi.encodeWithSelector(
-                        automationAggregatorBot.replaceGroupTrigger.selector,
+                        aggregator.replaceGroupTrigger.selector,
                         cdpId,
                         trigger.triggerType,
                         triggerData,
-                        automationAggregatorBot.triggerGroup(triggerHash)
+                        aggregator.triggerGroup(triggerHash)
                     )
                 );
 
