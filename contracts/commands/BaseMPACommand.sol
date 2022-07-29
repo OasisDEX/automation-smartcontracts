@@ -25,6 +25,7 @@ import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
+import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
 abstract contract BaseMPACommand is ICommand {
     using RatioUtils for uint256;
@@ -38,6 +39,15 @@ abstract contract BaseMPACommand is ICommand {
     uint256 public constant MIN_ALLOWED_DEVIATION = 50;
 
     ServiceRegistry public immutable serviceRegistry;
+
+    struct TriggerData {
+        uint256 cdpId;
+        uint16 triggerType;
+        uint256 execCollRatio;
+        uint256 targetCollRatio;
+        uint256 BsPrice;
+        bool continuous;
+    }
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
@@ -94,20 +104,60 @@ abstract contract BaseMPACommand is ICommand {
         require(status, string(reason));
     }
 
+    function decodeBase(bytes memory triggerData) public pure returns (TriggerData memory) {
+        return abi.decode(triggerData, (TriggerData));
+    }
+
+    function getTriggersHash(
+        uint256 cdpId,
+        bytes memory triggerData,
+        address commandAddress
+    ) private view returns (bytes32) {
+        bytes32 triggersHash = keccak256(
+            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+        );
+
+        return triggersHash;
+    }
+
     function recreateTrigger(
         uint256 cdpId,
         uint16 triggerType,
         bytes memory triggerData
     ) internal {
-        (bool status, ) = msg.sender.delegatecall(
-            abi.encodeWithSelector(
-                AutomationBot(msg.sender).addTrigger.selector,
-                cdpId,
-                triggerType,
-                0,
-                triggerData
-            )
+        TriggerData memory trigger = decodeBase(triggerData);
+        AutomationBotAggregator aggregator = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
         );
-        require(status, "base-mpa-command/trigger-recreation-failed");
+
+        bytes32 commandHash = keccak256(abi.encode("Command", trigger.triggerType));
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+        bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
+        if (trigger.continuous) {
+            if (aggregator.triggerGroup(triggerHash) != 0) {
+                (bool status, ) = address(aggregator).delegatecall(
+                    abi.encodeWithSelector(
+                        aggregator.replaceGroupTrigger.selector,
+                        cdpId,
+                        trigger.triggerType,
+                        triggerData,
+                        aggregator.triggerGroup(triggerHash)
+                    )
+                );
+
+                require(status, "aggregator/add-trigger-failed");
+            } else {
+                (bool status, ) = msg.sender.delegatecall(
+                    abi.encodeWithSelector(
+                        AutomationBot(msg.sender).addTrigger.selector,
+                        cdpId,
+                        triggerType,
+                        0,
+                        triggerData
+                    )
+                );
+                require(status, "base-mpa-command/trigger-recreation-failed");
+            }
+        }
     }
 }
