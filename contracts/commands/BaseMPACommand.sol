@@ -25,6 +25,7 @@ import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { AutomationBot } from "../AutomationBot.sol";
+import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
 abstract contract BaseMPACommand is ICommand {
     using RatioUtils for uint256;
@@ -41,6 +42,16 @@ abstract contract BaseMPACommand is ICommand {
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+    }
+
+    function getTriggersHash(
+        uint256 cdpId,
+        uint16 triggerType,
+        bytes memory triggerData
+    ) private view returns (bytes32) {
+        bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+        return keccak256(abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress));
     }
 
     function getVaultAndMarketInfo(uint256 cdpId)
@@ -99,15 +110,33 @@ abstract contract BaseMPACommand is ICommand {
         uint16 triggerType,
         bytes memory triggerData
     ) internal {
-        (bool status, ) = msg.sender.delegatecall(
-            abi.encodeWithSelector(
-                AutomationBot(msg.sender).addTrigger.selector,
-                cdpId,
-                triggerType,
-                0,
-                triggerData
-            )
+        AutomationBotAggregator aggregator = AutomationBotAggregator(
+            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
         );
-        require(status, "base-mpa-command/trigger-recreation-failed");
+        bytes32 triggerHash = getTriggersHash(cdpId, triggerType, triggerData);
+        if (aggregator.triggerGroup(triggerHash) != 0) {
+            (bool status, ) = address(aggregator).delegatecall(
+                abi.encodeWithSelector(
+                    aggregator.replaceGroupTrigger.selector,
+                    cdpId,
+                    triggerType,
+                    triggerData,
+                    aggregator.triggerGroup(triggerHash)
+                )
+            );
+
+            require(status, "aggregator/add-trigger-failed");
+        } else {
+            (bool status, ) = msg.sender.delegatecall(
+                abi.encodeWithSelector(
+                    AutomationBot(msg.sender).addTrigger.selector,
+                    cdpId,
+                    triggerType,
+                    0,
+                    triggerData
+                )
+            );
+            require(status, "base-mpa-command/trigger-recreation-failed");
+        }
     }
 }

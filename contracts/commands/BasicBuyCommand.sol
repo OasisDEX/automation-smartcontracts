@@ -26,7 +26,6 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
-import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
 contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
@@ -47,18 +46,6 @@ contract BasicBuyCommand is BaseMPACommand {
 
     function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
-    }
-
-    function getTriggersHash(
-        uint256 cdpId,
-        bytes memory triggerData,
-        address commandAddress
-    ) private view returns (bytes32) {
-        bytes32 triggersHash = keccak256(
-            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
-        );
-
-        return triggersHash;
     }
 
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
@@ -116,32 +103,12 @@ contract BasicBuyCommand is BaseMPACommand {
         bytes memory triggerData
     ) external {
         BasicBuyTriggerData memory trigger = decode(triggerData);
-        AutomationBotAggregator aggregator = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
-        );
         validateTriggerType(trigger.triggerType, 3);
         validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
-        bytes32 commandHash = keccak256(abi.encode("Command", trigger.triggerType));
-        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
-        bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
         if (trigger.continuous) {
-            if (aggregator.triggerGroup(triggerHash) != 0) {
-                (bool status, ) = address(aggregator).delegatecall(
-                    abi.encodeWithSelector(
-                        aggregator.replaceGroupTrigger.selector,
-                        cdpId,
-                        trigger.triggerType,
-                        triggerData,
-                        aggregator.triggerGroup(triggerHash)
-                    )
-                );
-
-                require(status, "aggregator/add-trigger-failed");
-            } else {
-                recreateTrigger(cdpId, trigger.triggerType, triggerData);
-            }
+            recreateTrigger(cdpId, trigger.triggerType, triggerData);
         }
     }
 
