@@ -759,7 +759,7 @@ describe('AutomationAggregatorBot', async () => {
             triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
         })
 
-        it('should successfully replace a trigger and update group through executor', async () => {
+        it("should successfully replace a trigger when it's executed", async () => {
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const tx = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
 
