@@ -163,8 +163,18 @@ describe('AutomationAggregatorBot', async () => {
         })
         it('should successfully create a trigger group, remove old bb and add new bb in its place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const oldBbTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                buyExecutionRatio,
+                buyTargetRatio,
+                5000,
+                true,
+                50,
+                maxGweiPrice,
+            )
 
-            const createTx = await createTrigger(bbTriggerData, TriggerType.CM_BASIC_BUY)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
             await (await createTx).wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
@@ -188,8 +198,18 @@ describe('AutomationAggregatorBot', async () => {
         })
         it('should successfully create a trigger group, remove old bs and add bb in its place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const createTx = await createTrigger(bsTriggerData, TriggerType.CM_BASIC_SELL)
+            // basic sell
+            const oldBsTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_SELL,
+                sellExecutionRatio,
+                sellTargetRatio,
+                5000,
+                true,
+                50,
+                maxGweiPrice,
+            )
+            const createTx = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
             await (await createTx).wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
