@@ -58,9 +58,7 @@ contract AutomationBotAggregator {
         bytes memory triggerData,
         address commandAddress
     ) private view returns (bytes32) {
-        return keccak256(
-            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
-        );
+        return keccak256(abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress));
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (address) {
@@ -159,13 +157,7 @@ contract AutomationBotAggregator {
         require(aggregator.triggerGroup(newHash) == groupId, "aggregator/inactive-trigger");
 
         (bool status, ) = address(bot).delegatecall(
-            abi.encodeWithSelector(
-                bot.addTrigger.selector,
-                cdpId,
-                triggerType,
-                0,
-                triggerData
-            )
+            abi.encodeWithSelector(bot.addTrigger.selector, cdpId, triggerType, 0, triggerData)
         );
         require(status, "aggregator/replace-trigger-fail");
 
