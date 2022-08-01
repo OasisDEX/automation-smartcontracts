@@ -98,7 +98,7 @@ abstract contract BaseMPACommand is ICommand {
         uint256 cdpId,
         uint16 triggerType,
         bytes memory triggerData
-    ) internal {
+    ) internal virtual {
         (bool status, ) = msg.sender.delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(msg.sender).addTrigger.selector,

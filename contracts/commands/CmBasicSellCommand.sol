@@ -27,6 +27,11 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { CmBaseMPACommand } from "./CmBaseMPACommand.sol";
 import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
 
+/*
+Changes compared to BasicSellCommand
+1) Inherites from CmBaseMPACommand not BaseMPACommand and therefore uses different recreateTrigger function
+2) Has triggerType 6 instead of 4
+*/
 contract CmBasicSellCommand is CmBaseMPACommand {
     using RatioUtils for uint256;
 
