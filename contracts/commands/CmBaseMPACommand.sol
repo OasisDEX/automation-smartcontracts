@@ -36,7 +36,7 @@ abstract contract CmBaseMPACommand is BaseMPACommand {
         uint16 triggerType;
         uint256 execCollRatio;
         uint256 targetCollRatio;
-        uint256 BsPrice;
+        uint256 bsPrice;
         bool continuous;
     }
 
