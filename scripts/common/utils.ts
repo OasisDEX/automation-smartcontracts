@@ -44,11 +44,14 @@ function getTriggerDataTypes(triggerType: TriggerType) {
         case TriggerType.CLOSE_TO_DAI:
             return ['uint256', 'uint16', 'uint256']
         case TriggerType.BASIC_BUY:
+        case TriggerType.CM_BASIC_BUY:
             // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
         case TriggerType.BASIC_SELL:
+        case TriggerType.CM_BASIC_SELL:
             // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 minSellPrice, bool continuous, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
+
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
@@ -157,7 +160,8 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
             const { stopLossLevel } = decodeStopLossData(triggerData)
             return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
         }
-        case TriggerType.BASIC_BUY: {
+        case TriggerType.BASIC_BUY:
+        case TriggerType.CM_BASIC_BUY: {
             const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicBuyData(triggerData)
             return baseInfo.concat([
@@ -169,7 +173,8 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
-        case TriggerType.BASIC_SELL: {
+        case TriggerType.BASIC_SELL:
+        case TriggerType.CM_BASIC_SELL: {
             const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicSellData(triggerData)
             return baseInfo.concat([
@@ -181,6 +186,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
+
         default:
             throw new Error(`Trigger Type ${triggerType} is not supported.`)
     }

@@ -69,6 +69,16 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.AUTOMATION_BASIC_SELL_COMMAND,
             },
             {
+                name: 'TriggerType.CM_BASIC_BUY',
+                hash: getCommandHash(TriggerType.CM_BASIC_BUY),
+                addressFromConfig: addresses.AUTOMATION_CM_BASIC_BUY_COMMAND,
+            },
+            {
+                name: 'TriggerType.CM_BASIC_SELL',
+                hash: getCommandHash(TriggerType.CM_BASIC_SELL),
+                addressFromConfig: addresses.AUTOMATION_CM_BASIC_SELL_COMMAND,
+            },
+            {
                 name: AutomationServiceName.CDP_MANAGER,
                 hash: getServiceNameHash(AutomationServiceName.CDP_MANAGER),
                 addressFromConfig: addresses.CDP_MANAGER,
@@ -79,9 +89,9 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.MULTIPLY_PROXY_ACTIONS,
             },
             {
-                name: AutomationServiceName.AUTOMATION_AGGREGATOR_BOT,
-                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_AGGREGATOR_BOT),
-                addressFromConfig: addresses.AUTOMATION_AGGREGATOR_BOT,
+                name: AutomationServiceName.AUTOMATION_BOT_AGGREGATOR,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
+                addressFromConfig: addresses.AUTOMATION_BOT_AGGREGATOR,
             },
             {
                 name: 'TriggerGroupType.CONSTANT_MULTIPLE',

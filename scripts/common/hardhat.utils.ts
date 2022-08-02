@@ -35,7 +35,7 @@ export class HardhatUtils {
             automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
             automationBotAggregator: await this.hre.ethers.getContractAt(
                 'AutomationBotAggregator',
-                this.addresses.AUTOMATION_AGGREGATOR_BOT,
+                this.addresses.AUTOMATION_BOT_AGGREGATOR,
             ),
             constantMultipleValidator: await this.hre.ethers.getContractAt(
                 'ConstantMultipleValidator',
@@ -55,6 +55,14 @@ export class HardhatUtils {
             basicSell: await this.hre.ethers.getContractAt(
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
+            ),
+            cmBasicBuy: await this.hre.ethers.getContractAt(
+                'CmBasicBuyCommand',
+                this.addresses.AUTOMATION_CM_BASIC_BUY_COMMAND,
+            ),
+            cmBasicSell: await this.hre.ethers.getContractAt(
+                'CmBasicSellCommand',
+                this.addresses.AUTOMATION_CM_BASIC_SELL_COMMAND,
             ),
         }
     }
