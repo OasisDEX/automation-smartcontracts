@@ -160,7 +160,8 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
             const { stopLossLevel } = decodeStopLossData(triggerData)
             return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
         }
-        case TriggerType.BASIC_BUY | TriggerType.CM_BASIC_BUY: {
+        case TriggerType.BASIC_BUY:
+        case TriggerType.CM_BASIC_BUY: {
             const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicBuyData(triggerData)
             return baseInfo.concat([
@@ -172,7 +173,8 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
-        case TriggerType.BASIC_SELL | TriggerType.CM_BASIC_SELL: {
+        case TriggerType.BASIC_SELL:
+        case TriggerType.CM_BASIC_SELL: {
             const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicSellData(triggerData)
             return baseInfo.concat([
