@@ -60,7 +60,7 @@ abstract contract CmBaseMPACommand is BaseMPACommand {
         bytes memory triggerData
     ) internal override {
         AutomationBotAggregator aggregator = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService("AUTOMATION_AGGREGATOR_BOT")
+            serviceRegistry.getRegisteredService("AUTOMATION_BOT_AGGREGATOR")
         );
 
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));

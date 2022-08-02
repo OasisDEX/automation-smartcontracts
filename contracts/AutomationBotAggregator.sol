@@ -27,7 +27,7 @@ import { ServiceRegistry } from "./ServiceRegistry.sol";
 contract AutomationBotAggregator {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
-    string private constant AUTOMATION_AGGREGATOR_BOT_KEY = "AUTOMATION_AGGREGATOR_BOT";
+    string private constant AUTOMATION_BOT_AGGREGATOR_KEY = "AUTOMATION_BOT_AGGREGATOR";
 
     mapping(uint256 => uint256) public activeGroups; // groupId => cdpId
     mapping(bytes32 => uint256) public triggerGroup; // triggerHash => groupId
@@ -83,7 +83,7 @@ contract AutomationBotAggregator {
     {
         bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
         aggregator = AutomationBotAggregator(
-            serviceRegistry.getRegisteredService(AUTOMATION_AGGREGATOR_BOT_KEY)
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT_AGGREGATOR_KEY)
         );
     }
 

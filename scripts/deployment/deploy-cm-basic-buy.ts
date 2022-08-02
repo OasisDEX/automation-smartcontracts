@@ -17,9 +17,7 @@ async function main() {
     ])) as CmBasicBuyCommand
     console.log(`CmBasicBuy Deployed: ${system.cmBasicBuy.address}`)
 
-    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.CM_BASIC_BUY),
-    ])
+    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [])
 }
 
 main().catch(error => {

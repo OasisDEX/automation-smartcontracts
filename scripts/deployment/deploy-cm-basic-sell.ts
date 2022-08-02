@@ -17,9 +17,7 @@ async function main() {
     ])) as CmBasicSellCommand
     console.log(`CmBasicSell Deployed: ${system.cmBasicSell!.address}`)
 
-    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.CM_BASIC_SELL),
-    ])
+    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [])
 }
 
 main().catch(error => {

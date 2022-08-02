@@ -89,9 +89,9 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.MULTIPLY_PROXY_ACTIONS,
             },
             {
-                name: AutomationServiceName.AUTOMATION_AGGREGATOR_BOT,
-                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_AGGREGATOR_BOT),
-                addressFromConfig: addresses.AUTOMATION_AGGREGATOR_BOT,
+                name: AutomationServiceName.AUTOMATION_BOT_AGGREGATOR,
+                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
+                addressFromConfig: addresses.AUTOMATION_BOT_AGGREGATOR,
             },
             {
                 name: 'TriggerGroupType.CONSTANT_MULTIPLE',
