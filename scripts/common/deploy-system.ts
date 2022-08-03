@@ -278,14 +278,9 @@ export async function configureRegistryEntries(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
         system.automationBotAggregator.address,
     )
-    if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
-        system.constantMultipleValidator.address,
-    )
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR),
+        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
         system.constantMultipleValidator.address,
     )
 
