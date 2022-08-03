@@ -31,16 +31,9 @@ struct GenericTriggerData {
 
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { IValidator } from "../interfaces/IValidator.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
 
 contract ConstantMultipleValidator is IValidator {
     using RatioUtils for uint256;
-
-    ServiceRegistry public immutable serviceRegistry;
-
-    constructor(ServiceRegistry _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
-    }
 
     function decode(bytes[] memory triggersData)
         public

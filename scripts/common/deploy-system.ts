@@ -108,7 +108,7 @@ export async function deploySystem({
     )
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
         ethers.getContractFactory('ConstantMultipleValidator'),
-        [ServiceRegistryInstance.address],
+        [],
     )
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
