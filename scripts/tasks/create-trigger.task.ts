@@ -93,7 +93,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
             // Fund the owner
-            hre.ethers.provider.getSigner(0).sendTransaction({
+            await hre.ethers.provider.getSigner(0).sendTransaction({
                 to: currentProxyOwner,
                 value: EthersBN.from(10).pow(18),
             })
