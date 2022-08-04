@@ -391,37 +391,6 @@ describe('AutomationAggregatorBot', async () => {
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
         })
-        it('should be able to be used by a user with permissions', async () => {
-            const [signer] = await hre.ethers.getSigners()
-            const signerAddress = await signer.getAddress()
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
-                groupTypeId,
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-            ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
-            await tx.wait()
-
-            const triggerCounter = await AutomationBotInstance.triggersCounter()
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-
-            const tx1 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
-            await expect(tx1).to.be.reverted
-
-            const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
-            await expect(cdpAllowTx).not.to.be.reverted
-
-            const tx2 = AutomationBotAggregatorInstance.connect(signer).addRecord(testCdpId, groupTypeId, triggerIds)
-
-            await expect(tx2).not.to.be.reverted
-
-            const receipt = await (await tx2).wait()
-            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(events.length).to.be.equal(1)
-        })
     })
     describe('removeTriggerGroup', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
@@ -569,46 +538,6 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('cdpAllowed', async () => {
-        before(async () => {
-            const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-            const replacedTriggerId = [0, 0]
-
-            // current coll ratio : 1.859946411122229468
-            const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-            const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
-
-            // basic buy
-            const bbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.CM_BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                0,
-                true,
-                50,
-                maxGweiPrice,
-            )
-            // basic sell
-            const bsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.CM_BASIC_SELL,
-                sellExecutionRatio,
-                sellTargetRatio,
-                0,
-                true,
-                50,
-                maxGweiPrice,
-            )
-
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
-                groupTypeId,
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-            ])
-            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
-        })
-
         it('should return false for bad operator address', async () => {
             const status = await AutomationBotAggregatorInstance.isCdpAllowed(
                 testCdpId,
