@@ -16,6 +16,7 @@ import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
+const firstTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
 const maxGweiPrice = 1000
 
 function toRatio(units: number) {
@@ -30,6 +31,8 @@ describe('AutomationAggregatorBot', async () => {
     let DssProxyActions: Contract
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
+    let firstOwnerProxy: DsProxyLike
+    let firstOwnerProxyUserAddress: string
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
 
@@ -62,6 +65,10 @@ describe('AutomationAggregatorBot', async () => {
         const proxyAddress = await cdpManager.owns(testCdpId)
         ownerProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         ownerProxyUserAddress = await ownerProxy.owner()
+
+        const firstProxyAddress = await cdpManager.owns(firstTestCdpId)
+        firstOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', firstProxyAddress)
+        firstOwnerProxyUserAddress = await firstOwnerProxy.owner()
 
         const otherProxyAddress = await cdpManager.owns(1)
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
@@ -422,21 +429,59 @@ describe('AutomationAggregatorBot', async () => {
             50,
             maxGweiPrice,
         )
-
+        const [firstSellExecutionRatio, firstSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [firstBuyExecutionRatio, firstBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
+        // basic buy
+        const firstBbTriggerData = encodeTriggerData(
+            firstTestCdpId,
+            TriggerType.CM_BASIC_BUY,
+            firstBuyExecutionRatio,
+            firstBuyTargetRatio,
+            0,
+            true,
+            50,
+            maxGweiPrice,
+        )
+        // basic sell
+        const firstBsTriggerData = encodeTriggerData(
+            firstTestCdpId,
+            TriggerType.CM_BASIC_SELL,
+            firstSellExecutionRatio,
+            firstSellTargetRatio,
+            0,
+            true,
+            50,
+            maxGweiPrice,
+        )
         let triggerGroupId = 0
         before(async () => {
+            const firstOwner = await hardhatUtils.impersonate(firstOwnerProxyUserAddress)
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const firstDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'addTriggerGroup',
+                [groupTypeId, replacedTriggerId, [firstBbTriggerData, firstBsTriggerData]],
+            )
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
+            const firstTx = await firstOwnerProxy
+                .connect(firstOwner)
+                .execute(AutomationBotAggregatorInstance.address, firstDataToSupplyAdd)
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
+            const firstTxReceipt = await firstTx.wait()
             const txReceipt = await tx.wait()
+            /*             const [firstEvent] = getEvents(
+                firstTxReceipt,
+                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
+            ) */
             const [event] = getEvents(
                 txReceipt,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
             )
+
             triggerGroupId = event.args.groupId.toNumber()
         })
 
@@ -528,10 +573,10 @@ describe('AutomationAggregatorBot', async () => {
 
             const triggerCounter = await AutomationBotInstance.triggersCounter()
 
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            const firstTriggerIds = [Number(triggerCounter) - 3, Number(triggerCounter) - 2]
             const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'removeTriggerGroup',
-                [testCdpId, 2, triggerIds, false],
+                [firstTestCdpId, 1, firstTriggerIds, false],
             )
             await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
                 .to.be.reverted
