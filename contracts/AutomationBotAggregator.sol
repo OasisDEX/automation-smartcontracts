@@ -210,13 +210,16 @@ contract AutomationBotAggregator {
     function removeRecord(
         uint256 cdpId,
         uint256 groupId,
-        bytes32[] memory triggerHashes
+        bytes32[] memory removedTriggerHashes
     ) external onlyCdpAllowed(cdpId) {
         require(activeGroups[groupId] == cdpId, "aggregator/inactive-group");
         activeGroups[groupId] = 0;
-        for (uint256 i = 0; i < triggerHashes.length; i++) {
-            require(triggerGroup[triggerHashes[i]] == groupId, "aggregator/inactive-trigger");
-            triggerGroup[triggerHashes[i]] = 0;
+        for (uint256 i = 0; i < removedTriggerHashes.length; i++) {
+            require(
+                triggerGroup[removedTriggerHashes[i]] == groupId,
+                "aggregator/inactive-trigger"
+            );
+            triggerGroup[removedTriggerHashes[i]] = 0;
         }
 
         emit TriggerGroupRemoved(groupId, cdpId);

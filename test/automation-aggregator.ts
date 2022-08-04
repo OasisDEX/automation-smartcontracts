@@ -448,16 +448,11 @@ describe('AutomationAggregatorBot', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const firstTx = await firstOwnerProxy
+            await firstOwnerProxy
                 .connect(firstOwner)
                 .execute(AutomationBotAggregatorInstance.address, firstDataToSupplyAdd)
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
-            const firstTxReceipt = await firstTx.wait()
             const txReceipt = await tx.wait()
-            /*             const [firstEvent] = getEvents(
-                firstTxReceipt,
-                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
-            ) */
             const [event] = getEvents(
                 txReceipt,
                 AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
