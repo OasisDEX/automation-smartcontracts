@@ -66,6 +66,24 @@ contract ConstantMultipleValidator is IValidator {
             triggersData[1],
             (GenericTriggerData)
         );
+        GenericTriggerData memory replacedTriggerId1 = abi.decode(
+            triggersData[0],
+            (GenericTriggerData)
+        );
+        GenericTriggerData memory replacedTriggerId2 = abi.decode(
+            triggersData[1],
+            (GenericTriggerData)
+        );
+        if (replacedTriggerId[0] != 0 && replacedTriggerId[1] != 0) {
+            require(
+                replacedTriggerId1.triggerType == 3 || replacedTriggerId1.triggerType == 5,
+                "validator/wrong=replcement-bb"
+            );
+            require(
+                replacedTriggerId2.triggerType == 4 || replacedTriggerId2.triggerType == 6,
+                "validator/wrong=replcement-bs"
+            );
+        }
         require(
             buyTriggerData.continuous == sellTriggerData.continuous == true,
             "validator/continous-not-true"
