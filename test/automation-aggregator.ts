@@ -192,17 +192,15 @@ describe('AutomationAggregatorBot', async () => {
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
             const triggerCounter = await AutomationBotInstance.triggersCounter()
-            console.log(`triggerCounter  ${triggerCounter}`)
             const dataToSupply2 = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 [Number(triggerCounter) - 1, Number(triggerCounter)],
                 [bbTriggerData, bsTriggerData],
             ])
-
             const tx2 = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply2)
-            console.log(`triggerCounter  ${triggerCounter}`)
+
             const counterAfter2 = await AutomationBotAggregatorInstance.triggerGroupCounter()
-            console.log(`counter after 2 ${counterAfter2}`)
+
             expect(counterAfter2.toNumber()).to.be.equal(counterAfter.toNumber() + 1)
             const receipt2 = await tx2.wait()
             const events2 = getEvents(receipt2, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))

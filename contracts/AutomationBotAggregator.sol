@@ -99,6 +99,21 @@ contract AutomationBotAggregator {
         uint256 firstTriggerId = bot.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         bytes32[] memory replacedTriggerHashes = new bytes32[](triggerIds.length);
+
+        for (uint256 i = 0; i < replacedTriggerId.length; i++) {
+            (bytes32 replacedTriggerHash, ) = bot.activeTriggers(replacedTriggerId[i]);
+            replacedTriggerHashes[i] = replacedTriggerHash;
+            if (
+                aggregator.triggerGroup(replacedTriggerHash) != 0 &&
+                i == replacedTriggerId.length - 1
+            ) {
+                aggregator.removeRecord(
+                    cdpIds[0],
+                    aggregator.triggerGroup(replacedTriggerHash),
+                    replacedTriggerHashes
+                );
+            }
+        }
         for (uint256 i = 0; i < triggerTypes.length; i++) {
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
@@ -110,17 +125,8 @@ contract AutomationBotAggregator {
                 )
             );
             triggerIds[i] = firstTriggerId + i;
-            (bytes32 replacedTriggerHash, ) = bot.activeTriggers(replacedTriggerId[i]);
             require(status, "aggregator/add-trigger-failed");
-            if (triggerGroup[replacedTriggerHash] != 0 && i == triggerIds.length - 1) {
-                aggregator.removeRecord(
-                    cdpIds[0],
-                    triggerGroup[replacedTriggerHash],
-                    replacedTriggerHashes
-                );
-            }
         }
-
         aggregator.addRecord(cdpIds[0], groupType, triggerIds);
     }
 
@@ -146,7 +152,6 @@ contract AutomationBotAggregator {
             require(status, "aggregator/remove-trigger-failed");
             triggerHashes[i] = triggerHash;
         }
-
         aggregator.removeRecord(cdpId, groupId, triggerHashes);
     }
 
@@ -171,7 +176,6 @@ contract AutomationBotAggregator {
             abi.encodeWithSelector(bot.addTrigger.selector, cdpId, triggerType, 0, triggerData)
         );
         require(status, "aggregator/replace-trigger-fail");
-
         aggregator.updateRecord(cdpId, groupId, bot.triggersCounter(), triggerType);
     }
 
