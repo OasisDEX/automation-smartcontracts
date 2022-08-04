@@ -64,6 +64,7 @@ const config: HardhatUserConfig = {
             gas: 'auto',
             initialBaseFeePerGas: 1000000000,
             allowUnlimitedContractSize: false,
+            accounts: [{ privateKey: process.env.PRIVATE_KEY_GOERLI!, balance: '10000000000000000000000000' }],
         },
         ...Object.fromEntries(
             [
