@@ -125,7 +125,7 @@ contract AutomationBotAggregator {
     }
 
     event TriggerGroupAdded(
-        uint256 groupId,
+        uint256 indexed groupId,
         uint16 indexed groupType,
         uint256 indexed cdpId,
         uint256[] triggerIds
