@@ -242,9 +242,19 @@ describe('AutomationAggregatorBot', async () => {
             expect(AutomationBotAggregatorInstance.address).to.eql(aggregatorEvents[0].address)
         })
 
-        it('should successfully create a trigger group, remove old bs and add bb in its place', async () => {
+        it('should not create a trigger group, remove old bs and add bb in its place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             // basic sell
+            const oldBbTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BASIC_BUY,
+                buyExecutionRatio,
+                buyTargetRatio,
+                5000,
+                true,
+                50,
+                maxGweiPrice,
+            )
             const oldBsTriggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BASIC_SELL,
@@ -255,27 +265,18 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
-            await (await createTx).wait()
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            await createTx.wait()
+            await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
-                [triggersCounterBefore.toNumber(), 0],
-                [bbTriggerData, bsTriggerData],
+                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
+                [bsTriggerData, bbTriggerData],
             ])
-            const counterBefore = await AutomationBotAggregatorInstance.triggerGroupCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
-            const receipt = await tx.wait()
-
-            const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
-            const aggregatorEvents = getEvents(
-                receipt,
-                AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'),
-            )
-            expect(AutomationBotInstance.address).to.eql(botEvents[0].address)
-            expect(AutomationBotAggregatorInstance.address).to.eql(aggregatorEvents[0].address)
+            const tx = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should successfully create a trigger group, remove old bb and old bs - add new bs and bb in their place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
