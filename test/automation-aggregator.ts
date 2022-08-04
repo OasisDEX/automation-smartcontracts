@@ -1,6 +1,6 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { BytesLike, Contract, ContractTransaction, Signer, utils } from 'ethers'
+import { BytesLike, ContractTransaction, utils } from 'ethers'
 import {
     encodeTriggerData,
     forgeUnoswapCalldata,
@@ -16,7 +16,7 @@ import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const firstTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
+const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
 const maxGweiPrice = 1000
 
 function toRatio(units: number) {
@@ -28,11 +28,10 @@ describe('AutomationAggregatorBot', async () => {
 
     let AutomationBotInstance: AutomationBot
     let AutomationBotAggregatorInstance: AutomationBotAggregator
-    let DssProxyActions: Contract
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
-    let firstOwnerProxy: DsProxyLike
-    let firstOwnerProxyUserAddress: string
+    let beforeOwnerProxy: DsProxyLike
+    let beforeOwnerProxyUserAddress: string
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
 
@@ -56,9 +55,6 @@ describe('AutomationAggregatorBot', async () => {
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        DssProxyActions = new Contract(hardhatUtils.addresses.DSS_PROXY_ACTIONS, [
-            'function cdpAllow(address,uint,address,uint)',
-        ])
         await system.mcdView.approve(executorAddress, true)
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -66,9 +62,9 @@ describe('AutomationAggregatorBot', async () => {
         ownerProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         ownerProxyUserAddress = await ownerProxy.owner()
 
-        const firstProxyAddress = await cdpManager.owns(firstTestCdpId)
-        firstOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', firstProxyAddress)
-        firstOwnerProxyUserAddress = await firstOwnerProxy.owner()
+        const beforeProxyAddress = await cdpManager.owns(beforeTestCdpId)
+        beforeOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', beforeProxyAddress)
+        beforeOwnerProxyUserAddress = await beforeOwnerProxy.owner()
 
         const otherProxyAddress = await cdpManager.owns(1)
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
@@ -99,7 +95,6 @@ describe('AutomationAggregatorBot', async () => {
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
 
-        // current coll ratio : 1.859946411122229468
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
         const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
 
@@ -125,9 +120,42 @@ describe('AutomationAggregatorBot', async () => {
             50,
             maxGweiPrice,
         )
-
+        const [beforeSellExecutionRatio, beforeSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
+        // basic buy
+        const beforeBbTriggerData = encodeTriggerData(
+            beforeTestCdpId,
+            TriggerType.CM_BASIC_BUY,
+            beforeBuyExecutionRatio,
+            beforeBuyTargetRatio,
+            0,
+            true,
+            50,
+            maxGweiPrice,
+        )
+        // basic sell
+        const beforeBsTriggerData = encodeTriggerData(
+            beforeTestCdpId,
+            TriggerType.CM_BASIC_SELL,
+            beforeSellExecutionRatio,
+            beforeSellTargetRatio,
+            0,
+            true,
+            50,
+            maxGweiPrice,
+        )
         const replacedTriggerId = [0, 0]
-
+        beforeEach(async () => {
+            const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
+            const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'addTriggerGroup',
+                [groupTypeId, replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
+            )
+            const tx = await beforeOwnerProxy
+                .connect(beforeOwner)
+                .execute(AutomationBotAggregatorInstance.address, beforeDataToSupplyAdd)
+            await tx.wait()
+        })
         it('should successfully create a trigger group through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             console.log('-------')
@@ -410,47 +438,47 @@ describe('AutomationAggregatorBot', async () => {
             50,
             maxGweiPrice,
         )
-        const [firstSellExecutionRatio, firstSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
-        const [firstBuyExecutionRatio, firstBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
+        const [beforeSellExecutionRatio, beforeSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
+        const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
         // basic buy
-        const firstBbTriggerData = encodeTriggerData(
-            firstTestCdpId,
+        const beforeBbTriggerData = encodeTriggerData(
+            beforeTestCdpId,
             TriggerType.CM_BASIC_BUY,
-            firstBuyExecutionRatio,
-            firstBuyTargetRatio,
+            beforeBuyExecutionRatio,
+            beforeBuyTargetRatio,
             0,
             true,
             50,
             maxGweiPrice,
         )
         // basic sell
-        const firstBsTriggerData = encodeTriggerData(
-            firstTestCdpId,
+        const beforeBsTriggerData = encodeTriggerData(
+            beforeTestCdpId,
             TriggerType.CM_BASIC_SELL,
-            firstSellExecutionRatio,
-            firstSellTargetRatio,
+            beforeSellExecutionRatio,
+            beforeSellTargetRatio,
             0,
             true,
             50,
             maxGweiPrice,
         )
         let triggerGroupId = 0
-        before(async () => {
-            const firstOwner = await hardhatUtils.impersonate(firstOwnerProxyUserAddress)
+        beforeEach(async () => {
+            const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const firstDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+            const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'addTriggerGroup',
-                [groupTypeId, replacedTriggerId, [firstBbTriggerData, firstBsTriggerData]],
+                [groupTypeId, replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
             )
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            await firstOwnerProxy
-                .connect(firstOwner)
-                .execute(AutomationBotAggregatorInstance.address, firstDataToSupplyAdd)
+            await beforeOwnerProxy
+                .connect(beforeOwner)
+                .execute(AutomationBotAggregatorInstance.address, beforeDataToSupplyAdd)
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyAdd)
             const txReceipt = await tx.wait()
             const [event] = getEvents(
@@ -549,16 +577,57 @@ describe('AutomationAggregatorBot', async () => {
 
             const triggerCounter = await AutomationBotInstance.triggersCounter()
 
-            const firstTriggerIds = [Number(triggerCounter) - 3, Number(triggerCounter) - 2]
+            const beforeTriggerIds = [Number(triggerCounter) - 3, Number(triggerCounter) - 2]
             const dataToSupplyRemove = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'removeTriggerGroup',
-                [firstTestCdpId, 1, firstTriggerIds, false],
+                [beforeTestCdpId, 1, beforeTriggerIds, false],
             )
             await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
                 .to.be.reverted
         })
     })
     describe('cdpAllowed', async () => {
+        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+
+        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
+        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
+
+        // basic buy
+        const bbTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.CM_BASIC_BUY,
+            buyExecutionRatio,
+            buyTargetRatio,
+            5000,
+            true,
+            50,
+            maxGweiPrice,
+        )
+        // basic sell
+        const bsTriggerData = encodeTriggerData(
+            testCdpId,
+            TriggerType.CM_BASIC_SELL,
+            sellExecutionRatio,
+            sellTargetRatio,
+            5000,
+            true,
+            50,
+            maxGweiPrice,
+        )
+
+        const replacedTriggerId = [0, 0]
+        before(async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
+            const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
+                'addTriggerGroup',
+                [groupTypeId, replacedTriggerId, [bbTriggerData, bsTriggerData]],
+            )
+
+            const tx = await ownerProxy
+                .connect(owner)
+                .execute(AutomationBotAggregatorInstance.address, beforeDataToSupplyAdd)
+        })
         it('should return false for bad operator address', async () => {
             const status = await AutomationBotAggregatorInstance.isCdpAllowed(
                 testCdpId,
@@ -569,12 +638,12 @@ describe('AutomationAggregatorBot', async () => {
         })
 
         it('should return true for correct operator address', async () => {
-            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+            const status = await AutomationBotInstance.isCdpAllowed(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
             )
-            expect(status).to.equal(true, 'approval does not exist for AutomationBot')
+            expect(status).to.equal(true, 'approval does not exist for AutomationBotAggregatorInstance')
         })
     })
     describe('replaceGroupTrigger', async () => {
