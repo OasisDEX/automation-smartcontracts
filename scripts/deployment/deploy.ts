@@ -4,7 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import hre from 'hardhat'
-import { HardhatUtils } from '../common'
+import { HardhatUtils, isLocalNetwork } from '../common'
 import { deploySystem } from '../common/deploy-system'
 
 async function main() {
@@ -15,7 +15,12 @@ async function main() {
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    await deploySystem({ utils, addCommands: true, deployMcdView: false, logDebug: true })
+    await deploySystem({
+        utils,
+        addCommands: true,
+        deployMcdView: isLocalNetwork(network) ? true : false,
+        logDebug: true,
+    })
 }
 
 // We recommend this pattern to be able to use async/await everywhere
