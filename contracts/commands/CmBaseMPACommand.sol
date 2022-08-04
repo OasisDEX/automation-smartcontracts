@@ -67,29 +67,29 @@ abstract contract CmBaseMPACommand is BaseMPACommand {
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
         bytes32 triggerHash = getTriggersHash(cdpId, triggerData, commandAddress);
 
-        if (aggregator.triggerGroup(triggerHash) != 0) {
-            (bool status, ) = address(aggregator).delegatecall(
-                abi.encodeWithSelector(
-                    aggregator.replaceGroupTrigger.selector,
-                    cdpId,
-                    triggerType,
-                    triggerData,
-                    aggregator.triggerGroup(triggerHash)
-                )
-            );
+        // if (aggregator.triggerGroup(triggerHash) != 0) {
+        //     (bool status, ) = address(aggregator).delegatecall(
+        //         abi.encodeWithSelector(
+        //             aggregator.replaceGroupTrigger.selector,
+        //             cdpId,
+        //             triggerType,
+        //             triggerData,
+        //             aggregator.triggerGroup(triggerHash)
+        //         )
+        //     );
 
-            require(status, "aggregator/add-trigger-failed");
-        } else {
-            (bool status, ) = msg.sender.delegatecall(
-                abi.encodeWithSelector(
-                    AutomationBot(msg.sender).addTrigger.selector,
-                    cdpId,
-                    triggerType,
-                    0,
-                    triggerData
-                )
-            );
-            require(status, "base-mpa-command/trigger-recreation-failed");
-        }
+        //     require(status, "aggregator/add-trigger-failed");
+        // } else {
+        (bool status, ) = msg.sender.delegatecall(
+            abi.encodeWithSelector(
+                AutomationBot(msg.sender).addTrigger.selector,
+                cdpId,
+                triggerType,
+                0,
+                triggerData
+            )
+        );
+        require(status, "base-mpa-command/trigger-recreation-failed");
+        // }
     }
 }
