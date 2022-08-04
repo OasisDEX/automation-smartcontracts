@@ -9,6 +9,7 @@ import '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
+import { Wallet } from 'ethers'
 
 dotenv.config()
 
@@ -49,6 +50,7 @@ const config: HardhatUserConfig = {
         local: {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
+            accounts: [process.env.PRIVATE_KEY_GOERLI!, Wallet.createRandom()._signingKey().privateKey],
         },
         hardhat: {
             forking: {
@@ -64,7 +66,6 @@ const config: HardhatUserConfig = {
             gas: 'auto',
             initialBaseFeePerGas: 1000000000,
             allowUnlimitedContractSize: false,
-            accounts: [{ privateKey: process.env.PRIVATE_KEY_GOERLI!, balance: '10000000000000000000000000' }],
         },
         ...Object.fromEntries(
             [
