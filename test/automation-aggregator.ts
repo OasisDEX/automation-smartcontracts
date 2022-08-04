@@ -88,25 +88,6 @@ describe('AutomationAggregatorBot', async () => {
         }
     })
 
-    const executeCdpAllow = async (
-        proxy: DsProxyLike,
-        signer: Signer,
-        cdpId: number,
-        operator: string,
-        allow: number,
-    ) =>
-        proxy
-            .connect(signer)
-            .execute(
-                DssProxyActions.address,
-                DssProxyActions.interface.encodeFunctionData('cdpAllow', [
-                    hardhatUtils.addresses.CDP_MANAGER,
-                    cdpId,
-                    operator,
-                    allow,
-                ]),
-            )
-
     beforeEach(async () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
