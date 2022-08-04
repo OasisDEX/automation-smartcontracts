@@ -32,7 +32,7 @@ contract AutomationBotAggregator {
     ServiceRegistry public immutable serviceRegistry;
     address public immutable self;
 
-    uint256 counter;
+    uint256 public counter;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
