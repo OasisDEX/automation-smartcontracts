@@ -103,10 +103,16 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < replacedTriggerId.length; i++) {
             (bytes32 replacedTriggerHash, ) = bot.activeTriggers(replacedTriggerId[i]);
             replacedTriggerHashes[i] = replacedTriggerHash;
+            bool shouldRemoveGroup = true;
             if (
-                aggregator.triggerGroup(replacedTriggerHash) != 0 &&
-                i == replacedTriggerId.length - 1
+                aggregator.triggerGroup(replacedTriggerHash) == 0 ||
+                (aggregator.triggerGroup(replacedTriggerHash) != 0 &&
+                    aggregator.activeGroups(aggregator.triggerGroup(replacedTriggerHash)) !=
+                    cdpIds[0])
             ) {
+                shouldRemoveGroup = false;
+            }
+            if (shouldRemoveGroup && i == replacedTriggerId.length - 1) {
                 aggregator.removeRecord(
                     cdpIds[0],
                     aggregator.triggerGroup(replacedTriggerHash),
