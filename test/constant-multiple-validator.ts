@@ -85,14 +85,14 @@ describe('ConstantMultipleValidator', async () => {
             console.log(`ag bot address ${AutomationBotAggregatorInstance.address}`)
             console.log(`bot address ${AutomationBotInstance.address}`)
             console.log('-------')
-            const counterBefore = await AutomationBotAggregatorInstance.triggerGroupCounter()
+            const counterBefore = await AutomationBotAggregatorInstance.counter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotAggregatorInstance.triggerGroupCounter()
+            const counterAfter = await AutomationBotAggregatorInstance.counter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))

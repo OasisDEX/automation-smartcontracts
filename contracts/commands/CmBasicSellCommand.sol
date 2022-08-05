@@ -24,15 +24,9 @@ import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { CmBaseMPACommand } from "./CmBaseMPACommand.sol";
-import { AutomationBotAggregator } from "../AutomationBotAggregator.sol";
+import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-/*
-Changes compared to BasicSellCommand
-1) Inherits from CmBaseMPACommand, not BaseMPACommand, and therefore uses different recreateTrigger function
-2) Has triggerType 6, instead of 4
-*/
-contract CmBasicSellCommand is CmBaseMPACommand {
+contract CmBasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
 
     struct BasicSellTriggerData {
@@ -46,7 +40,7 @@ contract CmBasicSellCommand is CmBaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
-    constructor(ServiceRegistry _serviceRegistry) CmBaseMPACommand(_serviceRegistry) {}
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
     function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
         return abi.decode(triggerData, (BasicSellTriggerData));
