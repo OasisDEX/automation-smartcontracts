@@ -79,6 +79,12 @@ contract AutomationBotAggregator {
         if (!isCdpAllowed(cdpId, aggregator, manager)) {
             manager.cdpAllow(cdpId, aggregator, 1);
         }
+
+        address bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        if (!isCdpAllowed(cdpId, bot, manager)) {
+            manager.cdpAllow(cdpId, bot, 1);
+        }
+
         AutomationBotAggregator(aggregator).addRecords(groupType, replacedTriggerId, triggersData);
         manager.cdpAllow(cdpId, aggregator, 0);
     }
