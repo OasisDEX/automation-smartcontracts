@@ -54,7 +54,7 @@ contract ConstantMultipleValidator is IValidator {
     {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
-        require(triggerTypes[0] == 5 && triggerTypes[1] == 6, "validator/wrong-trigger-type");
+        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
         GenericTriggerData memory buyTriggerData = abi.decode(
             triggersData[0],

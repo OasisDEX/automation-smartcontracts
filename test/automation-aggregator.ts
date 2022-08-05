@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
 import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
+import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 
@@ -88,7 +88,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_BUY,
+            TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             5000,
@@ -99,7 +99,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_SELL,
+            TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             5000,
@@ -112,7 +112,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.CM_BASIC_BUY,
+            TriggerType.BASIC_BUY,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
@@ -123,7 +123,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.CM_BASIC_SELL,
+            TriggerType.BASIC_SELL,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
@@ -436,7 +436,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_BUY,
+            TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -447,7 +447,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_SELL,
+            TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             0,
@@ -460,7 +460,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.CM_BASIC_BUY,
+            TriggerType.BASIC_BUY,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
@@ -471,7 +471,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.CM_BASIC_SELL,
+            TriggerType.BASIC_SELL,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
