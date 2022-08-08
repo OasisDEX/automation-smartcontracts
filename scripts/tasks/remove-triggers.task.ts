@@ -51,7 +51,7 @@ createTask<CreateTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
         }
 
         const removeTriggerGroupData = aggregator.interface.encodeFunctionData('removeTriggers', [
-            [...args.triggers.map(item => item.toString())],
+            args.triggers.map(item => item.toString()),
             args.allowance,
         ])
 
