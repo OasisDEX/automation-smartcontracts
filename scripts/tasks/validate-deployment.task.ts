@@ -69,16 +69,6 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.AUTOMATION_BASIC_SELL_COMMAND,
             },
             {
-                name: 'TriggerType.CM_BASIC_BUY',
-                hash: getCommandHash(TriggerType.CM_BASIC_BUY),
-                addressFromConfig: addresses.AUTOMATION_CM_BASIC_BUY_COMMAND,
-            },
-            {
-                name: 'TriggerType.CM_BASIC_SELL',
-                hash: getCommandHash(TriggerType.CM_BASIC_SELL),
-                addressFromConfig: addresses.AUTOMATION_CM_BASIC_SELL_COMMAND,
-            },
-            {
                 name: AutomationServiceName.CDP_MANAGER,
                 hash: getServiceNameHash(AutomationServiceName.CDP_MANAGER),
                 addressFromConfig: addresses.CDP_MANAGER,

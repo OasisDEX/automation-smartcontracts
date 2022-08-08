@@ -7,8 +7,6 @@ import {
     AutomationSwap,
     BasicBuyCommand,
     BasicSellCommand,
-    CmBasicBuyCommand,
-    CmBasicSellCommand,
     CloseCommand,
     McdUtils,
     McdView,
@@ -31,8 +29,6 @@ export interface DeployedSystem {
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
-    cmBasicBuy?: CmBasicBuyCommand
-    cmBasicSell?: CmBasicSellCommand
 }
 
 export interface DeploySystemArgs {
@@ -92,8 +88,6 @@ export async function deploySystem({
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
-    let CmBasicBuyInstance: CmBasicBuyCommand | undefined
-    let CmBasicSellInstance: CmBasicSellCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -173,21 +167,13 @@ export async function deploySystem({
         BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
             ServiceRegistryInstance.address,
         ])) as BasicSellCommand
-
-        logDebug && console.log('Deploying CmBasicBuy....')
-        CmBasicBuyInstance = (await utils.deployContract(ethers.getContractFactory('CmBasicBuyCommand'), [
-            ServiceRegistryInstance.address,
-        ])) as CmBasicBuyCommand
-
-        logDebug && console.log('Deploying CmBasicSell....')
-        CmBasicSellInstance = (await utils.deployContract(ethers.getContractFactory('CmBasicSellCommand'), [
-            ServiceRegistryInstance.address,
-        ])) as CmBasicSellCommand
     }
 
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
+        console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
+        console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
@@ -211,8 +197,6 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
-        cmBasicSell: CmBasicSellInstance,
-        cmBasicBuy: CmBasicBuyInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -260,21 +244,6 @@ export async function configureRegistryEntries(
         logDebug && console.log('Whitelisting BasicSellCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
     }
-    if (system.cmBasicBuy && system.cmBasicBuy.address !== constants.AddressZero) {
-        logDebug && console.log(`Adding CM_BASIC_BUY command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CM_BASIC_BUY), system.cmBasicBuy.address)
-
-        logDebug && console.log('Whitelisting CmBasicBuyCommand on McdView....')
-        await ensureMcdViewWhitelist(system.cmBasicBuy.address)
-    }
-
-    if (system.cmBasicSell && system.cmBasicSell.address !== constants.AddressZero) {
-        logDebug && console.log(`Adding CM_BASIC_SELL command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CM_BASIC_SELL), system.cmBasicSell.address)
-
-        logDebug && console.log('Whitelisting CmBasicSellCommand on McdView....')
-        await ensureMcdViewWhitelist(system.cmBasicSell.address)
-    }
 
     logDebug && console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
@@ -296,14 +265,16 @@ export async function configureRegistryEntries(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
         system.automationBotAggregator.address,
     )
+
     logDebug && console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
         system.constantMultipleValidator.address,
     )
+    
     logDebug && console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR),
+        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
         system.constantMultipleValidator.address,
     )
 
