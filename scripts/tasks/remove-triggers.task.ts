@@ -6,7 +6,7 @@ import { coalesceNetwork, getEvents, HardhatUtils, Network, isLocalNetwork } fro
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
-interface CreateTriggerGroupArgs extends BaseTaskArgs {
+interface RemoveTriggerGroupArgs extends BaseTaskArgs {
     vault: BigNumber
     triggers: BigNumber[]
     allowance: boolean
