@@ -12,11 +12,11 @@ interface RemoveTriggerGroupArgs extends BaseTaskArgs {
     allowance: boolean
 }
 // eg use block : 15162445 and npx hardhat remove-triggers --vault 29032 --id 0 --triggers '[321,322]' --allowance false --network local
-createTask<CreateTriggerGroupArgs>('remove-triggers', 'Removes group of triggers')
+createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('triggers', 'Trigger ids', undefined, types.json, false)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
-    .setAction(async (args: CreateTriggerGroupArgs, hre) => {
+    .setAction(async (args: RemoveTriggerGroupArgs, hre) => {
         const { name: network } = hre.network
         console.log(
             `Network: ${network}. Using addresses from ${coalesceNetwork(args.forked || (network as Network))}\n`,

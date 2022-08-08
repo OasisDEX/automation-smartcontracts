@@ -18,6 +18,7 @@ import { params } from './params'
 interface CreateTriggerGroupArgs extends BaseTaskArgs {
     vault: BigNumber
     type: number
+    replaced: number[]
     bb: any[]
     bs: any[]
 }
@@ -25,6 +26,7 @@ interface CreateTriggerGroupArgs extends BaseTaskArgs {
 createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automation trigger group for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('type', 'The trigger group type', TriggerGroupType.CONSTANT_MULTIPLE, types.int)
+    .addParam('replaced', 'Replaced triggers ids', [0, 0], types.json)
     .addParam(
         'bb',
         `The remaining args for the bb trigger data (i.e. '[23200,21900,"0",true,100,200]'). See 'encodeTriggerData' for more info`,
@@ -76,15 +78,16 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
         const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.CM_BASIC_SELL, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
-        const counter = await bot.triggersCounter()
+
         const addTriggerGroupData = aggregator.interface.encodeFunctionData('addTriggerGroup', [
             args.type.toString(),
-            [0, 0],
+            args.replaced,
             triggersData,
         ])
 
         const info = [
             `Triggers Data: ${triggersData}`,
+            `Triggers to replace: ${args.replaced}`,
             `Automation Aggregator Bot: ${aggregator.address}`,
             `Vault ID: ${args.vault.toString()}`,
             `DSProxy: ${proxyAddress}`,
