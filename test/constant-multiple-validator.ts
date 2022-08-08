@@ -55,7 +55,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_BUY,
+            TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -66,7 +66,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic sell
         let bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.CM_BASIC_SELL,
+            TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
             0,
