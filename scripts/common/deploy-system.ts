@@ -164,8 +164,6 @@ export async function deploySystem({
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
-            console.log(`CmBasicBuyCommand deployed to: ${CmBasicBuyInstance!.address}`)
-            console.log(`CmBasicSellCommand deployed to: ${CmBasicSellInstance!.address}`)
         }
     }
 
