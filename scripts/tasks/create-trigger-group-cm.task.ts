@@ -74,8 +74,8 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             })
         }
 
-        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.CM_BASIC_BUY, ...args.bb)
-        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.CM_BASIC_SELL, ...args.bs)
+        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_BUY, ...args.bb)
+        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_SELL, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
 
