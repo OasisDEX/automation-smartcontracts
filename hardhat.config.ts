@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
         local: {
             url: 'http://127.0.0.1:8545',
             timeout: 100000,
-            accounts: [process.env.PRIVATE_KEY_GOERLI!, Wallet.createRandom()._signingKey().privateKey],
+            accounts: [process.env.PRIVATE_KEY!, Wallet.createRandom()._signingKey().privateKey],
         },
         hardhat: {
             forking: {
