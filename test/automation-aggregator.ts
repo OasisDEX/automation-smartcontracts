@@ -514,7 +514,7 @@ describe('AutomationAggregatorBot', async () => {
                 .to.not.be.reverted
         })
 
-        it.skip('should only remove approval if last param set to true - test FALSE', async () => {
+        it('should only remove approval if last param set to true - test FALSE', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
@@ -530,7 +530,7 @@ describe('AutomationAggregatorBot', async () => {
             )
             expect(status).to.equal(true)
         })
-        it.skip('should only remove approval if last param set to true - test TRUE', async () => {
+        it('should only remove approval if last param set to true - test TRUE', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]

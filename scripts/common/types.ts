@@ -16,6 +16,8 @@ export enum TriggerType {
     CLOSE_TO_DAI = 2,
     BASIC_BUY = 3,
     BASIC_SELL = 4,
+    CM_BASIC_BUY = 5,
+    CM_BASIC_SELL = 6,
 }
 
 export enum TriggerGroupType {
