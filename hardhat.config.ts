@@ -9,6 +9,7 @@ import '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
+import { Wallet } from 'ethers'
 
 dotenv.config()
 

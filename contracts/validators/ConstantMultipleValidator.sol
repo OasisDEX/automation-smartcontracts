@@ -35,18 +35,16 @@ import { IValidator } from "../interfaces/IValidator.sol";
 contract ConstantMultipleValidator is IValidator {
     using RatioUtils for uint256;
 
-    function decode(bytes[] memory triggersData)
+    function decode(bytes[] memory triggerData)
         public
         pure
         returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
     {
-        uint256[] memory _cdpIds = new uint256[](triggersData.length);
-        uint256[] memory _triggerTypes = new uint256[](triggersData.length);
-        for (uint256 i = 0; i < triggersData.length; i++) {
-            (_cdpIds[i], _triggerTypes[i]) = abi.decode(triggersData[i], (uint256, uint16));
+        cdpIds = new uint256[](triggerData.length);
+        triggerTypes = new uint256[](triggerData.length);
+        for (uint256 i = 0; i < triggerData.length; i++) {
+            (cdpIds[i], triggerTypes[i]) = abi.decode(triggerData[i], (uint256, uint16));
         }
-
-        return (_cdpIds, _triggerTypes);
     }
 
     function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
@@ -56,7 +54,7 @@ contract ConstantMultipleValidator is IValidator {
     {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
-        require(triggerTypes[0] == 5 && triggerTypes[1] == 6, "validator/wrong-trigger-type");
+        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
         GenericTriggerData memory buyTriggerData = abi.decode(
             triggersData[0],
@@ -67,7 +65,7 @@ contract ConstantMultipleValidator is IValidator {
             (GenericTriggerData)
         );
         require(
-            buyTriggerData.continuous == sellTriggerData.continuous == true,
+            (buyTriggerData.continuous == sellTriggerData.continuous) == true,
             "validator/continous-not-true"
         );
         require(

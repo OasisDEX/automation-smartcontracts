@@ -56,14 +56,6 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
-            cmBasicBuy: await this.hre.ethers.getContractAt(
-                'CmBasicBuyCommand',
-                this.addresses.AUTOMATION_CM_BASIC_BUY_COMMAND,
-            ),
-            cmBasicSell: await this.hre.ethers.getContractAt(
-                'CmBasicSellCommand',
-                this.addresses.AUTOMATION_CM_BASIC_SELL_COMMAND,
-            ),
         }
     }
 
