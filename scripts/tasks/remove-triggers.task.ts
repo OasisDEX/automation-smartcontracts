@@ -11,8 +11,8 @@ interface CreateTriggerGroupArgs extends BaseTaskArgs {
     triggers: BigNumber[]
     allowance: boolean
 }
-// eg use block : 15162445 and npx hardhat remove-trigger-group-cm --vault 29032 --id 0 --triggers '[321,322]' --allowance false --network local
-createTask<CreateTriggerGroupArgs>('remove-trigger-group-cm', 'Removes group of triggers')
+// eg use block : 15162445 and npx hardhat remove-triggers --vault 29032 --id 0 --triggers '[321,322]' --allowance false --network local
+createTask<CreateTriggerGroupArgs>('remove-triggers', 'Removes group of triggers')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('triggers', 'Trigger ids', undefined, types.json, false)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
