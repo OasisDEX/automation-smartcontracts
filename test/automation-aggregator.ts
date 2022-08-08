@@ -1,11 +1,19 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
-import { encodeTriggerData, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
+import {
+    encodeTriggerData,
+    forgeUnoswapCalldata,
+    generateRandomAddress,
+    getEvents,
+    HardhatUtils,
+    ONE_INCH_V4_ROUTER,
+} from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
+import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
+import { getMultiplyParams } from '@oasisdex/multiply'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
@@ -28,6 +36,8 @@ describe('AutomationAggregatorBot', async () => {
     let notOwnerProxyUserAddress: string
 
     let system: DeployedSystem
+    let MPAInstance: MPALike
+    let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
     let createTrigger: (triggerData: BytesLike, tiggerType: TriggerType) => Promise<ContractTransaction>
@@ -35,12 +45,15 @@ describe('AutomationAggregatorBot', async () => {
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
+        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         system = await deploySystem({ utils, addCommands: true })
 
         AutomationBotInstance = system.automationBot
         AutomationBotAggregatorInstance = system.automationBotAggregator
+
+        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
         await system.mcdView.approve(executorAddress, true)
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -81,7 +94,7 @@ describe('AutomationAggregatorBot', async () => {
 
     describe('addTriggerGroup', async () => {
         const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-
+        // data for the owner vault
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
         const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
 
@@ -91,7 +104,7 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.CM_BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
-            5000,
+            '4472665974900000000000',
             true,
             50,
             maxGweiPrice,
@@ -102,11 +115,12 @@ describe('AutomationAggregatorBot', async () => {
             TriggerType.CM_BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
-            5000,
+            '4472665974900000000000',
             true,
             50,
             maxGweiPrice,
         )
+        // data for the vault that's created before all tests
         const [beforeSellExecutionRatio, beforeSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
         const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
         // basic buy
@@ -132,6 +146,86 @@ describe('AutomationAggregatorBot', async () => {
             maxGweiPrice,
         )
         const replacedTriggerId = [0, 0]
+
+        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
+            const collRatio = await system.mcdView.getRatio(testCdpId, true)
+            const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
+            const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
+            const slippage = new BigNumber(0.01)
+            const oasisFee = new BigNumber(0.002)
+
+            const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
+            const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
+                {
+                    oraclePrice: oraclePriceUnits,
+                    marketPrice: oraclePriceUnits,
+                    OF: oasisFee,
+                    FF: new BigNumber(0),
+                    slippage,
+                },
+                {
+                    currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
+                    currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-18),
+                    minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
+                },
+                {
+                    requiredCollRatio: targetRatio.shiftedBy(-4),
+                    providedCollateral: new BigNumber(0),
+                    providedDai: new BigNumber(0),
+                    withdrawDai: new BigNumber(0),
+                    withdrawColl: new BigNumber(0),
+                },
+            )
+
+            const cdpData = {
+                gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
+                fundsReceiver: receiverAddress,
+                cdpId: testCdpId,
+                ilk: ethAIlk,
+                requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
+                borrowCollateral: collateralDelta.shiftedBy(18).abs().toFixed(0),
+                withdrawCollateral: 0,
+                withdrawDai: 0,
+                depositDai: 0,
+                depositCollateral: 0,
+                skipFL,
+                methodName: '',
+            }
+
+            const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
+            const exchangeData = {
+                fromTokenAddress: hardhatUtils.addresses.DAI,
+                toTokenAddress: hardhatUtils.addresses.WETH,
+                fromTokenAmount: cdpData.requiredDebt,
+                toTokenAmount: cdpData.borrowCollateral,
+                minToTokenAmount: minToTokenAmount.toFixed(0),
+                exchangeAddress: ONE_INCH_V4_ROUTER,
+                _exchangeCalldata: forgeUnoswapCalldata(
+                    hardhatUtils.addresses.DAI,
+                    new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
+                    minToTokenAmount.toFixed(0),
+                    false,
+                ),
+            }
+
+            const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
+                exchangeData,
+                cdpData,
+                hardhatUtils.mpaServiceRegistry(),
+            ])
+
+            return system.automationExecutor.execute(
+                executionData,
+                testCdpId,
+                triggerData,
+                system.cmBasicBuy!.address,
+                triggerId,
+                0,
+                0,
+                0,
+            )
+        }
+
         beforeEach(async () => {
             const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
             const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
@@ -423,6 +517,38 @@ describe('AutomationAggregatorBot', async () => {
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
+        })
+        it('should successfully execute a trigger from the group', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const counterBefore = await AutomationBotInstance.triggersCounter()
+            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+                groupTypeId,
+                replacedTriggerId,
+                [bbTriggerData, bsTriggerData],
+            ])
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const counterAfter = await AutomationBotInstance.triggersCounter()
+            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
+            const receipt = await tx.wait()
+            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
+            expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
+
+            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const triggerIds = [Number(counterAfter) - 1, Number(counterAfter)]
+            const txExecute = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
+
+            const receiptExecute = await (await txExecute).wait()
+            const eventTriggerExecuted = getEvents(
+                receiptExecute,
+                AutomationBotInstance.interface.getEvent('TriggerExecuted'),
+            )
+            const eventTriggerAdded = getEvents(
+                receiptExecute,
+                AutomationBotInstance.interface.getEvent('TriggerAdded'),
+            )
+
+            expect(eventTriggerExecuted.length).to.eq(1)
+            expect(eventTriggerAdded.length).to.eql(1)
         })
     })
     describe('removeTriggers', async () => {
