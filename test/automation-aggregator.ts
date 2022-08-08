@@ -218,7 +218,7 @@ describe('AutomationAggregatorBot', async () => {
                 executionData,
                 testCdpId,
                 triggerData,
-                system.cmBasicBuy!.address,
+                system.basicBuy!.address,
                 triggerId,
                 0,
                 0,
