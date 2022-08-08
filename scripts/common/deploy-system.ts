@@ -154,6 +154,8 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
+        console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
+        console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
@@ -162,6 +164,8 @@ export async function deploySystem({
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
+            console.log(`CmBasicBuyCommand deployed to: ${CmBasicBuyInstance!.address}`)
+            console.log(`CmBasicSellCommand deployed to: ${CmBasicSellInstance!.address}`)
         }
     }
 

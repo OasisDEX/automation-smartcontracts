@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
-import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
+import { encodeTriggerData, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
@@ -579,6 +579,73 @@ describe('AutomationAggregatorBot', async () => {
             ])
             await expect(ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove))
                 .to.be.reverted
+        })
+    })
+    describe('cdpAllowed', async () => {
+        beforeEach(async () => {
+            const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+            const replacedTriggerId = [0, 0]
+
+            // current coll ratio : 1.859946411122229468
+            const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
+            const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
+
+            // basic buy
+            const bbTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.CM_BASIC_BUY,
+                buyExecutionRatio,
+                buyTargetRatio,
+                0,
+                true,
+                50,
+                maxGweiPrice,
+            )
+            // basic sell
+            const bsTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.CM_BASIC_SELL,
+                sellExecutionRatio,
+                sellTargetRatio,
+                0,
+                true,
+                50,
+                maxGweiPrice,
+            )
+
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+                groupTypeId,
+                replacedTriggerId,
+                [bbTriggerData, bsTriggerData],
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+        })
+
+        it('should return false for bad operator address', async () => {
+            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+                testCdpId,
+                generateRandomAddress(),
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false, 'approval returned for random address')
+        })
+
+        it('should return true for correct operator address', async () => {
+            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(true, 'approval does not exist for AutomationBot')
+        })
+        it('should return false for correct operator address', async () => {
+            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+                testCdpId,
+                AutomationBotAggregatorInstance.address,
+                hardhatUtils.addresses.CDP_MANAGER,
+            )
+            expect(status).to.equal(false, 'approval does exist for AutomationBotAggregatorInstance')
         })
     })
 })
