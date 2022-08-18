@@ -99,6 +99,9 @@ export class TriggerExecutor {
             case TriggerType.CLOSE_TO_COLLATERAL:
             case TriggerType.CLOSE_TO_DAI:
                 return this.getStopLossExecutionData(vault, triggerType === TriggerType.CLOSE_TO_COLLATERAL, slippage)
+            case TriggerType.AUTO_TP_COLLATERAL:
+            case TriggerType.AUTO_TP_DAI:
+                return this.getStopLossExecutionData(vault, triggerType === TriggerType.AUTO_TP_COLLATERAL, slippage)
             case TriggerType.BASIC_BUY:
             case TriggerType.BASIC_SELL: {
                 const [, , , target] = decodeTriggerData(triggerType, triggerData)
@@ -117,8 +120,10 @@ export class TriggerExecutor {
     private getMPAMethod(triggerType: TriggerType) {
         switch (triggerType) {
             case TriggerType.CLOSE_TO_COLLATERAL:
+            case TriggerType.AUTO_TP_COLLATERAL:
                 return 'closeVaultExitCollateral'
             case TriggerType.CLOSE_TO_DAI:
+            case TriggerType.AUTO_TP_DAI:
                 return 'closeVaultExitDai'
             case TriggerType.BASIC_BUY:
                 return 'increaseMultiple'
