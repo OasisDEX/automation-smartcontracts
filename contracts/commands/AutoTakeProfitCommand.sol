@@ -25,6 +25,7 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
+/// @title An Auto Take Profit Command for the MPAContract
 contract AutoTakeProfitCommand is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
@@ -35,6 +36,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
+    /// @notice Returns the correctness of the vault state post execution of the command.
+    /// @param cdpId The CDP id
+    /// @return Correctness of the trigger execution
     function isExecutionCorrect(uint256 cdpId, bytes memory) external view override returns (bool) {
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
@@ -42,6 +46,10 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         return !(collateral > 0 || debt > 0);
     }
 
+    /// @notice Checks the validity of the trigger data when the trigger is executed
+    /// @param _cdpId The CDP id
+    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
+    /// @return Correctness of the trigger data during execution
     function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
         external
         view
@@ -64,6 +72,10 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             nextPrice >= autoTakeProfitTriggerData.tpLevel;
     }
 
+    /// @notice Checks the validity of the trigger data when the trigger is added
+    /// @param _cdpId The CDP id
+    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
+    /// @return Correctness of the trigger data
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
         external
         pure
@@ -74,7 +86,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        // TODO: (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+        // TODO: uncomment  and add test for next next price
+        /*         (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+        require(autoTakeProfitTriggerData.tpLevel > nextPrice, "atp/tp-level-too-low"); */
         return
             // TODO: change to autoTakeProfitTriggerData.tpLevel > nextPrice -> add test for next next price
             autoTakeProfitTriggerData.tpLevel > 0 &&
@@ -83,6 +97,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
                 autoTakeProfitTriggerData.triggerType == 8);
     }
 
+    /// @notice Executes the trigger
+    /// @param executionData Execution data from the Automation Worker
+    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     function execute(
         bytes calldata executionData,
         uint256,
