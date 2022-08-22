@@ -29,7 +29,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
     .addParam(
         'params',
-        'The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info',
+        "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
         undefined,
         types.json,
         false,
