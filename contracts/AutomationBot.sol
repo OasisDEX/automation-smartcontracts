@@ -280,10 +280,11 @@ contract AutomationBot {
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        drawDaiFromVault(cdpId, manager, daiCoverage);
 
         ICommand command = ICommand(commandAddress);
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
+
+        drawDaiFromVault(cdpId, manager, daiCoverage);
 
         manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
