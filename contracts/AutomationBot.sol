@@ -224,8 +224,6 @@ contract AutomationBot {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
         }
-
-        emit TriggerRemoved(cdpId, triggerId);
     }
 
     //works correctly in context of dsProxy
