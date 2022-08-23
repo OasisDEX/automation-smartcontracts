@@ -163,7 +163,7 @@ contract AutomationBot {
             activeTriggers[replacedTriggerId] = TriggerRecord(0, 0);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
-        emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
+        emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerType, triggerData);
     }
 
     // works correctly in context of automationBot
@@ -307,6 +307,7 @@ contract AutomationBot {
         uint256 indexed triggerId,
         address indexed commandAddress,
         uint256 indexed cdpId,
+        uint256 triggerType,
         bytes triggerData
     );
 
