@@ -25,7 +25,7 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
-/// @title An Auto Take Profit Command for the MPAContract
+/// @title An Auto Take Profit Command for the AutomationBot
 contract AutoTakeProfitCommand is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
@@ -72,7 +72,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             nextPrice >= autoTakeProfitTriggerData.executionPrice;
     }
 
-    /// @notice Checks the validity of the trigger data when the trigger is added
+    /// @notice Checks the validity of the trigger data when the trigger is created
     /// @param _cdpId The CDP id
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
