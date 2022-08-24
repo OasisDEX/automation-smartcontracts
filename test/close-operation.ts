@@ -147,6 +147,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
+                        false,
                         0,
                         triggerData,
                     ])
@@ -213,6 +214,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
+                        false,
                         0,
                         triggersData,
                     ])
@@ -370,6 +372,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_DAI,
+                        false,
                         0,
                         triggersData,
                     ])
@@ -429,6 +432,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_DAI,
+                        false,
                         0,
                         triggersData,
                     ])

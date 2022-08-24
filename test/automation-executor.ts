@@ -162,6 +162,7 @@ describe('AutomationExecutor', async () => {
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 2,
+                false,
                 0,
                 triggerData,
             ])

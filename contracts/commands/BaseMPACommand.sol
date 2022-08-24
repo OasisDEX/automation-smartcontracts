@@ -104,6 +104,7 @@ abstract contract BaseMPACommand is ICommand {
                 AutomationBot(msg.sender).addTrigger.selector,
                 cdpId,
                 triggerType,
+                true,
                 0,
                 triggerData
             )

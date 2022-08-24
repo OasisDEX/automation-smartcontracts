@@ -36,6 +36,7 @@ describe('BasicSellCommand', () => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
             TriggerType.BASIC_SELL,
+            false,
             0,
             triggerData,
         ])

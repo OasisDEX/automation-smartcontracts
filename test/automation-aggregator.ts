@@ -40,7 +40,7 @@ describe('AutomationAggregatorBot', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-    let createTrigger: (triggerData: BytesLike, tiggerType: TriggerType) => Promise<ContractTransaction>
+    let createTrigger: (triggerData: BytesLike, tiggerType: TriggerType, continous : boolean) => Promise<ContractTransaction>
     const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
@@ -72,10 +72,11 @@ describe('AutomationAggregatorBot', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType) => {
+        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 triggerType,
+                continous,
                 0,
                 triggerData,
             ])
@@ -230,7 +231,7 @@ describe('AutomationAggregatorBot', async () => {
             const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
             const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'addTriggerGroup',
-                [groupTypeId, replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
+                [groupTypeId, [true,true], replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
             )
             const tx = await beforeOwnerProxy
                 .connect(beforeOwner)
@@ -248,6 +249,7 @@ describe('AutomationAggregatorBot', async () => {
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -263,6 +265,7 @@ describe('AutomationAggregatorBot', async () => {
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -275,6 +278,7 @@ describe('AutomationAggregatorBot', async () => {
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const dataToSupply2 = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [Number(triggerCounter) - 1, Number(triggerCounter)],
                 [bbTriggerData, bsTriggerData],
             ])
@@ -300,11 +304,12 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
             await createTx.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [triggersCounterBefore.toNumber(), 0],
                 [bbTriggerData, bsTriggerData],
             ])
@@ -346,13 +351,14 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bsTriggerData, bbTriggerData],
             ])
@@ -381,13 +387,14 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bbTriggerData, bsTriggerData],
             ])
@@ -418,13 +425,14 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bbTriggerData, bsTriggerData],
             ])
@@ -464,13 +472,14 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 [triggersCounterBefore.toNumber(), triggersCounterBefore.toNumber() - 1],
                 [bbTriggerData, bsTriggerData],
             ])
@@ -492,6 +501,7 @@ describe('AutomationAggregatorBot', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -499,7 +509,7 @@ describe('AutomationAggregatorBot', async () => {
                 .to.be.reverted
         })
         it('should revert when called not by the delegate ', async () => {
-            const tx = AutomationBotAggregatorInstance.addTriggerGroup(groupTypeId, replacedTriggerId, [
+            const tx = AutomationBotAggregatorInstance.addTriggerGroup(groupTypeId, [true,true], replacedTriggerId, [
                 bbTriggerData,
                 bsTriggerData,
             ])
@@ -509,6 +519,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -523,6 +534,7 @@ describe('AutomationAggregatorBot', async () => {
             const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -612,10 +624,11 @@ describe('AutomationAggregatorBot', async () => {
 
             const beforeDataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData(
                 'addTriggerGroup',
-                [groupTypeId, replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
+                [groupTypeId, [true, true], replacedTriggerId, [beforeBbTriggerData, beforeBsTriggerData]],
             )
             const dataToSupplyAdd = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -742,6 +755,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])

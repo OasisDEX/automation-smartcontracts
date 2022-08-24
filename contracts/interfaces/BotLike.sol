@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 interface BotLike {
     function addRecord(
         uint256 cdpId,
+        bool continous,
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData

@@ -88,6 +88,7 @@ describe('ConstantMultipleValidator', async () => {
             const counterBefore = await AutomationBotAggregatorInstance.counter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -112,6 +113,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -132,6 +134,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -152,6 +155,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -172,6 +176,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -192,6 +197,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -212,6 +218,7 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])

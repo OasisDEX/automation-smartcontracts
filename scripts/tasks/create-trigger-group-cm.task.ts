@@ -81,6 +81,7 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
 
         const addTriggerGroupData = aggregator.interface.encodeFunctionData('addTriggerGroup', [
             args.type.toString(),
+            [false, false],
             args.replaced,
             triggersData,
         ])
