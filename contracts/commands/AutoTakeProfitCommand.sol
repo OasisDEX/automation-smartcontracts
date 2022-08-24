@@ -32,7 +32,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     struct AutoTakeProfitTriggerData {
         uint256 cdpId;
         uint16 triggerType;
-        uint256 tpLevel;
+        uint256 executionPrice;
         uint32 maxBaseFeeInGwei;
     }
 
@@ -69,7 +69,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         require(nextCollRatio != 0, "atp/empty-vault"); // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         return
             baseFeeIsValid(autoTakeProfitTriggerData.maxBaseFeeInGwei) &&
-            nextPrice >= autoTakeProfitTriggerData.tpLevel;
+            nextPrice >= autoTakeProfitTriggerData.executionPrice;
     }
 
     /// @notice Checks the validity of the trigger data when the trigger is added
@@ -87,7 +87,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             (AutoTakeProfitTriggerData)
         );
         return
-            autoTakeProfitTriggerData.tpLevel > 0 &&
+            autoTakeProfitTriggerData.executionPrice > 0 &&
             _cdpId == autoTakeProfitTriggerData.cdpId &&
             (autoTakeProfitTriggerData.triggerType == 7 ||
                 autoTakeProfitTriggerData.triggerType == 8);
