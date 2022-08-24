@@ -86,11 +86,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        // TODO: uncomment  and add test for next next price
-        /*         (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
-        require(autoTakeProfitTriggerData.tpLevel > nextPrice, "atp/tp-level-too-low"); */
         return
-            // TODO: change to autoTakeProfitTriggerData.tpLevel > nextPrice -> add test for next next price
             autoTakeProfitTriggerData.tpLevel > 0 &&
             _cdpId == autoTakeProfitTriggerData.cdpId &&
             (autoTakeProfitTriggerData.triggerType == 7 ||
