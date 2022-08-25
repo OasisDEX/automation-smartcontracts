@@ -145,7 +145,7 @@ contract AutomationBot {
         address commandAddress = getCommandAddress(triggerType);
 
         require(
-            ICommand(commandAddress).isTriggerDataValid(cdpId, triggerData),
+            ICommand(commandAddress).isTriggerDataValid(cdpId, continous, triggerData),
             "bot/invalid-trigger-data"
         );
 

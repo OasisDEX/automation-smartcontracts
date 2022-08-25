@@ -47,11 +47,11 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bool continuous,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));

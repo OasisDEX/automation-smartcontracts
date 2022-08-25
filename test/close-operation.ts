@@ -59,6 +59,11 @@ describe('CloseCommand', async () => {
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
     })
 
+    
+    describe('isTriggerDataValid', () => {
+        //TODO: add test checking that continous true is disallowed
+    })
+
     describe('execute', async () => {
         const serviceRegistry = hardhatUtils.mpaServiceRegistry()
         let currentCollRatioAsPercentage: number

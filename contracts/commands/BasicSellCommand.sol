@@ -45,11 +45,11 @@ contract BasicSellCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        pure
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bool continuous,
+        bytes memory triggerData
+    ) external pure returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
