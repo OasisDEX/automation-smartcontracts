@@ -44,7 +44,6 @@ describe('AutomationAggregatorBot', async () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
-        console.log('Deploying system');
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -72,9 +71,7 @@ describe('AutomationAggregatorBot', async () => {
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
-        console.log('setBudInOSM');
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        console.log('setBudInOSM end');
         createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
                 testCdpId,

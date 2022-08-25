@@ -59,7 +59,6 @@ describe('ConstantMultipleValidator', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            false,
             50,
             maxGweiPrice,
         )
@@ -70,7 +69,6 @@ describe('ConstantMultipleValidator', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            false,
             50,
             maxGweiPrice,
         )
@@ -107,7 +105,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
@@ -128,13 +125,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
-                [true,true],
+                [true,false],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -149,7 +145,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 70,
                 maxGweiPrice,
             )
@@ -170,7 +165,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 70,
                 maxGweiPrice,
             )
@@ -191,7 +185,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice + 1,
             )
@@ -212,7 +205,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
