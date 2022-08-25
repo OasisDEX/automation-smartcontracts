@@ -304,7 +304,7 @@ describe('CloseCommand', async () => {
                 })
 
                 it('it should wipe all debt and collateral', async () => {
-                    await AutomationExecutorInstance.execute(
+                    const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -314,6 +314,9 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                     )
+
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -449,7 +452,7 @@ describe('CloseCommand', async () => {
                 })
 
                 it('it should wipe all debt and collateral', async () => {
-                    await AutomationExecutorInstance.execute(
+                    const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggersData,
@@ -459,6 +462,9 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                     )
+
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 

@@ -185,7 +185,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -238,7 +238,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     triggerId = event.args.triggerId.toNumber()
                 })
                 it('it should wipe all debt and collateral', async () => {
-                    await AutomationExecutorInstance.execute(
+                    const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggerData,
@@ -246,8 +246,11 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
+
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -266,7 +269,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
-                        182000,
+                        188000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -299,7 +302,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -309,7 +312,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -407,7 +410,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -458,7 +461,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 })
 
                 it('it should wipe all debt and collateral', async () => {
-                    await AutomationExecutorInstance.execute(
+                    const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
                         triggerData,
@@ -466,8 +469,10 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -493,7 +498,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -504,7 +509,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -540,7 +545,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        182000,
+                        188000,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
