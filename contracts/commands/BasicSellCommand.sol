@@ -35,7 +35,6 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 minSellPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
@@ -98,10 +97,6 @@ contract BasicSellCommand is BaseMPACommand {
         validateSelector(MPALike.decreaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
-
-        if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
-        }
     }
 
     function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)

@@ -44,6 +44,7 @@ describe('AutomationAggregatorBot', async () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
+        console.log('Deploying system');
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -71,7 +72,9 @@ describe('AutomationAggregatorBot', async () => {
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
+        console.log('setBudInOSM');
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+        console.log('setBudInOSM end');
         createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
@@ -106,7 +109,6 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             '4472665974900000000000',
-            true,
             50,
             maxGweiPrice,
         )
@@ -117,7 +119,6 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             '4472665974900000000000',
-            true,
             50,
             maxGweiPrice,
         )
@@ -131,7 +132,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -142,7 +142,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -235,8 +234,8 @@ describe('AutomationAggregatorBot', async () => {
             )
             const tx = await beforeOwnerProxy
                 .connect(beforeOwner)
-                .execute(AutomationBotAggregatorInstance.address, beforeDataToSupplyAdd)
-            await tx.wait()
+                .execute(AutomationBotAggregatorInstance.address, beforeDataToSupplyAdd, {gasLimit:2_000_000})
+            await tx.wait();
         })
         it('should successfully create a trigger group through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -299,7 +298,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -337,7 +335,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -347,7 +344,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -373,7 +369,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -383,7 +378,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -420,7 +414,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -458,7 +451,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -468,7 +460,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -554,13 +545,8 @@ describe('AutomationAggregatorBot', async () => {
                 receiptExecute,
                 AutomationBotInstance.interface.getEvent('TriggerExecuted'),
             )
-            const eventTriggerAdded = getEvents(
-                receiptExecute,
-                AutomationBotInstance.interface.getEvent('TriggerAdded'),
-            )
 
             expect(eventTriggerExecuted.length).to.eq(1)
-            expect(eventTriggerAdded.length).to.eql(1)
         })
     })
     describe('removeTriggers', async () => {
@@ -578,7 +564,6 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -589,7 +574,6 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -602,7 +586,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -613,7 +596,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -736,7 +718,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -747,7 +728,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )

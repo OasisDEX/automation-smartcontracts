@@ -122,7 +122,10 @@ contract AutomationBotAggregator {
         bytes[] memory triggersData
     ) external {
         IValidator validator = getValidatorAddress(groupType);
-        require(validator.validate(replacedTriggerId, triggersData), "aggregator/validation-error");
+        require(
+            validator.validate(continous, replacedTriggerId, triggersData),
+            "aggregator/validation-error"
+        );
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
 
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));

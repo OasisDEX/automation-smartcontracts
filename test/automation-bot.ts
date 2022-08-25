@@ -562,7 +562,6 @@ describe('AutomationBot', async () => {
                 executionReceipt,
                 AutomationBotInstance.interface.getEvent('TriggerAdded'),
             )
-            console.log('gas used', executionReceipt.gasUsed.toNumber())
 
             expect(triggerAddedEvent.args.triggerId.toNumber()).to.be.equal(
                 firstTriggerAddedEvent.args.triggerId.toNumber() + 1,
@@ -624,7 +623,6 @@ describe('AutomationBot', async () => {
                 executionReceipt,
                 AutomationBotInstance.interface.getEvent('TriggerAdded'),
             )
-            console.log('gas used', executionReceipt.gasUsed.toNumber())
 
             expect(triggerAddedEvent.args.triggerId.toNumber()).to.be.equal(
                 firstTriggerAddedEvent.args.triggerId.toNumber() + 1,
@@ -731,7 +729,6 @@ describe('AutomationBot', async () => {
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
             const receipt = await (await tx).wait()
 
-            console.log('gas used', receipt.gasUsed.toNumber())
         })
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
