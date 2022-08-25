@@ -64,10 +64,11 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         require(
             ManagerLike(ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY))
                 .owns(_cdpId) != address(0),
-            "atp/no-owner"
+            "auto-take-profit/no-owner"
         );
-        require(nextCollRatio != 0, "atp/empty-vault"); // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
+        bool vaultNotEmpty = nextCollRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         return
+            vaultNotEmpty &&
             baseFeeIsValid(autoTakeProfitTriggerData.maxBaseFeeInGwei) &&
             nextPrice >= autoTakeProfitTriggerData.executionPrice;
     }
@@ -78,7 +79,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @return Correctness of the trigger data
     function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
         external
-        pure
+        view
         override
         returns (bool)
     {
@@ -86,8 +87,12 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
+        (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+        require(
+            autoTakeProfitTriggerData.executionPrice > nextPrice,
+            "auto-take-profit/tp-level-too-low"
+        );
         return
-            autoTakeProfitTriggerData.executionPrice > 0 &&
             _cdpId == autoTakeProfitTriggerData.cdpId &&
             (autoTakeProfitTriggerData.triggerType == 7 ||
                 autoTakeProfitTriggerData.triggerType == 8);
@@ -112,9 +117,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
         } else if (autoTakeProfitTriggerData.triggerType == 8) {
             validateSelector(MPALike.closeVaultExitDai.selector, executionData);
-        } else revert("atp/unsupported-trigger-type");
+        } else revert("auto-take-profit/unsupported-trigger-type");
 
         (bool status, ) = mpaAddress.delegatecall(executionData);
-        require(status, "atp/execution-failed");
+        require(status, "auto-take-profit/execution-failed");
     }
 }

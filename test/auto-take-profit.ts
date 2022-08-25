@@ -131,7 +131,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 )
             })
 
-            describe('when Trigger is above next col ratio', async () => {
+            describe('when Trigger is below next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -145,7 +145,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     triggerData = encodeTriggerData(
                         testCdpId,
                         TriggerType.AUTO_TP_COLLATERAL,
-                        nextPrice.add('32665974900000000000'),
+                        nextPrice.add('1000'),
                         1000,
                     )
 
@@ -190,7 +190,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
-            describe('when Trigger is below next col ratio', async () => {
+            describe('when Trigger is above next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -206,6 +206,9 @@ describe('AutoTakeProfitCommmand', async () => {
 
                 before(async () => {
                     // makeSnapshot
+
+                    const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+                    const osmAddress = await osmMom.osms(ethAIlk)
 
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
@@ -231,10 +234,23 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         triggerData,
                     ])
+
+                    // manipulate the next price to pass the trigger validation
+                    const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
+                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+
+                    // revert the stored next price
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', nextPriceStorage])
+
                     triggerId = event.args.triggerId.toNumber()
                 })
                 it('it should wipe all debt and collateral', async () => {
@@ -250,7 +266,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    console.log('         gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -356,7 +372,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 )
             })
 
-            describe('when Trigger is above next col ratio', async () => {
+            describe('when Trigger is above next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -367,12 +383,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(
-                        testCdpId,
-                        TriggerType.AUTO_TP_DAI,
-                        nextPrice.add('32665974900000000000'),
-                        1000,
-                    )
+                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -416,7 +427,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 })
             })
 
-            describe('when Trigger is below next col ratio', async () => {
+            describe('when Trigger is below next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -444,11 +455,27 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         triggerData,
                     ])
+
+                    // manipulate the next price to pass the trigger validation
+                    const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+                    const osmAddress = await osmMom.osms(ethAIlk)
+
+                    const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
+                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
+
+                    // revert the stored next price
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', nextPriceStorage])
                 })
 
                 beforeEach(async () => {
@@ -472,7 +499,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         188000,
                     )
                     const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    console.log('         gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 

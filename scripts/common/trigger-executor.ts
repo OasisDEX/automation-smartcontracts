@@ -318,6 +318,7 @@ export class TriggerExecutor {
             const osmMom = await this.ethers.getContractAt('OsmMomLike', this.addresses.OSM_MOM)
             const osmAddress = await osmMom.osms(ilk)
             const hash = utils.solidityKeccak256(['uint256', 'uint256'], [mcdView.address, 5])
+            console.log(hash)
             const isBud = await this.provider.getStorageAt(osmAddress, hash)
             if (EthersBN.from(isBud).eq(0)) {
                 await this.provider.send('hardhat_setStorageAt', [osmAddress, hash, utils.hexZeroPad('0x01', 32)])
