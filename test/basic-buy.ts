@@ -30,11 +30,11 @@ describe('BasicBuyCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike, continous : boolean) => {
+    const createTrigger = async (triggerData: BytesLike, continuous : boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
             TriggerType.BASIC_BUY,
-            continous,
+            continuous,
             0,
             triggerData,
         ])
@@ -285,7 +285,7 @@ describe('BasicBuyCommand', () => {
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             expect(removeEvents.length).to.eq(1)
             expect(finalTriggerRecord.cdpId).to.eq(0);
-            expect(finalTriggerRecord.continous).to.eq(false);
+            expect(finalTriggerRecord.continuous).to.eq(false);
         })
 
         it('keeps the trigger if `continuous` is set to true', async () => {
@@ -301,7 +301,7 @@ describe('BasicBuyCommand', () => {
             expect(events.length).to.eq(0);
             const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId);
             expect(finalTriggerRecord.cdpId).to.eq(testCdpId);
-            expect(finalTriggerRecord.continous).to.eq(true);
+            expect(finalTriggerRecord.continuous).to.eq(true);
         })
     })
 })

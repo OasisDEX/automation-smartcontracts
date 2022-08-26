@@ -17,7 +17,7 @@ contract DummyRollingCommand is DummyCommand {
         bool _finalCheckReturn,
         bool _revertsInExecute,
         bool _validTriggerData,
-        bool _continous
+        bool _continuous
     )
         DummyCommand(
             _serviceRegistry,
@@ -28,7 +28,7 @@ contract DummyRollingCommand is DummyCommand {
         )
     {
         triggerType = 100;
-        continuous = _continous;
+        continuous = _continuous;
     }
 
     function execute(

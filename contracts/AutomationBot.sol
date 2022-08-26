@@ -28,7 +28,7 @@ contract AutomationBot {
     struct TriggerRecord {
         bytes32 triggerHash;
         uint248 cdpId; // to still fit two memory slots for whole struct
-        bool continous;
+        bool continuous;
     }
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -136,7 +136,7 @@ contract AutomationBot {
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
         uint256 cdpId,
-        bool continous,
+        bool continuous,
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData
@@ -145,7 +145,7 @@ contract AutomationBot {
         address commandAddress = getCommandAddress(triggerType);
 
         require(
-            ICommand(commandAddress).isTriggerDataValid(cdpId, continous, triggerData),
+            ICommand(commandAddress).isTriggerDataValid(cdpId, continuous, triggerData),
             "bot/invalid-trigger-data"
         );
 
@@ -155,7 +155,7 @@ contract AutomationBot {
         activeTriggers[triggersCounter] = TriggerRecord(
             getTriggersHash(cdpId, triggerData, commandAddress),
             uint248(cdpId),
-            continous
+            continuous
         );
 
         if (replacedTriggerId != 0) {
@@ -191,7 +191,7 @@ contract AutomationBot {
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
-        bool continous,
+        bool continuous,
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external onlyDelegate {
@@ -201,7 +201,7 @@ contract AutomationBot {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(
             cdpId,
-            continous,
+            continuous,
             triggerType,
             replacedTriggerId,
             triggerData
@@ -298,7 +298,7 @@ contract AutomationBot {
 
         manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
-        if (!activeTriggers[triggerId].continous) {
+        if (!activeTriggers[triggerId].continuous) {
             activeTriggers[triggerId] = TriggerRecord(0, 0, false);
             emit TriggerRemoved(cdpId, triggerId);
         }

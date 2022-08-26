@@ -61,7 +61,7 @@ describe('CloseCommand', async () => {
 
     
     describe('isTriggerDataValid', () => {
-        //TODO: add test checking that continous true is disallowed
+        //TODO: add test checking that continuous true is disallowed
     })
 
     describe('execute', async () => {

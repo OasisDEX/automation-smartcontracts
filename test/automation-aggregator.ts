@@ -40,7 +40,7 @@ describe('AutomationAggregatorBot', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-    let createTrigger: (triggerData: BytesLike, tiggerType: TriggerType, continous : boolean) => Promise<ContractTransaction>
+    let createTrigger: (triggerData: BytesLike, tiggerType: TriggerType, continuous : boolean) => Promise<ContractTransaction>
     const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
@@ -72,11 +72,11 @@ describe('AutomationAggregatorBot', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continous: boolean) => {
+        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 triggerType,
-                continous,
+                continuous,
                 0,
                 triggerData,
             ])

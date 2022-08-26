@@ -117,7 +117,7 @@ describe('ConstantMultipleValidator', async () => {
             const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
-        it('should not add trigger group with continous not equal', async () => {
+        it('should not add trigger group with continuous not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,

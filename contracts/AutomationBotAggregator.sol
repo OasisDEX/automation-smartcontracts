@@ -68,7 +68,7 @@ contract AutomationBotAggregator {
 
     function addTriggerGroup(
         uint16 groupType,
-        bool[] memory continous,
+        bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external onlyDelegate {
@@ -88,7 +88,7 @@ contract AutomationBotAggregator {
 
         AutomationBotAggregator(aggregator).addRecords(
             groupType,
-            continous,
+            continuous,
             replacedTriggerId,
             triggersData
         );
@@ -117,13 +117,13 @@ contract AutomationBotAggregator {
 
     function addRecords(
         uint16 groupType,
-        bool[] memory continous,
+        bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external {
         IValidator validator = getValidatorAddress(groupType);
         require(
-            validator.validate(continous, replacedTriggerId, triggersData),
+            validator.validate(continuous, replacedTriggerId, triggersData),
             "aggregator/validation-error"
         );
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
@@ -135,7 +135,7 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < triggerTypes.length; i++) {
             bot.addRecord(
                 cdpId,
-                continous[i],
+                continuous[i],
                 triggerTypes[i],
                 replacedTriggerId[i],
                 triggersData[i]

@@ -19,7 +19,7 @@ import { params } from './params'
 
 interface CreateTriggerArgs extends BaseTaskArgs {
     vault: BigNumber
-    continous: boolean
+    continuous: boolean
     type: number
     noreplace: boolean
     params: any[]
@@ -28,7 +28,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
-    .addParam('continous', 'Is trigger supposed to be continous', false, types.boolean)
+    .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
     .addParam(
         'params',
         'The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info',
@@ -107,7 +107,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
             args.vault.toString(),
             args.type,
-            args.continous,
+            args.continuous,
             triggerIdToReplace,
             triggerData,
         ])

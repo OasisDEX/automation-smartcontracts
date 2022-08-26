@@ -32,11 +32,11 @@ describe('BasicSellCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike, continous: boolean) => {
+    const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
             TriggerType.BASIC_SELL,
-            continous,
+            continuous,
             0,
             triggerData,
         ])
