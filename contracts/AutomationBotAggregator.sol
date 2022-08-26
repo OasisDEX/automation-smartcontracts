@@ -135,8 +135,8 @@ contract AutomationBotAggregator {
         for (uint256 i = 0; i < triggerTypes.length; i++) {
             bot.addRecord(
                 cdpId,
-                continuous[i],
                 triggerTypes[i],
+                continuous[i],
                 replacedTriggerId[i],
                 triggersData[i]
             );
