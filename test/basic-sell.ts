@@ -298,8 +298,15 @@ describe('BasicSellCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(addEvents.length).to.eq(0)
+            const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
+            expect(executeEvents.length).to.eq(1)
+            expect(removeEvents.length).to.eq(1)
+            expect(finalTriggerRecord.cdpId).to.eq(0)
+            expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
         it('keeps trigger if `continuous` is set to true', async () => {
@@ -307,7 +314,7 @@ describe('BasicSellCommand', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId);
+            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -315,7 +322,7 @@ describe('BasicSellCommand', () => {
             expect(events.length).to.eq(0)
             const removeEvent = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             expect(removeEvent.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId);
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })
