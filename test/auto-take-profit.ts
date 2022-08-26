@@ -185,7 +185,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -262,7 +262,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
 
                     const receipt = await tx.wait()
@@ -285,7 +285,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
-                        188000,
+                        195000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -318,7 +318,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -328,7 +328,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -421,7 +421,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -496,7 +496,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
                     const receipt = await tx.wait()
                     console.log('         gas used', receipt.gasUsed.toNumber())
@@ -525,7 +525,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -536,7 +536,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -572,7 +572,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        188000,
+                        195000,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
