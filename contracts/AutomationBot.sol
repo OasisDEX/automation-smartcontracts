@@ -28,7 +28,7 @@ contract AutomationBot {
     struct TriggerRecord {
         bytes32 triggerHash;
         uint248 cdpId; // to still fit two memory slots for whole struct
-        bool continous;
+        bool continuous;
     }
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
