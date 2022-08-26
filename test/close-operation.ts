@@ -59,6 +59,11 @@ describe('CloseCommand', async () => {
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
     })
 
+    
+    describe('isTriggerDataValid', () => {
+        //TODO: add test checking that continuous true is disallowed
+    })
+
     describe('execute', async () => {
         const serviceRegistry = hardhatUtils.mpaServiceRegistry()
         let currentCollRatioAsPercentage: number
@@ -147,6 +152,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
+                        false,
                         0,
                         triggerData,
                     ])
@@ -213,6 +219,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_COLLATERAL,
+                        false,
                         0,
                         triggersData,
                     ])
@@ -370,6 +377,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_DAI,
+                        false,
                         0,
                         triggersData,
                     ])
@@ -429,6 +437,7 @@ describe('CloseCommand', async () => {
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
                         TriggerType.CLOSE_TO_DAI,
+                        false,
                         0,
                         triggersData,
                     ])

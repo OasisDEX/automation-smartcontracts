@@ -68,6 +68,7 @@ contract AutomationBotAggregator {
 
     function addTriggerGroup(
         uint16 groupType,
+        bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external onlyDelegate {
@@ -85,7 +86,12 @@ contract AutomationBotAggregator {
             manager.cdpAllow(cdpId, bot, 1);
         }
 
-        AutomationBotAggregator(aggregator).addRecords(groupType, replacedTriggerId, triggersData);
+        AutomationBotAggregator(aggregator).addRecords(
+            groupType,
+            continuous,
+            replacedTriggerId,
+            triggersData
+        );
         manager.cdpAllow(cdpId, aggregator, 0);
     }
 
@@ -96,7 +102,7 @@ contract AutomationBotAggregator {
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            (, uint256 cdpId) = bot.activeTriggers(triggerIds[i]);
+            (, uint256 cdpId, ) = bot.activeTriggers(triggerIds[i]);
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
                     bot.removeTrigger.selector,
@@ -111,11 +117,15 @@ contract AutomationBotAggregator {
 
     function addRecords(
         uint16 groupType,
+        bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggersData
     ) external {
         IValidator validator = getValidatorAddress(groupType);
-        require(validator.validate(replacedTriggerId, triggersData), "aggregator/validation-error");
+        require(
+            validator.validate(continuous, replacedTriggerId, triggersData),
+            "aggregator/validation-error"
+        );
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
 
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
@@ -123,7 +133,13 @@ contract AutomationBotAggregator {
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         uint256 cdpId = cdpIds[0];
         for (uint256 i = 0; i < triggerTypes.length; i++) {
-            bot.addRecord(cdpId, triggerTypes[i], replacedTriggerId[i], triggersData[i]);
+            bot.addRecord(
+                cdpId,
+                triggerTypes[i],
+                continuous[i],
+                replacedTriggerId[i],
+                triggersData[i]
+            );
             triggerIds[i] = firstTriggerId + i;
         }
 

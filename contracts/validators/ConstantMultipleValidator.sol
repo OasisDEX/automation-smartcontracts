@@ -24,7 +24,6 @@ struct GenericTriggerData {
     uint256 execCollRatio;
     uint256 targetCollRatio;
     uint256 bsPrice;
-    bool continuous;
     uint64 deviation;
     uint32 maxBaseFeeInGwei;
 }
@@ -47,14 +46,16 @@ contract ConstantMultipleValidator is IValidator {
         }
     }
 
-    function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
-        external
-        pure
-        returns (bool)
-    {
+    function validate(
+        bool[] memory continuous,
+        uint256[] memory replacedTriggerId,
+        bytes[] memory triggersData
+    ) external pure returns (bool) {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
+        require(continuous[0] == true, "validator/buy-trigger-must-be-continuous");
+        require(continuous[1] == true, "validator/sell-trigger-must-be-continuous");
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
         GenericTriggerData memory buyTriggerData = abi.decode(
             triggersData[0],
@@ -63,10 +64,6 @@ contract ConstantMultipleValidator is IValidator {
         GenericTriggerData memory sellTriggerData = abi.decode(
             triggersData[1],
             (GenericTriggerData)
-        );
-        require(
-            (buyTriggerData.continuous == sellTriggerData.continuous) == true,
-            "validator/continous-not-true"
         );
         require(
             buyTriggerData.maxBaseFeeInGwei == sellTriggerData.maxBaseFeeInGwei,

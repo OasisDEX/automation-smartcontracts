@@ -93,21 +93,4 @@ abstract contract BaseMPACommand is ICommand {
             .delegatecall(executionData);
         require(status, string(reason));
     }
-
-    function recreateTrigger(
-        uint256 cdpId,
-        uint16 triggerType,
-        bytes memory triggerData
-    ) internal virtual {
-        (bool status, ) = msg.sender.delegatecall(
-            abi.encodeWithSelector(
-                AutomationBot(msg.sender).addTrigger.selector,
-                cdpId,
-                triggerType,
-                0,
-                triggerData
-            )
-        );
-        require(status, "base-mpa-command/trigger-recreation-failed");
-    }
 }

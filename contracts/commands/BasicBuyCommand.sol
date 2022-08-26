@@ -37,7 +37,6 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 maxBuyPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
@@ -48,11 +47,11 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bool continuous,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -108,10 +107,6 @@ contract BasicBuyCommand is BaseMPACommand {
         validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
-
-        if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
-        }
     }
 
     function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)

@@ -5,6 +5,7 @@ interface BotLike {
     function addRecord(
         uint256 cdpId,
         uint256 triggerType,
+        bool continuous,
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external;

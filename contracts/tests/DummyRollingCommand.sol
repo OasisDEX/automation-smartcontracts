@@ -9,13 +9,15 @@ import { DummyCommand } from "../tests/DummyCommand.sol";
 
 contract DummyRollingCommand is DummyCommand {
     uint256 public immutable triggerType;
+    bool public immutable continuous;
 
     constructor(
         address _serviceRegistry,
         bool _initialCheckReturn,
         bool _finalCheckReturn,
         bool _revertsInExecute,
-        bool _validTriggerData
+        bool _validTriggerData,
+        bool _continuous
     )
         DummyCommand(
             _serviceRegistry,
@@ -26,6 +28,7 @@ contract DummyRollingCommand is DummyCommand {
         )
     {
         triggerType = 100;
+        continuous = _continuous;
     }
 
     function execute(
@@ -37,6 +40,7 @@ contract DummyRollingCommand is DummyCommand {
             AutomationBot(msg.sender).addTrigger.selector,
             cdpId,
             triggerType,
+            continuous,
             0,
             triggerData
         );

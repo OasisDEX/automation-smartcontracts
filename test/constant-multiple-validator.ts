@@ -59,7 +59,6 @@ describe('ConstantMultipleValidator', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            false,
             50,
             maxGweiPrice,
         )
@@ -70,7 +69,6 @@ describe('ConstantMultipleValidator', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            false,
             50,
             maxGweiPrice,
         )
@@ -88,6 +86,7 @@ describe('ConstantMultipleValidator', async () => {
             const counterBefore = await AutomationBotAggregatorInstance.counter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -106,19 +105,19 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
-        it('should not add trigger group with continous not equal', async () => {
+        it('should not add trigger group with continuous not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
@@ -126,12 +125,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,false],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -146,12 +145,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 70,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -166,12 +165,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 70,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -186,12 +185,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice + 1,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
@@ -206,12 +205,12 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
                 groupTypeId,
+                [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])

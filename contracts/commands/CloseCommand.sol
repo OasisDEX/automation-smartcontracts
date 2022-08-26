@@ -89,16 +89,19 @@ contract CloseCommand is ICommand {
         require(status, "execution failed");
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bool continuous,
+        bytes memory triggerData
+    ) external pure override returns (bool) {
         (uint256 cdpId, uint16 triggerType, uint256 slLevel) = abi.decode(
             triggerData,
             (uint256, uint16, uint256)
         );
-        return slLevel > 100 && _cdpId == cdpId && (triggerType == 1 || triggerType == 2);
+        return
+            !continuous &&
+            slLevel > 100 &&
+            _cdpId == cdpId &&
+            (triggerType == 1 || triggerType == 2);
     }
 }

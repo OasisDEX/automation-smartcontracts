@@ -30,15 +30,16 @@ describe('BasicBuyCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike) => {
+    const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
             TriggerType.BASIC_BUY,
+            continuous,
             0,
             triggerData,
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
-        return usersProxy.connect(signer).execute(system.automationBot.address, data)
+        return usersProxy.connect(signer).execute(system.automationBot.address, data, { gasLimit: 2000000 })
     }
 
     before(async () => {
@@ -78,11 +79,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
         it('should fail if target target coll ratio is lte liquidation ratio', async () => {
@@ -93,11 +93,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
@@ -108,11 +107,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
         it('should fail if trigger type is not encoded correctly', async () => {
@@ -121,7 +119,7 @@ describe('BasicBuyCommand', () => {
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, executionRatio, targetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
@@ -132,11 +130,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
@@ -147,11 +144,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData)
+            const tx = createTrigger(triggerData, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -171,11 +167,10 @@ describe('BasicBuyCommand', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),
-                continuous,
                 50,
                 maxGweiPrice,
             )
-            const createTriggerTx = await createTrigger(triggerData)
+            const createTriggerTx = await createTrigger(triggerData, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
@@ -276,7 +271,7 @@ describe('BasicBuyCommand', () => {
             await expect(executeTrigger(triggerId, targetRatio, triggerData)).not.to.be.reverted
         })
 
-        it('does not recreate the trigger if `continuous` is set to false', async () => {
+        it('clears the trigger if `continuous` is set to false', async () => {
             const executionRatio = toRatio(2.55)
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
@@ -284,24 +279,32 @@ describe('BasicBuyCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(addEvents.length).to.eq(0)
+            const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
+            expect(executeEvents.length).to.eq(1)
+            expect(removeEvents.length).to.eq(1)
+            expect(finalTriggerRecord.cdpId).to.eq(0)
+            expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
-        it('recreates the trigger if `continuous` is set to true', async () => {
+        it('keeps the trigger if `continuous` is set to true', async () => {
             const executionRatio = toRatio(2.55)
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
+            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(1)
-            const [event] = events
-            expect(event.args.triggerData).to.eq(triggerData)
-            expect(event.args.commandAddress).to.eq(system.basicBuy!.address)
-            expect(event.args.cdpId).to.eq(testCdpId)
+            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            expect(finalTriggerRecord.cdpId).to.eq(testCdpId)
+            expect(finalTriggerRecord.continuous).to.eq(true)
+            expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })
 })

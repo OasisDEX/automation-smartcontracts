@@ -27,7 +27,8 @@ import "./McdUtils.sol";
 contract AutomationBot {
     struct TriggerRecord {
         bytes32 triggerHash;
-        uint256 cdpId;
+        uint248 cdpId; // to still fit two memory slots for whole struct
+        bool continuous;
     }
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -136,6 +137,7 @@ contract AutomationBot {
         // msg.sender should be dsProxy
         uint256 cdpId,
         uint256 triggerType,
+        bool continuous,
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
@@ -143,7 +145,7 @@ contract AutomationBot {
         address commandAddress = getCommandAddress(triggerType);
 
         require(
-            ICommand(commandAddress).isTriggerDataValid(cdpId, triggerData),
+            ICommand(commandAddress).isTriggerDataValid(cdpId, continuous, triggerData),
             "bot/invalid-trigger-data"
         );
 
@@ -152,7 +154,8 @@ contract AutomationBot {
         triggersCounter = triggersCounter + 1;
         activeTriggers[triggersCounter] = TriggerRecord(
             getTriggersHash(cdpId, triggerData, commandAddress),
-            cdpId
+            uint248(cdpId),
+            continuous
         );
 
         if (replacedTriggerId != 0) {
@@ -160,10 +163,17 @@ contract AutomationBot {
                 activeTriggers[replacedTriggerId].cdpId == cdpId,
                 "bot/trigger-removal-illegal"
             );
-            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0);
+            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0, false);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
-        emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
+        emit TriggerAdded(
+            triggersCounter,
+            commandAddress,
+            cdpId,
+            continuous,
+            triggerType,
+            triggerData
+        );
     }
 
     // works correctly in context of automationBot
@@ -180,7 +190,7 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0, 0);
+        activeTriggers[triggerId] = TriggerRecord(0, 0, false);
         emit TriggerRemoved(cdpId, triggerId);
     }
 
@@ -188,6 +198,7 @@ contract AutomationBot {
     function addTrigger(
         uint256 cdpId,
         uint256 triggerType,
+        bool continuous,
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external onlyDelegate {
@@ -195,7 +206,13 @@ contract AutomationBot {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
+        BotLike(automationBot).addRecord(
+            cdpId,
+            triggerType,
+            continuous,
+            replacedTriggerId,
+            triggerData
+        );
         if (!isCdpAllowed(cdpId, automationBot, manager)) {
             manager.cdpAllow(cdpId, automationBot, 1);
             emit ApprovalGranted(cdpId, automationBot);
@@ -224,8 +241,6 @@ contract AutomationBot {
             manager.cdpAllow(cdpId, automationBot, 0);
             emit ApprovalRemoved(cdpId, automationBot);
         }
-
-        emit TriggerRemoved(cdpId, triggerId);
     }
 
     //works correctly in context of dsProxy
@@ -282,14 +297,18 @@ contract AutomationBot {
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        drawDaiFromVault(cdpId, manager, daiCoverage);
 
         ICommand command = ICommand(commandAddress);
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
 
+        drawDaiFromVault(cdpId, manager, daiCoverage);
+
         manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
-        activeTriggers[triggerId] = TriggerRecord(0, 0);
+        if (!activeTriggers[triggerId].continuous) {
+            activeTriggers[triggerId] = TriggerRecord(0, 0, false);
+            emit TriggerRemoved(cdpId, triggerId);
+        }
         manager.cdpAllow(cdpId, commandAddress, 0);
 
         require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
@@ -307,6 +326,8 @@ contract AutomationBot {
         uint256 indexed triggerId,
         address indexed commandAddress,
         uint256 indexed cdpId,
+        bool continuous,
+        uint256 triggerType,
         bytes triggerData
     );
 
