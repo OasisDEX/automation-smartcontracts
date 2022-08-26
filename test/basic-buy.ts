@@ -276,6 +276,7 @@ describe('BasicBuyCommand', () => {
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
+            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId);
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -283,9 +284,10 @@ describe('BasicBuyCommand', () => {
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
+            expect(executeEvents.length).to.eq(1)
             expect(removeEvents.length).to.eq(1)
-            expect(finalTriggerRecord.cdpId).to.eq(0);
-            expect(finalTriggerRecord.continuous).to.eq(false);
+            expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord);
         })
 
         it('keeps the trigger if `continuous` is set to true', async () => {
@@ -293,7 +295,6 @@ describe('BasicBuyCommand', () => {
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId);
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
