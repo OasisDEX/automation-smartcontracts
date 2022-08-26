@@ -155,14 +155,14 @@ describe('AutomationBot', async () => {
             const [signer] = await hre.ethers.getSigners()
             const signerAddress = await signer.getAddress()
 
-            const tx = AutomationBotInstance.connect(signer).addRecord(testCdpId, false, triggerType, 0, triggerData)
+            const tx = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, false, 0, triggerData)
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, false, triggerType, 0, triggerData)
+            const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, false,  0, triggerData)
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()

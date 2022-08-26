@@ -136,8 +136,8 @@ contract AutomationBot {
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
         uint256 cdpId,
-        bool continuous,
         uint256 triggerType,
+        bool continuous,
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
@@ -208,8 +208,8 @@ contract AutomationBot {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(
             cdpId,
-            continuous,
             triggerType,
+            continuous,
             replacedTriggerId,
             triggerData
         );
