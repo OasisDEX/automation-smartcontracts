@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe.only('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -149,12 +149,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -216,12 +215,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -374,12 +372,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -434,12 +431,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 

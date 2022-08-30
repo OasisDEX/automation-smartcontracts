@@ -104,12 +104,11 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
-        const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
-            args.vault.toString(),
-            args.type,
-            args.continuous,
-            triggerIdToReplace,
-            triggerData,
+        const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
+            Math.pow(2, 16) - 1,
+            [args.continuous],
+            [triggerIdToReplace],
+            [triggerData],
         ])
 
         const info = [

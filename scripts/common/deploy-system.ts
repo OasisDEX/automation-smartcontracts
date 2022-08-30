@@ -1,7 +1,6 @@
 import { constants } from 'ethers'
 import {
     AutomationBot,
-    AutomationBotAggregator,
     ConstantMultipleValidator,
     AutomationExecutor,
     AutomationSwap,
@@ -23,7 +22,6 @@ export interface DeployedSystem {
     mcdUtils: McdUtils
     automationBot: AutomationBot
     automationBotStorage: AutomationBotStorage
-    automationBotAggregator: AutomationBotAggregator
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
@@ -103,10 +101,6 @@ export async function deploySystem({
         [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
     )
 
-    const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
-        ethers.getContractFactory('AutomationBotAggregator'),
-        [ServiceRegistryInstance.address],
-    )
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
         ethers.getContractFactory('ConstantMultipleValidator'),
         [],
@@ -162,7 +156,6 @@ export async function deploySystem({
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
         console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
-        console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
@@ -180,7 +173,6 @@ export async function deploySystem({
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
         automationBotStorage: AutomationBotStorageInstance,
-        automationBotAggregator: AutomationBotAggregatorInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
         automationSwap: AutomationSwapInstance,
@@ -257,11 +249,6 @@ export async function configureRegistryEntries(
         system.automationBotStorage.address,
     )
 
-    if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
-        system.automationBotAggregator.address,
-    )
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),

@@ -36,6 +36,8 @@ contract AutomationBotStorage {
 
     uint256 public triggersCounter = 0;
 
+    uint256 public triggersGroupCounter = 0;
+
     ServiceRegistry public immutable serviceRegistry;
 
     constructor(ServiceRegistry _serviceRegistry) {
@@ -52,6 +54,10 @@ contract AutomationBotStorage {
 
     function increaseCounter() external auth(msg.sender) {
         triggersCounter++;
+    }
+
+    function increaseGroupCounter() external auth(msg.sender) {
+        triggersGroupCounter++;
     }
 
     function updateTriggerRecord(uint256 id, TriggerRecord memory record)

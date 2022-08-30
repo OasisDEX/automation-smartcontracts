@@ -31,12 +31,11 @@ describe('BasicBuyCommand', () => {
     let snapshotId: string
 
     const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            continuous,
-            0,
-            triggerData,
+        const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
+            Math.pow(2, 16) - 1,
+            [continuous],
+            [0],
+            [triggerData],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data, { gasLimit: 2000000 })

@@ -51,9 +51,8 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
 
-        const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
-            vault,
-            args.id.toString(),
+        const removeTriggerData = bot.interface.encodeFunctionData('removeTriggers', [
+            [args.id.toString()],
             args.allowance,
         ])
 

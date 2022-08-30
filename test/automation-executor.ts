@@ -159,12 +159,11 @@ describe('AutomationExecutor', async () => {
         before(async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                testCdpId,
-                2,
-                false,
-                0,
-                triggerData,
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                Math.pow(2, 16) - 1,
+                [false],
+                [0],
+                [triggerData],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const result = await tx.wait()
