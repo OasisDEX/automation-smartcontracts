@@ -11,6 +11,7 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
+    AutoTakeProfitCommand,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
@@ -27,6 +28,7 @@ export interface DeployedSystem {
     automationSwap: AutomationSwap
     mcdView: McdView
     closeCommand?: CloseCommand
+    autoTakeProfitCommand?: AutoTakeProfitCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
 }
@@ -70,6 +72,7 @@ export async function deploySystem({
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
+    let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -149,6 +152,11 @@ export async function deploySystem({
         BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
             ServiceRegistryInstance.address,
         ])) as BasicSellCommand
+
+        if (logDebug) console.log('Deploying AutoTakeProfit....')
+        AutoTakeProfitInstance = (await utils.deployContract(ethers.getContractFactory('AutoTakeProfitCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as AutoTakeProfitCommand
     }
 
     if (logDebug) {
@@ -164,6 +172,7 @@ export async function deploySystem({
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
+            console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
         }
     }
 
@@ -179,6 +188,7 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
+        autoTakeProfitCommand: AutoTakeProfitInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -209,6 +219,19 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
+    }
+    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+            system.autoTakeProfitCommand.address,
+        )
+
+        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.AUTO_TP_DAI), system.autoTakeProfitCommand.address)
+
+        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {

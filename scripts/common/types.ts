@@ -18,6 +18,8 @@ export enum TriggerType {
     BASIC_SELL = 4,
     CM_BASIC_BUY = 5,
     CM_BASIC_SELL = 6,
+    AUTO_TP_COLLATERAL = 7,
+    AUTO_TP_DAI = 8,
 }
 
 export enum TriggerGroupType {
