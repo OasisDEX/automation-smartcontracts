@@ -23,6 +23,8 @@ import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "./interfaces/IAdapter.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -76,6 +78,12 @@ contract AutomationBot {
         ManagerLike manager
     ) public view returns (bool) {
         address cdpOwner = manager.owns(cdpId);
+        console.log("------------------");
+        console.log("isCdpAllowedBot");
+        console.log(operator);
+        console.log(cdpId);
+        console.log(manager.cdpCan(cdpOwner, cdpId, operator) == 1);
+        console.log("------------------");
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
@@ -91,6 +99,14 @@ contract AutomationBot {
     // works correctly in any context
     function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
+
+        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
+
+        return commandAddress;
+    }
+
+    function getAdapterAddress(uint256 adapterType) public view returns (address) {
+        bytes32 commandHash = keccak256(abi.encode("Adapter", adapterType));
 
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
 
@@ -189,17 +205,18 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 triggerType,
         uint256 replacedTriggerId,
-        bytes memory triggerData
+        bytes memory triggerData,
+        uint256 adapterType
     ) external onlyDelegate {
-        // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
-        if (!isCdpAllowed(cdpId, automationBot, manager)) {
-            manager.cdpAllow(cdpId, automationBot, 1);
-            emit ApprovalGranted(cdpId, automationBot);
-        }
+        console.log("add");
+        console.log(automationBot);
+        IAdapter adapter = IAdapter(getAdapterAddress(adapterType));
+        bytes memory identifier = abi.encode(cdpId);
+        (bool status, ) = address(adapter).delegatecall(
+            abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, true)
+        );
     }
 
     //works correctly in context of dsProxy
@@ -221,7 +238,11 @@ contract AutomationBot {
         BotLike(automationBot).removeRecord(cdpId, triggerId);
 
         if (removeAllowance) {
-            manager.cdpAllow(cdpId, automationBot, 0);
+            IAdapter adapter = IAdapter(getAdapterAddress(1));
+            bytes memory identifier = abi.encode(cdpId);
+            (bool status, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, false)
+            );
             emit ApprovalRemoved(cdpId, automationBot);
         }
 
@@ -230,14 +251,14 @@ contract AutomationBot {
 
     //works correctly in context of dsProxy
     function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
-        address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 0);
-        emit ApprovalRemoved(cdpId, approvedEntity);
+        // moved to adapter
+        //emit ApprovalRemoved(cdpId, approvedEntity);
     }
 
     //works correctly in context of dsProxy
     function grantApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
-        address approvedEntity = changeApprovalStatus(_serviceRegistry, cdpId, 1);
-        emit ApprovalGranted(cdpId, approvedEntity);
+        // moved to adapter
+        //emit ApprovalGranted(cdpId, approvedEntity);
     }
 
     //works correctly in context of dsProxy
@@ -246,16 +267,7 @@ contract AutomationBot {
         uint256 cdpId,
         uint256 status
     ) private returns (address) {
-        address managerAddress = _serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
-        ManagerLike manager = ManagerLike(managerAddress);
-        address automationBot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        require(
-            isCdpAllowed(cdpId, automationBot, manager) != (status == 1),
-            "bot/approval-unchanged"
-        );
-        validatePermissions(cdpId, address(this), manager);
-        manager.cdpAllow(cdpId, automationBot, status);
-        return automationBot;
+        // moved to adapter
     }
 
     function drawDaiFromVault(
@@ -282,7 +294,18 @@ contract AutomationBot {
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        drawDaiFromVault(cdpId, manager, daiCoverage);
+        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        // todo : adapter type
+        {
+            IAdapter adapter = IAdapter(getAdapterAddress(1));
+            bytes memory identifier = abi.encode(cdpId);
+            (bool status, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, true)
+            );
+            // todo: address
+            address token = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+            adapter.getCoverage(identifier, msg.sender, token, daiCoverage);
+        }
 
         ICommand command = ICommand(commandAddress);
         require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");

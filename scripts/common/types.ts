@@ -21,7 +21,9 @@ export enum TriggerType {
     AUTO_TP_COLLATERAL = 7,
     AUTO_TP_DAI = 8,
 }
-
+export enum AdapterType {
+    MAKER = 1,
+}
 export enum TriggerGroupType {
     CONSTANT_MULTIPLE = 1,
 }

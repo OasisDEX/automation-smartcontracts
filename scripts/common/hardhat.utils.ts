@@ -56,6 +56,10 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
+            makerAdapter: await this.hre.ethers.getContractAt(
+                'MakerAdapter',
+                this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
+            ),
         }
     }
 

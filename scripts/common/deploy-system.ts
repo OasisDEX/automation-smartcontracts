@@ -12,11 +12,12 @@ import {
     McdView,
     ServiceRegistry,
     AutoTakeProfitCommand,
+    MakerAdapter,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
-import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
+import { getCommandHash, getServiceNameHash, getValidatorHash, getAdapterNameHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -31,6 +32,7 @@ export interface DeployedSystem {
     autoTakeProfitCommand?: AutoTakeProfitCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
+    makerAdapter: MakerAdapter
 }
 
 export interface DeploySystemArgs {
@@ -98,7 +100,11 @@ export async function deploySystem({
         ethers.getContractFactory('AutomationBot'),
         [ServiceRegistryInstance.address],
     )
+    if (logDebug) console.log('Deploying AutomationBot....')
 
+    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
+        ServiceRegistryInstance.address,
+    ])
     const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
         ethers.getContractFactory('AutomationBotAggregator'),
         [ServiceRegistryInstance.address],
@@ -162,6 +168,7 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
+        console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
         console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
@@ -180,6 +187,7 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
+        makerAdapter: MakerAdapterInstance,
         automationBotAggregator: AutomationBotAggregatorInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
@@ -275,7 +283,10 @@ export async function configureRegistryEntries(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
         system.constantMultipleValidator.address,
     )
+    if (logDebug) console.log('Adding MAKER_ADAPTER to ServiceRegistry....')
+    await ensureServiceRegistryEntry(getAdapterNameHash(AdapterType.MAKER), system.makerAdapter.address)
 
+    getAdapterNameHash
     if (logDebug) console.log('Adding MCD_VIEW to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_VIEW), system.mcdView.address)
 

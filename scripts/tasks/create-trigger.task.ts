@@ -13,6 +13,7 @@ import {
     TriggerType,
     isLocalNetwork,
     getCommandAddress,
+    AdapterType,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
@@ -107,6 +108,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             args.type,
             triggerIdToReplace,
             triggerData,
+            AdapterType.MAKER,
         ])
 
         const info = [
