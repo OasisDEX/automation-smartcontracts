@@ -21,6 +21,7 @@ pragma solidity ^0.8.0;
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
 import "./interfaces/BotLike.sol";
+import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
@@ -33,18 +34,17 @@ contract AutomationBot {
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
-    mapping(uint256 => TriggerRecord) public activeTriggers;
-
-    uint256 public triggersCounter = 0;
-
     ServiceRegistry public immutable serviceRegistry;
+    AutomationBotStorage public immutable automationBotStorage;
     address public immutable self;
 
-    constructor(ServiceRegistry _serviceRegistry) {
+    constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {
         serviceRegistry = _serviceRegistry;
+        automationBotStorage = _automationBotStorage;
         self = address(this);
     }
 
@@ -118,17 +118,18 @@ contract AutomationBot {
         address commandAddress,
         bytes memory triggerData
     ) private view {
-        bytes32 triggersHash = activeTriggers[triggerId].triggerHash;
+        (bytes32 triggerHash, , ) = automationBotStorage.activeTriggers(triggerId);
 
         require(
-            triggersHash != bytes32(0) &&
-                triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
+            triggerHash != bytes32(0) &&
+                triggerHash == getTriggersHash(cdpId, triggerData, commandAddress),
             "bot/invalid-trigger"
         );
     }
 
     function checkTriggersExistenceAndCorrectness(uint256 cdpId, uint256 triggerId) private view {
-        require(activeTriggers[triggerId].cdpId == cdpId, "bot/invalid-trigger");
+        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(triggerId);
+        require(triggerCdpId == cdpId, "bot/invalid-trigger");
     }
 
     // works correctly in context of automationBot
@@ -151,23 +152,26 @@ contract AutomationBot {
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "bot/no-permissions");
 
-        triggersCounter = triggersCounter + 1;
-        activeTriggers[triggersCounter] = TriggerRecord(
-            getTriggersHash(cdpId, triggerData, commandAddress),
-            uint248(cdpId),
-            continuous
+        automationBotStorage.appendTriggerRecord(
+            AutomationBotStorage.TriggerRecord(
+                getTriggersHash(cdpId, triggerData, commandAddress),
+                uint248(cdpId),
+                continuous
+            )
         );
 
+        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
+
         if (replacedTriggerId != 0) {
-            require(
-                activeTriggers[replacedTriggerId].cdpId == cdpId,
-                "bot/trigger-removal-illegal"
+            require(triggerCdpId == cdpId, "bot/trigger-removal-illegal");
+            automationBotStorage.updateTriggerRecord(
+                replacedTriggerId,
+                AutomationBotStorage.TriggerRecord(0, 0, false)
             );
-            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0, false);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(
-            triggersCounter,
+            automationBotStorage.triggersCounter(),
             commandAddress,
             cdpId,
             continuous,
@@ -190,7 +194,10 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0, 0, false);
+        automationBotStorage.updateTriggerRecord(
+            triggerId,
+            AutomationBotStorage.TriggerRecord(0, 0, false)
+        );
         emit TriggerRemoved(cdpId, triggerId);
     }
 
@@ -305,8 +312,12 @@ contract AutomationBot {
 
         manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
-        if (!activeTriggers[triggerId].continuous) {
-            activeTriggers[triggerId] = TriggerRecord(0, 0, false);
+        (, , bool continous) = automationBotStorage.activeTriggers(triggerId);
+        if (!continous) {
+            automationBotStorage.updateTriggerRecord(
+                triggerId,
+                AutomationBotStorage.TriggerRecord(0, 0, false)
+            );
             emit TriggerRemoved(cdpId, triggerId);
         }
         manager.cdpAllow(cdpId, commandAddress, 0);

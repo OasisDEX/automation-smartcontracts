@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
 import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
+import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor, AutomationBotStorage } from '../typechain'
 import { DummyRollingCommand } from '../typechain/DummyRollingCommand'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
@@ -12,6 +12,7 @@ describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
+    let AutomationBotStorageInstance: AutomationBotStorage
     let AutomationExecutorInstance: AutomationExecutor
     let DummyCommandInstance: DummyCommand
     let DummyRollingCommandInstance: DummyRollingCommand
@@ -50,6 +51,7 @@ describe('AutomationBot', async () => {
 
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
+        AutomationBotStorageInstance = system.automationBotStorage
         AutomationExecutorInstance = system.automationExecutor
 
         DssProxyActions = new Contract(hardhatUtils.addresses.DSS_PROXY_ACTIONS, [
@@ -138,7 +140,7 @@ describe('AutomationBot', async () => {
 
         it('should successfully create a trigger through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotInstance.triggersCounter()
+            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 triggerType,
@@ -147,7 +149,7 @@ describe('AutomationBot', async () => {
                 triggerData,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotInstance.triggersCounter()
+            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
 
@@ -191,7 +193,7 @@ describe('AutomationBot', async () => {
 
         it('should revert if removedTriggerId is incorrect if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            await AutomationBotInstance.triggersCounter()
+            await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                 testCdpId,
                 triggerType,
@@ -570,7 +572,7 @@ describe('AutomationBot', async () => {
             expect(triggerAddedEvent.args.cdpId.toNumber()).to.be.equal(firstTriggerAddedEvent.args.cdpId.toNumber())
             expect(triggerAddedEvent.args.triggerData).to.be.equal(firstTriggerAddedEvent.args.triggerData)
 
-            const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
+            const executedTriggerRecord = await AutomationBotStorageInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.cdpId).to.eq(testCdpId)
             expect(removalEventsCount).to.eq(0);
         })
@@ -631,7 +633,7 @@ describe('AutomationBot', async () => {
             expect(triggerAddedEvent.args.cdpId.toNumber()).to.be.equal(firstTriggerAddedEvent.args.cdpId.toNumber())
             expect(triggerAddedEvent.args.triggerData).to.be.equal(firstTriggerAddedEvent.args.triggerData)
 
-            const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
+            const executedTriggerRecord = await AutomationBotStorageInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.cdpId).to.eq(0)
             expect(removalEventsCount).to.eq(1);
         })

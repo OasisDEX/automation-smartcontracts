@@ -11,6 +11,7 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
+    AutomationBotStorage,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
@@ -21,6 +22,7 @@ export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
+    automationBotStorage: AutomationBotStorage
     automationBotAggregator: AutomationBotAggregator
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
@@ -91,9 +93,14 @@ export async function deploySystem({
     ])
 
     if (logDebug) console.log('Deploying AutomationBot....')
+    const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
+        ethers.getContractFactory('AutomationBotStorage'),
+        [ServiceRegistryInstance.address],
+    )
+
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [ServiceRegistryInstance.address],
+        [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
     )
 
     const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
@@ -154,6 +161,7 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
+        console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
         console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
@@ -171,6 +179,7 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
+        automationBotStorage: AutomationBotStorageInstance,
         automationBotAggregator: AutomationBotAggregatorInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
@@ -240,6 +249,12 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         system.automationBot.address,
+    )
+
+    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
+        system.automationBotStorage.address,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')

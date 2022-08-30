@@ -279,7 +279,7 @@ describe('BasicBuyCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
@@ -295,13 +295,13 @@ describe('BasicBuyCommand', () => {
             const targetRatio = new BigNumber(2.53).shiftedBy(4)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(events.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             expect(finalTriggerRecord.cdpId).to.eq(testCdpId)
             expect(finalTriggerRecord.continuous).to.eq(true)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)

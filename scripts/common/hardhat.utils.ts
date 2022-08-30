@@ -33,6 +33,10 @@ export class HardhatUtils {
             ),
             mcdUtils: await this.hre.ethers.getContractAt('McdUtils', this.addresses.AUTOMATION_MCD_UTILS),
             automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
+            automationBotStorage: await this.hre.ethers.getContractAt(
+                'AutomationBotStorage',
+                this.addresses.AUTOMATION_BOT_STORAGE,
+            ),
             automationBotAggregator: await this.hre.ethers.getContractAt(
                 'AutomationBotAggregator',
                 this.addresses.AUTOMATION_BOT_AGGREGATOR,

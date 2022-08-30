@@ -20,6 +20,7 @@
 pragma solidity ^0.8.0;
 
 import { AutomationBot } from "./AutomationBot.sol";
+import { AutomationBotStorage } from "./AutomationBotStorage.sol";
 import { ManagerLike } from "./interfaces/ManagerLike.sol";
 import { IValidator } from "./interfaces/IValidator.sol";
 import { ServiceRegistry } from "./ServiceRegistry.sol";
@@ -27,6 +28,7 @@ import { ServiceRegistry } from "./ServiceRegistry.sol";
 contract AutomationBotAggregator {
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_BOT_AGGREGATOR_KEY = "AUTOMATION_BOT_AGGREGATOR";
 
     ServiceRegistry public immutable serviceRegistry;
@@ -99,10 +101,13 @@ contract AutomationBotAggregator {
         external
         onlyDelegate
     {
+        AutomationBotStorage automationBotStorage = AutomationBotStorage(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT_STORAGE_KEY)
+        );
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            (, uint256 cdpId, ) = bot.activeTriggers(triggerIds[i]);
+            (, uint256 cdpId, ) = automationBotStorage.activeTriggers(triggerIds[i]);
             (bool status, ) = address(bot).delegatecall(
                 abi.encodeWithSelector(
                     bot.removeTrigger.selector,
@@ -129,7 +134,10 @@ contract AutomationBotAggregator {
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = validator.decode(triggersData);
 
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
-        uint256 firstTriggerId = bot.triggersCounter() + 1;
+        AutomationBotStorage automationBotStorage = AutomationBotStorage(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT_STORAGE_KEY)
+        );
+        uint256 firstTriggerId = automationBotStorage.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggersData.length);
         uint256 cdpId = cdpIds[0];
         for (uint256 i = 0; i < triggerTypes.length; i++) {
