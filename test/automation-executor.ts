@@ -337,14 +337,20 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
+
+            const expectedAmount = await UniswapV2Instance.getAmountsOut(amount, [
+                TestERC20Instance.address,
+                TestDAIInstance.address,
+            ])
+
             const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, true, amount, receiveAtLeast)
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            // account for 0.1% slippage
-            expect(daiBalanceAfter).to.be.gt(daiBalanceBefore.add(amount).mul(999).div(1000))
+
+            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(testTokenBalanceBefore.sub(amount)).to.be.eq(testTokenBalanceAfter)
         })
 
@@ -355,14 +361,20 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
+
+            const expectedAmount = await UniswapV2Instance.getAmountsOut(amount, [
+                TestDAIInstance.address,
+                TestERC20Instance.address,
+            ])
+
             const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, false, amount, receiveAtLeast)
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            // account for 0.1% slippage
-            expect(testTokenBalanceAfter).to.be.gt(testTokenBalanceBefore.add(amount).mul(999).div(1000))
+
+            expect(testTokenBalanceAfter.sub(testTokenBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
         it('should successfully execute swap dai for eth', async () => {
@@ -373,6 +385,11 @@ describe('AutomationExecutor', async () => {
                 hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
             ])
 
+            const expectedAmount = await UniswapV2Instance.getAmountsOut(amount, [
+                TestDAIInstance.address,
+                hardhatUtils.addresses.WETH,
+            ])
+
             const tx = AutomationExecutorInstance.swap(hardhatUtils.addresses.WETH, false, amount, receiveAtLeast)
 
             await expect(tx).not.to.be.reverted
@@ -380,8 +397,8 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
             ])
-            // account for 0.1% slippage
-            expect(ethBalanceAfter).to.be.gt(ethBalanceBefore.add(amount).mul(999).div(1000))
+
+            expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
         it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
