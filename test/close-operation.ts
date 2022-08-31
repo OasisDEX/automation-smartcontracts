@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 // Block dependent test, works for 13998517
 
-describe.only('CloseCommand', async () => {
+describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -147,7 +147,6 @@ describe.only('CloseCommand', async () => {
                         exchangeData,
                         serviceRegistry,
                     )
-
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                         Math.pow(2, 16) - 1,
@@ -155,9 +154,12 @@ describe.only('CloseCommand', async () => {
                         [0],
                         [triggerData],
                     ])
+                    
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })

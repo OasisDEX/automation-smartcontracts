@@ -43,11 +43,13 @@ contract AutomationBot {
     ServiceRegistry public immutable serviceRegistry;
     AutomationBotStorage public immutable automationBotStorage;
     address public immutable self;
+    uint256 private lockCount;
 
     constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {
         serviceRegistry = _serviceRegistry;
         automationBotStorage = _automationBotStorage;
         self = address(this);
+        lockCount = 0;
     }
 
     modifier auth(address caller) {
@@ -144,6 +146,8 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
+        lock();
+
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address commandAddress = getCommandAddress(triggerType);
 
@@ -203,6 +207,13 @@ contract AutomationBot {
         emit TriggerRemoved(cdpId, triggerId);
     }
 
+    function getTriggersCounter() private view returns (uint256) {
+        address automationBotStorageAddress = serviceRegistry.getRegisteredService(
+            AUTOMATION_BOT_STORAGE_KEY
+        );
+        return AutomationBotStorage(automationBotStorageAddress).triggersCounter();
+    }
+
     // works correctly in context of dsProxy
     function addTriggers(
         uint16 groupType,
@@ -226,7 +237,7 @@ contract AutomationBot {
             );
         }
 
-        uint256 firstTriggerId = automationBotStorage.triggersCounter() + 1;
+        uint256 firstTriggerId = getTriggersCounter();
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
@@ -243,13 +254,33 @@ contract AutomationBot {
             );
             triggerIds[i] = firstTriggerId + i;
         }
+        AutomationBot(automationBot).emitGroupDetails(groupType, cdpIds[0], triggerIds);
+    }
 
+    function unlock() private {
+        //To keep addRecord && emitGroupDetails atomic
+        require(lockCount > 0, "bot/not-locked");
+        lockCount = 0;
+    }
+
+    function lock() private {
+        //To keep addRecord && emitGroupDetails atomic
+        lockCount++;
+    }
+
+    function emitGroupDetails(
+        uint16 triggerGroupType,
+        uint256 cdpId,
+        uint256[] memory triggerIds
+    ) external {
+        require(lockCount == triggerIds.length, "bot/group-inconsistent");
+        unlock();
         automationBotStorage.increaseGroupCounter();
 
         emit TriggerGroupAdded(
             automationBotStorage.triggersGroupCounter(),
-            groupType,
-            cdpIds[0],
+            triggerGroupType,
+            cdpId,
             triggerIds
         );
     }
@@ -260,8 +291,12 @@ contract AutomationBot {
         returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
     {
         if (groupType == SINGLE_TRIGGER_GROUP_TYPE) {
+            cdpIds = new uint256[](triggerData.length);
+            triggerTypes = new uint256[](triggerData.length);
             (cdpIds[0], triggerTypes[0]) = abi.decode(triggerData[0], (uint256, uint16));
-        } else getValidatorAddress(groupType).decode(triggerData);
+        } else {
+            (cdpIds, triggerTypes) = getValidatorAddress(groupType).decode(triggerData);
+        }
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
