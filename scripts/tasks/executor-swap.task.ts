@@ -39,7 +39,6 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         }
 
         const executor = await hre.ethers.getContractAt('AutomationExecutor', addresses.AUTOMATION_EXECUTOR)
-        const executorExchange = await executor.exchange()
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
         if (!(await executor.callers(await signer.getAddress()))) {
@@ -56,7 +55,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         const swap = await getSwap(
             addresses.DAI,
             addresses.WETH,
-            executorExchange,
+            executor.address,
             args.amount.shiftedBy(18),
             args.slippage,
         )
@@ -70,27 +69,12 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
                 false,
                 args.amount.shiftedBy(18).toFixed(0),
                 receiveAtLeast.shiftedBy(18).toFixed(0),
-                swap.tx.to,
-                swap.tx.data,
             )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
-        const swapGasPrices = await hardhatUtils.getGasPrice()
         const tx = await executor
             .connect(signer)
-            .swap(
-                addresses.WETH,
-                false,
-                args.amount.shiftedBy(18).toFixed(0),
-                receiveAtLeast.shiftedBy(18).toFixed(0),
-                swap.tx.to,
-                swap.tx.data,
-                {
-                    gasLimit: gasEstimate.mul(11).div(10),
-                    maxFeePerGas: new BigNumber(swapGasPrices.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-                    maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
-                },
-            )
+            .swap(addresses.WETH, false, args.amount.shiftedBy(18).toFixed(0), receiveAtLeast.shiftedBy(18).toFixed(0))
         console.log(`Swap Transcaction Hash: ${tx.hash}`)
 
         const receipt = await tx.wait()

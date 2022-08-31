@@ -21,11 +21,14 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { AutomationExecutor } from "../AutomationExecutor.sol";
+import { IUniswapV2Router02 } from "../interfaces/IUniswapV2Router02.sol";
 
 contract AutomationSwap {
     using SafeERC20 for IERC20;
 
     address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+
+    IUniswapV2Router02 public immutable uniswapRouter;
 
     AutomationExecutor public immutable executor;
     IERC20 public immutable dai;
@@ -42,6 +45,7 @@ contract AutomationSwap {
         dai = _dai;
         owner = msg.sender;
         callers[owner] = true;
+        uniswapRouter = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
     modifier onlyOwner() {
@@ -79,16 +83,15 @@ contract AutomationSwap {
         address otherAsset,
         bool toDai,
         uint256 amount,
-        uint256 receiveAtLeast,
-        address callee,
-        bytes calldata withData
+        uint256 receiveAtLeast
     ) external auth(msg.sender) {
         require(receiver != address(0), "swap/receiver-zero-address");
         bool isEth = otherAsset == ETH_ADDRESS || otherAsset == address(0);
         // isEth && toDai - swap will fail
         // mock other asset as ERC20 if it's a swap to eth
         address other = isEth && !toDai ? address(dai) : otherAsset;
-        executor.swap(other, toDai, amount, 0, callee, withData);
+        executor.swap(other, toDai, amount, 0);
+
         if (isEth) {
             uint256 balance = address(this).balance;
             require(balance >= receiveAtLeast, "swap/received-less");

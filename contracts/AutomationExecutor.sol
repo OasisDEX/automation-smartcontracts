@@ -24,6 +24,7 @@ import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
+import { IUniswapV2Router02 } from "./interfaces/IUniswapV2Router02.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for IERC20;
@@ -31,11 +32,11 @@ contract AutomationExecutor {
     event CallerAdded(address indexed caller);
     event CallerRemoved(address indexed caller);
 
+    IUniswapV2Router02 public immutable uniswapRouter;
     BotLike public immutable bot;
     IERC20 public immutable dai;
     IWETH public immutable weth;
 
-    address public exchange;
     address public owner;
 
     mapping(address => bool) public callers;
@@ -43,15 +44,14 @@ contract AutomationExecutor {
     constructor(
         BotLike _bot,
         IERC20 _dai,
-        IWETH _weth,
-        address _exchange
+        IWETH _weth
     ) {
         bot = _bot;
         weth = _weth;
         dai = _dai;
-        exchange = _exchange;
         owner = msg.sender;
         callers[owner] = true;
+        uniswapRouter = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     }
 
     modifier onlyOwner() {
@@ -67,11 +67,6 @@ contract AutomationExecutor {
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "executor/invalid-new-owner");
         owner = newOwner;
-    }
-
-    function setExchange(address newExchange) external onlyOwner {
-        require(newExchange != address(0), "executor/invalid-new-exchange");
-        exchange = newExchange;
     }
 
     function addCallers(address[] calldata _callers) external onlyOwner {
@@ -122,32 +117,44 @@ contract AutomationExecutor {
         address otherAsset,
         bool toDai,
         uint256 amount,
-        uint256 receiveAtLeast,
-        address callee,
-        bytes calldata withData
+        uint256 receiveAtLeast
     ) external auth(msg.sender) {
         IERC20 fromToken = toDai ? IERC20(otherAsset) : dai;
+        bool eth = otherAsset == address(weth);
+
         require(
             amount > 0 && amount <= fromToken.balanceOf(address(this)),
             "executor/invalid-amount"
         );
 
-        fromToken.safeApprove(exchange, amount);
-        if (toDai) {
-            IExchange(exchange).swapTokenForDai(
-                otherAsset,
+        fromToken.safeApprove(address(uniswapRouter), amount);
+
+        address[] memory path = new address[](2);
+
+        if (eth && !toDai) {
+            path[0] = address(dai);
+            path[1] = address(weth);
+            uniswapRouter.swapExactTokensForETH(
                 amount,
                 receiveAtLeast,
-                callee,
-                withData
+                path,
+                address(this),
+                block.timestamp
             );
         } else {
-            IExchange(exchange).swapDaiForToken(
-                otherAsset,
+            if (toDai) {
+                path[0] = address(otherAsset);
+                path[1] = address(dai);
+            } else {
+                path[0] = address(dai);
+                path[1] = address(otherAsset);
+            }
+            uniswapRouter.swapExactTokensForTokens(
                 amount,
                 receiveAtLeast,
-                callee,
-                withData
+                path,
+                address(this),
+                block.timestamp
             );
         }
     }

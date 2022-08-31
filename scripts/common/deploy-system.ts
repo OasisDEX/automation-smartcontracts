@@ -108,12 +108,7 @@ export async function deploySystem({
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [
-            AutomationBotInstance.address,
-            addresses.DAI,
-            addresses.WETH,
-            utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
-        ],
+        [AutomationBotInstance.address, addresses.DAI, addresses.WETH],
     )
 
     if (logDebug) console.log('Deploying AutomationSwap....')
