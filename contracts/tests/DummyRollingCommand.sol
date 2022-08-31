@@ -30,12 +30,12 @@ contract DummyRollingCommand is DummyCommand {
 
     function execute(
         bytes calldata,
-        uint256 cdpId,
+        bytes memory identifier,
         bytes memory triggerData
     ) external override {
         bytes memory addTriggerCallData = abi.encodeWithSelector(
             AutomationBot(msg.sender).addTrigger.selector,
-            cdpId,
+            identifier,
             triggerType,
             0,
             triggerData

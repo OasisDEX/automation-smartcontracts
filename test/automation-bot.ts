@@ -20,7 +20,8 @@ import {
 } from '../typechain'
 import { DummyRollingCommand } from '../typechain/DummyRollingCommand'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const cdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = utils.defaultAbiCoder.encode(['uint256'], [cdpId])
 
 describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
@@ -134,7 +135,13 @@ describe('AutomationBot', async () => {
         )
 
         it('should fail if called not through delegatecall', async () => {
-            const tx = AutomationBotInstance.addTrigger(1, triggerType, 0, triggerData, AdapterType.MAKER)
+            const tx = AutomationBotInstance.addTrigger(
+                hre.ethers.utils.hexZeroPad('0x1', 16),
+                triggerType,
+                0,
+                triggerData,
+                AdapterType.MAKER,
+            )
             await expect(tx).to.be.revertedWith('bot/only-delegate')
         })
 
@@ -174,7 +181,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
+            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, cdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
             const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, 0, triggerData)
@@ -184,7 +191,7 @@ describe('AutomationBot', async () => {
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
 
-            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
+            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, cdpId, signerAddress, 0)
             await expect(cdpDisallowTx).not.to.be.reverted
         })
 
@@ -233,7 +240,7 @@ describe('AutomationBot', async () => {
         })
 
         it('should return false for bad operator address', async () => {
-            const status = await AutomationBotInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 '0x1234123412341234123412341234123412341234',
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -241,17 +248,13 @@ describe('AutomationBot', async () => {
             expect(status).to.equal(false, 'approval returned for random address')
         })
 
-        it.only('should return true for correct operator address', async () => {
-            console.log('^^^^^^^^^^^^^^^^^^^^^^^^')
-            console.log(testCdpId)
-            console.log(AutomationBotInstance.address)
-            console.log(hardhatUtils.addresses.CDP_MANAGER)
-            console.log('^^^^^^^^^^^^^^^^^^^^^^^^')
-            const status = await MakerAdapterInstance.isCdpAllowed(
+        it('should return true for correct operator address', async () => {
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address.toLowerCase(),
                 hardhatUtils.addresses.CDP_MANAGER,
             )
+
             expect(status).to.equal(true, 'approval do not exist for AutomationBot')
         })
     })
@@ -269,7 +272,7 @@ describe('AutomationBot', async () => {
         })
 
         it('allows to add approval to cdp which did not have it', async () => {
-            let status = await AutomationBotInstance.isCdpAllowed(
+            let status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -285,7 +288,7 @@ describe('AutomationBot', async () => {
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await AutomationBotInstance.isCdpAllowed(
+            status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -339,7 +342,7 @@ describe('AutomationBot', async () => {
         })
 
         it('allows to remove approval from cdp for which it was granted', async () => {
-            let status = await AutomationBotInstance.isCdpAllowed(
+            let status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -355,7 +358,7 @@ describe('AutomationBot', async () => {
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await AutomationBotInstance.isCdpAllowed(
+            status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -412,13 +415,13 @@ describe('AutomationBot', async () => {
             const txRes = await tx.wait()
 
             const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
-            triggerId = event.args.triggerId.toNumber()
+            triggerId = event.args[0].toNumber()
         })
 
         it('should fail if trying to remove trigger that does not exist', async () => {
             const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTrigger', [
-                123,
+                hre.ethers.utils.hexZeroPad('0x1', 16),
                 triggerId + 1,
                 false,
             ])
@@ -427,7 +430,7 @@ describe('AutomationBot', async () => {
 
             await expect(tx).to.be.reverted
 
-            const status = await AutomationBotInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -443,7 +446,7 @@ describe('AutomationBot', async () => {
                 false,
             ])
 
-            let status = await AutomationBotInstance.isCdpAllowed(
+            let status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -452,7 +455,7 @@ describe('AutomationBot', async () => {
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await AutomationBotInstance.isCdpAllowed(
+            status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -468,7 +471,7 @@ describe('AutomationBot', async () => {
                 true,
             ])
 
-            let status = await AutomationBotInstance.isCdpAllowed(
+            let status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -477,7 +480,7 @@ describe('AutomationBot', async () => {
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await AutomationBotInstance.isCdpAllowed(
+            status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -521,7 +524,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
+            const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, cdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
             const tx2 = AutomationBotInstance.connect(signer).removeRecord(testCdpId, triggerId)
@@ -531,7 +534,7 @@ describe('AutomationBot', async () => {
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
             expect(events.length).to.be.equal(1)
 
-            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 0)
+            const cdpDisallowTx = executeCdpAllow(ownerProxy, proxyOwner, cdpId, signerAddress, 0)
             await expect(cdpDisallowTx).not.to.be.reverted
         })
     })
@@ -556,7 +559,7 @@ describe('AutomationBot', async () => {
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             ).wait()
             firstTriggerAddedEvent = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))[0]
-            triggerId = firstTriggerAddedEvent.args.triggerId.toNumber()
+            triggerId = firstTriggerAddedEvent.args[0].toNumber()
         })
 
         it('should work', async () => {
@@ -589,7 +592,7 @@ describe('AutomationBot', async () => {
             expect(triggerAddedEvent.args.triggerData).to.be.equal(firstTriggerAddedEvent.args.triggerData)
 
             const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
-            expect(executedTriggerRecord.cdpId).to.eq(0)
+            expect(executedTriggerRecord.identifier).to.eq(0)
         })
     })
 
@@ -613,7 +616,7 @@ describe('AutomationBot', async () => {
             const txRes = await tx.wait()
 
             const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
-            triggerId = event.args.triggerId.toNumber()
+            triggerId = event.args[0].toNumber()
         })
 
         beforeEach(async () => {

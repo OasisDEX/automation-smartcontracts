@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 interface BotLike {
     function addRecord(
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData
@@ -12,13 +12,13 @@ interface BotLike {
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         //msg.sender should be dsProxy
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerId
     ) external;
 
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
+        bytes memory identifier,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,

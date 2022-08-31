@@ -26,6 +26,12 @@ import "../McdView.sol";
 import "../McdUtils.sol";
 
 interface IAdapter {
+    function canCall(
+        bytes memory identifier,
+        address operator,
+        ManagerLike manager
+    ) external returns (bool);
+
     function permit(
         bytes memory identifier,
         address target,

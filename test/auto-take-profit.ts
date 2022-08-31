@@ -10,10 +10,12 @@ import {
     TriggerType,
     ONE_INCH_V4_ROUTER,
     generateTpOrSlExecutionData,
+    AdapterType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const cdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = utils.defaultAbiCoder.encode(['uint256'], [cdpId])
 
 describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -142,12 +144,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggerData = encodeTriggerData(
-                        testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
-                        nextPrice.add('1000'),
-                        1000,
-                    )
+                    triggerData = encodeTriggerData(cdpId, TriggerType.AUTO_TP_COLLATERAL, nextPrice.add('1000'), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -163,6 +160,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         TriggerType.AUTO_TP_COLLATERAL,
                         0,
                         triggerData,
+                        AdapterType.MAKER,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -212,12 +210,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggerData = encodeTriggerData(
-                        testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
-                        nextPrice.sub(1000),
-                        1000,
-                    )
+                    triggerData = encodeTriggerData(cdpId, TriggerType.AUTO_TP_COLLATERAL, nextPrice.sub(1000), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -233,6 +226,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         TriggerType.AUTO_TP_COLLATERAL,
                         0,
                         triggerData,
+                        AdapterType.MAKER,
                     ])
 
                     // manipulate the next price to pass the trigger validation
@@ -383,7 +377,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
+                    triggerData = encodeTriggerData(cdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -399,6 +393,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         TriggerType.AUTO_TP_DAI,
                         0,
                         triggerData,
+                        AdapterType.MAKER,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -438,7 +433,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.sub(1000), 1000)
+                    triggerData = encodeTriggerData(cdpId, TriggerType.AUTO_TP_DAI, nextPrice.sub(1000), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -454,6 +449,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         TriggerType.AUTO_TP_DAI,
                         0,
                         triggerData,
+                        AdapterType.MAKER,
                     ])
 
                     // manipulate the next price to pass the trigger validation

@@ -30,7 +30,7 @@ contract BasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
 
     struct BasicSellTriggerData {
-        uint256 cdpId;
+        bytes identifier;
         uint16 triggerType;
         uint256 execCollRatio;
         uint256 targetCollRatio;
@@ -46,31 +46,34 @@ contract BasicSellCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
+    function isTriggerDataValid(bytes memory identifier, bytes memory triggerData)
         external
         pure
         returns (bool)
     {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
+        uint256 _cdpId = abi.decode(identifier, (uint256));
+        uint256 cdpId = abi.decode(trigger.identifier, (uint256));
         (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
         return
-            _cdpId == trigger.cdpId &&
+            _cdpId == cdpId &&
             trigger.triggerType == 4 &&
             trigger.execCollRatio <= lowerTarget &&
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
+    function isExecutionLegal(bytes memory identifier, bytes memory triggerData)
         external
         view
         returns (bool)
     {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
-        (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
+        uint256 cdpId = abi.decode(identifier, (uint256));
+        (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(
+            identifier
+        );
         uint256 dustLimit = getDustLimit(ilk);
-        uint256 debt = getVaultDebt(cdpId);
+        uint256 debt = getVaultDebt(identifier);
         uint256 wad = RatioUtils.WAD;
         uint256 futureDebt = (debt * nextCollRatio - debt * wad) /
             (trigger.targetCollRatio.wad() - wad);
@@ -89,28 +92,28 @@ contract BasicSellCommand is BaseMPACommand {
 
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
+        bytes memory identifier,
         bytes memory triggerData
     ) external {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         validateTriggerType(trigger.triggerType, 4);
         validateSelector(MPALike.decreaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
         if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            recreateTrigger(identifier, trigger.triggerType, triggerData);
         }
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
+    function isExecutionCorrect(bytes memory identifier, bytes memory triggerData)
         external
         view
         returns (bool)
     {
         BasicSellTriggerData memory trigger = decode(triggerData);
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 

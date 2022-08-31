@@ -11,12 +11,16 @@ import {
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
-import { TriggerGroupType, TriggerType } from '../scripts/common'
+import { TriggerGroupType, TriggerType, AdapterType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
+import { MakerAdapter } from '../typechain/MakerAdapter'
 
-const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
+const cdpId = parseInt(process.env.CDP_ID || '13288')
+const testCdpId = utils.defaultAbiCoder.encode(['bytes'], [cdpId])
+
+const beforeCdpId = parseInt(process.env.CDP_ID_2 || '26125')
+const beforeTestCdpId = utils.defaultAbiCoder.encode(['bytes'], [cdpId])
 const maxGweiPrice = 1000
 
 function toRatio(units: number) {
@@ -34,6 +38,7 @@ describe('AutomationAggregatorBot', async () => {
     let beforeOwnerProxyUserAddress: string
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
+    let MakerAdapterInstance: MakerAdapter
 
     let system: DeployedSystem
     let MPAInstance: MPALike
@@ -52,6 +57,7 @@ describe('AutomationAggregatorBot', async () => {
 
         AutomationBotInstance = system.automationBot
         AutomationBotAggregatorInstance = system.automationBotAggregator
+        MakerAdapterInstance = system.makerAdapter
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
@@ -78,6 +84,7 @@ describe('AutomationAggregatorBot', async () => {
                 triggerType,
                 0,
                 triggerData,
+                AdapterType.MAKER,
             ])
             const signer = await hardhatUtils.impersonate(ownerProxyUserAddress)
             return ownerProxy.connect(signer).execute(system.automationBot.address, data)
@@ -100,7 +107,7 @@ describe('AutomationAggregatorBot', async () => {
 
         // basic buy
         const bbTriggerData = encodeTriggerData(
-            testCdpId,
+            cdpId,
             TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
@@ -111,7 +118,7 @@ describe('AutomationAggregatorBot', async () => {
         )
         // basic sell
         const bsTriggerData = encodeTriggerData(
-            testCdpId,
+            cdpId,
             TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
@@ -125,7 +132,7 @@ describe('AutomationAggregatorBot', async () => {
         const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
-            beforeTestCdpId,
+            beforeCdpId,
             TriggerType.BASIC_BUY,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
@@ -136,7 +143,7 @@ describe('AutomationAggregatorBot', async () => {
         )
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
-            beforeTestCdpId,
+            beforeCdpId,
             TriggerType.BASIC_SELL,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
@@ -290,7 +297,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should successfully create a trigger group, remove old bb and add new bb in its place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -327,7 +334,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             // basic sell
             const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -337,7 +344,7 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
             const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_SELL,
                 sellExecutionRatio,
                 sellTargetRatio,
@@ -362,7 +369,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should successfully create a trigger group, remove old bb and old bs - add new bs and bb in their place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -372,7 +379,7 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
             const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_SELL,
                 sellExecutionRatio,
                 sellTargetRatio,
@@ -408,7 +415,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should successfully create a trigger group, remove old bbs - add new bs and bb in their place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -445,7 +452,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should successfully create a trigger group, remove old bb and old bs - add new bs and bb in their place - reverse order', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -455,7 +462,7 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
             const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_SELL,
                 sellExecutionRatio,
                 sellTargetRatio,
@@ -561,7 +568,7 @@ describe('AutomationAggregatorBot', async () => {
 
         // basic buy
         const bbTriggerData = encodeTriggerData(
-            testCdpId,
+            cdpId,
             TriggerType.BASIC_BUY,
             buyExecutionRatio,
             buyTargetRatio,
@@ -572,7 +579,7 @@ describe('AutomationAggregatorBot', async () => {
         )
         // basic sell
         const bsTriggerData = encodeTriggerData(
-            testCdpId,
+            cdpId,
             TriggerType.BASIC_SELL,
             sellExecutionRatio,
             sellTargetRatio,
@@ -585,7 +592,7 @@ describe('AutomationAggregatorBot', async () => {
         const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
-            beforeTestCdpId,
+            cdpId,
             TriggerType.BASIC_BUY,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
@@ -596,7 +603,7 @@ describe('AutomationAggregatorBot', async () => {
         )
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
-            beforeTestCdpId,
+            cdpId,
             TriggerType.BASIC_SELL,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
@@ -649,7 +656,7 @@ describe('AutomationAggregatorBot', async () => {
                 false,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove)
-            const status = await AutomationBotInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -665,7 +672,7 @@ describe('AutomationAggregatorBot', async () => {
                 true,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupplyRemove)
-            const status = await AutomationBotInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -718,7 +725,7 @@ describe('AutomationAggregatorBot', async () => {
 
             // basic buy
             const bbTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_BUY,
                 buyExecutionRatio,
                 buyTargetRatio,
@@ -729,7 +736,7 @@ describe('AutomationAggregatorBot', async () => {
             )
             // basic sell
             const bsTriggerData = encodeTriggerData(
-                testCdpId,
+                cdpId,
                 TriggerType.BASIC_SELL,
                 sellExecutionRatio,
                 sellTargetRatio,
@@ -749,7 +756,7 @@ describe('AutomationAggregatorBot', async () => {
         })
 
         it('should return false for bad operator address', async () => {
-            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 generateRandomAddress(),
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -758,7 +765,7 @@ describe('AutomationAggregatorBot', async () => {
         })
 
         it('should return true for correct operator address', async () => {
-            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,
@@ -766,7 +773,7 @@ describe('AutomationAggregatorBot', async () => {
             expect(status).to.equal(true, 'approval does not exist for AutomationBot')
         })
         it('should return false for correct operator address', async () => {
-            const status = await AutomationBotAggregatorInstance.isCdpAllowed(
+            const status = await MakerAdapterInstance.canCall(
                 testCdpId,
                 AutomationBotAggregatorInstance.address,
                 hardhatUtils.addresses.CDP_MANAGER,

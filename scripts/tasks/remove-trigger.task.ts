@@ -24,11 +24,11 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
         const triggerInfo = await bot.activeTriggers(args.id.toString())
-        if (triggerInfo.cdpId.eq(0)) {
+        if (triggerInfo.identifier == '0x0') {
             throw new Error(`Trigger with id ${args.id.toString()} is not active`)
         }
 
-        const vault = triggerInfo.cdpId.toString()
+        const vault = triggerInfo.identifier.toString()
         console.log(`Vault: ${vault}`)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)

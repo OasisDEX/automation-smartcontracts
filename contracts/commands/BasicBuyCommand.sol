@@ -32,7 +32,7 @@ contract BasicBuyCommand is BaseMPACommand {
     using RatioUtils for uint256;
 
     struct BasicBuyTriggerData {
-        uint256 cdpId;
+        bytes identifier;
         uint16 triggerType;
         uint256 execCollRatio;
         uint256 targetCollRatio;
@@ -48,15 +48,16 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
+    function isTriggerDataValid(bytes memory identifier, bytes memory triggerData)
         external
         view
         returns (bool)
     {
         BasicBuyTriggerData memory trigger = decode(triggerData);
-
+        uint256 _cdpId = abi.decode(identifier, (uint256));
+        uint256 cdpId = abi.decode(trigger.identifier, (uint256));
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(trigger.cdpId);
+        bytes32 ilk = manager.ilks(cdpId);
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
@@ -64,27 +65,27 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.deviation
         );
         return
-            _cdpId == trigger.cdpId &&
+            _cdpId == cdpId &&
             trigger.triggerType == 3 &&
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
+    function isExecutionLegal(bytes memory identifier, bytes memory triggerData)
         external
         view
         returns (bool)
     {
         BasicBuyTriggerData memory trigger = decode(triggerData);
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         (
             ,
             uint256 nextCollRatio,
             uint256 currPrice,
             uint256 nextPrice,
             bytes32 ilk
-        ) = getVaultAndMarketInfo(cdpId);
+        ) = getVaultAndMarketInfo(identifier);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
@@ -99,28 +100,28 @@ contract BasicBuyCommand is BaseMPACommand {
 
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
+        bytes memory identifier,
         bytes memory triggerData
     ) external {
         BasicBuyTriggerData memory trigger = decode(triggerData);
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         validateTriggerType(trigger.triggerType, 3);
         validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
 
         if (trigger.continuous) {
-            recreateTrigger(cdpId, trigger.triggerType, triggerData);
+            recreateTrigger(identifier, trigger.triggerType, triggerData);
         }
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
+    function isExecutionCorrect(bytes memory identifier, bytes memory triggerData)
         external
         view
         returns (bool)
     {
         BasicBuyTriggerData memory trigger = decode(triggerData);
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
 

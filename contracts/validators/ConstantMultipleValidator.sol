@@ -38,12 +38,12 @@ contract ConstantMultipleValidator is IValidator {
     function decode(bytes[] memory triggerData)
         public
         pure
-        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
+        returns (bytes[] memory identifiers, uint256[] memory triggerTypes)
     {
-        cdpIds = new uint256[](triggerData.length);
+        identifiers = new bytes[](triggerData.length);
         triggerTypes = new uint256[](triggerData.length);
         for (uint256 i = 0; i < triggerData.length; i++) {
-            (cdpIds[i], triggerTypes[i]) = abi.decode(triggerData[i], (uint256, uint16));
+            (identifiers[i], triggerTypes[i]) = abi.decode(triggerData[i], (bytes, uint16));
         }
     }
 
@@ -53,9 +53,9 @@ contract ConstantMultipleValidator is IValidator {
         returns (bool)
     {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
-        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
+        (bytes[] memory identifiers, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
-        require(cdpIds[0] == cdpIds[1], "validator/different-cdps");
+        require(keccak256(identifiers[0]) == keccak256(identifiers[1]), "validator/different-cdps");
         GenericTriggerData memory buyTriggerData = abi.decode(
             triggersData[0],
             (GenericTriggerData)

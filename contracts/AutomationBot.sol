@@ -29,7 +29,7 @@ import "hardhat/console.sol";
 contract AutomationBot {
     struct TriggerRecord {
         bytes32 triggerHash;
-        uint256 cdpId;
+        bytes identifier;
     }
 
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -62,41 +62,6 @@ contract AutomationBot {
         _;
     }
 
-    // works correctly in any context
-    function validatePermissions(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) private view {
-        require(isCdpOwner(cdpId, operator, manager), "bot/no-permissions");
-    }
-
-    // works correctly in any context
-    function isCdpAllowed(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) public view returns (bool) {
-        address cdpOwner = manager.owns(cdpId);
-        console.log("------------------");
-        console.log("isCdpAllowedBot");
-        console.log(operator);
-        console.log(cdpId);
-        console.log(manager.cdpCan(cdpOwner, cdpId, operator) == 1);
-        console.log("------------------");
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-    }
-
-    // works correctly in any context
-    function isCdpOwner(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) private view returns (bool) {
-        return (operator == manager.owns(cdpId));
-    }
-
-    // works correctly in any context
     function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
 
@@ -115,12 +80,12 @@ contract AutomationBot {
 
     // works correctly in any context
     function getTriggersHash(
-        uint256 cdpId,
+        bytes memory identifier,
         bytes memory triggerData,
         address commandAddress
     ) private view returns (bytes32) {
         bytes32 triggersHash = keccak256(
-            abi.encodePacked(cdpId, triggerData, serviceRegistry, commandAddress)
+            abi.encodePacked(identifier, triggerData, serviceRegistry, commandAddress)
         );
 
         return triggersHash;
@@ -128,7 +93,7 @@ contract AutomationBot {
 
     // works correctly in context of Automation Bot
     function checkTriggersExistenceAndCorrectness(
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerId,
         address commandAddress,
         bytes memory triggerData
@@ -137,20 +102,27 @@ contract AutomationBot {
 
         require(
             triggersHash != bytes32(0) &&
-                triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
+                triggersHash == getTriggersHash(identifier, triggerData, commandAddress),
             "bot/invalid-trigger"
         );
     }
 
-    function checkTriggersExistenceAndCorrectness(uint256 cdpId, uint256 triggerId) private view {
-        require(activeTriggers[triggerId].cdpId == cdpId, "bot/invalid-trigger");
+    function checkTriggersExistenceAndCorrectness(bytes memory identifier, uint256 triggerId)
+        private
+        view
+    {
+        require(
+            keccak256(abi.encode(activeTriggers[triggerId].identifier)) ==
+                keccak256(abi.encode(identifier)),
+            "bot/invalid-trigger"
+        );
     }
 
     // works correctly in context of automationBot
     function addRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData
@@ -159,64 +131,71 @@ contract AutomationBot {
         address commandAddress = getCommandAddress(triggerType);
 
         require(
-            ICommand(commandAddress).isTriggerDataValid(cdpId, triggerData),
+            ICommand(commandAddress).isTriggerDataValid(identifier, triggerData),
             "bot/invalid-trigger-data"
         );
+        IAdapter adapter = IAdapter(getAdapterAddress(1));
 
-        require(isCdpAllowed(cdpId, msg.sender, manager), "bot/no-permissions");
+        console.logBytes(identifier);
+        require(adapter.canCall(identifier, msg.sender, manager), "bot/no-permissions");
 
         triggersCounter = triggersCounter + 1;
         activeTriggers[triggersCounter] = TriggerRecord(
-            getTriggersHash(cdpId, triggerData, commandAddress),
-            cdpId
+            getTriggersHash(identifier, triggerData, commandAddress),
+            identifier
         );
 
         if (replacedTriggerId != 0) {
             require(
-                activeTriggers[replacedTriggerId].cdpId == cdpId,
+                keccak256(abi.encode(activeTriggers[replacedTriggerId].identifier)) ==
+                    keccak256(abi.encode(identifier)),
                 "bot/trigger-removal-illegal"
             );
-            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0);
-            emit TriggerRemoved(cdpId, replacedTriggerId);
+            activeTriggers[replacedTriggerId] = TriggerRecord(0, "0x0");
+            emit TriggerRemoved(identifier, replacedTriggerId);
         }
-        emit TriggerAdded(triggersCounter, commandAddress, cdpId, triggerData);
+        emit TriggerAdded(triggersCounter, commandAddress, identifier, triggerData);
     }
 
     // works correctly in context of automationBot
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerId
     ) external {
         address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
 
-        require(isCdpAllowed(cdpId, msg.sender, ManagerLike(managerAddress)), "bot/no-permissions");
+        IAdapter adapter = IAdapter(getAdapterAddress(1));
+
+        require(
+            adapter.canCall(identifier, msg.sender, ManagerLike(managerAddress)),
+            "bot/no-permissions"
+        );
         // validatePermissions(cdpId, msg.sender, ManagerLike(managerAddress));
 
-        checkTriggersExistenceAndCorrectness(cdpId, triggerId);
+        checkTriggersExistenceAndCorrectness(identifier, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0, 0);
-        emit TriggerRemoved(cdpId, triggerId);
+        activeTriggers[triggerId] = TriggerRecord(0, "0x0");
+        emit TriggerRemoved(identifier, triggerId);
     }
 
     //works correctly in context of dsProxy
     function addTrigger(
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerType,
         uint256 replacedTriggerId,
         bytes memory triggerData,
         uint256 adapterType
     ) external onlyDelegate {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        BotLike(automationBot).addRecord(cdpId, triggerType, replacedTriggerId, triggerData);
-        console.log("add");
-        console.log(automationBot);
+        BotLike(automationBot).addRecord(identifier, triggerType, replacedTriggerId, triggerData);
         IAdapter adapter = IAdapter(getAdapterAddress(adapterType));
-        bytes memory identifier = abi.encode(cdpId);
+
         (bool status, ) = address(adapter).delegatecall(
             abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, true)
         );
+        require(status, "failed");
     }
 
     //works correctly in context of dsProxy
@@ -226,7 +205,7 @@ contract AutomationBot {
     // despite there still be some active triggers which will be disables by this call.
     // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
     function removeTrigger(
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 triggerId,
         bool removeAllowance
     ) external onlyDelegate {
@@ -235,103 +214,110 @@ contract AutomationBot {
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
-        BotLike(automationBot).removeRecord(cdpId, triggerId);
+        BotLike(automationBot).removeRecord(identifier, triggerId);
 
         if (removeAllowance) {
             IAdapter adapter = IAdapter(getAdapterAddress(1));
-            bytes memory identifier = abi.encode(cdpId);
+
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, false)
             );
-            emit ApprovalRemoved(cdpId, automationBot);
+            emit ApprovalRemoved(identifier, automationBot);
         }
 
-        emit TriggerRemoved(cdpId, triggerId);
+        emit TriggerRemoved(identifier, triggerId);
     }
 
     //works correctly in context of dsProxy
-    function removeApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
+    function removeApproval(ServiceRegistry _serviceRegistry, bytes memory identifier)
+        external
+        onlyDelegate
+    {
         // moved to adapter
-        //emit ApprovalRemoved(cdpId, approvedEntity);
+        //emit ApprovalRemoved(identifier, approvedEntity);
     }
 
     //works correctly in context of dsProxy
-    function grantApproval(ServiceRegistry _serviceRegistry, uint256 cdpId) external onlyDelegate {
+    function grantApproval(ServiceRegistry _serviceRegistry, bytes memory identifier)
+        external
+        onlyDelegate
+    {
         // moved to adapter
-        //emit ApprovalGranted(cdpId, approvedEntity);
+        //emit ApprovalGranted(identifier, approvedEntity);
     }
 
     //works correctly in context of dsProxy
     function changeApprovalStatus(
         ServiceRegistry _serviceRegistry,
-        uint256 cdpId,
+        bytes memory identifier,
         uint256 status
     ) private returns (address) {
         // moved to adapter
     }
 
-    function drawDaiFromVault(
-        uint256 cdpId,
-        ManagerLike manager,
-        uint256 daiCoverage
-    ) internal {
-        address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-
-        McdUtils utils = McdUtils(utilsAddress);
-        manager.cdpAllow(cdpId, utilsAddress, 1);
-        utils.drawDebt(daiCoverage, cdpId, manager, msg.sender);
-        manager.cdpAllow(cdpId, utilsAddress, 0);
-    }
-
     //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
+        bytes memory identifier,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
         uint256 daiCoverage
     ) external auth(msg.sender) {
-        checkTriggersExistenceAndCorrectness(cdpId, triggerId, commandAddress, triggerData);
+        checkTriggersExistenceAndCorrectness(identifier, triggerId, commandAddress, triggerData);
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         // todo : adapter type
         {
             IAdapter adapter = IAdapter(getAdapterAddress(1));
-            bytes memory identifier = abi.encode(cdpId);
+
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(adapter.permit.selector, identifier, automationBot, true)
             );
+
+            require(status, "bot/permit-failed");
             // todo: address
             address token = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-            adapter.getCoverage(identifier, msg.sender, token, daiCoverage);
+
+            (bool status2, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(
+                    adapter.getCoverage.selector,
+                    identifier,
+                    msg.sender,
+                    token,
+                    daiCoverage
+                )
+            );
+            require(status2, "bot/coverage-failed");
+
+            //adapter.getCoverage(identifier, msg.sender, token, daiCoverage);
         }
 
         ICommand command = ICommand(commandAddress);
-        require(command.isExecutionLegal(cdpId, triggerData), "bot/trigger-execution-illegal");
+        require(command.isExecutionLegal(identifier, triggerData), "bot/trigger-execution-illegal");
 
-        manager.cdpAllow(cdpId, commandAddress, 1);
-        command.execute(executionData, cdpId, triggerData);
-        activeTriggers[triggerId] = TriggerRecord(0, 0);
-        manager.cdpAllow(cdpId, commandAddress, 0);
+        // manager.cdpAllow(cdpId, commandAddress, 1);
+        command.execute(executionData, identifier, triggerData);
+        activeTriggers[triggerId] = TriggerRecord(0, "0x0");
+        //manager.cdpAllow(cdpId, commandAddress, 0);
 
-        require(command.isExecutionCorrect(cdpId, triggerData), "bot/trigger-execution-wrong");
+        require(command.isExecutionCorrect(identifier, triggerData), "bot/trigger-execution-wrong");
 
-        emit TriggerExecuted(triggerId, cdpId, executionData);
+        emit TriggerExecuted(triggerId, identifier, executionData);
     }
 
-    event ApprovalRemoved(uint256 indexed cdpId, address approvedEntity);
+    event ApprovalRemoved(bytes indexed identifier, address approvedEntity);
 
-    event ApprovalGranted(uint256 indexed cdpId, address approvedEntity);
+    event ApprovalGranted(bytes indexed identifier, address approvedEntity);
 
-    event TriggerRemoved(uint256 indexed cdpId, uint256 indexed triggerId);
+    event TriggerRemoved(bytes indexed identifier, uint256 indexed triggerId);
 
     event TriggerAdded(
         uint256 indexed triggerId,
         address indexed commandAddress,
-        uint256 indexed cdpId,
+        bytes indexed identifier,
         bytes triggerData
     );
 
-    event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData);
+    event TriggerExecuted(uint256 indexed triggerId, bytes indexed identifier, bytes executionData);
 }

@@ -30,16 +30,23 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
     struct AutoTakeProfitTriggerData {
-        uint256 cdpId;
+        bytes identifier;
         uint16 triggerType;
         uint256 executionPrice;
         uint32 maxBaseFeeInGwei;
     }
 
     /// @notice Returns the correctness of the vault state post execution of the command.
-    /// @param cdpId The CDP id
+    /// @param identifier The CDP id
     /// @return Correctness of the trigger execution
-    function isExecutionCorrect(uint256 cdpId, bytes memory) external view override returns (bool) {
+    function isExecutionCorrect(bytes memory identifier, bytes memory)
+        external
+        view
+        override
+        returns (bool)
+    {
+        uint256 cdpId = abi.decode(identifier, (uint256));
+
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
@@ -47,10 +54,10 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     }
 
     /// @notice Checks the validity of the trigger data when the trigger is executed
-    /// @param _cdpId The CDP id
+    /// @param identifier The CDP id
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data during execution
-    function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
+    function isExecutionLegal(bytes memory identifier, bytes memory triggerData)
         external
         view
         override
@@ -60,7 +67,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+        uint256 _cdpId = abi.decode(identifier, (uint256));
+
+        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(identifier);
         require(
             ManagerLike(ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY))
                 .owns(_cdpId) != address(0),
@@ -74,10 +83,10 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     }
 
     /// @notice Checks the validity of the trigger data when the trigger is created
-    /// @param _cdpId The CDP id
+    /// @param identifier The CDP id
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
+    function isTriggerDataValid(bytes memory identifier, bytes memory triggerData)
         external
         view
         override
@@ -87,13 +96,15 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+        uint256 _cdpId = abi.decode(identifier, (uint256));
+        uint256 cdpId = abi.decode(autoTakeProfitTriggerData.identifier, (uint256));
+        (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(identifier);
         require(
             autoTakeProfitTriggerData.executionPrice > nextPrice,
             "auto-take-profit/tp-level-too-low"
         );
         return
-            _cdpId == autoTakeProfitTriggerData.cdpId &&
+            _cdpId == cdpId &&
             (autoTakeProfitTriggerData.triggerType == 7 ||
                 autoTakeProfitTriggerData.triggerType == 8);
     }
@@ -103,9 +114,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     function execute(
         bytes calldata executionData,
-        uint256,
+        bytes memory,
         bytes memory triggerData
-    ) external override {
+    ) external {
         AutoTakeProfitTriggerData memory autoTakeProfitTriggerData = abi.decode(
             triggerData,
             (AutoTakeProfitTriggerData)

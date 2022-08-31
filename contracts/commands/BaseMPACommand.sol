@@ -43,7 +43,7 @@ abstract contract BaseMPACommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function getVaultAndMarketInfo(uint256 cdpId)
+    function getVaultAndMarketInfo(bytes memory identifier)
         public
         view
         returns (
@@ -55,6 +55,7 @@ abstract contract BaseMPACommand is ICommand {
         )
     {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        uint256 cdpId = abi.decode(identifier, (uint256));
         ilk = manager.ilks(cdpId);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
@@ -64,7 +65,8 @@ abstract contract BaseMPACommand is ICommand {
         nextPrice = mcdView.getNextPrice(ilk);
     }
 
-    function getVaultDebt(uint256 cdpId) internal view returns (uint256) {
+    function getVaultDebt(bytes memory identifier) internal view returns (uint256) {
+        uint256 cdpId = abi.decode(identifier, (uint256));
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         (, uint256 debt) = mcdView.getVaultInfo(cdpId);
         return debt;
@@ -95,10 +97,11 @@ abstract contract BaseMPACommand is ICommand {
     }
 
     function recreateTrigger(
-        uint256 cdpId,
+        bytes memory identifier,
         uint16 triggerType,
         bytes memory triggerData
     ) internal virtual {
+        uint256 cdpId = abi.decode(identifier, (uint256));
         (bool status, ) = msg.sender.delegatecall(
             abi.encodeWithSelector(
                 AutomationBot(msg.sender).addTrigger.selector,

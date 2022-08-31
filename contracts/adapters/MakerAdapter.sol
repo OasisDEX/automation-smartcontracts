@@ -35,20 +35,13 @@ contract MakerAdapter {
         serviceRegistry = _serviceRegistry;
     }
 
-    function isCdpAllowed(
-        uint256 cdpId,
+    function canCall(
+        bytes memory identifier,
         address operator,
         ManagerLike manager
     ) public view returns (bool) {
-        console.log("------------------");
-        console.log("isCdpAllowedAdapter");
-
+        uint256 cdpId = abi.decode(identifier, (uint256));
         address cdpOwner = manager.owns(cdpId);
-
-        console.log(operator);
-        console.log(cdpId);
-        console.log(manager.cdpCan(cdpOwner, cdpId, operator) == 1);
-        console.log("------------------");
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
@@ -61,16 +54,12 @@ contract MakerAdapter {
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
-        if (!isCdpAllowed(cdpId, target, manager) && allowance) {
+        if (!canCall(identifier, target, manager) && allowance) {
             manager.cdpAllow(cdpId, target, 1);
-            console.log("------xxxxxxxxxxx---------");
-            console.log(isCdpAllowed(cdpId, target, manager));
-            console.log("------xxxxxxxxxxx---------");
             // emit ApprovalGranted(cdpId, target);
         }
-        if (isCdpAllowed(cdpId, target, manager) && !allowance) {
+        if (canCall(identifier, target, manager) && !allowance) {
             manager.cdpAllow(cdpId, target, 0);
-
             // emit ApprovalRevoked(cdpId, target);
         }
     }
@@ -80,7 +69,7 @@ contract MakerAdapter {
         address receiver,
         address token,
         uint256 amount
-    ) internal {
+    ) external {
         console.log("inside");
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);

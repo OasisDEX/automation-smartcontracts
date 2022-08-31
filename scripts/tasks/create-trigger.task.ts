@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { Signer, BigNumber as EthersBN } from 'ethers'
+import { Signer, BigNumber as EthersBN, utils } from 'ethers'
 import { types } from 'hardhat/config'
 import { max } from 'lodash'
 import {
@@ -104,7 +104,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
-            args.vault.toString(),
+            utils.defaultAbiCoder.encode(['bytes'], [args.vault]),
             args.type,
             triggerIdToReplace,
             triggerData,
