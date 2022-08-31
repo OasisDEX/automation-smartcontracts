@@ -328,7 +328,12 @@ describe('AutomationExecutor', async () => {
         afterEach(async () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
-
+        it('should revert on swap eth to dai', async () => {
+            const amount = 100
+            const receiveAtLeast = 90
+            const tx = AutomationExecutorInstance.swap(hardhatUtils.addresses.WETH, true, amount, receiveAtLeast)
+            await expect(tx).to.be.reverted
+        })
         it('should successfully execute swap token for dai', async () => {
             const amount = 10000
             const receiveAtLeast = 9000
