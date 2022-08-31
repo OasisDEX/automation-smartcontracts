@@ -26,6 +26,7 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
+import "hardhat/console.sol";
 
 contract BasicBuyCommand is BaseMPACommand {
     using SafeMath for uint256;
@@ -51,7 +52,7 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 _cdpId,
         bool continuous,
         bytes memory triggerData
-    ) external view returns (bool) {
+    ) external view returns (bool result) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -62,12 +63,13 @@ contract BasicBuyCommand is BaseMPACommand {
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
             trigger.deviation
         );
-        return
+        result =
             _cdpId == trigger.cdpId &&
             trigger.triggerType == 3 &&
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
+        return result;
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)

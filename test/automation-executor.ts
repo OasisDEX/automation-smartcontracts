@@ -17,6 +17,11 @@ import { TestERC20 } from '../typechain/TestERC20'
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
+const dummyTriggerData = utils.defaultAbiCoder.encode(
+    ['uint256', 'uint16', 'uint256'],
+    [testCdpId, 1, 101],
+)
+
 describe('AutomationExecutor', async () => {
     const testTokenTotalSupply = EthersBN.from(10).pow(18)
     const daiTotalSupply = EthersBN.from(10).pow(18)
@@ -153,7 +158,7 @@ describe('AutomationExecutor', async () => {
     })
 
     describe('execute', async () => {
-        const triggerData = '0x'
+        const triggerData = dummyTriggerData
         let triggerId = 0
 
         before(async () => {
@@ -183,7 +188,7 @@ describe('AutomationExecutor', async () => {
         it('should not revert on successful execution', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -198,7 +203,7 @@ describe('AutomationExecutor', async () => {
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.connect(notOwner).execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -217,7 +222,7 @@ describe('AutomationExecutor', async () => {
             const ownerBalanceBefore = await hre.ethers.provider.getBalance(await owner.getAddress())
 
             const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -228,7 +233,7 @@ describe('AutomationExecutor', async () => {
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -266,7 +271,7 @@ describe('AutomationExecutor', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
 
             const estimation = await AutomationExecutorInstance.estimateGas.execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -277,7 +282,7 @@ describe('AutomationExecutor', async () => {
             )
 
             const tx = AutomationExecutorInstance.execute(
-                '0x',
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
@@ -378,7 +383,7 @@ describe('AutomationExecutor', async () => {
                 testTokenBalance.add(1),
                 100,
                 constants.AddressZero,
-                '0x',
+                dummyTriggerData,
             )
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
 
@@ -389,7 +394,7 @@ describe('AutomationExecutor', async () => {
                 daiBalance.add(1),
                 100,
                 constants.AddressZero,
-                '0x',
+                dummyTriggerData,
             )
             await expect(tx2).to.be.revertedWith('executor/invalid-amount')
         })
@@ -401,7 +406,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 1,
                 constants.AddressZero,
-                '0x',
+                dummyTriggerData,
             )
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
         })
@@ -413,7 +418,7 @@ describe('AutomationExecutor', async () => {
                 1,
                 1,
                 constants.AddressZero,
-                '0x',
+                dummyTriggerData,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
