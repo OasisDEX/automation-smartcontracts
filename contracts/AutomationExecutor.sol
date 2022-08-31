@@ -169,10 +169,6 @@ contract AutomationExecutor {
         }
     }
 
-    function unwrapWETH(uint256 amount) external onlyOwner {
-        weth.withdraw(amount);
-    }
-
     function revokeAllowance(IERC20 token, address target) external onlyOwner {
         token.safeApprove(target, 0);
     }

@@ -100,13 +100,13 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         }
 
         const unwrapGasPrice = await hardhatUtils.getGasPrice()
-        const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter)
-        const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
+        /*   const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter) */
+        /* const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
             gasLimit: unwrapGasEstimate.mul(11).div(10),
             maxFeePerGas: new BigNumber(unwrapGasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
             maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
-        })
-        console.log(`Unwrap Transcaction Hash: ${unwrapTx.hash}`)
+        }) */
+        /*         console.log(`Unwrap Transcaction Hash: ${unwrapTx.hash}`) */
 
         const unwrapReceipt = await tx.wait()
         if (!unwrapReceipt.status) {

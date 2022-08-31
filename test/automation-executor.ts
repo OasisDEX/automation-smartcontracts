@@ -82,14 +82,15 @@ describe('AutomationExecutor', async () => {
             owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) }),
         ])
         // create testDai - eth LP
+        // add the same amount of ETH as TestDAI
         await UniswapV2Instance.addLiquidityETH(
             TestDAIInstance.address,
             daiTotalSupply.div(4),
             daiTotalSupply.div(4),
-            hre.ethers.utils.parseUnits('1.0'),
+            daiTotalSupply.div(4),
             await owner.getAddress(),
             9999999999999,
-            { value: hre.ethers.utils.parseUnits('1.0') },
+            { value: daiTotalSupply.div(4) },
         )
         // create testDai - TestERC20 LP
         await UniswapV2Instance.addLiquidity(
@@ -329,8 +330,8 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should successfully execute swap token for dai', async () => {
-            const amount = 100
-            const receiveAtLeast = 90
+            const amount = 10000
+            const receiveAtLeast = 9000
 
             const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
@@ -348,8 +349,8 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should successfully execute swap dai for token', async () => {
-            const amount = 100
-            const receiveAtLeast = 90
+            const amount = 10000
+            const receiveAtLeast = 9000
             const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
@@ -365,8 +366,8 @@ describe('AutomationExecutor', async () => {
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
         it('should successfully execute swap dai for eth', async () => {
-            const amount = 100
-            const receiveAtLeast = 90
+            const amount = 10000
+            const receiveAtLeast = 9000
             const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
                 hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
@@ -380,10 +381,6 @@ describe('AutomationExecutor', async () => {
                 hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
             ])
             // account for 0.1% slippage
-            console.log(ethBalanceBefore)
-            console.log(ethBalanceAfter)
-            console.log(daiBalanceBefore)
-            console.log(daiBalanceAfter)
             expect(ethBalanceAfter).to.be.gt(ethBalanceBefore.add(amount).mul(999).div(1000))
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
@@ -470,22 +467,6 @@ describe('AutomationExecutor', async () => {
 
         afterEach(async () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
-        })
-
-        it.skip('should successfully unwrap WETH to ETH', async () => {
-            const ethBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
-            const wethBalanceBefore = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
-            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount)
-            await expect(tx).not.to.be.reverted
-            const ethBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
-            const wethBalanceAfter = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
-            expect(ethBalanceBefore.add(wethAmount).toString()).to.eq(ethBalanceAfter.toString())
-            expect(wethBalanceBefore.sub(wethAmount).toString()).to.eq(wethBalanceAfter.toString())
-        })
-
-        it('should revert on invalid amount', async () => {
-            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount.add(1))
-            await expect(tx).to.be.reverted
         })
     })
 })
