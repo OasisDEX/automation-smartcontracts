@@ -90,7 +90,7 @@ contract AutomationSwap {
         // isEth && toDai - swap will fail
         // mock other asset as ERC20 if it's a swap to eth
         address other = isEth && !toDai ? address(dai) : otherAsset;
-        executor.swap(other, toDai, amount, 0);
+        executor.swap(otherAsset, otherAsset, amount, 0);
 
         if (isEth) {
             uint256 balance = address(this).balance;

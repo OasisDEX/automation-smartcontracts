@@ -342,7 +342,12 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.address,
             ])
 
-            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, true, amount, receiveAtLeast)
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                TestDAIInstance.address,
+                amount,
+                receiveAtLeast,
+            )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
@@ -366,7 +371,12 @@ describe('AutomationExecutor', async () => {
                 TestERC20Instance.address,
             ])
 
-            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, false, amount, receiveAtLeast)
+            const tx = AutomationExecutorInstance.swap(
+                TestDAIInstance.address,
+                TestERC20Instance.address,
+                amount,
+                receiveAtLeast,
+            )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
@@ -376,7 +386,7 @@ describe('AutomationExecutor', async () => {
             expect(testTokenBalanceAfter.sub(testTokenBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
-        it('should successfully execute swap dai for eth', async () => {
+        it.only('should successfully execute swap dai for eth', async () => {
             const amount = 10000
             const receiveAtLeast = 9000
             const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
@@ -389,8 +399,13 @@ describe('AutomationExecutor', async () => {
                 hardhatUtils.addresses.WETH,
             ])
 
-            const tx = AutomationExecutorInstance.swap(hardhatUtils.addresses.WETH, false, amount, receiveAtLeast)
-
+            const tx = AutomationExecutorInstance.swap(
+                TestDAIInstance.address,
+                hardhatUtils.addresses.WETH,
+                amount,
+                receiveAtLeast,
+            )
+await (await tx).wait()
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
@@ -403,21 +418,36 @@ describe('AutomationExecutor', async () => {
         it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
             // await MockERC20Instance.mock.balanceOf.returns(100)
             const testTokenBalance = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
-            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, true, testTokenBalance.add(1), 100)
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                TestDAIInstance.address,
+                testTokenBalance.add(1),
+                100,
+            )
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
 
             const daiBalance = await TestDAIInstance.balanceOf(AutomationExecutorInstance.address)
-            const tx2 = AutomationExecutorInstance.swap(TestERC20Instance.address, false, daiBalance.add(1), 100)
+            const tx2 = AutomationExecutorInstance.swap(
+                TestDAIInstance.address,
+                TestERC20Instance.address,
+                daiBalance.add(1),
+                100,
+            )
             await expect(tx2).to.be.revertedWith('executor/invalid-amount')
         })
 
         it('should revert with executor/invalid-amount on 0 amount provided', async () => {
-            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, true, 0, 1)
+            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, TestDAIInstance.address, 0, 1)
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
         })
 
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
-            const tx = AutomationExecutorInstance.connect(notOwner).swap(TestERC20Instance.address, true, 1, 1)
+            const tx = AutomationExecutorInstance.connect(notOwner).swap(
+                TestERC20Instance.address,
+                TestDAIInstance.address,
+                1,
+                1,
+            )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
     })

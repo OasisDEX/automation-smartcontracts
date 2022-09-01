@@ -114,44 +114,46 @@ contract AutomationExecutor {
     }
 
     function swap(
-        address otherAsset,
-        bool toDai,
-        uint256 amount,
-        uint256 receiveAtLeast
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOutMin
     ) external auth(msg.sender) {
-        IERC20 fromToken = toDai ? IERC20(otherAsset) : dai;
-        bool eth = otherAsset == address(weth);
-
         require(
-            amount > 0 && amount <= fromToken.balanceOf(address(this)),
+            amountIn > 0 && amountIn <= IERC20(tokenIn).balanceOf(address(this)),
             "executor/invalid-amount"
         );
 
-        fromToken.safeApprove(address(uniswapRouter), amount);
-
         address[] memory path = new address[](2);
-
-        if (eth && !toDai) {
-            path[0] = address(dai);
-            path[1] = address(weth);
-            uniswapRouter.swapExactTokensForETH(
-                amount,
-                receiveAtLeast,
+        if (tokenIn != address(weth) && tokenOut != address(weth)) {
+            IERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
+            path[0] = tokenIn;
+            path[1] = tokenOut;
+            uniswapRouter.swapExactTokensForTokens(
+                amountIn,
+                amountOutMin,
                 path,
                 address(this),
                 block.timestamp
             );
-        } else {
-            if (toDai) {
-                path[0] = address(otherAsset);
-                path[1] = address(dai);
-            } else {
-                path[0] = address(dai);
-                path[1] = address(otherAsset);
-            }
-            uniswapRouter.swapExactTokensForTokens(
-                amount,
-                receiveAtLeast,
+        }
+
+        if (tokenOut == address(weth)) {
+            IERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
+            path[0] = tokenIn;
+            path[1] = address(weth);
+            uniswapRouter.swapExactTokensForETH(
+                amountIn,
+                amountOutMin,
+                path,
+                address(this),
+                block.timestamp
+            );
+        } else if (tokenIn == address(weth)) {
+            path[0] = address(weth);
+            path[1] = tokenOut;
+            uniswapRouter.swapExactETHForTokens{ value: amountIn }(
+                amountOutMin,
                 path,
                 address(this),
                 block.timestamp

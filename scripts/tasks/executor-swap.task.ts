@@ -62,19 +62,23 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
 
         const receiveAtLeast = swap.toTokenAmount.times(new BigNumber(1).minus(args.slippage.div(100)))
 
-        const gasEstimate = await executor
-            .connect(signer)
-            .estimateGas.swap(
-                addresses.WETH,
-                false,
-                args.amount.shiftedBy(18).toFixed(0),
-                receiveAtLeast.shiftedBy(18).toFixed(0),
-            )
+        const gasEstimate = await executor.connect(signer).estimateGas.swap(
+            addresses.DAI,
+            addresses.WETH,
+
+            args.amount.shiftedBy(18).toFixed(0),
+            receiveAtLeast.shiftedBy(18).toFixed(0),
+        )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
         const tx = await executor
             .connect(signer)
-            .swap(addresses.WETH, false, args.amount.shiftedBy(18).toFixed(0), receiveAtLeast.shiftedBy(18).toFixed(0))
+            .swap(
+                addresses.DAI,
+                addresses.WETH,
+                args.amount.shiftedBy(18).toFixed(0),
+                receiveAtLeast.shiftedBy(18).toFixed(0),
+            )
         console.log(`Swap Transcaction Hash: ${tx.hash}`)
 
         const receipt = await tx.wait()
@@ -93,30 +97,6 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         const wethBalanceAfter = await weth.balanceOf(addresses.AUTOMATION_EXECUTOR)
         console.log(`DAI Balance After: ${new BigNumber(daiBalanceAfter.toString()).shiftedBy(-18).toFixed(2)}`)
         console.log(`WETH Balance After: ${new BigNumber(wethBalanceAfter.toString()).shiftedBy(-18).toFixed(6)}`)
-
-        if (wethBalanceAfter.eq(0)) {
-            console.log(`Zero WETH balance. Nothing to swap...`)
-            return
-        }
-
-        const unwrapGasPrice = await hardhatUtils.getGasPrice()
-        /*   const unwrapGasEstimate = await executor.connect(signer).estimateGas.unwrapWETH(wethBalanceAfter) */
-        /* const unwrapTx = await executor.connect(signer).unwrapWETH(wethBalanceAfter, {
-            gasLimit: unwrapGasEstimate.mul(11).div(10),
-            maxFeePerGas: new BigNumber(unwrapGasPrice.suggestBaseFee).plus(2).shiftedBy(9).toFixed(0),
-            maxPriorityFeePerGas: new BigNumber(2).shiftedBy(9).toFixed(0),
-        }) */
-        /*         console.log(`Unwrap Transcaction Hash: ${unwrapTx.hash}`) */
-
-        const unwrapReceipt = await tx.wait()
-        if (!unwrapReceipt.status) {
-            throw new Error(`Unwrap Transaction Failed...`)
-        }
-        console.log(
-            `Swap Success. Effective Gas Price: ${new BigNumber(unwrapReceipt.effectiveGasPrice.toString())
-                .shiftedBy(-9)
-                .toFixed(2)}`,
-        )
 
         const ethBalanceAfter = await hre.ethers.provider.getBalance(addresses.AUTOMATION_EXECUTOR)
         console.log(`Successfully swapped & unwrapped.`)
