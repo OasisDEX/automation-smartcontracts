@@ -1,5 +1,5 @@
 import { BigNumber } from 'bignumber.js'
-import { Signer } from 'ethers'
+import { Signer, BigNumber as EthersBN } from 'ethers'
 import { task } from 'hardhat/config'
 import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network, getSwap } from '../common'
 import { params } from './params'
@@ -31,6 +31,11 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         const executorBalance = await dai.balanceOf(addresses.AUTOMATION_EXECUTOR)
         const executorBalanceUnits = new BigNumber(executorBalance.toString()).shiftedBy(-18)
 
+        const UniswapV2Instance = await hre.ethers.getContractAt(
+            'IUniswapV2Router02',
+            hardhatUtils.addresses.UNISWAP_V2_ROUTER,
+        )
+
         console.log(`Executor Balance: ${executorBalanceUnits.toFixed(2)} DAI`)
         if (args.amount.shiftedBy(18).gt(executorBalance.toString())) {
             throw new Error(
@@ -51,7 +56,10 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             signer = await hardhatUtils.impersonate(executionOwner)
             console.log(`Impersonated execution owner ${executionOwner}...`)
         }
-
+        const expectedAmount = await UniswapV2Instance.getAmountsOut(EthersBN.from(args.amount), [
+            addresses.DAI,
+            hardhatUtils.addresses.WETH,
+        ])
         const swap = await getSwap(
             addresses.DAI,
             addresses.WETH,
@@ -60,25 +68,24 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             args.slippage,
         )
 
-        const receiveAtLeast = swap.toTokenAmount.times(new BigNumber(1).minus(args.slippage.div(100)))
+        const receiveAtLeast = expectedAmount[1].mul(EthersBN.from(1).sub(EthersBN.from(args.slippage).div(100)))
 
         const gasEstimate = await executor.connect(signer).estimateGas.swap(
             addresses.DAI,
             addresses.WETH,
 
-            args.amount.shiftedBy(18).toFixed(0),
-            receiveAtLeast.shiftedBy(18).toFixed(0),
+            EthersBN.from(args.amount),
+            receiveAtLeast,
         )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
-        const tx = await executor
-            .connect(signer)
-            .swap(
-                addresses.DAI,
-                addresses.WETH,
-                args.amount.shiftedBy(18).toFixed(0),
-                receiveAtLeast.shiftedBy(18).toFixed(0),
-            )
+        const tx = await executor.connect(signer).swap(
+            addresses.DAI,
+            addresses.WETH,
+
+            EthersBN.from(args.amount),
+            receiveAtLeast,
+        )
         console.log(`Swap Transcaction Hash: ${tx.hash}`)
 
         const receipt = await tx.wait()
@@ -91,15 +98,11 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
                 .toFixed(2)}`,
         )
 
-        const weth = await hre.ethers.getContractAt('ERC20', addresses.WETH)
-
         const daiBalanceAfter = await dai.balanceOf(addresses.AUTOMATION_EXECUTOR)
-        const wethBalanceAfter = await weth.balanceOf(addresses.AUTOMATION_EXECUTOR)
         console.log(`DAI Balance After: ${new BigNumber(daiBalanceAfter.toString()).shiftedBy(-18).toFixed(2)}`)
-        console.log(`WETH Balance After: ${new BigNumber(wethBalanceAfter.toString()).shiftedBy(-18).toFixed(6)}`)
 
         const ethBalanceAfter = await hre.ethers.provider.getBalance(addresses.AUTOMATION_EXECUTOR)
-        console.log(`Successfully swapped & unwrapped.`)
+        console.log(`Successfully swapped.`)
         console.log(`ETH Balance Before: ${new BigNumber(ethBalanceBefore.toString()).shiftedBy(-18).toFixed(6)}`)
         console.log(`ETH Balance After: ${new BigNumber(ethBalanceAfter.toString()).shiftedBy(-18).toFixed(6)}`)
     })

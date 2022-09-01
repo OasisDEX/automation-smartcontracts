@@ -13,7 +13,6 @@ import {
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
-import { IUniswapV2Factory } from '../typechain/IUniswapV2Factory'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
@@ -32,7 +31,7 @@ describe('AutomationExecutor', async () => {
     let TestDAIInstance: TestERC20
     let TestWETHInstance: TestWETH
     let UniswapV2Instance: IUniswapV2Router02
-    let UniswapV2Factory: IUniswapV2Factory
+
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
     let owner: Signer
@@ -65,11 +64,7 @@ describe('AutomationExecutor', async () => {
         AutomationExecutorInstance = system.automationExecutor
         UniswapV2Instance = await hre.ethers.getContractAt(
             'IUniswapV2Router02',
-            '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
-        )
-        UniswapV2Factory = await hre.ethers.getContractAt(
-            'IUniswapV2Factory',
-            '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f',
+            hardhatUtils.addresses.UNISWAP_V2_ROUTER,
         )
 
         // Fund executor
@@ -414,6 +409,36 @@ describe('AutomationExecutor', async () => {
 
             expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
+        })
+        it.only('should successfully execute swap eth for dai', async () => {
+            const amount = 10000
+            const receiveAtLeast = 9000
+            const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            ])
+
+            const expectedAmount = await UniswapV2Instance.getAmountsOut(amount, [
+                hardhatUtils.addresses.WETH,
+                TestDAIInstance.address,
+            ])
+
+            const tx = AutomationExecutorInstance.swap(
+                hardhatUtils.addresses.WETH,
+                TestDAIInstance.address,
+
+                amount,
+                receiveAtLeast,
+            )
+
+            await expect(tx).not.to.be.reverted
+            const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            ])
+
+            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.eq(expectedAmount[1])
+            expect(ethBalanceBefore.sub(amount)).to.be.eq(ethBalanceAfter)
         })
         it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
             // await MockERC20Instance.mock.balanceOf.returns(100)

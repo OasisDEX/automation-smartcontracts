@@ -120,7 +120,13 @@ contract AutomationExecutor {
         uint256 amountOutMin
     ) external auth(msg.sender) {
         require(
-            amountIn > 0 && amountIn <= IERC20(tokenIn).balanceOf(address(this)),
+            amountIn > 0 &&
+                amountIn <=
+                (
+                    tokenIn == address(weth)
+                        ? address(this).balance
+                        : IERC20(tokenIn).balanceOf(address(this))
+                ),
             "executor/invalid-amount"
         );
 
