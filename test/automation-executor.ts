@@ -410,7 +410,7 @@ describe('AutomationExecutor', async () => {
             expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
-        it.only('should successfully execute swap eth for dai', async () => {
+        it('should successfully execute swap eth for dai', async () => {
             const amount = 10000
             const receiveAtLeast = 9000
             const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
