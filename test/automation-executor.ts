@@ -386,7 +386,7 @@ describe('AutomationExecutor', async () => {
             expect(testTokenBalanceAfter.sub(testTokenBalanceBefore)).to.be.eq(expectedAmount[1])
             expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
         })
-        it.only('should successfully execute swap dai for eth', async () => {
+        it('should successfully execute swap dai for eth', async () => {
             const amount = 10000
             const receiveAtLeast = 9000
             const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
@@ -405,7 +405,7 @@ describe('AutomationExecutor', async () => {
                 amount,
                 receiveAtLeast,
             )
-await (await tx).wait()
+
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
                 TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
