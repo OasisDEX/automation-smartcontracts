@@ -4,7 +4,6 @@ import {
     AutomationBotAggregator,
     ConstantMultipleValidator,
     AutomationExecutor,
-    AutomationSwap,
     BasicBuyCommand,
     BasicSellCommand,
     CloseCommand,
@@ -24,7 +23,6 @@ export interface DeployedSystem {
     automationBotAggregator: AutomationBotAggregator
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
-    automationSwap: AutomationSwap
     mcdView: McdView
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
@@ -111,13 +109,6 @@ export async function deploySystem({
         [AutomationBotInstance.address, addresses.DAI, addresses.WETH],
     )
 
-    if (logDebug) console.log('Deploying AutomationSwap....')
-    const AutomationSwapInstance: AutomationSwap = await utils.deployContract(
-        ethers.getContractFactory('AutomationSwap'),
-        [AutomationExecutorInstance.address, addresses.DAI],
-    )
-    await AutomationExecutorInstance.addCallers([AutomationSwapInstance.address])
-
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
     const McdViewInstance: McdView = deployMcdView
         ? await utils.deployContract(ethers.getContractFactory('McdView'), [
@@ -152,7 +143,6 @@ export async function deploySystem({
         console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
-        console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
@@ -169,7 +159,6 @@ export async function deploySystem({
         automationBotAggregator: AutomationBotAggregatorInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
-        automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
@@ -261,12 +250,6 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         system.automationExecutor.address,
-    )
-
-    if (logDebug) console.log('Adding AUTOMATION_SWAP to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
-        system.automationSwap.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
