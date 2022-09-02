@@ -6,7 +6,6 @@ import {
     AutomationExecutor,
     DsProxyLike,
     DummyCommand,
-    ISwapRouter,
     ServiceRegistry,
     TestWETH,
     ERC20,
@@ -14,7 +13,6 @@ import {
 import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
-import { find } from 'lodash'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
@@ -35,7 +33,6 @@ describe('AutomationExecutor', async () => {
     let dai: ERC20
     let weth: ERC20
     let usdc: ERC20
-    let UniswapV3Instance: ISwapRouter
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
     let owner: Signer
@@ -46,6 +43,18 @@ describe('AutomationExecutor', async () => {
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
         ownerAddress = await owner.getAddress()
+
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: 15458557,
+                    },
+                },
+            ],
+        })
 
         const testERC20Factory = await hre.ethers.getContractFactory('TestERC20', owner)
         TestERC20Instance = await testERC20Factory.deploy('Test Token', 'TST', testTokenTotalSupply)
@@ -68,7 +77,6 @@ describe('AutomationExecutor', async () => {
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
 
-        UniswapV3Instance = await hre.ethers.getContractAt('ISwapRouter', '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45')
         // Fund executor
         await owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) })
 
@@ -97,7 +105,19 @@ describe('AutomationExecutor', async () => {
     beforeEach(async () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
-
+    after(async () => {
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: hre.config.networks.hardhat.forking?.blockNumber,
+                    },
+                },
+            ],
+        })
+    })
     afterEach(async () => {
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })

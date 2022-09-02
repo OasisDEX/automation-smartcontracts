@@ -27,7 +27,6 @@ import { ICommand } from "./interfaces/ICommand.sol";
 import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
@@ -162,8 +161,7 @@ contract AutomationExecutor {
             amountIn: amountIn,
             amountOutMinimum: amountOutMin
         });
-        console.log(amountIn);
-        console.log(amountOutMin);
+
         if (tokenIn == address(weth)) {
             return uniswapRouter.exactInput{ value: amountIn }(params);
         } else if ((tokenOut == address(weth))) {
