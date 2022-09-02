@@ -138,7 +138,8 @@ contract AutomationExecutor {
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 amountOutMin
+        uint256 amountOutMin,
+        uint24 fee
     ) external auth(msg.sender) returns (uint256) {
         require(
             amountIn > 0 &&
@@ -153,7 +154,7 @@ contract AutomationExecutor {
 
         ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));
 
-        bytes memory path = abi.encodePacked(tokenIn, uint24(3000), tokenOut);
+        bytes memory path = abi.encodePacked(tokenIn, uint24(fee), tokenOut);
 
         ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
             path: path,

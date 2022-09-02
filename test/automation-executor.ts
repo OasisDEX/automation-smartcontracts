@@ -39,6 +39,7 @@ describe('AutomationExecutor', async () => {
     let ownerAddress: string
     let notOwner: Signer
     let snapshotId: string
+    let fee = 3000 // base fee for eth pools
 
     before(async () => {
         ;[owner, notOwner] = await hre.ethers.getSigners()
@@ -343,7 +344,7 @@ describe('AutomationExecutor', async () => {
                 hardhatUtils.addresses.DAI,
                 hardhatUtils.addresses.WETH,
 
-                3000,
+                fee,
             )
 
             const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals()))
@@ -353,6 +354,8 @@ describe('AutomationExecutor', async () => {
 
                 amount,
                 expected.mul(99).div(100),
+
+                fee,
             )
 
             await expect(tx).not.to.be.reverted
@@ -374,7 +377,7 @@ describe('AutomationExecutor', async () => {
             const price = await AutomationExecutorInstance.getPrice(
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.DAI,
-                3000,
+                fee,
             )
             const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await weth.decimals()))
             const tx = AutomationExecutorInstance.swap(
@@ -383,6 +386,8 @@ describe('AutomationExecutor', async () => {
 
                 amount,
                 expected.mul(99).div(100),
+
+                fee,
             )
             await expect(tx).not.to.be.reverted
             const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
@@ -395,6 +400,7 @@ describe('AutomationExecutor', async () => {
             expect(ethBalanceBefore.sub(amount)).to.be.eq(ethBalanceAfter)
         })
         it('should successfully execute swap usdc for dai', async () => {
+            fee = 100
             const amount = hre.ethers.utils.parseUnits('1000', await usdc.decimals())
             const [daiBalanceBefore, usdcBalanceBefore] = await Promise.all([
                 dai.balanceOf(AutomationExecutorInstance.address),
@@ -403,7 +409,7 @@ describe('AutomationExecutor', async () => {
             const price = await AutomationExecutorInstance.getPrice(
                 hardhatUtils.addresses.USDC,
                 hardhatUtils.addresses.DAI,
-                3000,
+                fee,
             )
             const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await usdc.decimals()))
             const tx = AutomationExecutorInstance.swap(
@@ -412,6 +418,8 @@ describe('AutomationExecutor', async () => {
 
                 amount,
                 expected.mul(99).div(100),
+
+                fee,
             )
             await (await tx).wait()
             await expect(tx).not.to.be.reverted
@@ -425,6 +433,7 @@ describe('AutomationExecutor', async () => {
             expect(usdcBalanceBefore.sub(amount)).to.be.eq(usdcBalanceAfter)
         })
         it('should successfully execute swap dai for usdc', async () => {
+            fee = 100
             const amount = hre.ethers.utils.parseUnits('1000', await dai.decimals())
             const [daiBalanceBefore, usdcBalanceBefore] = await Promise.all([
                 dai.balanceOf(AutomationExecutorInstance.address),
@@ -434,7 +443,7 @@ describe('AutomationExecutor', async () => {
                 hardhatUtils.addresses.DAI,
                 hardhatUtils.addresses.USDC,
 
-                3000,
+                fee,
             )
             const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals()))
 
@@ -444,6 +453,8 @@ describe('AutomationExecutor', async () => {
 
                 amount,
                 expected.mul(99).div(100),
+
+                fee,
             )
             await (await tx).wait()
             await expect(tx).not.to.be.reverted
@@ -464,6 +475,7 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.address,
                 testTokenBalance.add(1),
                 100,
+                fee,
             )
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
 
@@ -473,12 +485,13 @@ describe('AutomationExecutor', async () => {
                 TestERC20Instance.address,
                 daiBalance.add(1),
                 100,
+                fee,
             )
             await expect(tx2).to.be.revertedWith('executor/invalid-amount')
         })
 
         it('should revert with executor/invalid-amount on 0 amount provided', async () => {
-            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, TestDAIInstance.address, 0, 1)
+            const tx = AutomationExecutorInstance.swap(TestERC20Instance.address, TestDAIInstance.address, 0, 1, fee)
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
         })
 
@@ -488,6 +501,7 @@ describe('AutomationExecutor', async () => {
                 TestDAIInstance.address,
                 1,
                 1,
+                fee,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })

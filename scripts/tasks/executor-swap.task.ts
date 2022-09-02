@@ -69,6 +69,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
 
             EthersBN.from(args.amount),
             receiveAtLeast,
+            3000,
         )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
@@ -78,6 +79,7 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
 
             EthersBN.from(args.amount),
             receiveAtLeast,
+            3000,
         )
         console.log(`Swap Transcaction Hash: ${tx.hash}`)
 
