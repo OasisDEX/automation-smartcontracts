@@ -31,11 +31,6 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
         const executorBalance = await dai.balanceOf(addresses.AUTOMATION_EXECUTOR)
         const executorBalanceUnits = new BigNumber(executorBalance.toString()).shiftedBy(-18)
 
-        const UniswapV2Instance = await hre.ethers.getContractAt(
-            'IUniswapV2Router02',
-            hardhatUtils.addresses.UNISWAP_V2_ROUTER,
-        )
-
         console.log(`Executor Balance: ${executorBalanceUnits.toFixed(2)} DAI`)
         if (args.amount.shiftedBy(18).gt(executorBalance.toString())) {
             throw new Error(
@@ -56,19 +51,17 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             signer = await hardhatUtils.impersonate(executionOwner)
             console.log(`Impersonated execution owner ${executionOwner}...`)
         }
-        const expectedAmount = await UniswapV2Instance.getAmountsOut(EthersBN.from(args.amount), [
-            addresses.DAI,
+        const price = await executor.getPrice(
+            hardhatUtils.addresses.DAI,
             hardhatUtils.addresses.WETH,
-        ])
-        const swap = await getSwap(
-            addresses.DAI,
-            addresses.WETH,
-            executor.address,
-            args.amount.shiftedBy(18),
-            args.slippage,
+
+            3000,
+        )
+        const expected = price.mul(
+            EthersBN.from(args.amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals())),
         )
 
-        const receiveAtLeast = expectedAmount[1].mul(EthersBN.from(1).sub(EthersBN.from(args.slippage).div(100)))
+        const receiveAtLeast = expected.mul(EthersBN.from(1).sub(EthersBN.from(args.slippage).div(100)))
 
         const gasEstimate = await executor.connect(signer).estimateGas.swap(
             addresses.DAI,

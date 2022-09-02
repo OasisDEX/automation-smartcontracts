@@ -288,4 +288,54 @@ export class HardhatUtils {
         this._cache.set('gasprice', data.result, 10)
         return data.result
     }
+    /**
+     * Find the storage slot where `balanceOf` mapping is declared
+     * @param {string} tokenAddress - address of the token contract
+     * @return {Promise<number>} storage slot
+     */
+    public async findBalancesSlot(tokenAddress: string): Promise<number> {
+        const encode = (types: any[], values: any[]) => this.hre.ethers.utils.defaultAbiCoder.encode(types, values)
+        const account = constants.AddressZero
+        const probeA = encode(['uint'], [EthersBN.from('100')])
+        const probeB = encode(['uint'], [EthersBN.from('200')])
+        const token = await this.hre.ethers.getContractAt('ERC20', tokenAddress)
+        for (let i = 0; i < 100; i++) {
+            let probedSlot = this.hre.ethers.utils.keccak256(encode(['address', 'uint'], [account, i]))
+            // remove padding for JSON RPC
+            while (probedSlot.startsWith('0x0')) probedSlot = '0x' + probedSlot.slice(3)
+            const prev = await this.hre.network.provider.send('eth_getStorageAt', [tokenAddress, probedSlot, 'latest'])
+            // make sure the probe will change the slot value
+            const probe = prev === probeA ? probeB : probeA
+
+            await this.hre.network.provider.send('hardhat_setStorageAt', [tokenAddress, probedSlot, probe])
+
+            const balance = await token.balanceOf(account)
+            // reset to previous value
+            await this.hre.network.provider.send('hardhat_setStorageAt', [tokenAddress, probedSlot, prev])
+            if (balance.eq(this.hre.ethers.BigNumber.from(probe))) return i
+        }
+        throw 'Balances slot not found!'
+    }
+    /**
+     * Set token balance to the provided value.
+     * @param {string} account  - address of the wallet holding the tokens
+     * @param {string}tokenAddress - address of the token contract
+     * @param {EthersBN} balance - token balance to set
+     * @return {Promise<boolean>} if the operation succedded
+     */
+    public async setTokenBalance(account: string, tokenAddress: string, balance: EthersBN): Promise<boolean> {
+        const slot = await this.findBalancesSlot(tokenAddress)
+
+        let index = this.hre.ethers.utils.solidityKeccak256(['uint256', 'uint256'], [account, slot])
+        if (index.startsWith('0x0')) index = '0x' + index.slice(3)
+
+        await this.hre.ethers.provider.send('hardhat_setStorageAt', [
+            tokenAddress,
+            index,
+            this.hre.ethers.utils.hexZeroPad(balance.toHexString(), 32),
+        ])
+        const token = await this.hre.ethers.getContractAt('ERC20', tokenAddress)
+        const balanceAfter = await token.balanceOf(account)
+        return balance == balanceAfter
+    }
 }
