@@ -66,7 +66,6 @@ describe('Create2Deployer', async () => {
         const ownableFactory = await hre.ethers.getContractFactory('TestOwnable')
         const { bytecode } = ownableFactory
         const ownableAddress = buildCreate2Address(deployer.address, salt, bytecode)
-        console.log(ownableAddress)
         const ownable = await hre.ethers.getContractAt('TestOwnable', ownableAddress)
         const tx = deployer.deploy(bytecode, salt, true)
         await expect(tx).not.to.reverted
