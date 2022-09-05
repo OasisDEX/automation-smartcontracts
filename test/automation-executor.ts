@@ -341,87 +341,133 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should successfully execute swap dai for eth', async () => {
-            const amount = hre.ethers.utils.parseUnits('200', await dai.decimals())
-            const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            const token0Address = hardhatUtils.addresses.DAI
+            const token1Address = hardhatUtils.addresses.WETH
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('11231', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
 
             const price = await AutomationExecutorInstance.getPrice(
-                hardhatUtils.addresses.DAI,
-                hardhatUtils.addresses.WETH,
+                token0Address,
+                token1Address,
 
                 fee,
             )
 
-            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals()))
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
+
             const tx = AutomationExecutorInstance.swap(
-                hardhatUtils.addresses.DAI,
-                hardhatUtils.addresses.WETH,
+                token0Address,
+                token1Address,
 
                 amount,
                 expected.mul(99).div(100),
 
                 fee,
             )
-
+            await (await tx).wait()
             await expect(tx).not.to.be.reverted
-            const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
-            expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.lt(expected.mul(101).div(100))
-            expect(ethBalanceAfter.sub(ethBalanceBefore)).to.be.gt(expected.mul(99).div(100))
-            expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
+
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
         })
 
         it('should successfully execute swap eth for dai', async () => {
-            const amount = hre.ethers.utils.parseUnits('0.9', await weth.decimals())
-            const [daiBalanceBefore, ethBalanceBefore] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            const token0Address = hardhatUtils.addresses.WETH
+            const token1Address = hardhatUtils.addresses.DAI
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('1', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
+
             const price = await AutomationExecutorInstance.getPrice(
-                hardhatUtils.addresses.WETH,
-                hardhatUtils.addresses.DAI,
+                token0Address,
+                token1Address,
+
                 fee,
             )
-            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await weth.decimals()))
+
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
+
             const tx = AutomationExecutorInstance.swap(
-                hardhatUtils.addresses.WETH,
-                hardhatUtils.addresses.DAI,
+                token0Address,
+                token1Address,
 
                 amount,
                 expected.mul(99).div(100),
 
                 fee,
             )
+            await (await tx).wait()
             await expect(tx).not.to.be.reverted
-            const [daiBalanceAfter, ethBalanceAfter] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                hre.ethers.provider.getBalance(AutomationExecutorInstance.address),
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
 
-            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.lt(expected.mul(101).div(100))
-            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.gt(expected.mul(99).div(100))
-            expect(ethBalanceBefore.sub(amount)).to.be.eq(ethBalanceAfter)
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
         })
         it('should successfully execute swap usdc for dai', async () => {
             fee = 100
-            const amount = hre.ethers.utils.parseUnits('1000', await usdc.decimals())
-            const [daiBalanceBefore, usdcBalanceBefore] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const token0Address = hardhatUtils.addresses.USDC
+            const token1Address = hardhatUtils.addresses.DAI
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('10001', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
+
             const price = await AutomationExecutorInstance.getPrice(
-                hardhatUtils.addresses.USDC,
-                hardhatUtils.addresses.DAI,
+                token0Address,
+                token1Address,
+
                 fee,
             )
-            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await usdc.decimals()))
+
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
+
             const tx = AutomationExecutorInstance.swap(
-                hardhatUtils.addresses.USDC,
-                hardhatUtils.addresses.DAI,
+                token0Address,
+                token1Address,
 
                 amount,
                 expected.mul(99).div(100),
@@ -430,33 +476,48 @@ describe('AutomationExecutor', async () => {
             )
             await (await tx).wait()
             await expect(tx).not.to.be.reverted
-            const [daiBalanceAfter, usdcBalanceAfter] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
 
-            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.lt(expected.mul(101).div(100))
-            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.gt(expected.mul(99).div(100))
-            expect(usdcBalanceBefore.sub(amount)).to.be.eq(usdcBalanceAfter)
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
         })
         it('should successfully execute swap dai for usdc', async () => {
             fee = 100
-            const amount = hre.ethers.utils.parseUnits('1000', await dai.decimals())
-            const [daiBalanceBefore, usdcBalanceBefore] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const token0Address = hardhatUtils.addresses.DAI
+            const token1Address = hardhatUtils.addresses.USDC
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('11211', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
+
             const price = await AutomationExecutorInstance.getPrice(
-                hardhatUtils.addresses.DAI,
-                hardhatUtils.addresses.USDC,
+                token0Address,
+                token1Address,
 
                 fee,
             )
-            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals()))
+
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
 
             const tx = AutomationExecutorInstance.swap(
-                hardhatUtils.addresses.DAI,
-                hardhatUtils.addresses.USDC,
+                token0Address,
+                token1Address,
 
                 amount,
                 expected.mul(99).div(100),
@@ -465,33 +526,48 @@ describe('AutomationExecutor', async () => {
             )
             await (await tx).wait()
             await expect(tx).not.to.be.reverted
-            const [daiBalanceAfter, usdcBalanceAfter] = await Promise.all([
-                dai.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
 
-            expect(usdcBalanceAfter.sub(usdcBalanceBefore)).to.be.lt(expected.mul(101).div(100))
-            expect(usdcBalanceAfter.sub(usdcBalanceBefore)).to.be.gt(expected.mul(99).div(100))
-            expect(daiBalanceBefore.sub(amount)).to.be.eq(daiBalanceAfter)
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
         })
-        it.only('should successfully execute swap wbtc for usdc', async () => {
+        it('should successfully execute swap wbtc for usdc', async () => {
             fee = 3000
-            const amount = hre.ethers.utils.parseUnits('1', await wbtc.decimals())
-            const [wbtcBalanceBefore, usdcBalanceBefore] = await Promise.all([
-                wbtc.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const token0Address = hardhatUtils.addresses.WBTC
+            const token1Address = hardhatUtils.addresses.USDC
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('1', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
+
             const price = await AutomationExecutorInstance.getPrice(
-                hardhatUtils.addresses.WBTC,
-                hardhatUtils.addresses.USDC,
+                token0Address,
+                token1Address,
 
                 fee,
             )
-            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await wbtc.decimals()))
+
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
 
             const tx = AutomationExecutorInstance.swap(
-                hardhatUtils.addresses.WBTC,
-                hardhatUtils.addresses.USDC,
+                token0Address,
+                token1Address,
 
                 amount,
                 expected.mul(99).div(100),
@@ -500,14 +576,60 @@ describe('AutomationExecutor', async () => {
             )
             await (await tx).wait()
             await expect(tx).not.to.be.reverted
-            const [wbtcBalanceAfter, usdcBalanceAfter] = await Promise.all([
-                wbtc.balanceOf(AutomationExecutorInstance.address),
-                usdc.balanceOf(AutomationExecutorInstance.address),
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token0.balanceOf(AutomationExecutorInstance.address),
+                token1Address === hardhatUtils.addresses.WETH
+                    ? hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+                    : token1.balanceOf(AutomationExecutorInstance.address),
             ])
 
-            expect(usdcBalanceAfter.sub(usdcBalanceBefore)).to.be.lt(expected.mul(101).div(100))
-            expect(usdcBalanceAfter.sub(usdcBalanceBefore)).to.be.gt(expected.mul(99).div(100))
-            expect(wbtcBalanceBefore.sub(amount)).to.be.eq(wbtcBalanceAfter)
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
+        })
+        it('should successfully execute swap usdc for wbtc', async () => {
+            fee = 3000
+            const token0Address = hardhatUtils.addresses.USDC
+            const token1Address = hardhatUtils.addresses.WBTC
+            const token0 = await hre.ethers.getContractAt('ERC20', token0Address)
+            const token1 = await hre.ethers.getContractAt('ERC20', token1Address)
+            const amount = hre.ethers.utils.parseUnits('21000', await token0.decimals())
+
+            const [token0BalanceBefore, token1BalanceBefore] = await Promise.all([
+                token0.balanceOf(AutomationExecutorInstance.address),
+                token1.balanceOf(AutomationExecutorInstance.address),
+            ])
+
+            const price = await AutomationExecutorInstance.getPrice(
+                token0Address,
+                token1Address,
+
+                fee,
+            )
+
+            const expected = price.mul(amount).div(hre.ethers.utils.parseUnits('1', await token0.decimals()))
+
+            const tx = AutomationExecutorInstance.swap(
+                token0Address,
+                token1Address,
+
+                amount,
+                expected.mul(99).div(100),
+
+                fee,
+            )
+            await (await tx).wait()
+            await expect(tx).not.to.be.reverted
+            const [token0BalanceAfter, token1BalanceAfter] = await Promise.all([
+                token0.balanceOf(AutomationExecutorInstance.address),
+                token1.balanceOf(AutomationExecutorInstance.address),
+            ])
+
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.lt(expected.mul(101).div(100))
+            expect(token1BalanceAfter.sub(token1BalanceBefore)).to.be.gt(expected.mul(99).div(100))
+            expect(token0BalanceBefore.sub(amount)).to.be.eq(token0BalanceAfter)
         })
         it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
             // await MockERC20Instance.mock.balanceOf.returns(100)

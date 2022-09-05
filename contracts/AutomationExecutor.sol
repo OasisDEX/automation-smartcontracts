@@ -26,10 +26,9 @@ import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
 import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-
 import { TickMath } from "./libs/TickMath.sol";
 import { FullMath } from "./libs/FullMath.sol";
+import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
@@ -152,13 +151,14 @@ contract AutomationExecutor {
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
 
         uint160 sqrtPriceX96 = getTick(address(pool), 0);
-        address token1 = pool.token1();
+        address token0 = pool.token0();
         uint256 decimals = ERC20(tokenIn).decimals();
 
-        if (token1 == tokenIn) {
-            return ((2**192) / (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)))) * (10**decimals);
-        } else {
+        if (token0 == tokenIn) {
             return (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192;
+        } else {
+            return (((2**192) * (10**decimals)) /
+                ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)))));
         }
     }
 
