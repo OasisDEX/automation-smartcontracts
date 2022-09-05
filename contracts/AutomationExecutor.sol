@@ -123,7 +123,7 @@ contract AutomationExecutor {
     }
 
     // token 1 / token0
-    function getTwat(address uniswapV3Pool, uint32 twapInterval)
+    function getTick(address uniswapV3Pool, uint32 twapInterval)
         public
         view
         returns (uint160 sqrtPriceX96)
@@ -153,12 +153,13 @@ contract AutomationExecutor {
     ) public view returns (uint256 price) {
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
 
-        uint160 sqrtPriceX96 = getTwat(address(pool), 0);
+        uint160 sqrtPriceX96 = getTick(address(pool), 0);
+        console.log(sqrtPriceX96);
         address token1 = pool.token1();
         uint256 decimals = ERC20(tokenIn).decimals();
 
         if (token1 == tokenIn) {
-            return (2**192 * (10**decimals)) / (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)));
+            return ((2**192) / (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)))) * (10**decimals);
         } else {
             return (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192;
         }
