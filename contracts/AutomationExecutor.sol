@@ -31,8 +31,6 @@ import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { TickMath } from "./libs/TickMath.sol";
 import { FullMath } from "./libs/FullMath.sol";
 
-import "hardhat/console.sol";
-
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
 
@@ -154,7 +152,6 @@ contract AutomationExecutor {
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
 
         uint160 sqrtPriceX96 = getTick(address(pool), 0);
-        console.log(sqrtPriceX96);
         address token1 = pool.token1();
         uint256 decimals = ERC20(tokenIn).decimals();
 
