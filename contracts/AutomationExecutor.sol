@@ -16,7 +16,7 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.10;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -27,6 +27,11 @@ import { ICommand } from "./interfaces/ICommand.sol";
 import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
 import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
 import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import { TickMath } from "./libs/TickMath.sol";
+import { FullMath } from "./libs/FullMath.sol";
+
+import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
@@ -118,15 +123,40 @@ contract AutomationExecutor {
     }
 
     // token 1 / token0
+    function getTwat(address uniswapV3Pool, uint32 twapInterval)
+        public
+        view
+        returns (uint160 sqrtPriceX96)
+    {
+        if (twapInterval == 0) {
+            // return the current price if twapInterval == 0
+            (sqrtPriceX96, , , , , , ) = IUniswapV3Pool(uniswapV3Pool).slot0();
+        } else {
+            uint32[] memory secondsAgos = new uint32[](2);
+            // past ---secondsAgo---> present
+            secondsAgos[0] = twapInterval; // secondsAgo
+            secondsAgos[1] = 0; // now
+
+            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(uniswapV3Pool).observe(secondsAgos);
+
+            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(
+                int24((tickCumulatives[1] - tickCumulatives[0]) / int56(uint56(twapInterval)))
+            );
+        }
+        return sqrtPriceX96;
+    }
+
     function getPrice(
         address tokenIn,
         address tokenOut,
         uint24 fee
     ) public view returns (uint256 price) {
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
-        (uint160 sqrtPriceX96, , , , , , ) = pool.slot0();
+
+        uint160 sqrtPriceX96 = getTwat(address(pool), 0);
         address token1 = pool.token1();
         uint256 decimals = ERC20(tokenIn).decimals();
+
         if (token1 == tokenIn) {
             return (2**192 * (10**decimals)) / (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)));
         } else {
