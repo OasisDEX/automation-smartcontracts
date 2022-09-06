@@ -60,7 +60,13 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        (, uint256 nextCollRatio, , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        bytes32 ilk = manager.ilks(_cdpId);
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        uint256 nextPrice = mcdView.getNextPrice(ilk);
+        uint256 nextCollRatio = mcdView.getRatio(_cdpId, true);
+
         require(
             ManagerLike(ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY))
                 .owns(_cdpId) != address(0),
@@ -87,7 +93,12 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             triggerData,
             (AutoTakeProfitTriggerData)
         );
-        (, , , uint256 nextPrice, ) = getVaultAndMarketInfo(_cdpId);
+
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        bytes32 ilk = manager.ilks(_cdpId);
+        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        uint256 nextPrice = mcdView.getNextPrice(ilk);
+
         require(
             autoTakeProfitTriggerData.executionPrice > nextPrice,
             "auto-take-profit/tp-level-too-low"
