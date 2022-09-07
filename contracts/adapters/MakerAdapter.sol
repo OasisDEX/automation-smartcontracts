@@ -50,10 +50,10 @@ contract MakerAdapter {
     function canCall(bytes[] memory triggerData, address operator) public view returns (bool) {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256[] memory cdpIds, ) = decode(triggerData);
-        console.log(cdpIds[0]);
+
         uint256 cdpId = cdpIds[0];
         address cdpOwner = manager.owns(cdpId);
-        console.log(cdpOwner);
+
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
@@ -64,9 +64,9 @@ contract MakerAdapter {
     ) public {
         (uint256[] memory cdpIds, ) = decode(triggerData);
         uint256 cdpId = cdpIds[0];
-        console.log(cdpIds[0]);
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        //require(msg.sender == manager.owns(cdpId), "fuck");
         if (!canCall(triggerData, target) && allowance) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
@@ -78,20 +78,25 @@ contract MakerAdapter {
     }
 
     function getCoverage(
-        bytes[] memory triggerData,
+        bytes memory triggerData,
         address receiver,
-        address token,
+        address,
         uint256 amount
     ) external {
-        console.log("inside");
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-        (uint256[] memory cdpIds, ) = decode(triggerData);
+        // TODO: fix the whole array non-array situatiion - after adams pr is merged
+        bytes[] memory arr = new bytes[](1);
+        arr[0] = triggerData;
+
+        (uint256[] memory cdpIds, ) = decode(arr);
         uint256 cdpId = cdpIds[0];
 
         McdUtils utils = McdUtils(utilsAddress);
-        permit(triggerData, utilsAddress, true);
+        permit(arr, utilsAddress, true);
+
         utils.drawDebt(amount, cdpId, manager, receiver);
-        permit(triggerData, utilsAddress, false);
+        permit(arr, utilsAddress, false);
+        console.log(" ");
     }
 }

@@ -34,7 +34,8 @@ contract CloseCommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory) external view override returns (bool) {
+    function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
+        (uint256 cdpId, , ) = abi.decode(triggerData, (uint256, uint16, uint256));
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);

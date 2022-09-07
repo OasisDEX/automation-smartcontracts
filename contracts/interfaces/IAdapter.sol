@@ -28,7 +28,7 @@ interface IAdapter {
     ) external;
 
     function getCoverage(
-        bytes[] memory triggerData,
+        bytes memory triggerData,
         address receiver,
         address token,
         uint256 amount

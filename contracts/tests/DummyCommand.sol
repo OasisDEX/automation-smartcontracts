@@ -45,7 +45,6 @@ contract DummyCommand is ICommand {
     }
 
     function isExecutionCorrect(
-        uint256, // cdpId
         bytes memory // triggerData
     ) external view override returns (bool) {
         return finalCheckReturn;

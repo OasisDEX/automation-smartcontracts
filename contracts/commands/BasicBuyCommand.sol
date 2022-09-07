@@ -104,15 +104,11 @@ contract BasicBuyCommand is BaseMPACommand {
         executeMPAMethod(executionData);
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
+        uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
             trigger.deviation

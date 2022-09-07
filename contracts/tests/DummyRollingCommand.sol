@@ -6,6 +6,7 @@ import "../interfaces/BotLike.sol";
 import "../ServiceRegistry.sol";
 import "../AutomationBot.sol";
 import { DummyCommand } from "../tests/DummyCommand.sol";
+import "hardhat/console.sol";
 
 contract DummyRollingCommand is DummyCommand {
     uint256 public immutable triggerType;
@@ -36,17 +37,19 @@ contract DummyRollingCommand is DummyCommand {
         uint256 cdpId,
         bytes memory triggerData
     ) external override {
+        bytes[] memory triggersData = new bytes[](1);
+        triggersData[0] = triggerData;
         bytes memory addTriggerCallData = abi.encodeWithSelector(
             AutomationBot(msg.sender).addTrigger.selector,
             cdpId,
             triggerType,
             continuous,
             0,
-            triggerData
+            triggersData
         );
 
         (bool status, ) = address(msg.sender).delegatecall(addTriggerCallData);
-
+        console.log(status);
         require(status, "addTrigger reverted");
 
         //TODO: use remaining execution data to call whatever is needed

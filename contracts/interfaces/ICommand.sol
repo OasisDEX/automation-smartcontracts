@@ -7,10 +7,7 @@ interface ICommand {
         view
         returns (bool);
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool);
+    function isExecutionCorrect(bytes memory triggerData) external view returns (bool);
 
     function isExecutionLegal(bytes memory triggerData) external view returns (bool);
 
