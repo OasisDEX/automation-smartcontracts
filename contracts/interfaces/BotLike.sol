@@ -7,12 +7,13 @@ interface BotLike {
         uint256 triggerType,
         bool continuous,
         uint256 replacedTriggerId,
-        bytes memory triggerData
+        bytes[] memory triggerData
     ) external;
 
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         //msg.sender should be dsProxy
+        bytes[] memory triggersData,
         uint256 cdpId,
         uint256 triggerId
     ) external;

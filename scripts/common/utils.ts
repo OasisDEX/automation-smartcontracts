@@ -1,7 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
@@ -16,6 +16,10 @@ export function isLocalNetwork(network: string) {
 
 export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
+}
+
+export function getAdapterNameHash(adapterType: AdapterType) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Adapter', adapterType]))
 }
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {

@@ -47,11 +47,11 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(
-        uint256 _cdpId,
-        bool continuous,
-        bytes memory triggerData
-    ) external view returns (bool) {
+    function isTriggerDataValid(bool continuous, bytes memory triggerData)
+        external
+        view
+        returns (bool)
+    {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -63,18 +63,13 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.deviation
         );
         return
-            _cdpId == trigger.cdpId &&
             trigger.triggerType == 3 &&
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionLegal(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         (
@@ -83,7 +78,7 @@ contract BasicBuyCommand is BaseMPACommand {
             uint256 currPrice,
             uint256 nextPrice,
             bytes32 ilk
-        ) = getVaultAndMarketInfo(cdpId);
+        ) = getVaultAndMarketInfo(trigger.cdpId);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);

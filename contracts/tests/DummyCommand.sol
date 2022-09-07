@@ -40,11 +40,7 @@ contract DummyCommand is ICommand {
         revertsInExecute = _revertsInExecute;
     }
 
-    function isTriggerDataValid(
-        uint256,
-        bool,
-        bytes memory
-    ) external view override returns (bool) {
+    function isTriggerDataValid(bool, bytes memory) external view override returns (bool) {
         return validTriggerData;
     }
 
@@ -56,7 +52,6 @@ contract DummyCommand is ICommand {
     }
 
     function isExecutionLegal(
-        uint256, // cdpId
         bytes memory // triggerData
     ) external view override returns (bool) {
         return initialCheckReturn;

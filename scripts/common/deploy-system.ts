@@ -1,7 +1,6 @@
 import { constants } from 'ethers'
 import {
     AutomationBot,
-    AutomationBotAggregator,
     ConstantMultipleValidator,
     AutomationExecutor,
     AutomationSwap,
@@ -11,17 +10,18 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
+    MakerAdapter,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
-import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
+import { getCommandHash, getServiceNameHash, getValidatorHash, getAdapterNameHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
-    automationBotAggregator: AutomationBotAggregator
+
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
@@ -29,6 +29,7 @@ export interface DeployedSystem {
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
+    makerAdapter: MakerAdapter
 }
 
 export interface DeploySystemArgs {
@@ -96,14 +97,16 @@ export async function deploySystem({
         [ServiceRegistryInstance.address],
     )
 
-    const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
-        ethers.getContractFactory('AutomationBotAggregator'),
-        [ServiceRegistryInstance.address],
-    )
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
         ethers.getContractFactory('ConstantMultipleValidator'),
         [],
     )
+
+    if (logDebug) console.log('Deploying AutomationBot....')
+
+    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
+        ServiceRegistryInstance.address,
+    ])
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
@@ -154,7 +157,7 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
-        console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
+        console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
@@ -171,7 +174,7 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
-        automationBotAggregator: AutomationBotAggregatorInstance,
+        makerAdapter: MakerAdapterInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
         automationSwap: AutomationSwapInstance,
@@ -227,6 +230,9 @@ export async function configureRegistryEntries(
         await ensureMcdViewWhitelist(system.basicSell.address)
     }
 
+    if (logDebug) console.log('Adding MAKER_ADAPTER to ServiceRegistry....')
+    await ensureServiceRegistryEntry(getAdapterNameHash(AdapterType.MAKER), system.makerAdapter.address)
+
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
@@ -242,11 +248,6 @@ export async function configureRegistryEntries(
         system.automationBot.address,
     )
 
-    if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
-        system.automationBotAggregator.address,
-    )
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
