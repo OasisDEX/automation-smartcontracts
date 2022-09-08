@@ -91,11 +91,7 @@ contract BasicBuyCommand is BaseMPACommand {
             baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 
-    function execute(
-        bytes calldata executionData,
-        uint256 cdpId,
-        bytes memory triggerData
-    ) external {
+    function execute(bytes calldata executionData, bytes memory triggerData) external {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         validateTriggerType(trigger.triggerType, 3);

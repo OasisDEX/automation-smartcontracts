@@ -32,11 +32,7 @@ contract DummyRollingCommand is DummyCommand {
         continuous = _continuous;
     }
 
-    function execute(
-        bytes calldata,
-        uint256 cdpId,
-        bytes memory triggerData
-    ) external override {
+    function execute(bytes calldata, bytes memory triggerData) external override {
         bytes[] memory triggersData = new bytes[](1);
         triggersData[0] = triggerData;
         bytes memory addTriggerCallData = abi.encodeWithSelector(

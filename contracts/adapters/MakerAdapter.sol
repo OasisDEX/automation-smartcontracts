@@ -24,7 +24,6 @@ import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
-import "hardhat/console.sol";
 
 contract MakerAdapter {
     ServiceRegistry public immutable serviceRegistry;
@@ -35,28 +34,18 @@ contract MakerAdapter {
         serviceRegistry = _serviceRegistry;
     }
 
-    function decode(bytes[] memory triggerData)
+    function decode(bytes memory triggerData)
         public
         pure
-        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
+        returns (uint256 cdpId, uint256 triggerType)
     {
-        cdpIds = new uint256[](triggerData.length);
-        triggerTypes = new uint256[](triggerData.length);
-        for (uint256 i = 0; i < triggerData.length; i++) {
-            (cdpIds[i], triggerTypes[i]) = abi.decode(triggerData[i], (uint256, uint16));
-        }
+        (cdpId, triggerType) = abi.decode(triggerData, (uint256, uint16));
     }
 
     function canCall(bytes memory triggerData, address operator) public view returns (bool) {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        // TODO: fix the whole array non-array situatiion - after adams pr is merged
-        bytes[] memory arr = new bytes[](1);
-        arr[0] = triggerData;
-        (uint256[] memory cdpIds, ) = decode(arr);
-
-        uint256 cdpId = cdpIds[0];
+        (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
-
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
@@ -65,14 +54,9 @@ contract MakerAdapter {
         address target,
         bool allowance
     ) public {
-        // TODO: fix the whole array non-array situatiion - after adams pr is merged
-        bytes[] memory arr = new bytes[](1);
-        arr[0] = triggerData;
-        (uint256[] memory cdpIds, ) = decode(arr);
-        uint256 cdpId = cdpIds[0];
-
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        //require(msg.sender == manager.owns(cdpId), "error");
+        (uint256 cdpId, ) = decode(triggerData);
+
         if (!canCall(triggerData, target) && allowance) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
@@ -89,18 +73,14 @@ contract MakerAdapter {
         address,
         uint256 amount
     ) external {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-        bytes[] memory arr = new bytes[](1);
-        arr[0] = triggerData;
-        (uint256[] memory cdpIds, ) = decode(arr);
-        uint256 cdpId = cdpIds[0];
-
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         McdUtils utils = McdUtils(utilsAddress);
-        permit(triggerData, utilsAddress, true);
 
+        (uint256 cdpId, ) = decode(triggerData);
+
+        permit(triggerData, utilsAddress, true);
         utils.drawDebt(amount, cdpId, manager, receiver);
         permit(triggerData, utilsAddress, false);
-        console.log(" ");
     }
 }

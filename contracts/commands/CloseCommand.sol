@@ -58,11 +58,7 @@ contract CloseCommand is ICommand {
         return vaultNotEmpty && collRatio <= slLevel * 10**16;
     }
 
-    function execute(
-        bytes calldata executionData,
-        uint256,
-        bytes memory triggerData
-    ) external override {
+    function execute(bytes calldata executionData, bytes memory triggerData) external override {
         (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
@@ -87,11 +83,11 @@ contract CloseCommand is ICommand {
 
     function isTriggerDataValid(bool continuous, bytes memory triggerData)
         external
-        view
+        pure
         override
         returns (bool)
     {
-        (uint256 cdpId, uint16 triggerType, uint256 slLevel) = abi.decode(
+        (, uint16 triggerType, uint256 slLevel) = abi.decode(
             triggerData,
             (uint256, uint16, uint256)
         );

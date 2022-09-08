@@ -26,7 +26,6 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
-import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -41,8 +40,6 @@ contract AutomationBot {
     string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
-
-    uint256 public triggersCounter = 0;
 
     ServiceRegistry public immutable serviceRegistry;
     AutomationBotStorage public immutable automationBotStorage;
@@ -164,7 +161,7 @@ contract AutomationBot {
     ) external {
         lock();
         address commandAddress = getCommandAddress(triggerType);
-
+        // 4k gas
         require(
             ICommand(commandAddress).isTriggerDataValid(continuous, triggerData),
             "bot/invalid-trigger-data"
@@ -172,10 +169,9 @@ contract AutomationBot {
 
         // TODO: pass adapter type // make adapter address command dependent ?
         IAdapter adapter = IAdapter(getAdapterAddress(1));
-
+        // 9k gas
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
-        triggersCounter = triggersCounter + 1;
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
                 getTriggersHash(triggerData, commandAddress),
@@ -201,7 +197,13 @@ contract AutomationBot {
             emit TriggerRemoved(replacedTriggerId);
         }
 
-        emit TriggerAdded(triggersCounter, commandAddress, continuous, triggerType, triggerData);
+        emit TriggerAdded(
+            automationBotStorage.triggersCounter(),
+            commandAddress,
+            continuous,
+            triggerType,
+            triggerData
+        );
     }
 
     // works correctly in context of automationBot
@@ -230,7 +232,7 @@ contract AutomationBot {
         bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
-        uint256[] memory triggerTypes
+        uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
     ) external onlyDelegate {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
         // TODO: pass adapter type // make adapter address command dependent ?
@@ -250,17 +252,6 @@ contract AutomationBot {
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            (bool status, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(
-                    adapter.permit.selector,
-                    triggerData[i],
-                    address(automationBot),
-                    true
-                )
-            );
-
-            require(status, "bot/permit-failed");
-
             AutomationBot(automationBot).addRecord(
                 triggerTypes[i],
                 continuous[i],
@@ -269,6 +260,18 @@ contract AutomationBot {
             );
 
             triggerIds[i] = firstTriggerId + i;
+
+            if (i == triggerData.length - 1) {
+                (bool status, ) = address(adapter).delegatecall(
+                    abi.encodeWithSelector(
+                        adapter.permit.selector,
+                        triggerData[i],
+                        address(automationBot),
+                        true
+                    )
+                );
+                require(status, "bot/permit-failed");
+            }
         }
         AutomationBot(automationBot).emitGroupDetails(groupType, triggerIds);
     }
@@ -303,20 +306,6 @@ contract AutomationBot {
         );
     }
 
-    function decodeTriggersData(uint16 groupType, bytes[] memory triggerData)
-        private
-        view
-        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
-    {
-        if (groupType == SINGLE_TRIGGER_GROUP_TYPE) {
-            cdpIds = new uint256[](triggerData.length);
-            triggerTypes = new uint256[](triggerData.length);
-            (cdpIds[0], triggerTypes[0]) = abi.decode(triggerData[0], (uint256, uint16));
-        } else {
-            (cdpIds, triggerTypes) = getValidatorAddress(groupType).decode(triggerData);
-        }
-    }
-
     function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
         bytes32 validatorHash = keccak256(abi.encode("Validator", groupType));
         return IValidator(serviceRegistry.getServiceAddress(validatorHash));
@@ -333,7 +322,6 @@ contract AutomationBot {
         bytes[] memory triggerData,
         bool removeAllowance
     ) external onlyDelegate {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
@@ -408,7 +396,7 @@ contract AutomationBot {
             );
             require(statusAllow, "bot/permit-failed");
 
-            command.execute(executionData, cdpId, triggerData);
+            command.execute(executionData, triggerData);
             (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
             if (!continuous) {
                 automationBotStorage.updateTriggerRecord(
