@@ -433,7 +433,7 @@ contract AutomationBot {
             );
         }
 
-        emit TriggerExecuted(triggerId, cdpId, executionData);
+        emit TriggerExecuted(triggerId, executionData);
     }
 
     event ApprovalRemoved(bytes indexed triggerData, address approvedEntity);
@@ -450,7 +450,7 @@ contract AutomationBot {
         bytes triggerData
     );
 
-    event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData);
+    event TriggerExecuted(uint256 indexed triggerId, bytes executionData);
     event TriggerGroupAdded(
         uint256 indexed groupId,
         uint16 indexed groupType,

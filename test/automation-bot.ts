@@ -872,8 +872,8 @@ describe('AutomationBot', async () => {
             )
             await expect(tx)
                 .to.emit(AutomationBotInstance, 'TriggerExecuted')
-                .withArgs(triggerId, testCdpId, dummyTriggerDataNoReRegister)
-            const receipt = await (await tx).wait()
+                .withArgs(triggerId, dummyTriggerDataNoReRegister)
+            await (await tx).wait()
         })
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
