@@ -208,14 +208,14 @@ contract AutomationBot {
     function removeRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
         // msg.sender should be dsProxy
-        bytes memory triggersData,
+        bytes memory triggerData,
         uint256 triggerId
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
         // TODO: pass adapter type // make adapter address command dependent ?
         IAdapter adapter = IAdapter(getAdapterAddress(1));
-        require(adapter.canCall(triggersData, msg.sender), "no-permit");
-        checkTriggersExistenceAndCorrectness(commandAddress, triggerId);
+        require(adapter.canCall(triggerData, msg.sender), "no-permit");
+        checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
 
         automationBotStorage.updateTriggerRecord(
             triggerId,
@@ -387,10 +387,9 @@ contract AutomationBot {
         uint256 triggerId,
         uint256 daiCoverage
     ) external auth(msg.sender) {
-        console.log("execute");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
-        console.log(address(command));
+
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         IAdapter adapter = IAdapter(getAdapterAddress(1));
         (bool status, ) = address(adapter).delegatecall(

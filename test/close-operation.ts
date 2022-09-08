@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe.only('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -59,7 +59,6 @@ describe('CloseCommand', async () => {
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
     })
 
-    
     describe('isTriggerDataValid', () => {
         //TODO: add test checking that continuous true is disallowed
     })
@@ -147,18 +146,19 @@ describe('CloseCommand', async () => {
                         exchangeData,
                         serviceRegistry,
                     )
-
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [1],
                     ])
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -216,16 +216,17 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [1],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
+                    console.log(`add 1st trigger gas : ${txRes.gasUsed}`)
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -374,12 +375,12 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [2],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -434,16 +435,17 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        Math.pow(2, 16) - 1,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [2],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
+                    console.log(`add 2nd trigger gas : ${txRes.gasUsed}`)
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })

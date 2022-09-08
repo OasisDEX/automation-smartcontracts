@@ -32,13 +32,13 @@ describe('BasicSellCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BASIC_SELL,
-            continuous,
-            0,
-            triggerData,
+    const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
+        const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
+            Math.pow(2, 16) - 1,
+            [continuous],
+            [0],
+            [triggerData],
+            [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data)
@@ -83,7 +83,7 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
@@ -96,7 +96,7 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
@@ -109,15 +109,16 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
-        it('should fail if trigger type is not encoded correctly', async () => {
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
+            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
@@ -130,7 +131,7 @@ describe('BasicSellCommand', () => {
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData, false)
+            const tx = createTrigger(triggerData, TriggerType.BASIC_SELL, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -154,7 +155,7 @@ describe('BasicSellCommand', () => {
                 50,
                 maxBaseFee,
             )
-            const createTriggerTx = await createTrigger(triggerData, continuous)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.BASIC_SELL, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
@@ -298,14 +299,16 @@ describe('BasicSellCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
             expect(executeEvents.length).to.eq(1)
             expect(removeEvents.length).to.eq(1)
-            expect(finalTriggerRecord.cdpId).to.eq(0)
+            expect(finalTriggerRecord.triggerHash).to.eq(
+                '0x0000000000000000000000000000000000000000000000000000000000000000',
+            )
             expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
@@ -314,7 +317,7 @@ describe('BasicSellCommand', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -322,7 +325,7 @@ describe('BasicSellCommand', () => {
             expect(events.length).to.eq(0)
             const removeEvent = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             expect(removeEvent.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })

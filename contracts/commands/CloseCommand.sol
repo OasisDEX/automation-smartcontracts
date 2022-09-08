@@ -23,7 +23,6 @@ import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
-import "hardhat/console.sol";
 
 contract CloseCommand is ICommand {
     address public immutable serviceRegistry;
@@ -92,7 +91,6 @@ contract CloseCommand is ICommand {
         override
         returns (bool)
     {
-        console.log("in command");
         (uint256 cdpId, uint16 triggerType, uint256 slLevel) = abi.decode(
             triggerData,
             (uint256, uint16, uint256)
