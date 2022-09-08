@@ -35,11 +35,9 @@ contract AutomationBot {
     }
 
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2**16 - 1;
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
     string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
-    string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
     ServiceRegistry public immutable serviceRegistry;
     AutomationBotStorage public immutable automationBotStorage;
@@ -64,34 +62,6 @@ contract AutomationBot {
     modifier onlyDelegate() {
         require(address(this) != self, "bot/only-delegate");
         _;
-    }
-
-    // works correctly in any context
-    function validatePermissions(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) private view {
-        require(isCdpOwner(cdpId, operator, manager), "bot/no-permissions");
-    }
-
-    // works correctly in any context
-    function isCdpAllowed(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) public view returns (bool) {
-        address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-    }
-
-    // works correctly in any context
-    function isCdpOwner(
-        uint256 cdpId,
-        address operator,
-        ManagerLike manager
-    ) private view returns (bool) {
-        return (operator == manager.owns(cdpId));
     }
 
     // works correctly in any context
@@ -369,7 +339,6 @@ contract AutomationBot {
     //works correctly in context of automationBot
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
@@ -413,11 +382,7 @@ contract AutomationBot {
                 abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, false)
             );
             require(statusDisallow, "bot/remove-permit-failed");
-
-            require(
-                command.isExecutionCorrect(triggerData) && statusDisallow && statusAllow,
-                "bot/trigger-execution-wrong"
-            );
+            require(command.isExecutionCorrect(triggerData), "bot/trigger-execution-wrong");
         }
 
         emit TriggerExecuted(triggerId, executionData);

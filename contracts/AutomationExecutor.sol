@@ -93,6 +93,7 @@ contract AutomationExecutor {
         }
     }
 
+    // TODO: remove cdpId
     function execute(
         bytes calldata executionData,
         uint256 cdpId,
@@ -104,7 +105,7 @@ contract AutomationExecutor {
         int256 gasRefund
     ) external auth(msg.sender) {
         uint256 initialGasAvailable = gasleft();
-        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
+        bot.execute(executionData, triggerData, commandAddress, triggerId, daiCoverage);
 
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);

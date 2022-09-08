@@ -290,7 +290,7 @@ describe('CloseCommand', async () => {
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
@@ -510,7 +510,7 @@ describe('CloseCommand', async () => {
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(

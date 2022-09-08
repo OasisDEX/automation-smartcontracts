@@ -18,7 +18,6 @@ interface BotLike {
 
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
