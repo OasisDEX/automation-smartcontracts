@@ -40,8 +40,7 @@ contract DummyRollingCommand is DummyCommand {
         bytes[] memory triggersData = new bytes[](1);
         triggersData[0] = triggerData;
         bytes memory addTriggerCallData = abi.encodeWithSelector(
-            AutomationBot(msg.sender).addTrigger.selector,
-            cdpId,
+            AutomationBot(msg.sender).addTriggers.selector,
             triggerType,
             continuous,
             0,

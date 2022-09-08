@@ -11,6 +11,7 @@ import {
     McdView,
     ServiceRegistry,
     MakerAdapter,
+    AutomationBotStorage,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
@@ -21,7 +22,7 @@ export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
-
+    automationBotStorage: AutomationBotStorage
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
@@ -92,9 +93,13 @@ export async function deploySystem({
     ])
 
     if (logDebug) console.log('Deploying AutomationBot....')
+    const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
+        ethers.getContractFactory('AutomationBotStorage'),
+        [ServiceRegistryInstance.address],
+    )
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [ServiceRegistryInstance.address],
+        [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
     )
 
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
@@ -157,6 +162,7 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
+        console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
         console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
@@ -182,6 +188,7 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
+        automationBotStorage: AutomationBotStorageInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -274,7 +281,11 @@ export async function configureRegistryEntries(
         getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
         system.automationSwap.address,
     )
-
+    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
+        system.automationBotStorage.address,
+    )
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
 }

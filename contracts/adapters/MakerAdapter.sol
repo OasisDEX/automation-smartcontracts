@@ -47,9 +47,12 @@ contract MakerAdapter {
         }
     }
 
-    function canCall(bytes[] memory triggerData, address operator) public view returns (bool) {
+    function canCall(bytes memory triggerData, address operator) public view returns (bool) {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        (uint256[] memory cdpIds, ) = decode(triggerData);
+        // TODO: fix the whole array non-array situatiion - after adams pr is merged
+        bytes[] memory arr = new bytes[](1);
+        arr[0] = triggerData;
+        (uint256[] memory cdpIds, ) = decode(arr);
 
         uint256 cdpId = cdpIds[0];
         address cdpOwner = manager.owns(cdpId);
@@ -58,15 +61,18 @@ contract MakerAdapter {
     }
 
     function permit(
-        bytes[] memory triggerData,
+        bytes memory triggerData,
         address target,
         bool allowance
     ) public {
-        (uint256[] memory cdpIds, ) = decode(triggerData);
+        // TODO: fix the whole array non-array situatiion - after adams pr is merged
+        bytes[] memory arr = new bytes[](1);
+        arr[0] = triggerData;
+        (uint256[] memory cdpIds, ) = decode(arr);
         uint256 cdpId = cdpIds[0];
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        //require(msg.sender == manager.owns(cdpId), "fuck");
+        //require(msg.sender == manager.owns(cdpId), "error");
         if (!canCall(triggerData, target) && allowance) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
@@ -85,18 +91,16 @@ contract MakerAdapter {
     ) external {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-        // TODO: fix the whole array non-array situatiion - after adams pr is merged
         bytes[] memory arr = new bytes[](1);
         arr[0] = triggerData;
-
         (uint256[] memory cdpIds, ) = decode(arr);
         uint256 cdpId = cdpIds[0];
 
         McdUtils utils = McdUtils(utilsAddress);
-        permit(arr, utilsAddress, true);
+        permit(triggerData, utilsAddress, true);
 
         utils.drawDebt(amount, cdpId, manager, receiver);
-        permit(arr, utilsAddress, false);
+        permit(triggerData, utilsAddress, false);
         console.log(" ");
     }
 }

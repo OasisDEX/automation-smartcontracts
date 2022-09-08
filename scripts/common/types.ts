@@ -40,6 +40,7 @@ export enum AutomationServiceName {
     MCD_VAT = 'MCD_VAT',
     MCD_UTILS = 'MCD_UTILS',
     MULTIPLY_PROXY_ACTIONS = 'MULTIPLY_PROXY_ACTIONS',
+    AUTOMATION_BOT_STORAGE = 'AUTOMATION_BOT_STORAGE',
 }
 
 export interface OneInchQuoteResponse {
