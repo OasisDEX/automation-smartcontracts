@@ -150,7 +150,7 @@ contract AutomationExecutor {
     ) public view returns (uint256 price) {
         IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
 
-        uint160 sqrtPriceX96 = getTick(address(pool), 0);
+        uint160 sqrtPriceX96 = getTick(address(pool), 60);
         address token0 = pool.token0();
         uint256 decimals = ERC20(tokenIn).decimals();
 
