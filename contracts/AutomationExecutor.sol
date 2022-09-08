@@ -131,8 +131,8 @@ contract AutomationExecutor {
         } else {
             uint32[] memory secondsAgos = new uint32[](2);
             // past ---secondsAgo---> present
-            secondsAgos[0] = twapInterval; // secondsAgo
-            secondsAgos[1] = 0; // now
+            secondsAgos[0] = 1 + twapInterval; // secondsAgo
+            secondsAgos[1] = 1; // now
 
             (int56[] memory tickCumulatives, ) = IUniswapV3Pool(uniswapV3Pool).observe(secondsAgos);
 
