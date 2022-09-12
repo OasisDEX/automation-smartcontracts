@@ -1,28 +1,26 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
+import { AutomationBot, DsProxyLike, McdView, MPALike, AutomationExecutor, AutoTakeProfitCommand } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
     encodeTriggerData,
     forgeUnoswapCalldata,
-    generateTpOrSlExecutionData,
     TriggerType,
     ONE_INCH_V4_ROUTER,
+    generateTpOrSlExecutionData,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-// Block dependent test, works for 13998517
-
-describe('CloseCommand', async () => {
+describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let CloseCommandInstance: CloseCommand
+    let AutoTakeProfitCommandInstance: AutoTakeProfitCommand
     let McdViewInstance: McdView
     let DAIInstance: Contract
     let MPAInstance: MPALike
@@ -31,9 +29,10 @@ describe('CloseCommand', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-
+    const ethAIlk = utils.formatBytes32String('ETH-A')
+    const buffer = 10 // base 1000, 10 = 1%
     before(async () => {
-        const ethAIlk = utils.formatBytes32String('ETH-A')
+        const utils = new HardhatUtils(hre)
 
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
@@ -41,13 +40,13 @@ describe('CloseCommand', async () => {
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        const system = await deploySystem({ utils, addCommands: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        CloseCommandInstance = system.closeCommand as CloseCommand
+        AutoTakeProfitCommandInstance = system.autoTakeProfitCommand as AutoTakeProfitCommand
         McdViewInstance = system.mcdView
 
-        await McdViewInstance.approve(executorAddress, true)
+        await system.mcdView.approve(executorAddress, true)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
         const proxyAddress = await cdpManager.owns(testCdpId)
@@ -57,28 +56,37 @@ describe('CloseCommand', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
-    })
-
-    
-    describe('isTriggerDataValid', () => {
-        //TODO: add test checking that continuous true is disallowed
+        const currentCollRatio = await system.mcdView.getRatio(testCdpId, false)
+        const nextCollRatio = await system.mcdView.getRatio(testCdpId, false)
+        const currentPrice = await McdViewInstance.getPrice(ethAIlk)
+        const nextPrice = await McdViewInstance.getNextPrice(ethAIlk)
+        const vaultInfo = await system.mcdView.getVaultInfo(testCdpId)
+        console.log(`Current collateralization ratio: ${currentCollRatio}`)
+        console.log(`Next collateralization ratio   : ${nextCollRatio}`)
+        console.log(`Current price                  : ${currentPrice}`)
+        console.log(`Next price                     : ${nextPrice}`)
+        console.log(`Collateral                     : ${hre.ethers.utils.formatEther(vaultInfo[0])} ETH`)
+        console.log(`Debt                           : ${hre.ethers.utils.formatEther(vaultInfo[1])} DAI`)
     })
 
     describe('execute', async () => {
         const serviceRegistry = hardhatUtils.mpaServiceRegistry()
-        let currentCollRatioAsPercentage: number
+        let nextCollRatioAsPercentage: number
         let collateralAmount: string
         let debtAmount: string
         let cdpData: any
         let exchangeData: any
+        let nextPrice: EthersBN
 
         before(async () => {
-            const collRatioRaw = await McdViewInstance.getRatio(testCdpId, true)
-            const collRatio18 = hre.ethers.utils.formatEther(collRatioRaw)
+            const nextCollRatioRaw = await McdViewInstance.getRatio(testCdpId, true)
+            const collRatio = hre.ethers.utils.formatEther(nextCollRatioRaw)
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
-            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
+            nextCollRatioAsPercentage = Math.floor(parseFloat(collRatio) * 100)
+
+            nextPrice = await McdViewInstance.getNextPrice(ethAIlk)
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -110,7 +118,7 @@ describe('CloseCommand', async () => {
             before(async () => {
                 const debt = EthersBN.from(debtAmount)
                 const tradeSize = debt.mul(10020).div(10000) // + our fee 0.2%
-                // const collateralValue = debt.mul(currentCollRatioAsPercentage).div(100)
+                // const collateralValue = debt.mul(nextCollRatioAsPercentage).div(100)
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.toString()
@@ -123,21 +131,22 @@ describe('CloseCommand', async () => {
                 )
             })
 
-            describe('when Trigger is below current col ratio', async () => {
+            describe('when Trigger is below next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
                 let signer: Signer
 
-                beforeEach(async () => {
+                before(async () => {
                     // makeSnapshot
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        currentCollRatioAsPercentage - 1,
+                        TriggerType.AUTO_TP_COLLATERAL,
+                        nextPrice.add('1000'),
+                        1000,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -151,8 +160,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
+                        TriggerType.AUTO_TP_COLLATERAL,
                         0,
                         triggerData,
                     ])
@@ -163,7 +171,7 @@ describe('CloseCommand', async () => {
                     triggerId = event.args.triggerId.toNumber()
                 })
 
-                afterEach(async () => {
+                after(async () => {
                     // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
@@ -173,18 +181,18 @@ describe('CloseCommand', async () => {
                         executionData,
                         testCdpId,
                         triggerData,
-                        CloseCommandInstance.address,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
-            describe('when Trigger is above current col ratio', async () => {
+            describe('when Trigger is above next price', async () => {
                 let triggerId: number
-                let triggersData: BytesLike
+                let triggerData: BytesLike
                 let executionData: BytesLike
                 let signer: Signer
 
@@ -199,12 +207,16 @@ describe('CloseCommand', async () => {
                 before(async () => {
                     // makeSnapshot
 
+                    const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+                    const osmAddress = await osmMom.osms(ethAIlk)
+
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
                     // addTrigger
-                    triggersData = encodeTriggerData(
+                    triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        currentCollRatioAsPercentage + 1,
+                        TriggerType.AUTO_TP_COLLATERAL,
+                        nextPrice.sub(1000),
+                        1000,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -218,30 +230,62 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
+                        TriggerType.AUTO_TP_COLLATERAL,
                         0,
-                        triggersData,
+                        triggerData,
                     ])
+
+                    // manipulate the next price to pass the trigger validation
+                    const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
+                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+
+                    // revert the stored next price
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', nextPriceStorage])
+
                     triggerId = event.args.triggerId.toNumber()
                 })
+                it('it should wipe all debt and collateral', async () => {
+                    const tx = await AutomationExecutorInstance.execute(
+                        executionData,
+                        testCdpId,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
+                        triggerId,
+                        0,
+                        0,
+                        185000,
+                    )
 
+                    const receipt = await tx.wait()
+                    console.log('         gas used', receipt.gasUsed.toNumber())
+
+                    const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
+
+                    expect(debt.toNumber()).to.be.equal(0)
+                    expect(collateral.toNumber()).to.be.equal(0)
+                    return true
+                })
                 it('it should pay instructed amount of DAI to executor to cover gas costs', async () => {
                     const balanceBefore = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
 
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
-                        178000,
+                        185000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -269,23 +313,22 @@ describe('CloseCommand', async () => {
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
-
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -296,40 +339,19 @@ describe('CloseCommand', async () => {
                         AutomationExecutorInstance.address,
                     )
                     const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+
                     expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
-                        10,
+                        buffer,
                     ) //account for some refund calculation inacurencies
                     expect(
                         ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    ).to.be.greaterThan(-buffer) //account for some refund calculation inacurencies
                     expect(
                         executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    ).to.be.greaterThan(1000 - buffer) //account for some refund calculation inacurencies
                     expect(
                         executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
-                })
-
-                it('it should wipe all debt and collateral', async () => {
-                    const tx = await AutomationExecutorInstance.execute(
-                        executionData,
-                        testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
-                        triggerId,
-                        0,
-                        0,
-                        178000,
-                    )
-
-                    const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
-
-                    const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
-
-                    expect(debt.toNumber()).to.be.equal(0)
-                    expect(collateral.toNumber()).to.be.equal(0)
-                    return true
+                    ).to.be.lessThan(1000 + buffer) //account for some refund calculation inacurencies
                 })
             })
         })
@@ -337,11 +359,10 @@ describe('CloseCommand', async () => {
         describe('closeToDai operation', async () => {
             before(async () => {
                 const debt = EthersBN.from(debtAmount)
-                const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) // value of collateral
+                const tradeSize = debt.mul(nextCollRatioAsPercentage).div(100) // value of collateral
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
-                // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000) /* 2% slippage */.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = ONE_INCH_V4_ROUTER
                 exchangeData._exchangeCalldata = forgeUnoswapCalldata(
@@ -351,9 +372,9 @@ describe('CloseCommand', async () => {
                 )
             })
 
-            describe('when Trigger is below current col ratio', async () => {
+            describe('when Trigger is above next price', async () => {
                 let triggerId: number
-                let triggersData: BytesLike
+                let triggerData: BytesLike
                 let executionData: BytesLike
                 let signer: Signer
 
@@ -362,15 +383,11 @@ describe('CloseCommand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = encodeTriggerData(
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        currentCollRatioAsPercentage - 1,
-                    )
+                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
-                        false,
+                        false, // to collateral
                         cdpData,
                         exchangeData,
                         serviceRegistry,
@@ -379,10 +396,9 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
+                        TriggerType.AUTO_TP_DAI,
                         0,
-                        triggersData,
+                        triggerData,
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -400,20 +416,20 @@ describe('CloseCommand', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
 
-            describe('when Trigger is above current col ratio', async () => {
+            describe('when Trigger is below next price', async () => {
                 let triggerId: number
-                let triggersData: BytesLike
+                let triggerData: BytesLike
                 let executionData: BytesLike
                 let signer: Signer
 
@@ -422,11 +438,7 @@ describe('CloseCommand', async () => {
                     //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggersData = encodeTriggerData(
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        currentCollRatioAsPercentage + 1,
-                    )
+                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.sub(1000), 1000)
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -439,16 +451,31 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
+                        TriggerType.AUTO_TP_DAI,
                         0,
-                        triggersData,
+                        triggerData,
                     ])
+
+                    // manipulate the next price to pass the trigger validation
+                    const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+                    const osmAddress = await osmMom.osms(ethAIlk)
+
+                    const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
+                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
+
+                    // revert the stored next price
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', nextPriceStorage])
                 })
 
                 beforeEach(async () => {
@@ -464,16 +491,15 @@ describe('CloseCommand', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
-
                     const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    console.log('         gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -494,23 +520,23 @@ describe('CloseCommand', async () => {
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -521,36 +547,38 @@ describe('CloseCommand', async () => {
                         AutomationExecutorInstance.address,
                     )
                     const ownerBalanceAfter = await hre.ethers.provider.getBalance(executorAddress)
+                    const buffer = 10
+
                     expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
-                        10,
+                        buffer,
                     ) //account for some refund calculation inacurencies
                     expect(
                         ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+                    ).to.be.greaterThan(-buffer) //account for some refund calculation inacurencies
                     expect(
                         executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.greaterThan(990) //account for some refund calculation inacurencies
+                    ).to.be.greaterThan(1000 - buffer) //account for some refund calculation inacurencies
                     expect(
                         executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber(),
-                    ).to.be.lessThan(1010) //account for some refund calculation inacurencies
+                    ).to.be.lessThan(1000 + buffer) //account for some refund calculation inacurencies
                 })
 
                 it('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
-                        triggersData,
-                        CloseCommandInstance.address,
+                        triggerData,
+                        AutoTakeProfitCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        185000,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
 
                     const debt = EthersBN.from(debtAmount)
-                    const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100)
+                    const tradeSize = debt.mul(nextCollRatioAsPercentage).div(100)
                     const valueLocked = tradeSize.sub(debt)
 
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()

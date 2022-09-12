@@ -59,6 +59,16 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
             },
             {
+                name: 'TriggerType.AUTO_TP_COLLATERAL',
+                hash: getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+                addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
+            },
+            {
+                name: 'TriggerType.AUTO_TP_DAI',
+                hash: getCommandHash(TriggerType.AUTO_TP_DAI),
+                addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
+            },
+            {
                 name: 'TriggerType.BASIC_BUY',
                 hash: getCommandHash(TriggerType.BASIC_BUY),
                 addressFromConfig: addresses.AUTOMATION_BASIC_BUY_COMMAND,

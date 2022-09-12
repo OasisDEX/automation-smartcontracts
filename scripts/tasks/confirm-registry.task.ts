@@ -45,11 +45,13 @@ task<ConfirmRegistryArgs>('confirm-registry')
         for (const { blockNumber, transactionHash, parsed } of pending) {
             const func = registry.interface.getFunction(parsed.args.data.slice(0, 10))
             const decoded = registry.interface.decodeFunctionData(func, parsed.args.data)
+            const timeLeft = (parsed.args.scheduledFor.toNumber() * 1000 - Date.now()) / 60000
             const info = [
                 `Transaction Hash: ${transactionHash}`,
                 `Block Number: ${blockNumber}`,
                 `Function: ${func.name}`,
                 `Arguments: [${func.inputs.map(input => decoded[input.name].toString()).join(', ')}]`,
+                timeLeft > 0 ? `Approx. time left: ${timeLeft} minutes` : `Changes ready to be applied`,
             ]
             console.log(`Change ${parsed.args.dataHash}:\n\t${info.join('\n\t')}\n`)
         }

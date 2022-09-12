@@ -7,6 +7,7 @@
     "test": "npx hardhat test",
     "test:aggregator": "npx hardhat test test/automation-aggregator.ts",
     "test:cmv": "npx hardhat test test/constant-multiple-validator.ts",
+    "test:atp": "npx hardhat test test/auto-take-profit.ts",
     "build": "npx hardhat compile",
     "clean": "rm -rf artifacts cache typechain",
     "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/*.sol contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
