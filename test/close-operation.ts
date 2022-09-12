@@ -149,7 +149,7 @@ describe('CloseCommand', async () => {
                     )
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        Math.pow(2, 16) - 1,
+                        TriggerGroupType.SINGLE_TRIGGER,
                         [false],
                         [0],
                         [triggerData],
@@ -218,7 +218,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        Math.pow(2, 16) - 1,
+                        TriggerGroupType.SINGLE_TRIGGER,
                         [false],
                         [0],
                         [triggersData],
@@ -375,7 +375,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        Math.pow(2, 16) - 1,
+                        TriggerGroupType.SINGLE_TRIGGER,
                         [false],
                         [0],
                         [triggersData],
@@ -434,7 +434,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        Math.pow(2, 16) - 1,
+                        TriggerGroupType.SINGLE_TRIGGER,
                         [false],
                         [0],
                         [triggersData],

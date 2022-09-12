@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName, TriggerGroupType } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor, AutomationBotStorage } from '../typechain'
 
@@ -112,14 +112,14 @@ describe('AutomationBot', async () => {
         )
 
         it('should fail if called not through delegatecall', async () => {
-            const tx = AutomationBotInstance.addTriggers(Math.pow(2, 16) - 1, [false], [0], [triggerData])
+            const tx = AutomationBotInstance.addTriggers(TriggerGroupType.SINGLE_TRIGGER, [false], [0], [triggerData])
             await expect(tx).to.be.revertedWith('bot/only-delegate')
         })
 
         it('should fail if called by a non-owner address', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],
@@ -132,7 +132,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],
@@ -167,7 +167,7 @@ describe('AutomationBot', async () => {
         it('should emit TriggerAdded if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],
@@ -183,7 +183,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [7],
                 [triggerData],
@@ -197,7 +197,7 @@ describe('AutomationBot', async () => {
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -297,7 +297,7 @@ describe('AutomationBot', async () => {
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -369,7 +369,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -507,7 +507,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [true],
                 [0],
                 [triggerData],
@@ -557,7 +557,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],
@@ -602,7 +602,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData]
@@ -702,6 +702,11 @@ describe('AutomationBot', async () => {
                 },
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
+        })
+        
+        it('should fail when trying to call emitGroupDetails', async () => {
+            const tx = AutomationBotInstance.emitGroupDetails(TriggerGroupType.SINGLE_TRIGGER, testCdpId, [])
+            await expect(tx).to.be.revertedWith('bot/not-locked')
         })
 
         it('should revert with bot/trigger-execution-wrong if finalCheckReturn is false', async () => {

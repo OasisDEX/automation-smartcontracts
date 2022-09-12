@@ -34,7 +34,7 @@ describe('BasicSellCommand', () => {
 
     const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
-            Math.pow(2, 16) - 1,
+            TriggerGroupType.SINGLE_TRIGGER,
             [continuous],
             [0],
             [triggerData],
@@ -111,7 +111,7 @@ describe('BasicSellCommand', () => {
             await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
-        it('should fail if trigger type is not encoded correctly', async () => {
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],

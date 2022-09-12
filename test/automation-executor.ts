@@ -165,7 +165,7 @@ describe('AutomationExecutor', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],

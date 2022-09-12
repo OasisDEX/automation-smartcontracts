@@ -21,6 +21,7 @@ export enum TriggerType {
 }
 
 export enum TriggerGroupType {
+    SINGLE_TRIGGER = 65535,
     CONSTANT_MULTIPLE = 1,
 }
 
