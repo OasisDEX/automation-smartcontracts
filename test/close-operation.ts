@@ -10,6 +10,7 @@ import {
     generateStopLossExecutionData,
     TriggerType,
     ONE_INCH_V4_ROUTER,
+    TriggerGroupType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 

@@ -10,6 +10,7 @@ import {
     HardhatUtils,
     ONE_INCH_V4_ROUTER,
     toRatio,
+    TriggerGroupType,
     TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'

@@ -9,6 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     toRatio,
+    TriggerGroupType,
     TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'

@@ -10,7 +10,7 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils, TriggerGroupType } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
 
