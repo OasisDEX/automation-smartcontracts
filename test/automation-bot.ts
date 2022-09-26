@@ -43,7 +43,7 @@ describe('AutomationBot', async () => {
             true,
             false,
             true,
-            true
+            true,
         )) as DummyRollingCommand
         DummyRollingCommandInstance = await DummyRollingCommandInstance.deployed()
         DummyCommandInstance = await DummyCommandInstance.deployed()
@@ -162,7 +162,7 @@ describe('AutomationBot', async () => {
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, false,  0, triggerData)
+            const tx2 = AutomationBotInstance.connect(signer).addRecord(testCdpId, triggerType, false, 0, triggerData)
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()
@@ -519,9 +519,12 @@ describe('AutomationBot', async () => {
     describe('execute with re-register', async () => {
         let triggerId = 1
         let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
-        let removalEventsCount: number = 0;
-        const triggerData =
-            '0x0000000000000000000000000000000000000000000000000000000000006CBB000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000A5'
+        let removalEventsCount = 0
+        const triggerType = 100
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256'],
+            [testCdpId, triggerType, 165],
+        )
 
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -556,7 +559,10 @@ describe('AutomationBot', async () => {
                 )
             ).wait()
 
-            removalEventsCount = getEvents(executionReceipt, AutomationBotInstance.interface.getEvent('TriggerRemoved')).length;
+            removalEventsCount = getEvents(
+                executionReceipt,
+                AutomationBotInstance.interface.getEvent('TriggerRemoved'),
+            ).length
 
             const [triggerAddedEvent] = getEvents(
                 executionReceipt,
@@ -572,17 +578,19 @@ describe('AutomationBot', async () => {
 
             const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.cdpId).to.eq(testCdpId)
-            expect(removalEventsCount).to.eq(0);
+            expect(removalEventsCount).to.eq(0)
         })
     })
 
-    
     describe('execute without re-register', async () => {
         let triggerId = 1
         let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
-        let removalEventsCount: number = 0;
-        const triggerData =
-            '0x0000000000000000000000000000000000000000000000000000000000006CBB000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000A5'
+        let removalEventsCount = 0
+        const triggerType = 100
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256'],
+            [testCdpId, triggerType, 165],
+        )
 
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -617,7 +625,10 @@ describe('AutomationBot', async () => {
                 )
             ).wait()
 
-            removalEventsCount = getEvents(executionReceipt, AutomationBotInstance.interface.getEvent('TriggerRemoved')).length;
+            removalEventsCount = getEvents(
+                executionReceipt,
+                AutomationBotInstance.interface.getEvent('TriggerRemoved'),
+            ).length
 
             const [triggerAddedEvent] = getEvents(
                 executionReceipt,
@@ -633,7 +644,7 @@ describe('AutomationBot', async () => {
 
             const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.cdpId).to.eq(0)
-            expect(removalEventsCount).to.eq(1);
+            expect(removalEventsCount).to.eq(1)
         })
     })
 
@@ -728,7 +739,6 @@ describe('AutomationBot', async () => {
             )
             await expect(tx).to.emit(AutomationBotInstance, 'TriggerExecuted').withArgs(triggerId, testCdpId, '0x')
             const receipt = await (await tx).wait()
-
         })
 
         it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
