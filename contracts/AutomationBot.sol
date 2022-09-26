@@ -25,6 +25,7 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -150,6 +151,8 @@ contract AutomationBot {
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address commandAddress = getCommandAddress(triggerType);
+
+        console.log("TriggerType", triggerType);
 
         require(
             ICommand(commandAddress).isTriggerDataValid(cdpId, continuous, triggerData),

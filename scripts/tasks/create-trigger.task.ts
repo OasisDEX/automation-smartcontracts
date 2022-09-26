@@ -13,6 +13,7 @@ import {
     TriggerType,
     isLocalNetwork,
     getCommandAddress,
+    TriggerGroupType,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
