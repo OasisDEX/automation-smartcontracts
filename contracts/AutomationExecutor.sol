@@ -195,6 +195,7 @@ contract AutomationExecutor {
             "executor/invalid-amount"
         );
         if (tokenIn == address(weth)) {
+            weth.withdraw(amountIn);
             return amountIn;
         }
         ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));

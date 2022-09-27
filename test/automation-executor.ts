@@ -31,9 +31,6 @@ describe('AutomationExecutor', async () => {
     let TestDAIInstance: TestERC20
     let TestWETHInstance: TestWETH
     let dai: ERC20
-    let weth: ERC20
-    let usdc: ERC20
-    let wbtc: ERC20
     let proxyOwnerAddress: string
     let usersProxy: DsProxyLike
     let owner: Signer
@@ -67,9 +64,6 @@ describe('AutomationExecutor', async () => {
         await TestWETHInstance.deposit({ value: wethAmount })
 
         dai = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.DAI)
-        weth = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
-        usdc = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
-        wbtc = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
 
         const system = await deploySystem({
             utils: hardhatUtils,
@@ -311,7 +305,7 @@ describe('AutomationExecutor', async () => {
         })
     })
 
-    describe.only('swap', () => {
+    describe('swap', () => {
         beforeEach(async () => {
             snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
             await hardhatUtils.setTokenBalance(

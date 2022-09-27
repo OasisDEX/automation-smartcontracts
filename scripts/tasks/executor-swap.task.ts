@@ -52,24 +52,16 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             signer = await hardhatUtils.impersonate(executionOwner)
             console.log(`Impersonated execution owner ${executionOwner}...`)
         }
-        const { price, fee } = await executor.getPrice(
-            hardhatUtils.addresses.DAI,
-
-            FEES,
-        )
+        const { price, fee } = await executor.getPrice(hardhatUtils.addresses.DAI, FEES)
         const expected = price.mul(
             EthersBN.from(args.amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals())),
         )
 
         const receiveAtLeast = expected.mul(EthersBN.from(1).sub(EthersBN.from(args.slippage).div(100)))
 
-        const gasEstimate = await executor.connect(signer).estimateGas.swapToEth(
-            addresses.DAI,
-
-            EthersBN.from(args.amount),
-            receiveAtLeast,
-            fee,
-        )
+        const gasEstimate = await executor
+            .connect(signer)
+            .estimateGas.swapToEth(addresses.DAI, EthersBN.from(args.amount), receiveAtLeast, fee)
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
         const tx = await executor
