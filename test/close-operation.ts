@@ -10,6 +10,7 @@ import {
     generateStopLossExecutionData,
     TriggerType,
     ONE_INCH_V4_ROUTER,
+    TriggerGroupType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
@@ -147,18 +148,19 @@ describe('CloseCommand', async () => {
                         exchangeData,
                         serviceRegistry,
                     )
-
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
+                    
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -216,12 +218,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -255,7 +256,7 @@ describe('CloseCommand', async () => {
                     )
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -374,12 +375,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -434,12 +434,11 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
-                        false,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggersData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -475,7 +474,7 @@ describe('CloseCommand', async () => {
                     expect(collateral.toNumber()).to.be.equal(0)
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),

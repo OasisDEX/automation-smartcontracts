@@ -20,7 +20,9 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
+import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
+import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
@@ -31,21 +33,23 @@ contract AutomationBot {
         bool continuous;
     }
 
+    uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2**16 - 1;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
-    mapping(uint256 => TriggerRecord) public activeTriggers;
-
-    uint256 public triggersCounter = 0;
-
     ServiceRegistry public immutable serviceRegistry;
+    AutomationBotStorage public immutable automationBotStorage;
     address public immutable self;
+    uint256 private lockCount;
 
-    constructor(ServiceRegistry _serviceRegistry) {
+    constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {
         serviceRegistry = _serviceRegistry;
+        automationBotStorage = _automationBotStorage;
         self = address(this);
+        lockCount = 0;
     }
 
     modifier auth(address caller) {
@@ -118,17 +122,18 @@ contract AutomationBot {
         address commandAddress,
         bytes memory triggerData
     ) private view {
-        bytes32 triggersHash = activeTriggers[triggerId].triggerHash;
+        (bytes32 triggerHash, , ) = automationBotStorage.activeTriggers(triggerId);
 
         require(
-            triggersHash != bytes32(0) &&
-                triggersHash == getTriggersHash(cdpId, triggerData, commandAddress),
+            triggerHash != bytes32(0) &&
+                triggerHash == getTriggersHash(cdpId, triggerData, commandAddress),
             "bot/invalid-trigger"
         );
     }
 
     function checkTriggersExistenceAndCorrectness(uint256 cdpId, uint256 triggerId) private view {
-        require(activeTriggers[triggerId].cdpId == cdpId, "bot/invalid-trigger");
+        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(triggerId);
+        require(triggerCdpId == cdpId, "bot/invalid-trigger");
     }
 
     // works correctly in context of automationBot
@@ -141,6 +146,8 @@ contract AutomationBot {
         uint256 replacedTriggerId,
         bytes memory triggerData
     ) external {
+        lock();
+
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address commandAddress = getCommandAddress(triggerType);
 
@@ -151,23 +158,26 @@ contract AutomationBot {
 
         require(isCdpAllowed(cdpId, msg.sender, manager), "bot/no-permissions");
 
-        triggersCounter = triggersCounter + 1;
-        activeTriggers[triggersCounter] = TriggerRecord(
-            getTriggersHash(cdpId, triggerData, commandAddress),
-            uint248(cdpId),
-            continuous
+        automationBotStorage.appendTriggerRecord(
+            AutomationBotStorage.TriggerRecord(
+                getTriggersHash(cdpId, triggerData, commandAddress),
+                uint248(cdpId),
+                continuous
+            )
         );
 
+        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
+
         if (replacedTriggerId != 0) {
-            require(
-                activeTriggers[replacedTriggerId].cdpId == cdpId,
-                "bot/trigger-removal-illegal"
+            require(triggerCdpId == cdpId, "bot/trigger-removal-illegal");
+            automationBotStorage.updateTriggerRecord(
+                replacedTriggerId,
+                AutomationBotStorage.TriggerRecord(0, 0, false)
             );
-            activeTriggers[replacedTriggerId] = TriggerRecord(0, 0, false);
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(
-            triggersCounter,
+            automationBotStorage.triggersCounter(),
             commandAddress,
             cdpId,
             continuous,
@@ -190,33 +200,108 @@ contract AutomationBot {
 
         checkTriggersExistenceAndCorrectness(cdpId, triggerId);
 
-        activeTriggers[triggerId] = TriggerRecord(0, 0, false);
+        automationBotStorage.updateTriggerRecord(
+            triggerId,
+            AutomationBotStorage.TriggerRecord(0, 0, false)
+        );
         emit TriggerRemoved(cdpId, triggerId);
     }
 
-    //works correctly in context of dsProxy
-    function addTrigger(
-        uint256 cdpId,
-        uint256 triggerType,
-        bool continuous,
-        uint256 replacedTriggerId,
-        bytes memory triggerData
-    ) external onlyDelegate {
-        // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+    function getTriggersCounter() private view returns (uint256) {
+        address automationBotStorageAddress = serviceRegistry.getRegisteredService(
+            AUTOMATION_BOT_STORAGE_KEY
+        );
+        return AutomationBotStorage(automationBotStorageAddress).triggersCounter();
+    }
 
+    // works correctly in context of dsProxy
+    function addTriggers(
+        uint16 groupType,
+        bool[] memory continuous,
+        uint256[] memory replacedTriggerId,
+        bytes[] memory triggerData
+    ) external onlyDelegate {
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        BotLike(automationBot).addRecord(
-            cdpId,
-            triggerType,
-            continuous,
-            replacedTriggerId,
+
+        (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decodeTriggersData(
+            groupType,
             triggerData
         );
-        if (!isCdpAllowed(cdpId, automationBot, manager)) {
-            manager.cdpAllow(cdpId, automationBot, 1);
-            emit ApprovalGranted(cdpId, automationBot);
+
+        if (groupType != SINGLE_TRIGGER_GROUP_TYPE) {
+            IValidator validator = getValidatorAddress(groupType);
+            require(
+                validator.validate(continuous, replacedTriggerId, triggerData),
+                "aggregator/validation-error"
+            );
         }
+
+        uint256 firstTriggerId = getTriggersCounter();
+        uint256[] memory triggerIds = new uint256[](triggerData.length);
+
+        for (uint256 i = 0; i < triggerData.length; i++) {
+            if (!isCdpAllowed(cdpIds[i], automationBot, manager)) {
+                manager.cdpAllow(cdpIds[i], automationBot, 1);
+                emit ApprovalGranted(cdpIds[i], automationBot);
+            }
+            AutomationBot(automationBot).addRecord(
+                cdpIds[i],
+                triggerTypes[i],
+                continuous[i],
+                replacedTriggerId[i],
+                triggerData[i]
+            );
+            triggerIds[i] = firstTriggerId + i;
+        }
+        AutomationBot(automationBot).emitGroupDetails(groupType, cdpIds[0], triggerIds);
+    }
+
+    function unlock() private {
+        //To keep addRecord && emitGroupDetails atomic
+        require(lockCount > 0, "bot/not-locked");
+        lockCount = 0;
+    }
+
+    function lock() private {
+        //To keep addRecord && emitGroupDetails atomic
+        lockCount++;
+    }
+
+    function emitGroupDetails(
+        uint16 triggerGroupType,
+        uint256 cdpId,
+        uint256[] memory triggerIds
+    ) external {
+        require(lockCount == triggerIds.length, "bot/group-inconsistent");
+        unlock();
+        automationBotStorage.increaseGroupCounter();
+
+        emit TriggerGroupAdded(
+            automationBotStorage.triggersGroupCounter(),
+            triggerGroupType,
+            cdpId,
+            triggerIds
+        );
+    }
+
+    function decodeTriggersData(uint16 groupType, bytes[] memory triggerData)
+        private
+        view
+        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
+    {
+        if (groupType == SINGLE_TRIGGER_GROUP_TYPE) {
+            cdpIds = new uint256[](triggerData.length);
+            triggerTypes = new uint256[](triggerData.length);
+            (cdpIds[0], triggerTypes[0]) = abi.decode(triggerData[0], (uint256, uint16));
+        } else {
+            (cdpIds, triggerTypes) = getValidatorAddress(groupType).decode(triggerData);
+        }
+    }
+
+    function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
+        bytes32 validatorHash = keccak256(abi.encode("Validator", groupType));
+        return IValidator(serviceRegistry.getServiceAddress(validatorHash));
     }
 
     //works correctly in context of dsProxy
@@ -225,11 +310,28 @@ contract AutomationBot {
     // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
     // despite there still be some active triggers which will be disables by this call.
     // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
+    function removeTriggers(uint256[] memory triggerIds, bool removeAllowance)
+        external
+        onlyDelegate
+    {
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+
+        for (uint256 i = 0; i < triggerIds.length; i++) {
+            (, uint256 cdpId, ) = automationBotStorage.activeTriggers(triggerIds[i]);
+            removeTrigger(cdpId, triggerIds[i], false);
+            if (removeAllowance) {
+                manager.cdpAllow(cdpId, automationBot, 0);
+                emit ApprovalRemoved(cdpId, automationBot);
+            }
+        }
+    }
+
     function removeTrigger(
         uint256 cdpId,
         uint256 triggerId,
         bool removeAllowance
-    ) external onlyDelegate {
+    ) private {
         address managerAddress = serviceRegistry.getRegisteredService(CDP_MANAGER_KEY);
         ManagerLike manager = ManagerLike(managerAddress);
 
@@ -305,8 +407,12 @@ contract AutomationBot {
 
         manager.cdpAllow(cdpId, commandAddress, 1);
         command.execute(executionData, cdpId, triggerData);
-        if (!activeTriggers[triggerId].continuous) {
-            activeTriggers[triggerId] = TriggerRecord(0, 0, false);
+        (, , bool continous) = automationBotStorage.activeTriggers(triggerId);
+        if (!continous) {
+            automationBotStorage.updateTriggerRecord(
+                triggerId,
+                AutomationBotStorage.TriggerRecord(0, 0, false)
+            );
             emit TriggerRemoved(cdpId, triggerId);
         }
         manager.cdpAllow(cdpId, commandAddress, 0);
@@ -332,4 +438,11 @@ contract AutomationBot {
     );
 
     event TriggerExecuted(uint256 indexed triggerId, uint256 indexed cdpId, bytes executionData);
+
+    event TriggerGroupAdded(
+        uint256 indexed groupId,
+        uint16 indexed groupType,
+        uint256 indexed cdpId,
+        uint256[] triggerIds
+    );
 }

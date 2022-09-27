@@ -9,6 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     toRatio,
+    TriggerGroupType,
     TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
@@ -33,12 +34,11 @@ describe('BasicSellCommand', () => {
     let snapshotId: string
 
     const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BASIC_SELL,
-            continuous,
-            0,
-            triggerData,
+        const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SINGLE_TRIGGER,
+            [continuous],
+            [0],
+            [triggerData],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data)
@@ -112,7 +112,8 @@ describe('BasicSellCommand', () => {
             await expect(createTrigger(triggerData, false)).to.be.reverted
         })
 
-        it('should fail if trigger type is not encoded correctly', async () => {
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
+            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
@@ -298,7 +299,7 @@ describe('BasicSellCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
@@ -314,7 +315,7 @@ describe('BasicSellCommand', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -322,7 +323,7 @@ describe('BasicSellCommand', () => {
             expect(events.length).to.eq(0)
             const removeEvent = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             expect(removeEvent.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })

@@ -2,7 +2,7 @@ import hre from 'hardhat'
 import { expect } from 'chai'
 import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
+import { AutomationBot, AutomationBotStorage, DsProxyLike } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 
@@ -17,7 +17,7 @@ describe('ConstantMultipleValidator', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     let AutomationBotInstance: AutomationBot
-    let AutomationBotAggregatorInstance: AutomationBotAggregator
+    let AutomationBotStorageInstance: AutomationBotStorage
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
     let snapshotId: string
@@ -28,7 +28,7 @@ describe('ConstantMultipleValidator', async () => {
         const system = await deploySystem({ utils, addCommands: true })
 
         AutomationBotInstance = system.automationBot
-        AutomationBotAggregatorInstance = system.automationBotAggregator
+        AutomationBotStorageInstance = system.automationBotStorage
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -80,22 +80,22 @@ describe('ConstantMultipleValidator', async () => {
             console.log('-------')
             console.log(`user address ${ownerProxyUserAddress}`)
             console.log(`proxy ${ownerProxy.address}`)
-            console.log(`ag bot address ${AutomationBotAggregatorInstance.address}`)
+            console.log(`ag bot address ${AutomationBotInstance.address}`)
             console.log(`bot address ${AutomationBotInstance.address}`)
             console.log('-------')
-            const counterBefore = await AutomationBotAggregatorInstance.counter()
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const counterBefore = await AutomationBotStorageInstance.triggersGroupCounter()
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotAggregatorInstance.counter()
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const counterAfter = await AutomationBotStorageInstance.triggersGroupCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
             const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotAggregatorInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotAggregatorInstance.address).to.eql(events[0].address)
+            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
+            expect(AutomationBotInstance.address).to.eql(events[0].address)
         })
         it('should not add trigger group with different traget ratios', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -108,13 +108,13 @@ describe('ConstantMultipleValidator', async () => {
                 50,
                 maxGweiPrice,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
         it('should not add trigger group with continuous not equal', async () => {
@@ -128,13 +128,13 @@ describe('ConstantMultipleValidator', async () => {
                 50,
                 maxGweiPrice,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,false],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
         it('should not add trigger group with deviation not equal', async () => {
@@ -148,13 +148,13 @@ describe('ConstantMultipleValidator', async () => {
                 70,
                 maxGweiPrice,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
         it('should not add trigger group with deviation not equal', async () => {
@@ -168,13 +168,13 @@ describe('ConstantMultipleValidator', async () => {
                 70,
                 maxGweiPrice,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
         it('should not add trigger group with max gas fee not equal', async () => {
@@ -188,13 +188,13 @@ describe('ConstantMultipleValidator', async () => {
                 50,
                 maxGweiPrice + 1,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
         it('should not add trigger group with different cdp', async () => {
@@ -208,13 +208,13 @@ describe('ConstantMultipleValidator', async () => {
                 50,
                 maxGweiPrice,
             )
-            const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true,true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotAggregatorInstance.address, dataToSupply)
+            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
         })
     })

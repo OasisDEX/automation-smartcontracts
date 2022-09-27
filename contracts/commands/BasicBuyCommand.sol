@@ -51,7 +51,7 @@ contract BasicBuyCommand is BaseMPACommand {
         uint256 _cdpId,
         bool continuous,
         bytes memory triggerData
-    ) external view returns (bool) {
+    ) external view returns (bool result) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -62,7 +62,7 @@ contract BasicBuyCommand is BaseMPACommand {
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
             trigger.deviation
         );
-        return
+        result =
             _cdpId == trigger.cdpId &&
             trigger.triggerType == 3 &&
             trigger.execCollRatio > upperTarget &&

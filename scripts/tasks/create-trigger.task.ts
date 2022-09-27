@@ -13,6 +13,7 @@ import {
     TriggerType,
     isLocalNetwork,
     getCommandAddress,
+    TriggerGroupType,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
@@ -104,12 +105,11 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
-        const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
-            args.vault.toString(),
-            args.type,
-            args.continuous,
-            triggerIdToReplace,
-            triggerData,
+        const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SINGLE_TRIGGER,
+            [args.continuous],
+            [triggerIdToReplace],
+            [triggerData],
         ])
 
         const info = [
