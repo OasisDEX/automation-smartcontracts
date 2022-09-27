@@ -49,11 +49,11 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 _cdpId,
         bool continuous,
         bytes memory triggerData
-    ) external pure returns (bool) {
+    ) external pure returns (bool result) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
-        return
+        result =
             _cdpId == trigger.cdpId &&
             trigger.triggerType == 4 &&
             trigger.execCollRatio <= lowerTarget &&
