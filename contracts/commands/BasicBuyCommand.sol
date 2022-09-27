@@ -68,7 +68,6 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
-        return result;
     }
 
     function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
