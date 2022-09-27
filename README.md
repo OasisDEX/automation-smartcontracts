@@ -23,6 +23,12 @@ yarn test
 ```shell
 npx hardhat run scripts/deployment/deploy.ts --network <target network>
 ```
+## Hardhat tasks
+
+To get additional info about hardhat task use eg:
+```shell
+npx hardhat create-trigger --help
+```
 
 ## Linting & Formatting
 
