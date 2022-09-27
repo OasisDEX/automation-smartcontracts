@@ -27,7 +27,7 @@ import "./McdUtils.sol";
 contract AutomationBotStorage {
     struct TriggerRecord {
         bytes32 triggerHash;
-        uint248 cdpId; // to still fit two memory slots for whole struct
+        address commandAddress; // to still fit two memory slots for whole struct
         bool continuous;
     }
 
