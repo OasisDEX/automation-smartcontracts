@@ -24,11 +24,15 @@ import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
-import { ISwapRouter } from "./interfaces/ISwapRouter.sol";
-import { IUniswapV3Factory } from "./interfaces/IUniswapV3Factory.sol";
-import { TickMath } from "./libs/TickMath.sol";
-import { FullMath } from "./libs/FullMath.sol";
-import "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+
+import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
+import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
+import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import {
+    IV3SwapRouter
+} from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
+import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
@@ -36,12 +40,11 @@ contract AutomationExecutor {
     event CallerAdded(address indexed caller);
     event CallerRemoved(address indexed caller);
 
-    ISwapRouter public immutable uniswapRouter;
-    IUniswapV3Factory public immutable factory;
+    IV3SwapRouter public immutable uniswapRouter;
+    IUniswapV3Factory public immutable uniswapFactory;
     BotLike public immutable bot;
     ERC20 public immutable dai;
     IWETH public immutable weth;
-
     address public owner;
 
     mapping(address => bool) public callers;
@@ -56,8 +59,8 @@ contract AutomationExecutor {
         dai = _dai;
         owner = msg.sender;
         callers[owner] = true;
-        uniswapRouter = ISwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-        factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+        uniswapRouter = IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
+        uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     }
 
     modifier onlyOwner() {
@@ -143,64 +146,72 @@ contract AutomationExecutor {
         return sqrtPriceX96;
     }
 
-    function getPrice(
-        address tokenIn,
-        address tokenOut,
-        uint24 fee
-    ) public view returns (uint256 price) {
-        IUniswapV3Pool pool = IUniswapV3Pool(factory.getPool(tokenIn, tokenOut, fee));
+    function getPrice(address tokenIn, uint24[] memory fees)
+        public
+        view
+        returns (uint256 price, uint24 fee)
+    {
+        uint24 biggestPoolFee;
+        IUniswapV3Pool biggestPool;
+        uint256 highestPoolBalance;
+        uint256 currentPoolBalance;
+        for (uint8 i; i < fees.length; i++) {
+            IUniswapV3Pool pool = IUniswapV3Pool(
+                uniswapFactory.getPool(tokenIn, address(weth), fees[i])
+            );
+            currentPoolBalance = weth.balanceOf(address(pool));
+            if (currentPoolBalance > highestPoolBalance) {
+                biggestPoolFee = fees[i];
+                biggestPool = pool;
+                highestPoolBalance = currentPoolBalance;
+            }
+        }
 
-        uint160 sqrtPriceX96 = getTick(address(pool), 60);
-        address token0 = pool.token0();
+        uint160 sqrtPriceX96 = getTick(address(biggestPool), 60);
+        address token0 = biggestPool.token0();
         uint256 decimals = ERC20(tokenIn).decimals();
 
         if (token0 == tokenIn) {
-            return (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192;
+            return (
+                (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192,
+                biggestPoolFee
+            );
         } else {
-            return (((2**192) * (10**decimals)) /
-                ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)))));
+            return (
+                (((2**192) * (10**decimals)) / ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96))))),
+                biggestPoolFee
+            );
         }
     }
 
-    function swap(
+    function swapToEth(
         address tokenIn,
-        address tokenOut,
         uint256 amountIn,
         uint256 amountOutMin,
         uint24 fee
     ) external auth(msg.sender) returns (uint256) {
         require(
-            amountIn > 0 &&
-                amountIn <=
-                (
-                    tokenIn == address(weth)
-                        ? address(this).balance
-                        : ERC20(tokenIn).balanceOf(address(this))
-                ),
+            amountIn > 0 && amountIn <= ERC20(tokenIn).balanceOf(address(this)),
             "executor/invalid-amount"
         );
-
+        if (tokenIn == address(weth)) {
+            return amountIn;
+        }
         ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));
 
-        bytes memory path = abi.encodePacked(tokenIn, uint24(fee), tokenOut);
+        bytes memory path = abi.encodePacked(tokenIn, uint24(fee), address(weth));
 
-        ISwapRouter.ExactInputParams memory params = ISwapRouter.ExactInputParams({
+        IV3SwapRouter.ExactInputParams memory params = IV3SwapRouter.ExactInputParams({
             path: path,
             recipient: address(this),
             amountIn: amountIn,
             amountOutMinimum: amountOutMin
         });
 
-        if (tokenIn == address(weth)) {
-            return uniswapRouter.exactInput{ value: amountIn }(params);
-        } else if ((tokenOut == address(weth))) {
-            uint256 amount = uniswapRouter.exactInput(params);
-            weth.withdraw(amount);
-            return amount;
-        } else {
-            ERC20(tokenIn).approve(address(uniswapRouter), amountIn);
-            return uniswapRouter.exactInput(params);
-        }
+        ERC20(tokenIn).approve(address(uniswapRouter), amountIn);
+        uint256 amount = uniswapRouter.exactInput(params);
+        weth.withdraw(amount);
+        return amount;
     }
 
     function withdraw(address asset, uint256 amount) external onlyOwner {

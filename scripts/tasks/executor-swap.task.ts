@@ -11,6 +11,7 @@ interface ExecutorSwapArgs {
 }
 
 const DEFAULT_SLIPPAGE_PCT = new BigNumber(1)
+const FEES = [100, 500, 3000]
 
 task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
     .addParam('amount', 'The DAI amount to swap (base units)', '', params.bignumber)
@@ -51,11 +52,10 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
             signer = await hardhatUtils.impersonate(executionOwner)
             console.log(`Impersonated execution owner ${executionOwner}...`)
         }
-        const price = await executor.getPrice(
+        const { price, fee } = await executor.getPrice(
             hardhatUtils.addresses.DAI,
-            hardhatUtils.addresses.WETH,
 
-            3000,
+            FEES,
         )
         const expected = price.mul(
             EthersBN.from(args.amount).div(hre.ethers.utils.parseUnits('1', await dai.decimals())),
@@ -63,24 +63,18 @@ task<ExecutorSwapArgs>('swap', 'Swap DAI to ETH on the executor')
 
         const receiveAtLeast = expected.mul(EthersBN.from(1).sub(EthersBN.from(args.slippage).div(100)))
 
-        const gasEstimate = await executor.connect(signer).estimateGas.swap(
+        const gasEstimate = await executor.connect(signer).estimateGas.swapToEth(
             addresses.DAI,
-            addresses.WETH,
 
             EthersBN.from(args.amount),
             receiveAtLeast,
-            3000,
+            fee,
         )
         console.log(`Gas Estimate: ${gasEstimate.toString()}`)
 
-        const tx = await executor.connect(signer).swap(
-            addresses.DAI,
-            addresses.WETH,
-
-            EthersBN.from(args.amount),
-            receiveAtLeast,
-            3000,
-        )
+        const tx = await executor
+            .connect(signer)
+            .swapToEth(addresses.DAI, EthersBN.from(args.amount), receiveAtLeast, fee)
         console.log(`Swap Transcaction Hash: ${tx.hash}`)
 
         const receipt = await tx.wait()
