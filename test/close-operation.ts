@@ -256,7 +256,7 @@ describe('CloseCommand', async () => {
                     )
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -474,7 +474,7 @@ describe('CloseCommand', async () => {
                     expect(collateral.toNumber()).to.be.equal(0)
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
