@@ -10,6 +10,7 @@ import {
     TriggerType,
     ONE_INCH_V4_ROUTER,
     generateTpOrSlExecutionData,
+    TriggerGroupType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
@@ -158,11 +159,11 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -228,11 +229,11 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
 
                     // manipulate the next price to pass the trigger validation
@@ -394,11 +395,11 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AUTO_TP_DAI,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -449,11 +450,11 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AUTO_TP_DAI,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SINGLE_TRIGGER,
+                        [false],
+                        [0],
+                        [triggerData],
                     ])
 
                     // manipulate the next price to pass the trigger validation
