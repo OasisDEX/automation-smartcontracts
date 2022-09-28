@@ -10,7 +10,14 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    TriggerType,
+    HardhatUtils,
+    TriggerGroupType,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
 
@@ -162,7 +169,7 @@ describe('AutomationExecutor', async () => {
             const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SINGLE_TRIGGER,
                 [false],
                 [0],
                 [triggerData],

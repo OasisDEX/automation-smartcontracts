@@ -48,10 +48,6 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
-        const aggregator = await hre.ethers.getContractAt(
-            'AutomationBotAggregator',
-            hardhatUtils.addresses.AUTOMATION_BOT_AGGREGATOR,
-        )
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
@@ -78,10 +74,10 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
         const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_SELL, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
-
-        const addTriggerGroupData = aggregator.interface.encodeFunctionData('addTriggerGroup', [
+        /* 
+        const addTriggerGroupData = bot.interface.encodeFunctionData('addTriggers', [
             args.type.toString(),
-            [false, false],
+            [true, true],
             args.replaced,
             triggersData,
         ])
@@ -89,7 +85,7 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
         const info = [
             `Triggers Data: ${triggersData}`,
             `Triggers to replace: ${args.replaced}`,
-            `Automation Aggregator Bot: ${aggregator.address}`,
+            `Automation Bot: ${bot.address}`,
             `Vault ID: ${args.vault.toString()}`,
             `DSProxy: ${proxyAddress}`,
             `Signer: ${await signer.getAddress()}`,
@@ -100,12 +96,12 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             return
         }
 
-        const tx = await proxy.connect(signer).execute(aggregator.address, addTriggerGroupData, {
+        const tx = await proxy.connect(signer).execute(bot.address, addTriggerGroupData, {
             gasLimit: 2000000,
         })
         const receipt = await tx.wait()
 
-        const [triggerGroupAddedEvent] = getEvents(receipt, aggregator.interface.getEvent('TriggerGroupAdded'))
+        const [triggerGroupAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerGroupAdded'))
 
         if (!triggerGroupAddedEvent) {
             throw new Error(`Failed to create trigger group. Contract Receipt: ${JSON.stringify(receipt)}`)
@@ -124,5 +120,5 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             ]
                 .concat(info)
                 .join('\n'),
-        )
+        ) */
     })

@@ -151,7 +151,7 @@ contract AutomationBot {
         );
 
         if (replacedTriggerId != 0) {
-            // TODO: previosly it checked if cdpIds are the same
+            // TODO: previously it checked if cdpIds are the same
             (bytes32 replacedTriggersHash, , ) = automationBotStorage.activeTriggers(
                 replacedTriggerId
             );
@@ -196,7 +196,7 @@ contract AutomationBot {
         emit TriggerRemoved(triggerId);
     }
 
-    //works correctly in context of dsProxy
+    // works correctly in context of dsProxy
     function addTriggers(
         uint16 groupType,
         bool[] memory continuous,

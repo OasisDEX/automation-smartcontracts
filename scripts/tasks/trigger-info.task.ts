@@ -33,6 +33,7 @@ task<TriggerInfoArgs>('trigger-info')
         const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
+        const botStorage = await hre.ethers.getContractAt('AutomationBotStorage', addresses.AUTOMATION_BOT_STORAGE)
 
         const events = await hre.ethers.provider.getLogs({
             address: addresses.AUTOMATION_BOT,
@@ -48,11 +49,13 @@ task<TriggerInfoArgs>('trigger-info')
 
         const [event] = events
         const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
-
+        /* 
         const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
+        const trigger = await botStorage.activeTriggers(args.trigger.toString())
+        console.log(`Active: ${!trigger.cdpId.eq(0)}`)
 
-        const closeCommand = await hre.ethers.getContractAt('CloseCommand', addresses.AUTOMATION_CLOSE_COMMAND)
+        const command = await hre.ethers.getContractAt('ICommand', commandAddress)
         const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', addresses.CDP_MANAGER)
 
@@ -64,7 +67,7 @@ task<TriggerInfoArgs>('trigger-info')
         const vaultOwner = await cdpManager.owns(vaultId.toString(), opts)
         const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
         const proxyOwner = await proxy.owner(opts)
-        const isExecutionLegal = await closeCommand.isExecutionLegal(vaultId.toString(), triggerData, opts)
+        const isExecutionLegal = await command.isExecutionLegal(vaultId.toString(), triggerData, opts)
         const ilk = await cdpManager.ilks(vaultId.toString(), opts)
         const { ilkDecimals } = await hardhatUtils.getIlkData(ilk, opts)
         const [coll, debt] = await mcdView.getVaultInfo(vaultId.toString(), opts)
@@ -84,7 +87,7 @@ task<TriggerInfoArgs>('trigger-info')
             `Coll Ratio: ${toBaseUnits(collRatio, 16)}`,
             `Next Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
         ]
-        console.log(`\n${vaultInfo.join('\n')}`)
+        console.log(`\n${vaultInfo.join('\n')}`) */
     })
 
 function toBaseUnits(val: EthersBN, decimals = 18) {

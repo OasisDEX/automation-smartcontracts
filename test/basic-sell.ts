@@ -9,6 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     toRatio,
+    TriggerGroupType,
     TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
@@ -34,7 +35,7 @@ describe('BasicSellCommand', () => {
 
     const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
-            Math.pow(2, 16) - 1,
+            TriggerGroupType.SINGLE_TRIGGER,
             [continuous],
             [0],
             [triggerData],

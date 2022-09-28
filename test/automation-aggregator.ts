@@ -1,92 +1,103 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
-import { BytesLike, ContractTransaction, utils } from 'ethers'
+import { constants, Signer, BigNumber as EthersBN, utils } from 'ethers'
 import {
-    encodeTriggerData,
-    forgeUnoswapCalldata,
-    generateRandomAddress,
-    getEvents,
-    HardhatUtils,
-    ONE_INCH_V4_ROUTER,
-} from '../scripts/common'
-import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DsProxyLike, MPALike, AutomationBotStorage } from '../typechain'
-import { TriggerGroupType, TriggerType } from '../scripts/common'
-import BigNumber from 'bignumber.js'
-import { getMultiplyParams } from '@oasisdex/multiply'
+    AutomationBot,
+    AutomationExecutor,
+    DsProxyLike,
+    DummyCommand,
+    ServiceRegistry,
+    TestExchange,
+    TestWETH,
+} from '../typechain'
+import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
+import { deploySystem } from '../scripts/common/deploy-system'
+import { TestERC20 } from '../typechain/TestERC20'
 
-const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
-const maxGweiPrice = 1000
+const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
-function toRatio(units: number) {
-    return new BigNumber(units).shiftedBy(4).toNumber()
-}
+const dummyTriggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 1, 101])
 
-describe('AutomationAggregatorBot', async () => {
+describe('AutomationExecutor', async () => {
+    const testTokenTotalSupply = EthersBN.from(10).pow(18)
+    const daiTotalSupply = EthersBN.from(10).pow(18)
+    const wethAmount = EthersBN.from(10).pow(18).mul(10)
     const hardhatUtils = new HardhatUtils(hre)
 
+    let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
-    let AutomationBotStorageInstance: AutomationBotStorage
-    let ownerProxy: DsProxyLike
-    let ownerProxyUserAddress: string
-    let beforeOwnerProxy: DsProxyLike
-    let beforeOwnerProxyUserAddress: string
-    let notOwnerProxy: DsProxyLike
-    let notOwnerProxyUserAddress: string
-
-    let system: DeployedSystem
-    let MPAInstance: MPALike
-    let receiverAddress: string
-    let executorAddress: string
+    let AutomationExecutorInstance: AutomationExecutor
+    let DummyCommandInstance: DummyCommand
+    let TestERC20Instance: TestERC20
+    let TestDAIInstance: TestERC20
+    let TestWETHInstance: TestWETH
+    let TestExchangeInstance: TestExchange
+    let proxyOwnerAddress: string
+    let usersProxy: DsProxyLike
+    let owner: Signer
+    let ownerAddress: string
+    let notOwner: Signer
     let snapshotId: string
-    let createTrigger: (
-        triggerData: BytesLike,
-        triggerType: TriggerType,
-        continuous: boolean,
-    ) => Promise<ContractTransaction>
-    const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
-        executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
-        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
+        ;[owner, notOwner] = await hre.ethers.getSigners()
+        ownerAddress = await owner.getAddress()
 
-        system = await deploySystem({ utils, addCommands: true })
+        const testERC20Factory = await hre.ethers.getContractFactory('TestERC20', owner)
+        TestERC20Instance = await testERC20Factory.deploy('Test Token', 'TST', testTokenTotalSupply)
+        TestDAIInstance = await testERC20Factory.deploy('Dai', 'DAI', daiTotalSupply)
 
+        const testWETHFactory = await hre.ethers.getContractFactory('TestWETH', owner)
+        TestWETHInstance = await testWETHFactory.deploy()
+        await TestWETHInstance.deposit({ value: wethAmount })
+
+        const testExchangeFactory = await hre.ethers.getContractFactory('TestExchange', owner)
+        TestExchangeInstance = await testExchangeFactory.deploy(TestDAIInstance.address)
+
+        const system = await deploySystem({
+            utils: hardhatUtils,
+            addCommands: false,
+            addressOverrides: {
+                EXCHANGE: TestExchangeInstance.address,
+                DAI: TestDAIInstance.address,
+                WETH: TestWETHInstance.address,
+            },
+        })
+
+        ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
-        AutomationBotStorageInstance = system.automationBotStorage
+        AutomationExecutorInstance = system.automationExecutor
 
-        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
+        // Fund the exchange & the executor
+        await Promise.all([
+            TestDAIInstance.transfer(TestExchangeInstance.address, daiTotalSupply.div(2)),
+            TestERC20Instance.transfer(TestExchangeInstance.address, testTokenTotalSupply.div(2)),
+            TestDAIInstance.transfer(AutomationExecutorInstance.address, daiTotalSupply.div(2)),
+            TestERC20Instance.transfer(AutomationExecutorInstance.address, testTokenTotalSupply.div(2)),
+            owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) }),
+        ])
 
-        await system.mcdView.approve(executorAddress, true)
-        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
+        DummyCommandInstance = await dummyCommandFactory.deploy(
+            ServiceRegistryInstance.address,
+            true,
+            true,
+            false,
+            true,
+        )
+        DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        const proxyAddress = await cdpManager.owns(testCdpId)
-        ownerProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
-        ownerProxyUserAddress = await ownerProxy.owner()
+        let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
+        await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
-        const beforeProxyAddress = await cdpManager.owns(beforeTestCdpId)
-        beforeOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', beforeProxyAddress)
-        beforeOwnerProxyUserAddress = await beforeOwnerProxy.owner()
+        const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
-        const otherProxyAddress = await cdpManager.owns(1)
-        notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
-        notOwnerProxyUserAddress = await notOwnerProxy.owner()
-        const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
-        const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
-        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
-            const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
-                [continuous],
-                [0],
-                [triggerData],
-                [triggerType],
-            ])
-            const signer = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            return ownerProxy.connect(signer).execute(system.automationBot.address, data)
-        }
+        const proxyAddress = await cdpManagerInstance.owns(testCdpId)
+        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
+        proxyOwnerAddress = await usersProxy.owner()
     })
 
     beforeEach(async () => {
@@ -97,689 +108,397 @@ describe('AutomationAggregatorBot', async () => {
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
-    describe('addTriggerGroup', async () => {
-        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-        // data for the owner vault
-        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
+    describe('setExchange', async () => {
+        it('should successfully set new exchange address', async () => {
+            const address = generateRandomAddress()
+            await AutomationExecutorInstance.setExchange(address)
+            const newAddress = await AutomationExecutorInstance.exchange()
+            expect(newAddress.toLowerCase()).to.eq(address)
+        })
 
-        // basic buy
-        const bbTriggerData = encodeTriggerData(
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            buyExecutionRatio,
-            buyTargetRatio,
-            '4472665974900000000000',
-            50,
-            maxGweiPrice,
-        )
-        // basic sell
-        const bsTriggerData = encodeTriggerData(
-            testCdpId,
-            TriggerType.BASIC_SELL,
-            sellExecutionRatio,
-            sellTargetRatio,
-            '4472665974900000000000',
-            50,
-            maxGweiPrice,
-        )
-        // data for the vault that's created before all tests
-        const [beforeSellExecutionRatio, beforeSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
-        const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
-        // basic buy
-        const beforeBbTriggerData = encodeTriggerData(
-            beforeTestCdpId,
-            TriggerType.BASIC_BUY,
-            beforeBuyExecutionRatio,
-            beforeBuyTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-        // basic sell
-        const beforeBsTriggerData = encodeTriggerData(
-            beforeTestCdpId,
-            TriggerType.BASIC_SELL,
-            beforeSellExecutionRatio,
-            beforeSellTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-        const replacedTriggerId = [0, 0]
+        it('should revert with executor/only-owner on unauthorized sender', async () => {
+            const exchange = generateRandomAddress()
+            const tx = AutomationExecutorInstance.connect(notOwner).setExchange(exchange)
+            await expect(tx).to.be.revertedWith('executor/only-owner')
+        })
+    })
 
-        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
-            const collRatio = await system.mcdView.getRatio(testCdpId, true)
-            const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
-            const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
-            const slippage = new BigNumber(0.01)
-            const oasisFee = new BigNumber(0.002)
+    describe('addCaller', () => {
+        it('should be able to whitelist new callers', async () => {
+            const caller = generateRandomAddress()
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+        })
 
-            const oraclePriceUnits = new BigNumber(oraclePrice.toString()).shiftedBy(-18)
-            const { collateralDelta, debtDelta, oazoFee, skipFL } = getMultiplyParams(
-                {
-                    oraclePrice: oraclePriceUnits,
-                    marketPrice: oraclePriceUnits,
-                    OF: oasisFee,
-                    FF: new BigNumber(0),
-                    slippage,
-                },
-                {
-                    currentDebt: new BigNumber(debt.toString()).shiftedBy(-18),
-                    currentCollateral: new BigNumber(collateral.toString()).shiftedBy(-18),
-                    minCollRatio: new BigNumber(collRatio.toString()).shiftedBy(-18),
-                },
-                {
-                    requiredCollRatio: targetRatio.shiftedBy(-4),
-                    providedCollateral: new BigNumber(0),
-                    providedDai: new BigNumber(0),
-                    withdrawDai: new BigNumber(0),
-                    withdrawColl: new BigNumber(0),
-                },
-            )
+        it('should revert with executor/only-owner on unauthorized sender', async () => {
+            const caller = generateRandomAddress()
+            const tx = AutomationExecutorInstance.connect(notOwner).addCallers([caller])
+            await expect(tx).to.be.revertedWith('executor/only-owner')
+        })
+    })
 
-            const cdpData = {
-                gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
-                fundsReceiver: receiverAddress,
-                cdpId: testCdpId,
-                ilk: ethAIlk,
-                requiredDebt: debtDelta.shiftedBy(18).abs().toFixed(0),
-                borrowCollateral: collateralDelta.shiftedBy(18).abs().toFixed(0),
-                withdrawCollateral: 0,
-                withdrawDai: 0,
-                depositDai: 0,
-                depositCollateral: 0,
-                skipFL,
-                methodName: '',
-            }
+    describe('removeCaller', () => {
+        it('should be able to whitelist new callers', async () => {
+            const caller = generateRandomAddress()
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+            await AutomationExecutorInstance.removeCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+        })
 
-            const minToTokenAmount = new BigNumber(cdpData.borrowCollateral).times(new BigNumber(1).minus(slippage))
-            const exchangeData = {
-                fromTokenAddress: hardhatUtils.addresses.DAI,
-                toTokenAddress: hardhatUtils.addresses.WETH,
-                fromTokenAmount: cdpData.requiredDebt,
-                toTokenAmount: cdpData.borrowCollateral,
-                minToTokenAmount: minToTokenAmount.toFixed(0),
-                exchangeAddress: ONE_INCH_V4_ROUTER,
-                _exchangeCalldata: forgeUnoswapCalldata(
-                    hardhatUtils.addresses.DAI,
-                    new BigNumber(cdpData.requiredDebt).minus(oazoFee.shiftedBy(18)).toFixed(0),
-                    minToTokenAmount.toFixed(0),
-                    false,
-                ),
-            }
+        it('should revert with executor/only-owner on unauthorized sender', async () => {
+            const caller = generateRandomAddress()
+            const tx = AutomationExecutorInstance.connect(notOwner).removeCallers([caller])
+            await expect(tx).to.be.revertedWith('executor/only-owner')
+        })
+    })
 
-            const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
-                exchangeData,
-                cdpData,
-                hardhatUtils.mpaServiceRegistry(),
+    describe('execute', async () => {
+        const triggerData = dummyTriggerData
+        let triggerId = 0
+
+        before(async () => {
+            const newSigner = await hardhatUtils.impersonate(proxyOwnerAddress)
+
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                Math.pow(2, 16) - 1,
+                [false],
+                [0],
+                [triggerData],
+                [1],
             ])
+            const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
+            const result = await tx.wait()
 
-            return system.automationExecutor.execute(
-                executionData,
+            const [event] = getEvents(result, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            triggerId = event.args.triggerId.toNumber()
+        })
+
+        beforeEach(async () => {
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
+
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
+
+        it('should not revert on successful execution', async () => {
+            await DummyCommandInstance.changeFlags(true, true, false)
+            const tx = AutomationExecutorInstance.execute(
+                dummyTriggerData,
                 testCdpId,
                 triggerData,
-                system.basicBuy!.address,
+                DummyCommandInstance.address,
                 triggerId,
                 0,
                 0,
+                15000,
+            )
+            await expect(tx).not.to.be.reverted
+        })
+
+        it('should revert with executor/not-authorized on unauthorized sender', async () => {
+            await DummyCommandInstance.changeFlags(true, true, false)
+            const tx = AutomationExecutorInstance.connect(notOwner).execute(
+                dummyTriggerData,
+                testCdpId,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
                 0,
+                0,
+                15000,
             )
-        }
-
-        beforeEach(async () => {
-            const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
-            const beforeDataToSupplyAdd = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [beforeBbTriggerData, beforeBsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = await beforeOwnerProxy
-                .connect(beforeOwner)
-                .execute(AutomationBotInstance.address, beforeDataToSupplyAdd, { gasLimit: 2_000_000 })
-            await tx.wait()
+            await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
-        it('should successfully create a trigger group through DSProxy', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            console.log('-------')
-            console.log(`user address ${ownerProxyUserAddress}`)
-            console.log(`proxy ${ownerProxy.address}`)
-            console.log(`automation bot address ${AutomationBotInstance.address}`)
-            console.log(`bot address ${AutomationBotInstance.address}`)
-            console.log('-------')
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-        })
-        it('should successfully create a trigger group - and then replace it with new one', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply2 = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [Number(triggerCounter) - 1, Number(triggerCounter)],
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx2 = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply2)
 
-            const counterAfter2 = await AutomationBotStorageInstance.triggersCounter()
+        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+            await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
 
-            expect(counterAfter2.toNumber()).to.be.equal(counterAfter.toNumber() + 2)
-            const receipt2 = await tx2.wait()
-            const events2 = getEvents(receipt2, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events2[0].address)
-        })
-        it('should successfully create a trigger group, remove old bb and add new bb in its place', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const oldBbTriggerData = encodeTriggerData(
+            const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceBefore = await hre.ethers.provider.getBalance(await owner.getAddress())
+
+            const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
+                dummyTriggerData,
                 testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                15000,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            await createTx.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber(), 0],
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-
-            const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
-            const aggregatorEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(botEvents[0].address)
-            expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
-        })
-
-        it('should not create a trigger group, remove old bs and add bb in its place', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            // basic sell
-            const oldBbTriggerData = encodeTriggerData(
+            const tx = AutomationExecutorInstance.connect(owner).execute(
+                dummyTriggerData,
                 testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                15000,
+                { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
-            const oldBsTriggerData = encodeTriggerData(
+
+            await expect(tx).not.to.be.reverted
+
+            const receipt = await (await tx).wait()
+            const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
+            const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
+            expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
+                990,
+            ) //account for some refund calculation inacurencies
+            expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(
+                1010,
+            ) //account for some refund calculation inacurencies
+        })
+
+        it('should pay miner bribe to the coinbase address', async () => {
+            const minerBribe = EthersBN.from(10).pow(16) // 0.01 ETH
+            const blockReward = EthersBN.from(10).pow(18).mul(2)
+
+            await owner.sendTransaction({
+                to: AutomationExecutorInstance.address,
+                value: minerBribe,
+            })
+            await DummyCommandInstance.changeFlags(true, true, false)
+
+            const estimation = await AutomationExecutorInstance.estimateGas.execute(
+                dummyTriggerData,
                 testCdpId,
-                TriggerType.BASIC_SELL,
-                sellExecutionRatio,
-                sellTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                minerBribe,
+                15000,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
-                [bsTriggerData, bbTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
-        })
-        it('should successfully create a trigger group, remove old bb and old bs - add new bs and bb in their place', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const oldBbTriggerData = encodeTriggerData(
+
+            const tx = AutomationExecutorInstance.execute(
+                dummyTriggerData,
                 testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
-            )
-            const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_SELL,
-                sellExecutionRatio,
-                sellTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
-            )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-
-            const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
-            const aggregatorEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(botEvents[0].address)
-            expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
-        })
-        it('should successfully create a trigger group, remove old bbs - add new bs and bb in their place', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                minerBribe,
+                15000,
+                { gasLimit: estimation.toNumber() + 50000 },
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
+            await expect(tx).not.to.be.reverted
 
-            const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
-            const aggregatorEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(botEvents[0].address)
-            expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
-        })
-        it('should successfully create a trigger group, remove old bb and old bs - add new bs and bb in their place - reverse order', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
+            const receipt = await (await tx).wait()
+            const block = await hre.ethers.provider.getBlock(receipt.blockHash)
+            expect(block.miner.toLowerCase()).to.eq(HARDHAT_DEFAULT_COINBASE)
+            expect(block.transactions.length).to.eq(1)
+
+            const transactionCost = receipt.gasUsed
+                .mul(receipt.effectiveGasPrice.sub(block.baseFeePerGas ?? 0))
+                .toString()
+            const balanceBefore = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number - 1)
+            const balanceAfter = await hre.ethers.provider.getBalance(HARDHAT_DEFAULT_COINBASE, block.number)
+            expect(balanceAfter.toString()).to.be.equal(
+                balanceBefore.add(transactionCost).add(blockReward).add(minerBribe).toString(),
             )
-            const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_SELL,
-                sellExecutionRatio,
-                sellTargetRatio,
-                5000,
-                50,
-                maxGweiPrice,
-            )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber(), triggersCounterBefore.toNumber() - 1],
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-
-            const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
-            const aggregatorEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(botEvents[0].address)
-            expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
-        })
-        it('should not create a trigger group when called by not the owner', async () => {
-            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            await expect(notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)).to.be
-                .reverted
-        })
-        it('should revert when called not by the delegate ', async () => {
-            const tx = AutomationBotInstance.addTriggers(
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            )
-            await expect(tx).to.be.revertedWith('bot/only-delegate')
-        })
-        it('should emit TriggerGroupAdded (from AutomationBotAggregator) if called by user being an owner of proxy', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-        })
-        it('should successfully execute a trigger from the group', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
-            const triggerIds = [Number(counterAfter) - 1, Number(counterAfter)]
-            const txExecute = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
-
-            const receiptExecute = await (await txExecute).wait()
-            const eventTriggerExecuted = getEvents(
-                receiptExecute,
-                AutomationBotInstance.interface.getEvent('TriggerExecuted'),
-            )
-
-            expect(eventTriggerExecuted.length).to.eq(1)
         })
     })
-    describe('removeTriggers', async () => {
-        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-        const replacedTriggerId = [0, 0]
 
-        // current coll ratio : 1.859946411122229468
-        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
-
-        // basic buy
-        const bbTriggerData = encodeTriggerData(
-            testCdpId,
-            TriggerType.BASIC_BUY,
-            buyExecutionRatio,
-            buyTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-        // basic sell
-        const bsTriggerData = encodeTriggerData(
-            testCdpId,
-            TriggerType.BASIC_SELL,
-            sellExecutionRatio,
-            sellTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-        const [beforeSellExecutionRatio, beforeSellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
-        const [beforeBuyExecutionRatio, beforeBuyTargetRatio] = [toRatio(2), toRatio(1.8)]
-        // basic buy
-        const beforeBbTriggerData = encodeTriggerData(
-            beforeTestCdpId,
-            TriggerType.BASIC_BUY,
-            beforeBuyExecutionRatio,
-            beforeBuyTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-        // basic sell
-        const beforeBsTriggerData = encodeTriggerData(
-            beforeTestCdpId,
-            TriggerType.BASIC_SELL,
-            beforeSellExecutionRatio,
-            beforeSellTargetRatio,
-            0,
-            50,
-            maxGweiPrice,
-        )
-
+    describe('swap', () => {
         beforeEach(async () => {
-            const beforeOwner = await hardhatUtils.impersonate(beforeOwnerProxyUserAddress)
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const beforeDataToSupplyAdd = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [beforeBbTriggerData, beforeBsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            const dataToSupplyAdd = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
-            ])
-            await beforeOwnerProxy.connect(beforeOwner).execute(AutomationBotInstance.address, beforeDataToSupplyAdd)
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyAdd)
-            await tx.wait()
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
         })
 
-        it('should successfully remove a trigger group through DSProxy', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                triggerIds,
-                [bbTriggerData, bsTriggerData],
-                false,
-            ])
-            await expect(ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)).to.not.be
-                .reverted
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it('should only remove approval if last param set to true - test FALSE', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                triggerIds,
-                [bbTriggerData, bsTriggerData],
-                false,
+        it('should successfully execute swap token for dai', async () => {
+            const amount = 100
+            const receiveAtLeast = 90
+            const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(true)
-        })
-        it('should only remove approval if last param set to true - test TRUE', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                triggerIds,
-                [bbTriggerData, bsTriggerData],
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
                 true,
-            ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
+                amount,
+                receiveAtLeast,
+                constants.AddressZero,
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationExecutorInstance.address, amount, false],
+                ),
             )
-            expect(status).to.equal(false)
-        })
-        it('should revert if called not through delegatecall', async () => {
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            const tx = AutomationBotInstance.removeTriggers(triggerIds, [bbTriggerData, bsTriggerData], true)
-            await expect(tx).to.be.revertedWith('bot/only-delegate')
-        })
-
-        it('should not remove a trigger group by non owner DSProxy', async () => {
-            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-
-            const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                triggerIds,
-                [bbTriggerData, bsTriggerData],
-                false,
+            await expect(tx).not.to.be.reverted
+            const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            await expect(ownerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupplyRemove)).to.be
-                .reverted
+            expect(daiBalanceBefore.add(amount).toString()).to.eq(daiBalanceAfter.toString())
+            expect(testTokenBalanceBefore.sub(amount).toString()).to.eq(testTokenBalanceAfter.toString())
         })
-        it('should not remove a trigger group not owned by owner', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
-
-            const beforeTriggerIds = [Number(triggerCounter) - 3, Number(triggerCounter) - 2]
-            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                beforeTriggerIds,
-                [bbTriggerData, bsTriggerData],
-                false,
+        it('should successfully execute swap dai for token', async () => {
+            const amount = 100
+            const receiveAtLeast = 90
+            const [daiBalanceBefore, testTokenBalanceBefore] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            await expect(ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)).to.be
-                .reverted
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                false,
+                amount,
+                receiveAtLeast,
+                constants.AddressZero,
+                utils.defaultAbiCoder.encode(
+                    ['address', 'uint256', 'bool'],
+                    [AutomationExecutorInstance.address, amount, false],
+                ),
+            )
+            await expect(tx).not.to.be.reverted
+            const [daiBalanceAfter, testTokenBalanceAfter] = await Promise.all([
+                TestDAIInstance.balanceOf(AutomationExecutorInstance.address),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
+            ])
+            expect(daiBalanceBefore.sub(amount).toString()).to.eq(daiBalanceAfter.toString())
+            expect(testTokenBalanceBefore.add(amount).toString()).to.eq(testTokenBalanceAfter.toString())
+        })
+
+        it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
+            // await MockERC20Instance.mock.balanceOf.returns(100)
+            const testTokenBalance = await TestERC20Instance.balanceOf(TestExchangeInstance.address)
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                true,
+                testTokenBalance.add(1),
+                100,
+                constants.AddressZero,
+                dummyTriggerData,
+            )
+            await expect(tx).to.be.revertedWith('executor/invalid-amount')
+
+            const daiBalance = await TestDAIInstance.balanceOf(TestExchangeInstance.address)
+            const tx2 = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                false,
+                daiBalance.add(1),
+                100,
+                constants.AddressZero,
+                dummyTriggerData,
+            )
+            await expect(tx2).to.be.revertedWith('executor/invalid-amount')
+        })
+
+        it('should revert with executor/invalid-amount on 0 amount provided', async () => {
+            const tx = AutomationExecutorInstance.swap(
+                TestERC20Instance.address,
+                true,
+                0,
+                1,
+                constants.AddressZero,
+                dummyTriggerData,
+            )
+            await expect(tx).to.be.revertedWith('executor/invalid-amount')
+        })
+
+        it('should revert with executor/not-authorized on unauthorized sender', async () => {
+            const tx = AutomationExecutorInstance.connect(notOwner).swap(
+                TestERC20Instance.address,
+                true,
+                1,
+                1,
+                constants.AddressZero,
+                dummyTriggerData,
+            )
+            await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
     })
-    describe('cdpAllowed', async () => {
+
+    describe('withdraw', () => {
         beforeEach(async () => {
-            const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
-            const replacedTriggerId = [0, 0]
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
 
-            // current coll ratio : 1.859946411122229468
-            const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-            const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
 
-            // basic buy
-            const bbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_BUY,
-                buyExecutionRatio,
-                buyTargetRatio,
-                0,
-                50,
-                maxGweiPrice,
-            )
-            // basic sell
-            const bsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.BASIC_SELL,
-                sellExecutionRatio,
-                sellTargetRatio,
-                0,
-                50,
-                maxGweiPrice,
-            )
-
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
+        it('should successfully withdraw token amount', async () => {
+            const [ownerBalanceBefore, executorBalanceBefore] = await Promise.all([
+                TestERC20Instance.balanceOf(ownerAddress),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
             ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const amount = 100
+            const tx = AutomationExecutorInstance.withdraw(TestERC20Instance.address, amount)
+            await expect(tx).not.to.be.reverted
+            const [ownerBalanceAfter, executorBalanceAfter] = await Promise.all([
+                TestERC20Instance.balanceOf(ownerAddress),
+                TestERC20Instance.balanceOf(AutomationExecutorInstance.address),
+            ])
+            expect(ownerBalanceBefore.add(amount).toString()).to.eq(ownerBalanceAfter.toString())
+            expect(executorBalanceBefore.sub(amount).toString()).to.eq(executorBalanceAfter.toString())
         })
 
-        it('should return false for bad operator address', async () => {
-            const status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                generateRandomAddress(),
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(false, 'approval returned for random address')
+        it('should successfully withdraw ETH amount and balance should remain unchanged', async () => {
+            const executorBalance = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.withdraw(constants.AddressZero, executorBalance.add(1))
+            await expect(tx).to.be.revertedWith('executor/invalid-amount')
+            const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            expect(executorBalance.toString()).to.eq(executorBalanceAfter.toString())
         })
 
-        it('should return true for correct operator address', async () => {
-            const status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(true, 'approval does not exist for AutomationBot')
+        it('should revert on invalid token amount and balance should remain unchanged', async () => {
+            const executorBalance = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.withdraw(TestERC20Instance.address, executorBalance.add(1))
+            await expect(tx).to.be.revertedWith('ERC20: transfer amount exceeds balance')
+            const executorBalanceAfter = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
+            expect(executorBalance.toString()).to.eq(executorBalanceAfter.toString())
         })
-        it('should return false for correct operator address', async () => {
-            const status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            //TODO: why was false heree originally?
-            expect(status).to.equal(true, 'approval does exist for AutomationBotAggregatorInstance')
+
+        it('should revert with executor/not-authorized on unauthorized sender', async () => {
+            const tx = AutomationExecutorInstance.connect(notOwner).withdraw(TestERC20Instance.address, 100)
+            await expect(tx).to.be.revertedWith('executor/only-owner')
+
+            const tx2 = AutomationExecutorInstance.connect(notOwner).withdraw(constants.AddressZero, 100)
+            await expect(tx2).to.be.revertedWith('executor/only-owner')
+        })
+    })
+
+    describe('unwrapWETH', () => {
+        before(async () => {
+            await TestWETHInstance.transfer(AutomationExecutorInstance.address, wethAmount)
+        })
+
+        beforeEach(async () => {
+            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+        })
+
+        afterEach(async () => {
+            await hre.ethers.provider.send('evm_revert', [snapshotId])
+        })
+
+        it('should successfully unwrap WETH to ETH', async () => {
+            const ethBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const wethBalanceBefore = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount)
+            await expect(tx).not.to.be.reverted
+            const ethBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
+            const wethBalanceAfter = await TestWETHInstance.balanceOf(AutomationExecutorInstance.address)
+            expect(ethBalanceBefore.add(wethAmount).toString()).to.eq(ethBalanceAfter.toString())
+            expect(wethBalanceBefore.sub(wethAmount).toString()).to.eq(wethBalanceAfter.toString())
+        })
+
+        it('should revert on invalid amount', async () => {
+            const tx = AutomationExecutorInstance.unwrapWETH(wethAmount.add(1))
+            await expect(tx).to.be.reverted
         })
     })
 })

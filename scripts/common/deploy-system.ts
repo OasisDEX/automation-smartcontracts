@@ -12,6 +12,7 @@ import {
     ServiceRegistry,
     MakerAdapter,
     AutomationBotStorage,
+    AutoTakeProfitCommand,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
@@ -28,6 +29,7 @@ export interface DeployedSystem {
     automationSwap: AutomationSwap
     mcdView: McdView
     closeCommand?: CloseCommand
+    autoTakeProfitCommand?: AutoTakeProfitCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
@@ -72,6 +74,7 @@ export async function deploySystem({
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
+    let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -157,6 +160,11 @@ export async function deploySystem({
         BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
             ServiceRegistryInstance.address,
         ])) as BasicSellCommand
+
+        if (logDebug) console.log('Deploying AutoTakeProfit....')
+        AutoTakeProfitInstance = (await utils.deployContract(ethers.getContractFactory('AutoTakeProfitCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as AutoTakeProfitCommand
     }
 
     if (logDebug) {
@@ -173,6 +181,7 @@ export async function deploySystem({
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
+            console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
         }
     }
 
@@ -189,6 +198,7 @@ export async function deploySystem({
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
+        autoTakeProfitCommand: AutoTakeProfitInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -219,6 +229,19 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
+    }
+    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+            system.autoTakeProfitCommand.address,
+        )
+
+        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.AUTO_TP_DAI), system.autoTakeProfitCommand.address)
+
+        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
@@ -255,6 +278,12 @@ export async function configureRegistryEntries(
         system.automationBot.address,
     )
 
+    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
+        system.automationBotStorage.address,
+    )
+
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
@@ -281,11 +310,7 @@ export async function configureRegistryEntries(
         getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
         system.automationSwap.address,
     )
-    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
-        system.automationBotStorage.address,
-    )
+
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.MCD_UTILS), system.mcdUtils.address)
 }

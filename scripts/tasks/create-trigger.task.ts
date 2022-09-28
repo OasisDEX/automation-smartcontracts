@@ -13,6 +13,7 @@ import {
     TriggerType,
     isLocalNetwork,
     getCommandAddress,
+    TriggerGroupType,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
@@ -31,7 +32,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
     .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
     .addParam(
         'params',
-        'The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info',
+        "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
         undefined,
         types.json,
         false,
@@ -104,12 +105,12 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
-        const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
-            args.vault.toString(),
-            args.type,
-            args.continuous,
-            triggerIdToReplace,
-            triggerData,
+        const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SINGLE_TRIGGER,
+            [args.continuous],
+            [triggerIdToReplace],
+            [triggerData],
+            [args.type],
         ])
 
         const info = [
@@ -126,9 +127,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             return
         }
 
-        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData, {
-            gasLimit: 2000000,
-        })
+        const tx = await proxy.connect(signer).execute(bot.address, addTriggerData, await hardhatUtils.getGasSettings())
         const receipt = await tx.wait()
 
         const [triggerAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerAdded'))
@@ -140,7 +139,11 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         const triggerId = parseInt(triggerAddedEvent.topics[1], 16)
 
         console.log(
-            [`Trigger with type ${args.type} was succesfully created`, `Trigger ID: ${triggerId}`]
+            [
+                `Trigger with type ${args.type} was succesfully created`,
+                `Transaction Hash: ${tx.hash}`,
+                `Trigger ID: ${triggerId}`,
+            ]
                 .concat(info)
                 .join('\n'),
         )
