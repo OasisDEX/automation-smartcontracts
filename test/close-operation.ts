@@ -229,17 +229,9 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    console.log(
-                        'gas estimated',
-                        await usersProxy
-                            .connect(signer)
-                            .estimateGas.execute(AutomationBotInstance.address, dataToSupply),
-                    )
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
-
                     const txRes = await tx.wait()
-
-                    console.log('gas used', txRes.gasUsed.toNumber())
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
@@ -398,17 +390,9 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    console.log(
-                        'gas estimated',
-                        await usersProxy
-                            .connect(signer)
-                            .estimateGas.execute(AutomationBotInstance.address, dataToSupply),
-                    )
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
-
                     const txRes = await tx.wait()
-
-                    console.log('gas used', txRes.gasUsed.toNumber())
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
@@ -466,17 +450,9 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    console.log(
-                        'gas estimated',
-                        await usersProxy
-                            .connect(signer)
-                            .estimateGas.execute(AutomationBotInstance.address, dataToSupply),
-                    )
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
-
                     const txRes = await tx.wait()
-
-                    console.log('gas used', txRes.gasUsed.toNumber())
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()

@@ -46,7 +46,6 @@ contract AutomationBotStorage {
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        counters.triggersCounter = 1;
         counters.triggersGroupCounter = 1;
     }
 
