@@ -178,7 +178,7 @@ contract AutomationBot {
             emit TriggerRemoved(cdpId, replacedTriggerId);
         }
         emit TriggerAdded(
-            automationBotStorage.counters().triggersCounter(),
+            automationBotStorage.triggersCounter(),
             commandAddress,
             cdpId,
             continuous,
@@ -237,11 +237,9 @@ contract AutomationBot {
                 "aggregator/validation-error"
             );
         }
-        console.log(gasleft());
+
         uint256 firstTriggerId = getTriggersCounter();
-        console.log(gasleft());
         uint256[] memory triggerIds = new uint256[](triggerData.length);
-        console.log(gasleft());
 
         for (uint256 i = 0; i < triggerData.length; i++) {
             if (!isCdpAllowed(cdpIds[i], automationBot, manager)) {

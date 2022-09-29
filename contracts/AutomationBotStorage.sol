@@ -35,8 +35,8 @@ contract AutomationBotStorage {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
 
     struct Counters {
-        uint256 triggersCounter;
-        uint256 triggersGroupCounter;
+        uint64 triggersCounter;
+        uint64 triggersGroupCounter;
     }
 
     Counters public counters = Counters(1, 1);
@@ -73,5 +73,13 @@ contract AutomationBotStorage {
     function appendTriggerRecord(TriggerRecord memory record) external auth(msg.sender) {
         counters.triggersCounter++;
         activeTriggers[counters.triggersCounter] = record;
+    }
+
+    function triggersCounter() external view returns (uint256) {
+        return uint256(counters.triggersCounter);
+    }
+
+    function triggersGroupCounter() external view returns (uint256) {
+        return uint256(counters.triggersGroupCounter);
     }
 }

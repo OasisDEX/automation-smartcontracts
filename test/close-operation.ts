@@ -1,7 +1,15 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
+import {
+    AutomationBot,
+    AutomationBotStorage,
+    DsProxyLike,
+    CloseCommand,
+    McdView,
+    MPALike,
+    AutomationExecutor,
+} from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -22,6 +30,7 @@ describe.only('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
+    let AutomationBotStorageInstance: AutomationBotStorage
     let AutomationExecutorInstance: AutomationExecutor
     let CloseCommandInstance: CloseCommand
     let McdViewInstance: McdView
@@ -47,7 +56,7 @@ describe.only('CloseCommand', async () => {
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
-
+        AutomationBotStorageInstance = system.automationBotStorage
         await McdViewInstance.approve(executorAddress, true)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -162,15 +171,25 @@ describe.only('CloseCommand', async () => {
                         ).toNumber()}`,
                     )
 
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply, {
+                    const tx = await usersProxy.connect(signer).execute(
+                        AutomationBotInstance.address,
+                        dataToSupply /* ,{
                         type: 1,
                         accessList: [
                             {
-                                address: usersProxy.address, // admin gnosis safe proxy address
-                                storageKeys: [],
+                                address: AutomationBotStorageInstance.address, // admin gnosis safe proxy address
+                                storageKeys: [
+                                    '0x0000000000000000000000000000000000000000000000000000000000000000',
+                                    '0x0000000000000000000000000000000000000000000000000000000000000001',
+                                    '0x0000000000000000000000000000000000000000000000000000000000000002',
+                                    '0x0000000000000000000000000000000000000000000000000000000000000003',
+                                    '0x0000000000000000000000000000000000000000000000000000000000000004',
+                                    '0x0000000000000000000000000000000000000000000000000000000000000005',
+                                ],
                             },
                         ],
-                    })
+                    } */,
+                    )
 
                     const txRes = await tx.wait()
 
@@ -182,7 +201,7 @@ describe.only('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    //await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
