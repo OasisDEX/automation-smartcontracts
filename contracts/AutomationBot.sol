@@ -167,9 +167,8 @@ contract AutomationBot {
             )
         );
 
-        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
-
         if (replacedTriggerId != 0) {
+            (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
             require(triggerCdpId == cdpId, "bot/trigger-removal-illegal");
             automationBotStorage.updateTriggerRecord(
                 replacedTriggerId,

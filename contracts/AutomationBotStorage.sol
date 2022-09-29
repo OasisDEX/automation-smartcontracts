@@ -25,6 +25,8 @@ import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
 contract AutomationBotStorage {
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+
     struct TriggerRecord {
         bytes32 triggerHash;
         uint248 cdpId; // to still fit two memory slots for whole struct
@@ -32,19 +34,20 @@ contract AutomationBotStorage {
     }
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
 
     struct Counters {
         uint64 triggersCounter;
         uint64 triggersGroupCounter;
     }
 
-    Counters public counters = Counters(1, 1);
+    Counters public counters;
 
     ServiceRegistry public immutable serviceRegistry;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        counters.triggersCounter = 1;
+        counters.triggersGroupCounter = 1;
     }
 
     modifier auth(address caller) {
