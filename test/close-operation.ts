@@ -123,7 +123,7 @@ describe.only('CloseCommand', async () => {
                 )
             })
 
-            describe('when Trigger is below current col ratio', async () => {
+            describe.only('when Trigger is below current col ratio', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -155,24 +155,26 @@ describe.only('CloseCommand', async () => {
                         [triggerData],
                     ])
                     console.log(
-                        'gas estimated',
-                        await usersProxy
-                            .connect(signer)
-                            .estimateGas.execute(AutomationBotInstance.address, dataToSupply),
+                        `gas estimated - addTrigger ${(
+                            await usersProxy
+                                .connect(signer)
+                                .estimateGas.execute(AutomationBotInstance.address, dataToSupply)
+                        ).toNumber()}`,
                     )
-                    console.log(
-                        'gas estimated',
-                        await usersProxy
-                            .connect(signer)
-                            .estimateGas.execute(AutomationBotInstance.address, dataToSupply),
-                    )
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply, {
+                        type: 1,
+                        accessList: [
+                            {
+                                address: usersProxy.address, // admin gnosis safe proxy address
+                                storageKeys: [],
+                            },
+                        ],
+                    })
 
                     const txRes = await tx.wait()
 
-                    console.log('gas used', txRes.gasUsed.toNumber())
-
-                    console.log('gas used', txRes.gasUsed.toNumber())
+                    console.log('gas used - addTrigger', txRes.gasUsed.toNumber())
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()

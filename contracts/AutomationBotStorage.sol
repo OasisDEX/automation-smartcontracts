@@ -34,9 +34,12 @@ contract AutomationBotStorage {
     mapping(uint256 => TriggerRecord) public activeTriggers;
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
 
-    uint256 public triggersCounter = 0;
+    struct Counters {
+        uint256 triggersCounter;
+        uint256 triggersGroupCounter;
+    }
 
-    uint256 public triggersGroupCounter = 0;
+    Counters public counters = Counters(1, 1);
 
     ServiceRegistry public immutable serviceRegistry;
 
@@ -53,11 +56,11 @@ contract AutomationBotStorage {
     }
 
     function increaseCounter() external auth(msg.sender) {
-        triggersCounter++;
+        counters.triggersCounter++;
     }
 
     function increaseGroupCounter() external auth(msg.sender) {
-        triggersGroupCounter++;
+        counters.triggersGroupCounter++;
     }
 
     function updateTriggerRecord(uint256 id, TriggerRecord memory record)
@@ -68,7 +71,7 @@ contract AutomationBotStorage {
     }
 
     function appendTriggerRecord(TriggerRecord memory record) external auth(msg.sender) {
-        triggersCounter++;
-        activeTriggers[triggersCounter] = record;
+        counters.triggersCounter++;
+        activeTriggers[counters.triggersCounter] = record;
     }
 }
