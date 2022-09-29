@@ -1,15 +1,7 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import {
-    AutomationBot,
-    AutomationBotStorage,
-    DsProxyLike,
-    CloseCommand,
-    McdView,
-    MPALike,
-    AutomationExecutor,
-} from '../typechain'
+import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -30,7 +22,6 @@ describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
-    let AutomationBotStorageInstance: AutomationBotStorage
     let AutomationExecutorInstance: AutomationExecutor
     let CloseCommandInstance: CloseCommand
     let McdViewInstance: McdView
@@ -56,7 +47,6 @@ describe('CloseCommand', async () => {
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
-        AutomationBotStorageInstance = system.automationBotStorage
         await McdViewInstance.approve(executorAddress, true)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -163,6 +153,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggerData],
                     ])
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
 
@@ -172,7 +163,7 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    //await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
@@ -329,8 +320,7 @@ describe('CloseCommand', async () => {
                         178000,
                     )
 
-                    const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    await tx.wait()
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -478,9 +468,7 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                     )
-
-                    const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    await tx.wait()
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 

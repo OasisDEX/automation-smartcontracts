@@ -57,10 +57,6 @@ contract AutomationBotStorage {
         _;
     }
 
-    function increaseCounter() external auth(msg.sender) {
-        counters.triggersCounter++;
-    }
-
     function increaseGroupCounter() external auth(msg.sender) {
         counters.triggersGroupCounter++;
     }
