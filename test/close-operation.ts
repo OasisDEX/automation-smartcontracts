@@ -47,7 +47,6 @@ describe('CloseCommand', async () => {
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
-
         await McdViewInstance.approve(executorAddress, true)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -60,7 +59,6 @@ describe('CloseCommand', async () => {
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
     })
 
-    
     describe('isTriggerDataValid', () => {
         //TODO: add test checking that continuous true is disallowed
     })
@@ -155,10 +153,8 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggerData],
                     ])
-                    
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
-
-
                     const txRes = await tx.wait()
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
@@ -224,9 +220,10 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -323,8 +320,7 @@ describe('CloseCommand', async () => {
                         178000,
                     )
 
-                    const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    await tx.wait()
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -384,9 +380,10 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -443,9 +440,10 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -470,9 +468,7 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                     )
-
-                    const receipt = await tx.wait()
-                    console.log('gas used', receipt.gasUsed.toNumber())
+                    await tx.wait()
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 

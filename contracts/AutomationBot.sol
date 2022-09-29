@@ -166,9 +166,8 @@ contract AutomationBot {
             )
         );
 
-        (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
-
         if (replacedTriggerId != 0) {
+            (, uint256 triggerCdpId, ) = automationBotStorage.activeTriggers(replacedTriggerId);
             require(triggerCdpId == cdpId, "bot/trigger-removal-illegal");
             automationBotStorage.updateTriggerRecord(
                 replacedTriggerId,
@@ -207,13 +206,6 @@ contract AutomationBot {
         emit TriggerRemoved(cdpId, triggerId);
     }
 
-    function getTriggersCounter() private view returns (uint256) {
-        address automationBotStorageAddress = serviceRegistry.getRegisteredService(
-            AUTOMATION_BOT_STORAGE_KEY
-        );
-        return AutomationBotStorage(automationBotStorageAddress).triggersCounter();
-    }
-
     // works correctly in context of dsProxy
     function addTriggers(
         uint16 groupType,
@@ -237,7 +229,8 @@ contract AutomationBot {
             );
         }
 
-        uint256 firstTriggerId = getTriggersCounter();
+        uint256 firstTriggerId = automationBotStorage.triggersCounter();
+
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
@@ -245,6 +238,7 @@ contract AutomationBot {
                 manager.cdpAllow(cdpIds[i], automationBot, 1);
                 emit ApprovalGranted(cdpIds[i], automationBot);
             }
+
             AutomationBot(automationBot).addRecord(
                 cdpIds[i],
                 triggerTypes[i],

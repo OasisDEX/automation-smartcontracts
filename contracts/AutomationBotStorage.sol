@@ -25,23 +25,28 @@ import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
 contract AutomationBotStorage {
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+
     struct TriggerRecord {
         bytes32 triggerHash;
         uint248 cdpId; // to still fit two memory slots for whole struct
         bool continuous;
     }
 
+    struct Counters {
+        uint64 triggersCounter;
+        uint64 triggersGroupCounter;
+    }
+
     mapping(uint256 => TriggerRecord) public activeTriggers;
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
 
-    uint256 public triggersCounter = 0;
-
-    uint256 public triggersGroupCounter = 0;
+    Counters public counter;
 
     ServiceRegistry public immutable serviceRegistry;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        counter.triggersGroupCounter = 1;
     }
 
     modifier auth(address caller) {
@@ -52,12 +57,16 @@ contract AutomationBotStorage {
         _;
     }
 
-    function increaseCounter() external auth(msg.sender) {
-        triggersCounter++;
+    function increaseGroupCounter() external auth(msg.sender) {
+        counter.triggersGroupCounter++;
     }
 
-    function increaseGroupCounter() external auth(msg.sender) {
-        triggersGroupCounter++;
+    function triggersCounter() external view returns (uint256) {
+        return uint256(counter.triggersCounter);
+    }
+
+    function triggersGroupCounter() external view returns (uint256) {
+        return uint256(counter.triggersGroupCounter);
     }
 
     function updateTriggerRecord(uint256 id, TriggerRecord memory record)
@@ -68,7 +77,7 @@ contract AutomationBotStorage {
     }
 
     function appendTriggerRecord(TriggerRecord memory record) external auth(msg.sender) {
-        triggersCounter++;
-        activeTriggers[triggersCounter] = record;
+        counter.triggersCounter++;
+        activeTriggers[counter.triggersCounter] = record;
     }
 }
