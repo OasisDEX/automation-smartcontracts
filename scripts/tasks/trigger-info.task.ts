@@ -33,7 +33,10 @@ task<TriggerInfoArgs>('trigger-info')
         const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
-        const botStorage = await hre.ethers.getContractAt('AutomationBotStorage', addresses.AUTOMATION_BOT_STORAGE)
+        const storage = await hre.ethers.getContractAt(
+            'AutomationBotStorage',
+            hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
+        )
 
         const events = await hre.ethers.provider.getLogs({
             address: addresses.AUTOMATION_BOT,
@@ -52,7 +55,7 @@ task<TriggerInfoArgs>('trigger-info')
         /* 
         const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
-        const trigger = await botStorage.activeTriggers(args.trigger.toString())
+        const trigger = await storage.activeTriggers(args.trigger.toString())
         console.log(`Active: ${!trigger.cdpId.eq(0)}`)
 
         const command = await hre.ethers.getContractAt('ICommand', commandAddress)
