@@ -25,7 +25,6 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
-import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -207,13 +206,6 @@ contract AutomationBot {
         emit TriggerRemoved(cdpId, triggerId);
     }
 
-    function getTriggersCounter() private view returns (uint256) {
-        address automationBotStorageAddress = serviceRegistry.getRegisteredService(
-            AUTOMATION_BOT_STORAGE_KEY
-        );
-        return AutomationBotStorage(automationBotStorageAddress).triggersCounter();
-    }
-
     // works correctly in context of dsProxy
     function addTriggers(
         uint16 groupType,
@@ -237,7 +229,8 @@ contract AutomationBot {
             );
         }
 
-        uint256 firstTriggerId = getTriggersCounter();
+        uint256 firstTriggerId = automationBotStorage.triggersCounter();
+
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {

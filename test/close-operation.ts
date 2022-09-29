@@ -26,7 +26,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
 // Block dependent test, works for 13998517
 
-describe.only('CloseCommand', async () => {
+describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -132,7 +132,7 @@ describe.only('CloseCommand', async () => {
                 )
             })
 
-            describe.only('when Trigger is below current col ratio', async () => {
+            describe('when Trigger is below current col ratio', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -163,37 +163,8 @@ describe.only('CloseCommand', async () => {
                         [0],
                         [triggerData],
                     ])
-                    console.log(
-                        `gas estimated - addTrigger ${(
-                            await usersProxy
-                                .connect(signer)
-                                .estimateGas.execute(AutomationBotInstance.address, dataToSupply)
-                        ).toNumber()}`,
-                    )
-
-                    const tx = await usersProxy.connect(signer).execute(
-                        AutomationBotInstance.address,
-                        dataToSupply /* ,{
-                        type: 1,
-                        accessList: [
-                            {
-                                address: AutomationBotStorageInstance.address, // admin gnosis safe proxy address
-                                storageKeys: [
-                                    '0x0000000000000000000000000000000000000000000000000000000000000000',
-                                    '0x0000000000000000000000000000000000000000000000000000000000000001',
-                                    '0x0000000000000000000000000000000000000000000000000000000000000002',
-                                    '0x0000000000000000000000000000000000000000000000000000000000000003',
-                                    '0x0000000000000000000000000000000000000000000000000000000000000004',
-                                    '0x0000000000000000000000000000000000000000000000000000000000000005',
-                                ],
-                            },
-                        ],
-                    } */,
-                    )
-
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
-
-                    console.log('gas used - addTrigger', txRes.gasUsed.toNumber())
 
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
