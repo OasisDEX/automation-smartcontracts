@@ -108,18 +108,6 @@ contract AutomationBot {
         );
     }
 
-    function checkTriggersExistenceAndCorrectness(address commandAddress, uint256 triggerId)
-        private
-        view
-    {
-        (bytes32 triggersHash, address storedCommandAddress, ) = automationBotStorage
-            .activeTriggers(triggerId);
-        require(
-            triggersHash != bytes32(0) && storedCommandAddress == commandAddress,
-            "bot/invalid-command"
-        );
-    }
-
     // works correctly in context of automationBot
     function addRecord(
         // This function should be executed allways in a context of AutomationBot address not DsProxy,
