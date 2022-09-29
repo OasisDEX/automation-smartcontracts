@@ -33,20 +33,20 @@ contract AutomationBotStorage {
         bool continuous;
     }
 
-    mapping(uint256 => TriggerRecord) public activeTriggers;
-
     struct Counters {
         uint64 triggersCounter;
         uint64 triggersGroupCounter;
     }
 
-    Counters public counters;
+    mapping(uint256 => TriggerRecord) public activeTriggers;
+
+    Counters public counter;
 
     ServiceRegistry public immutable serviceRegistry;
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        counters.triggersGroupCounter = 1;
+        counter.triggersGroupCounter = 1;
     }
 
     modifier auth(address caller) {
@@ -58,7 +58,15 @@ contract AutomationBotStorage {
     }
 
     function increaseGroupCounter() external auth(msg.sender) {
-        counters.triggersGroupCounter++;
+        counter.triggersGroupCounter++;
+    }
+
+    function triggersCounter() external view returns (uint256) {
+        return uint256(counter.triggersCounter);
+    }
+
+    function triggersGroupCounter() external view returns (uint256) {
+        return uint256(counter.triggersGroupCounter);
     }
 
     function updateTriggerRecord(uint256 id, TriggerRecord memory record)
@@ -69,15 +77,7 @@ contract AutomationBotStorage {
     }
 
     function appendTriggerRecord(TriggerRecord memory record) external auth(msg.sender) {
-        counters.triggersCounter++;
-        activeTriggers[counters.triggersCounter] = record;
-    }
-
-    function triggersCounter() external view returns (uint256) {
-        return uint256(counters.triggersCounter);
-    }
-
-    function triggersGroupCounter() external view returns (uint256) {
-        return uint256(counters.triggersGroupCounter);
+        counter.triggersCounter++;
+        activeTriggers[counter.triggersCounter] = record;
     }
 }
