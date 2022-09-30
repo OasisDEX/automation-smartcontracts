@@ -254,6 +254,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 0,
                 0,
+                hardhatUtils.addresses.DAI,
             )
         }
 

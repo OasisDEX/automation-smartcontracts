@@ -681,6 +681,7 @@ describe('AutomationBot', async () => {
                     0,
                     0,
                     0,
+                    hardhatUtils.addresses.DAI,
                     {
                         gasLimit: 2000_000,
                     },
@@ -741,6 +742,7 @@ describe('AutomationBot', async () => {
                     0,
                     0,
                     0,
+                    hardhatUtils.addresses.DAI,
                 )
             ).wait()
 
@@ -799,6 +801,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },
@@ -823,6 +826,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },
@@ -842,6 +846,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },
@@ -863,6 +868,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },
@@ -881,6 +887,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },
@@ -899,6 +906,7 @@ describe('AutomationBot', async () => {
                 0,
                 0,
                 gasRefund,
+                hardhatUtils.addresses.DAI,
                 {
                     gasLimit: 2000_000,
                 },

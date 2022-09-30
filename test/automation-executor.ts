@@ -96,8 +96,8 @@ describe('AutomationExecutor', async () => {
         )
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        const adapterHash = getAdapterNameHash(DummyCommandInstance.address);
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address);
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
 
         let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
@@ -195,6 +195,9 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should not revert on successful execution', async () => {
+            console.log('00000000')
+            console.log(TestDAIInstance.address)
+            console.log('00000000')
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
@@ -205,6 +208,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -220,6 +224,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
@@ -239,6 +244,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
@@ -250,6 +256,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
 
@@ -288,6 +295,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.execute(
@@ -299,6 +307,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000 },
             )
 

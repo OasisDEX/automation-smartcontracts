@@ -114,6 +114,7 @@ export async function deploySystem({
 
     const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
         ServiceRegistryInstance.address,
+        addresses.DAI,
     ])
 
     if (logDebug) console.log('Deploying AutomationExecutor....')

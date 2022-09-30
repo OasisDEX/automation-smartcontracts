@@ -16,7 +16,7 @@ import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-describe('AutoTakeProfitCommmand', async () => {
+describe('AutoTakeProfitCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -188,6 +188,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -266,6 +267,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const receipt = await tx.wait()
@@ -289,6 +291,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -322,6 +325,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -332,6 +336,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -426,6 +431,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -502,6 +508,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     const receipt = await tx.wait()
                     console.log('         gas used', receipt.gasUsed.toNumber())
@@ -531,6 +538,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -542,6 +550,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -578,6 +587,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

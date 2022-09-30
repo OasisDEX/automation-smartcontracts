@@ -118,7 +118,7 @@ contract AutomationBot {
     ) external {
         lock();
         address commandAddress = getCommandAddress(triggerType);
-        // 4k gas
+
         require(
             ICommand(commandAddress).isTriggerDataValid(continuous, triggerData),
             "bot/invalid-trigger-data"
@@ -300,7 +300,8 @@ contract AutomationBot {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage
+        uint256 coverageAmount,
+        address coverageToken
     ) external auth(msg.sender) {
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
@@ -312,8 +313,8 @@ contract AutomationBot {
                 adapter.getCoverage.selector,
                 triggerData,
                 msg.sender,
-                0x0000000000000000000000000000000000000000,
-                daiCoverage
+                coverageToken,
+                coverageAmount
             )
         );
         require(status, "bot/failed-to-draw-dai");

@@ -10,7 +10,14 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils, getAdapterNameHash } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    TriggerType,
+    HardhatUtils,
+    getAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
 
@@ -92,9 +99,9 @@ describe('AutomationExecutor', async () => {
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
         hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
-        
-        const adapterHash = getAdapterNameHash(DummyCommandInstance.address);
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address);
+
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -197,6 +204,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -212,6 +220,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
@@ -231,6 +240,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
@@ -242,6 +252,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
 
@@ -280,6 +291,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.execute(
@@ -291,6 +303,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000 },
             )
 

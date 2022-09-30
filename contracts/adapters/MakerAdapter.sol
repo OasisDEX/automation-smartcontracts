@@ -24,14 +24,17 @@ import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
+import "hardhat/console.sol";
 
 contract MakerAdapter {
     ServiceRegistry public immutable serviceRegistry;
+    address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
 
-    constructor(ServiceRegistry _serviceRegistry) {
+    constructor(ServiceRegistry _serviceRegistry, address _dai) {
         serviceRegistry = _serviceRegistry;
+        dai = _dai;
     }
 
     function decode(bytes memory triggerData)
@@ -79,12 +82,13 @@ contract MakerAdapter {
     function getCoverage(
         bytes memory triggerData,
         address receiver,
-        address,
+        address coverageToken,
         uint256 amount
     ) external {
+        require(coverageToken == dai, "maker-adapter/not-dai");
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         McdUtils utils = McdUtils(utilsAddress);
+        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         (uint256 cdpId, ) = decode(triggerData);
 

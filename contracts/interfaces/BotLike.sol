@@ -21,6 +21,7 @@ interface BotLike {
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage
+        uint256 coverageAmount,
+        address coverageToken
     ) external;
 }
