@@ -1,7 +1,14 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
+import {
+    getEvents,
+    getCommandHash,
+    TriggerType,
+    HardhatUtils,
+    AutomationServiceName,
+    getAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -60,6 +67,9 @@ describe('AutomationBot', async () => {
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
+
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -337,9 +347,9 @@ describe('AutomationBot', async () => {
             status = await MakerAdapterInstance.canCall(triggerData, AutomationBotInstance.address)
             expect(status).to.equal(false)
         })
-        // this one is skipped becaus eit reverts, but that's not good enough for mocha
-        it.skip('should revert if called not through delegatecall', async () => {
-            const tx = await MakerAdapterInstance.permit(triggerData, AutomationBotInstance.address, false)
+
+        it('should revert if called not through delegatecall', async () => {
+            const tx = MakerAdapterInstance.permit(triggerData, AutomationBotInstance.address, false)
             await expect(tx).to.be.reverted
         })
 

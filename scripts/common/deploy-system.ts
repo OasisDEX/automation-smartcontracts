@@ -213,6 +213,11 @@ export async function configureRegistryEntries(
     logDebug = false,
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
+
+    const ensureCorrectAdapter = async (address: string, adapter: string) => {
+        await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+    }
+
     const ensureMcdViewWhitelist = async (address: string) => {
         const isWhitelisted = await system.mcdView.whitelisted(address)
         if (!isWhitelisted) {
@@ -229,6 +234,9 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -242,6 +250,9 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
@@ -250,6 +261,9 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicBuy.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -258,10 +272,10 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
-    }
 
-    if (logDebug) console.log('Adding MAKER_ADAPTER to ServiceRegistry....')
-    await ensureServiceRegistryEntry(getAdapterNameHash(AdapterType.MAKER), system.makerAdapter.address)
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
+    }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)

@@ -18,8 +18,8 @@ export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }
 
-export function getAdapterNameHash(adapterType: AdapterType) {
-    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Adapter', adapterType]))
+export function getAdapterNameHash(command: string) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['Adapter', command]))
 }
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {

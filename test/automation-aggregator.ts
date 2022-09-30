@@ -10,7 +10,7 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
 
@@ -92,6 +92,9 @@ describe('AutomationExecutor', async () => {
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
         hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
+        
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address);
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address);
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
