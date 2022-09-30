@@ -280,9 +280,9 @@ contract AutomationBot {
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
             (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[i]);
-            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
             removeTrigger(triggerIds[i], triggerData[i]);
             if (removeAllowance && (i == triggerIds.length - 1)) {
+                IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
                 (bool status, ) = address(adapter).delegatecall(
                     abi.encodeWithSelector(
                         adapter.permit.selector,
