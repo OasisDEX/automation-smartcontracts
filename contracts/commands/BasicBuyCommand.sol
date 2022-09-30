@@ -47,11 +47,11 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(
-        uint256 _cdpId,
-        bool continuous,
-        bytes memory triggerData
-    ) external view returns (bool) {
+    function isTriggerDataValid(bool continuous, bytes memory triggerData)
+        external
+        view
+        returns (bool)
+    {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -63,18 +63,13 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.deviation
         );
         return
-            _cdpId == trigger.cdpId &&
             trigger.triggerType == 3 &&
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionLegal(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         (
@@ -83,7 +78,7 @@ contract BasicBuyCommand is BaseMPACommand {
             uint256 currPrice,
             uint256 nextPrice,
             bytes32 ilk
-        ) = getVaultAndMarketInfo(cdpId);
+        ) = getVaultAndMarketInfo(trigger.cdpId);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
@@ -96,11 +91,7 @@ contract BasicBuyCommand is BaseMPACommand {
             baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 
-    function execute(
-        bytes calldata executionData,
-        uint256 cdpId,
-        bytes memory triggerData
-    ) external {
+    function execute(bytes calldata executionData, bytes memory triggerData) external {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         validateTriggerType(trigger.triggerType, 3);
@@ -109,15 +100,11 @@ contract BasicBuyCommand is BaseMPACommand {
         executeMPAMethod(executionData);
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
-        uint256 nextCollRatio = mcdView.getRatio(cdpId, true);
+        uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
             trigger.deviation

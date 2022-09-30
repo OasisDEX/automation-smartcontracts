@@ -1,7 +1,6 @@
 import { constants } from 'ethers'
 import {
     AutomationBot,
-    AutomationBotAggregator,
     ConstantMultipleValidator,
     AutomationExecutor,
     BasicBuyCommand,
@@ -10,23 +9,28 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
+    MakerAdapter,
+    AutomationBotStorage,
+    AutoTakeProfitCommand,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
-import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
+import { getCommandHash, getServiceNameHash, getValidatorHash, getAdapterNameHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
-    automationBotAggregator: AutomationBotAggregator
+    automationBotStorage: AutomationBotStorage
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     mcdView: McdView
     closeCommand?: CloseCommand
+    autoTakeProfitCommand?: AutoTakeProfitCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
+    makerAdapter: MakerAdapter
 }
 
 export interface DeploySystemArgs {
@@ -68,6 +72,7 @@ export async function deploySystem({
     let CloseCommandInstance: CloseCommand | undefined
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
+    let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -89,19 +94,26 @@ export async function deploySystem({
     ])
 
     if (logDebug) console.log('Deploying AutomationBot....')
+    const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
+        ethers.getContractFactory('AutomationBotStorage'),
+        [ServiceRegistryInstance.address],
+    )
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [ServiceRegistryInstance.address],
+        [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
     )
 
-    const AutomationBotAggregatorInstance: AutomationBotAggregator = await utils.deployContract(
-        ethers.getContractFactory('AutomationBotAggregator'),
-        [ServiceRegistryInstance.address],
-    )
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
         ethers.getContractFactory('ConstantMultipleValidator'),
         [],
     )
+
+    if (logDebug) console.log('Deploying AutomationBot....')
+
+    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DAI,
+    ])
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
@@ -135,12 +147,18 @@ export async function deploySystem({
         BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
             ServiceRegistryInstance.address,
         ])) as BasicSellCommand
+
+        if (logDebug) console.log('Deploying AutoTakeProfit....')
+        AutoTakeProfitInstance = (await utils.deployContract(ethers.getContractFactory('AutoTakeProfitCommand'), [
+            ServiceRegistryInstance.address,
+        ])) as AutoTakeProfitCommand
     }
 
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
-        console.log(`AutomationAggregatorBot deployed to: ${AutomationBotAggregatorInstance.address}`)
+        console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
+        console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
@@ -149,6 +167,7 @@ export async function deploySystem({
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
+            console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
         }
     }
 
@@ -156,13 +175,15 @@ export async function deploySystem({
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
-        automationBotAggregator: AutomationBotAggregatorInstance,
+        makerAdapter: MakerAdapterInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
+        automationBotStorage: AutomationBotStorageInstance,
+        autoTakeProfitCommand: AutoTakeProfitInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -177,6 +198,11 @@ export async function configureRegistryEntries(
     logDebug = false,
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
+
+    const ensureCorrectAdapter = async (address: string, adapter: string) => {
+        await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+    }
+
     const ensureMcdViewWhitelist = async (address: string) => {
         const isWhitelisted = await system.mcdView.whitelisted(address)
         if (!isWhitelisted) {
@@ -193,6 +219,25 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address)
+    }
+    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+            system.autoTakeProfitCommand.address,
+        )
+
+        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.AUTO_TP_DAI), system.autoTakeProfitCommand.address)
+
+        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
@@ -201,6 +246,9 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicBuy.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -209,6 +257,9 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
+
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
@@ -226,11 +277,12 @@ export async function configureRegistryEntries(
         system.automationBot.address,
     )
 
-    if (logDebug) console.log('Adding AUTOMATION_BOT_AGGREGATOR to ServiceRegistry....')
+    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_AGGREGATOR),
-        system.automationBotAggregator.address,
+        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
+        system.automationBotStorage.address,
     )
+
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),

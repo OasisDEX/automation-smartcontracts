@@ -45,6 +45,8 @@ const config: HardhatUserConfig = {
     },
     mocha: {
         timeout: 60000,
+        grep: '@skip-on-coverage',
+        invert: true,
     },
     networks: {
         local: {

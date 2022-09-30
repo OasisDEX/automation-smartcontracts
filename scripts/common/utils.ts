@@ -1,7 +1,7 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType } from './types'
+import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)
@@ -16,6 +16,10 @@ export function isLocalNetwork(network: string) {
 
 export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
+}
+
+export function getAdapterNameHash(command: string) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['Adapter', command]))
 }
 
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
@@ -43,6 +47,11 @@ function getTriggerDataTypes(triggerType: TriggerType) {
         case TriggerType.CLOSE_TO_COLLATERAL:
         case TriggerType.CLOSE_TO_DAI:
             return ['uint256', 'uint16', 'uint256']
+        case TriggerType.AUTO_TP_COLLATERAL:
+        case TriggerType.AUTO_TP_DAI:
+            //    uint256 cdpId, uint16 triggerType, uint256 executionPrice, uint32 maxBaseFeeInGwei;
+            return ['uint256', 'uint16', 'uint256', 'uint32']
+
         case TriggerType.BASIC_BUY:
             // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, uint64 deviation, uint32 baseFee
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint64', `uint32`]
@@ -127,7 +136,7 @@ export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAm
     return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
 }
 
-export function generateStopLossExecutionData(
+export function generateTpOrSlExecutionData(
     mpa: Contract,
     toCollateral: boolean,
     cdpData: any,
