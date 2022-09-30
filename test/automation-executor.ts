@@ -195,9 +195,6 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should not revert on successful execution', async () => {
-            console.log('00000000')
-            console.log(TestDAIInstance.address)
-            console.log('00000000')
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
