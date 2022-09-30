@@ -86,9 +86,10 @@ describe('ConstantMultipleValidator', async () => {
             const counterBefore = await AutomationBotStorageInstance.triggersGroupCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const counterAfter = await AutomationBotStorageInstance.triggersGroupCounter()
@@ -110,9 +111,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -130,9 +132,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,false],
+                [true, false],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -150,9 +153,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -170,9 +174,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -190,9 +195,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -210,9 +216,10 @@ describe('ConstantMultipleValidator', async () => {
             )
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
-                [true,true],
+                [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                [TriggerType.BASIC_BUY, TriggerType.BASIC_SELL],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')

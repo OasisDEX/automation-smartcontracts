@@ -74,7 +74,7 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
         const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_SELL, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
-
+        /* 
         const addTriggerGroupData = bot.interface.encodeFunctionData('addTriggers', [
             args.type.toString(),
             [true, true],
@@ -120,5 +120,5 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             ]
                 .concat(info)
                 .join('\n'),
-        )
+        ) */
     })

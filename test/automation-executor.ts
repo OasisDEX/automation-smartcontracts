@@ -10,17 +10,22 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils, TriggerGroupType } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    TriggerType,
+    HardhatUtils,
+    TriggerGroupType,
+    getAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
-const dummyTriggerData = utils.defaultAbiCoder.encode(
-    ['uint256', 'uint16', 'uint256'],
-    [testCdpId, 1, 101],
-)
+const dummyTriggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 1, 101])
 
 describe('AutomationExecutor', async () => {
     const testTokenTotalSupply = EthersBN.from(10).pow(18)
@@ -90,6 +95,9 @@ describe('AutomationExecutor', async () => {
             true,
         )
         DummyCommandInstance = await DummyCommandInstance.deployed()
+
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
 
         let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
@@ -169,6 +177,7 @@ describe('AutomationExecutor', async () => {
                 [false],
                 [0],
                 [triggerData],
+                [1],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const result = await tx.wait()
@@ -196,6 +205,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -211,6 +221,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
@@ -230,6 +241,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
@@ -241,6 +253,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
 
@@ -279,6 +292,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
             )
 
             const tx = AutomationExecutorInstance.execute(
@@ -290,6 +304,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
+                TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000 },
             )
 

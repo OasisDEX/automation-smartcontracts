@@ -27,13 +27,10 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
         )
 
-        const triggerInfo = await storage.activeTriggers(args.trigger.toString())
-        if (triggerInfo.cdpId.eq(0)) {
+        /*         const triggerInfo = await storage.activeTriggers(args.trigger.toString())
+        if (triggerInfo.commandAddress.eq('0x0000000000000000000000000000000000000000')) {
             throw new Error(`Trigger with id ${args.trigger.toString()} is not active`)
         }
-
-        const vault = triggerInfo.cdpId.toString()
-        console.log(`Vault: ${vault}`)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
         console.log(`Address: ${await signer.getAddress()}`)
@@ -77,5 +74,5 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n'))
+        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n')) */
     })

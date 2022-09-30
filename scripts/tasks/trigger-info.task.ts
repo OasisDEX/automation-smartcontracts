@@ -52,7 +52,7 @@ task<TriggerInfoArgs>('trigger-info')
 
         const [event] = events
         const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
-
+        /* 
         const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
         const trigger = await storage.activeTriggers(args.trigger.toString())
@@ -90,7 +90,7 @@ task<TriggerInfoArgs>('trigger-info')
             `Coll Ratio: ${toBaseUnits(collRatio, 16)}`,
             `Next Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
         ]
-        console.log(`\n${vaultInfo.join('\n')}`)
+        console.log(`\n${vaultInfo.join('\n')}`) */
     })
 
 function toBaseUnits(val: EthersBN, decimals = 18) {

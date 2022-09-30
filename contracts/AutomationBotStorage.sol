@@ -29,7 +29,7 @@ contract AutomationBotStorage {
 
     struct TriggerRecord {
         bytes32 triggerHash;
-        uint248 cdpId; // to still fit two memory slots for whole struct
+        address commandAddress; // or type ? do we allow execution of the same command with new contract - waht if contract rev X is broken ? Do we force migration (can we do it)?
         bool continuous;
     }
 

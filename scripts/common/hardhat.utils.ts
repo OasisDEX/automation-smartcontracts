@@ -37,6 +37,7 @@ export class HardhatUtils {
                 'AutomationBotStorage',
                 this.addresses.AUTOMATION_BOT_STORAGE,
             ),
+            makerAdapter: await this.hre.ethers.getContractAt('MakerAdapter', this.addresses.MAKER_ADAPTER),
             constantMultipleValidator: await this.hre.ethers.getContractAt(
                 'ConstantMultipleValidator',
                 this.addresses.CONSTANT_MULTIPLE_VALIDATOR,

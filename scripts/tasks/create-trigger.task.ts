@@ -110,6 +110,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             [args.continuous],
             [triggerIdToReplace],
             [triggerData],
+            [args.type],
         ])
 
         const info = [

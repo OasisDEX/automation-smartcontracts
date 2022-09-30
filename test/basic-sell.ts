@@ -33,12 +33,13 @@ describe('BasicSellCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
+    const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SINGLE_TRIGGER,
             [continuous],
             [0],
             [triggerData],
+            [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data)
@@ -83,7 +84,7 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
@@ -96,7 +97,7 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
@@ -109,7 +110,7 @@ describe('BasicSellCommand', () => {
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it.skip('should fail if trigger type is not encoded correctly', async () => {
@@ -118,7 +119,7 @@ describe('BasicSellCommand', () => {
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
@@ -131,7 +132,7 @@ describe('BasicSellCommand', () => {
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData, false)
+            const tx = createTrigger(triggerData, TriggerType.BASIC_SELL, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -155,7 +156,7 @@ describe('BasicSellCommand', () => {
                 50,
                 maxBaseFee,
             )
-            const createTriggerTx = await createTrigger(triggerData, continuous)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.BASIC_SELL, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
@@ -239,6 +240,7 @@ describe('BasicSellCommand', () => {
                 0,
                 0,
                 0,
+                hardhatUtils.addresses.DAI,
             )
         }
 
@@ -306,7 +308,9 @@ describe('BasicSellCommand', () => {
             const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
             expect(executeEvents.length).to.eq(1)
             expect(removeEvents.length).to.eq(1)
-            expect(finalTriggerRecord.cdpId).to.eq(0)
+            expect(finalTriggerRecord.triggerHash).to.eq(
+                '0x0000000000000000000000000000000000000000000000000000000000000000',
+            )
             expect(finalTriggerRecord.continuous).to.eq(false)
         })
 

@@ -152,6 +152,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        [1],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -176,6 +177,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -219,6 +221,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        [1],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -240,6 +243,7 @@ describe('CloseCommand', async () => {
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -273,6 +277,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -284,10 +289,11 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
@@ -318,6 +324,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     await tx.wait()
@@ -379,6 +386,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        [2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -403,6 +411,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -439,6 +448,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        [2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -467,6 +477,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await tx.wait()
 
@@ -495,6 +506,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -506,10 +518,11 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
@@ -540,6 +553,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
