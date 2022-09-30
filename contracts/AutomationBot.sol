@@ -281,7 +281,7 @@ contract AutomationBot {
         for (uint256 i = 0; i < triggerIds.length; i++) {
             (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[i]);
             IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
-            removeTrigger(triggerIds[i], triggerData[i], address(adapter), false);
+            removeTrigger(triggerIds[i], triggerData[i]);
             if (removeAllowance && (i == triggerIds.length - 1)) {
                 (bool status, ) = address(adapter).delegatecall(
                     abi.encodeWithSelector(
@@ -297,29 +297,9 @@ contract AutomationBot {
         }
     }
 
-    function removeTrigger(
-        uint256 triggerId,
-        bytes memory triggerData,
-        address adapterAddress,
-        bool removeAllowance
-    ) private {
+    function removeTrigger(uint256 triggerId, bytes memory triggerData) private {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-
         BotLike(automationBot).removeRecord(triggerData, triggerId);
-
-        if (removeAllowance) {
-            IAdapter adapter = IAdapter(getAdapterAddress(adapterAddress));
-            (bool status, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(
-                    adapter.permit.selector,
-                    triggerData,
-                    address(automationBot),
-                    false
-                )
-            );
-            require(status, "bot/permit-removal-failed");
-            emit ApprovalRemoved(triggerData, automationBot);
-        }
     }
 
     //works correctly in context of automationBot
