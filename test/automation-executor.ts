@@ -17,6 +17,7 @@ import {
     TriggerType,
     HardhatUtils,
     TriggerGroupType,
+    getAdapterNameHash,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
@@ -94,6 +95,9 @@ describe('AutomationExecutor', async () => {
             true,
         )
         DummyCommandInstance = await DummyCommandInstance.deployed()
+
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address);
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address);
 
         let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)

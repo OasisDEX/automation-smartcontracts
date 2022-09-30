@@ -26,6 +26,7 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -73,12 +74,11 @@ contract AutomationBot {
         return commandAddress;
     }
 
-    function getAdapterAddress(uint256 adapterType) public view returns (address) {
-        bytes32 commandHash = keccak256(abi.encode("Adapter", adapterType));
-
-        address commandAddress = serviceRegistry.getServiceAddress(commandHash);
-
-        return commandAddress;
+    function getAdapterAddress(address commandAddress) public view returns (address) {
+        require(commandAddress != address(0), "bot/unknown-trigger-type");
+        bytes32 adapterHash = keccak256(abi.encode("Adapter", commandAddress));
+        address service = serviceRegistry.getServiceAddress(adapterHash);
+        return service;
     }
 
     // works correctly in any context
@@ -126,7 +126,7 @@ contract AutomationBot {
         );
 
         // TODO: pass adapter type // make adapter address command dependent ?
-        IAdapter adapter = IAdapter(getAdapterAddress(1));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
         // 9k gas
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
@@ -144,14 +144,7 @@ contract AutomationBot {
                 replacedTriggerId
             );
             require(replacedTriggersHash != bytes32(0), "bot/invalid-trigger");
-            automationBotStorage.updateTriggerRecord(
-                replacedTriggerId,
-                AutomationBotStorage.TriggerRecord(
-                    0,
-                    0x0000000000000000000000000000000000000000,
-                    false
-                )
-            );
+            clearTrigger(replacedTriggerId);
             emit TriggerRemoved(replacedTriggerId);
         }
 
@@ -173,15 +166,19 @@ contract AutomationBot {
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
         // TODO: pass adapter type // make adapter address command dependent ?
-        IAdapter adapter = IAdapter(getAdapterAddress(1));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
 
+        clearTrigger(triggerId);
+        emit TriggerRemoved(triggerId);
+    }
+
+    function clearTrigger(uint256 triggerId) private {
         automationBotStorage.updateTriggerRecord(
             triggerId,
             AutomationBotStorage.TriggerRecord(0, 0x0000000000000000000000000000000000000000, false)
         );
-        emit TriggerRemoved(triggerId);
     }
 
     // works correctly in context of dsProxy
@@ -194,7 +191,6 @@ contract AutomationBot {
     ) external onlyDelegate {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
         // TODO: pass adapter type // make adapter address command dependent ?
-        IAdapter adapter = IAdapter(getAdapterAddress(1));
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
@@ -210,6 +206,7 @@ contract AutomationBot {
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
+            IAdapter adapter = IAdapter(getAdapterAddress(getCommandAddress(triggerTypes[i])));
             AutomationBot(automationBot).addRecord(
                 triggerTypes[i],
                 continuous[i],
@@ -283,9 +280,10 @@ contract AutomationBot {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            removeTrigger(triggerIds[i], triggerData[i], false);
+            (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[i]);
+            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+            removeTrigger(triggerIds[i], triggerData[i], address(adapter), false);
             if (removeAllowance && (i == triggerIds.length - 1)) {
-                IAdapter adapter = IAdapter(getAdapterAddress(1));
                 (bool status, ) = address(adapter).delegatecall(
                     abi.encodeWithSelector(
                         adapter.permit.selector,
@@ -303,6 +301,7 @@ contract AutomationBot {
     function removeTrigger(
         uint256 triggerId,
         bytes memory triggerData,
+        address adapterAddress,
         bool removeAllowance
     ) private {
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
@@ -310,7 +309,7 @@ contract AutomationBot {
         BotLike(automationBot).removeRecord(triggerData, triggerId);
 
         if (removeAllowance) {
-            IAdapter adapter = IAdapter(getAdapterAddress(1));
+            IAdapter adapter = IAdapter(getAdapterAddress(adapterAddress));
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
@@ -336,7 +335,7 @@ contract AutomationBot {
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter adapter = IAdapter(getAdapterAddress(1));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
         (bool status, ) = address(adapter).delegatecall(
             abi.encodeWithSelector(
                 adapter.getCoverage.selector,
@@ -356,14 +355,7 @@ contract AutomationBot {
             command.execute(executionData, triggerData);
             (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
             if (!continuous) {
-                automationBotStorage.updateTriggerRecord(
-                    triggerId,
-                    AutomationBotStorage.TriggerRecord(
-                        0,
-                        0x0000000000000000000000000000000000000000,
-                        false
-                    )
-                );
+                clearTrigger(triggerId);
                 emit TriggerRemoved(triggerId);
             }
             (bool statusDisallow, ) = address(adapter).delegatecall(

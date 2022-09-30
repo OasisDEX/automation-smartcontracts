@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
+import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -60,6 +60,9 @@ describe('AutomationBot', async () => {
 
         const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
+
+        const adapterHash = getAdapterNameHash(DummyCommandInstance.address);
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address);
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -540,7 +543,7 @@ describe('AutomationBot', async () => {
 
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            await expect(tx).to.be.reverted
+            await expect(tx).to.be.reverted;
 
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
@@ -596,7 +599,7 @@ describe('AutomationBot', async () => {
                 false,
             ])
             const tx = notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
+            await expect(tx).to.be.reverted;
         })
 
         it('should fail trying to remove the trigger callee does not own', async () => {
