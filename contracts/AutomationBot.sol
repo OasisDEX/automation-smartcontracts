@@ -124,9 +124,7 @@ contract AutomationBot {
             "bot/invalid-trigger-data"
         );
 
-        // TODO: pass adapter type // make adapter address command dependent ?
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
-        // 9k gas
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(
@@ -189,7 +187,6 @@ contract AutomationBot {
         uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
     ) external onlyDelegate {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
-        // TODO: pass adapter type // make adapter address command dependent ?
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
@@ -201,7 +198,7 @@ contract AutomationBot {
             );
         }
 
-        uint256 firstTriggerId = getTriggersCounter();
+        uint256 firstTriggerId = automationBotStorage.triggersCounter();
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
@@ -228,13 +225,6 @@ contract AutomationBot {
             }
         }
         AutomationBot(automationBot).emitGroupDetails(groupType, triggerIds);
-    }
-
-    function getTriggersCounter() private view returns (uint256) {
-        address automationBotStorageAddress = serviceRegistry.getRegisteredService(
-            AUTOMATION_BOT_STORAGE_KEY
-        );
-        return AutomationBotStorage(automationBotStorageAddress).triggersCounter();
     }
 
     function unlock() private {
@@ -276,24 +266,26 @@ contract AutomationBot {
         bytes[] memory triggerData,
         bool removeAllowance
     ) external onlyDelegate {
+        require(triggerData.length > 0, "bot/remove-at-least-one");
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
-            (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[i]);
             removeTrigger(triggerIds[i], triggerData[i]);
-            if (removeAllowance && (i == triggerIds.length - 1)) {
-                IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
-                (bool status, ) = address(adapter).delegatecall(
-                    abi.encodeWithSelector(
-                        adapter.permit.selector,
-                        triggerData[i],
-                        address(automationBot),
-                        false
-                    )
-                );
-                require(status, "bot/permit-removal-failed");
-                emit ApprovalRemoved(triggerData[i], automationBot);
-            }
+        }
+
+        if (removeAllowance) {
+            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+            (bool status, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(
+                    adapter.permit.selector,
+                    triggerData[0],
+                    address(automationBot),
+                    false
+                )
+            );
+            require(status, "bot/permit-removal-failed");
+            emit ApprovalRemoved(triggerData[0], automationBot);
         }
     }
 
