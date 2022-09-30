@@ -49,6 +49,15 @@ contract MakerAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
+    function canCall(
+        address operator,
+        ManagerLike manager,
+        uint256 cdpId,
+        address cdpOwner
+    ) private view returns (bool) {
+        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
+    }
+
     function permit(
         bytes memory triggerData,
         address target,
@@ -56,12 +65,12 @@ contract MakerAdapter {
     ) public {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
-
-        if (!canCall(triggerData, target) && allowance) {
+        address cdpOwner = manager.owns(cdpId);
+        if (allowance && !canCall(target, manager, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
         }
-        if (canCall(triggerData, target) && !allowance) {
+        if (!allowance && canCall(target, manager, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 0);
             // emit ApprovalRevoked(cdpId, target);
         }
@@ -79,8 +88,8 @@ contract MakerAdapter {
 
         (uint256 cdpId, ) = decode(triggerData);
 
-        permit(triggerData, utilsAddress, true);
+        manager.cdpAllow(cdpId, utilsAddress, 1);
         utils.drawDebt(amount, cdpId, manager, receiver);
-        permit(triggerData, utilsAddress, false);
+        manager.cdpAllow(cdpId, utilsAddress, 0);
     }
 }
