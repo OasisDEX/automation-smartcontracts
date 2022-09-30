@@ -25,6 +25,8 @@ import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
 contract AutomationBotStorage {
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+
     struct TriggerRecord {
         bytes32 triggerHash;
         address commandAddress; // or type ? do we allow execution of the same command with new contract - waht if contract rev X is broken ? Do we force migration (can we do it)?
@@ -37,7 +39,6 @@ contract AutomationBotStorage {
     }
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
 
     Counters public counter;
 
