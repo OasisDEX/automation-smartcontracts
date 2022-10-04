@@ -28,8 +28,6 @@ const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 const dummyTriggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 1, 101])
 
 describe('AutomationExecutor', async () => {
-    const testTokenTotalSupply = EthersBN.from(10).pow(18)
-    const daiTotalSupply = EthersBN.from(10).pow(18)
     const wethAmount = EthersBN.from(10).pow(18).mul(10)
     const hardhatUtils = new HardhatUtils(hre)
 
@@ -37,8 +35,6 @@ describe('AutomationExecutor', async () => {
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
     let DummyCommandInstance: DummyCommand
-    let TestERC20Instance: TestERC20
-    let TestDAIInstance: TestERC20
     let TestWETHInstance: TestWETH
     let dai: ERC20
     let proxyOwnerAddress: string
@@ -64,10 +60,6 @@ describe('AutomationExecutor', async () => {
                 },
             ],
         })
-
-        const testERC20Factory = await hre.ethers.getContractFactory('TestERC20', owner)
-        TestERC20Instance = await testERC20Factory.deploy('Test Token', 'TST', testTokenTotalSupply)
-        TestDAIInstance = await testERC20Factory.deploy('Dai', 'DAI', daiTotalSupply)
 
         const testWETHFactory = await hre.ethers.getContractFactory('TestWETH', owner)
         TestWETHInstance = await testWETHFactory.deploy()
@@ -203,7 +195,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
             )
             await expect(tx).not.to.be.reverted
         })
@@ -219,7 +211,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
             )
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
@@ -239,7 +231,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
@@ -251,7 +243,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 0,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
 
@@ -290,7 +282,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
             )
 
             const tx = AutomationExecutorInstance.execute(
@@ -302,7 +294,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 minerBribe,
                 15000,
-                TestDAIInstance.address,
+                dai.address,
                 { gasLimit: estimation.toNumber() + 50000 },
             )
 
@@ -496,28 +488,26 @@ describe('AutomationExecutor', async () => {
 
         it('should revert with executor/invalid-amount on amount greater than balance provided', async () => {
             // await MockERC20Instance.mock.balanceOf.returns(100)
-            const testTokenBalance = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
-            const tx = AutomationExecutorInstance.swapToEth(
-                TestERC20Instance.address,
-                testTokenBalance.add(1),
-                100,
-                fees[0],
-            )
+            const token0 = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
+            const testTokenBalance = await token0.balanceOf(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.swapToEth(token0.address, testTokenBalance.add(1), 100, fees[0])
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
 
-            const daiBalance = await TestDAIInstance.balanceOf(AutomationExecutorInstance.address)
-            const tx2 = AutomationExecutorInstance.swapToEth(TestDAIInstance.address, daiBalance.add(1), 100, fees[0])
+            const daiBalance = await dai.balanceOf(AutomationExecutorInstance.address)
+            const tx2 = AutomationExecutorInstance.swapToEth(dai.address, daiBalance.add(1), 100, fees[0])
 
             await expect(tx2).to.be.revertedWith('executor/invalid-amount')
         })
 
         it('should revert with executor/invalid-amount on 0 amount provided', async () => {
-            const tx = AutomationExecutorInstance.swapToEth(TestERC20Instance.address, 0, 1, fees[0])
+            const token0 = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
+            const tx = AutomationExecutorInstance.swapToEth(token0.address, 0, 1, fees[0])
             await expect(tx).to.be.revertedWith('executor/invalid-amount')
         })
 
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
-            const tx = AutomationExecutorInstance.connect(notOwner).swapToEth(TestERC20Instance.address, 1, 1, fees[0])
+            const token0 = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
+            const tx = AutomationExecutorInstance.connect(notOwner).swapToEth(token0.address, 1, 1, fees[0])
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
     })
@@ -561,33 +551,21 @@ describe('AutomationExecutor', async () => {
         })
 
         it('should revert on invalid token amount and balance should remain unchanged', async () => {
-            const executorBalance = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
-            const tx = AutomationExecutorInstance.withdraw(TestERC20Instance.address, executorBalance.add(1))
-            await expect(tx).to.be.revertedWith('ERC20: transfer amount exceeds balance')
-            const executorBalanceAfter = await TestERC20Instance.balanceOf(AutomationExecutorInstance.address)
+            const token0 = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
+            const executorBalance = await token0.balanceOf(AutomationExecutorInstance.address)
+            const tx = AutomationExecutorInstance.withdraw(token0.address, executorBalance.add(1))
+            await expect(tx).to.be.revertedWith('SafeERC20: low-level call failed')
+            const executorBalanceAfter = await token0.balanceOf(AutomationExecutorInstance.address)
             expect(executorBalance.toString()).to.eq(executorBalanceAfter.toString())
         })
 
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
-            const tx = AutomationExecutorInstance.connect(notOwner).withdraw(TestERC20Instance.address, 100)
+            const token0 = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.WBTC)
+            const tx = AutomationExecutorInstance.connect(notOwner).withdraw(token0.address, 100)
             await expect(tx).to.be.revertedWith('executor/only-owner')
 
             const tx2 = AutomationExecutorInstance.connect(notOwner).withdraw(constants.AddressZero, 100)
             await expect(tx2).to.be.revertedWith('executor/only-owner')
-        })
-    })
-
-    describe('unwrapWETH', () => {
-        before(async () => {
-            await TestWETHInstance.transfer(AutomationExecutorInstance.address, wethAmount)
-        })
-
-        beforeEach(async () => {
-            snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-        })
-
-        afterEach(async () => {
-            await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
     })
 })
