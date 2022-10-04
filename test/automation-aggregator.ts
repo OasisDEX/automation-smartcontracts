@@ -44,7 +44,11 @@ describe('AutomationAggregatorBot', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-    let createTrigger: (triggerData: BytesLike, continuous: boolean) => Promise<ContractTransaction>
+    let createTrigger: (
+        triggerData: BytesLike,
+        triggerType: TriggerType,
+        continuous: boolean,
+    ) => Promise<ContractTransaction>
     const ethAIlk = utils.formatBytes32String('ETH-A')
 
     before(async () => {
@@ -79,13 +83,13 @@ describe('AutomationAggregatorBot', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        createTrigger = async (triggerData: BytesLike, continuous: boolean) => {
+        createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SINGLE_TRIGGER,
                 [continuous],
                 [0],
                 [triggerData],
-                [5],
+                [triggerType],
             ])
             const signer = await hardhatUtils.impersonate(ownerProxyUserAddress)
             return ownerProxy.connect(signer).execute(system.automationBot.address, data)
@@ -313,7 +317,8 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, true)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+
             await createTx.wait()
             const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -356,8 +361,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, true)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -391,8 +396,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, true)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -426,8 +431,8 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, true)
-            const createTx2 = await createTrigger(oldBbTriggerData, true)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -469,8 +474,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, true)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY, true)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL, true)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
