@@ -284,7 +284,7 @@ describe.only('BasicSellCommand', async () => {
                     .execute(
                         system.mcdUtils.address,
                         system.mcdUtils.interface.encodeFunctionData('drawDebt', [
-                            EtherBN.from(10).pow(18).mul(1_010_000),
+                            EtherBN.from(10).pow(18).mul(22_284),
                             testCdpId,
                             hardhatUtils.addresses.CDP_MANAGER,
                             proxyOwnerAddress,

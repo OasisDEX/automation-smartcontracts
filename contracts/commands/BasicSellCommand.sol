@@ -25,7 +25,6 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
-import { console } from "hardhat/console.sol";
 
 contract BasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
@@ -69,8 +68,6 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 dustLimit = getDustLimit(ilk);
         uint256 debt = getVaultDebt(trigger.cdpId);
         uint256 wad = RatioUtils.WAD;
-        console.log("trigger.targetCollRatio", trigger.targetCollRatio);
-        console.log("nextCollRatio", nextCollRatio);
         uint256 futureDebt = (debt * nextCollRatio - debt * wad) /
             (trigger.targetCollRatio.wad() - wad);
 
