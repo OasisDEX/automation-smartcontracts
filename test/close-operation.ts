@@ -543,7 +543,7 @@ describe('CloseCommand', async () => {
                     ).to.be.lessThan(1010) //account for some refund calculation inacurencies
                 })
 
-                it('should send dai To receiverAddress', async () => {
+                it.only('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
@@ -554,6 +554,9 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                         hardhatUtils.addresses.DAI,
+                        {
+                            gasLimit:5000000
+                        }
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
