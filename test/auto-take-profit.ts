@@ -243,7 +243,7 @@ describe('AutoTakeProfitCommand', async () => {
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
                     const updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(10000)).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
@@ -474,7 +474,7 @@ describe('AutoTakeProfitCommand', async () => {
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
                     const updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(10000)).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
