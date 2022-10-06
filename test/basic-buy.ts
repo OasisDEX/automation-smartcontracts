@@ -16,7 +16,7 @@ import {
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
 
-const testCdpId = parseInt(process.env.CDP_ID || '13288')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 const maxGweiPrice = 1000
 
 describe('BasicBuyCommand', () => {

@@ -16,7 +16,7 @@ import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '29031')
 
-describe.only('AutoTakeProfitCommand', async () => {
+describe('AutoTakeProfitCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
