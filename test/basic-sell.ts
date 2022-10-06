@@ -19,7 +19,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
 // BLOCK_NUMBER=14997398
-describe.only('BasicSellCommand', () => {
+describe('BasicSellCommand', () => {
     const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
     const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
     const ethAIlk = utils.formatBytes32String('ETH-A')

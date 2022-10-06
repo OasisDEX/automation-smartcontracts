@@ -16,7 +16,7 @@ import { deploySystem } from '../scripts/common/deploy-system'
 
 const testCdpId = parseInt(process.env.CDP_ID || '29031')
 
-describe('AutoTakeProfitCommand', async () => {
+describe.only('AutoTakeProfitCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -132,7 +132,7 @@ describe('AutoTakeProfitCommand', async () => {
                 )
             })
 
-            describe('when Trigger is below next price', async () => {
+            describe('when Trigger is above next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
@@ -193,7 +193,7 @@ describe('AutoTakeProfitCommand', async () => {
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
-            describe('when Trigger is above next price', async () => {
+            describe('when Trigger is below next price', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
                 let executionData: BytesLike
