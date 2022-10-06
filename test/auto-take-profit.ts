@@ -14,7 +14,7 @@ import {
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 
 describe('AutoTakeProfitCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */

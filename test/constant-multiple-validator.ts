@@ -6,7 +6,7 @@ import { AutomationBot, AutomationBotStorage, DsProxyLike } from '../typechain'
 import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 const maxGweiPrice = 1000
 
 function toRatio(units: number) {

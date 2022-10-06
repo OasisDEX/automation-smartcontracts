@@ -14,7 +14,7 @@ import {
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 
 // Block dependent test, works for 13998517
 
@@ -543,7 +543,7 @@ describe('CloseCommand', async () => {
                     ).to.be.lessThan(1010) //account for some refund calculation inacurencies
                 })
 
-                it.only('should send dai To receiverAddress', async () => {
+                it('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
