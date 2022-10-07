@@ -66,8 +66,6 @@ describe.only('BasicSellCommand', async () => {
 
         const collRatio = ethers.utils.formatEther(await system.mcdView.getRatio(testCdpId, true))
 
-        console.log('CollRatio', collRatio)
-
         const collRationNum = Math.floor(10000 * parseFloat(collRatio))
 
         correctExecutionRatio = collRationNum + 1000
@@ -75,9 +73,6 @@ describe.only('BasicSellCommand', async () => {
 
         incorrectExecutionRatio = collRationNum - 1000
         incorrectTargetRatio = collRationNum - 2000
-
-        console.log('Coll ratios:', correctExecutionRatio, correctTargetRatio)
-        console.log('Coll ratios:', incorrectExecutionRatio, incorrectTargetRatio)
     })
 
     beforeEach(async () => {
