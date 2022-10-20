@@ -31,8 +31,15 @@ contract MakerAdapter {
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
+    address public immutable self;
+
+    modifier onlyDelegate() {
+        require(address(this) != self, "bot/only-delegate");
+        _;
+    }
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
+        self = address(this);
         serviceRegistry = _serviceRegistry;
         dai = _dai;
     }
@@ -69,6 +76,7 @@ contract MakerAdapter {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
+        require(canCall(msg.sender, manager, cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         if (allowance && !canCall(target, manager, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);

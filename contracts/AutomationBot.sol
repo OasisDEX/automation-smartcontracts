@@ -73,9 +73,15 @@ contract AutomationBot {
         return commandAddress;
     }
 
-    function getAdapterAddress(address commandAddress) public view returns (address) {
+    function getAdapterAddress(address commandAddress, bool isExecute)
+        public
+        view
+        returns (address)
+    {
         require(commandAddress != address(0), "bot/unknown-trigger-type");
-        bytes32 adapterHash = keccak256(abi.encode("Adapter", commandAddress));
+        bytes32 adapterHash = isExecute
+            ? keccak256(abi.encode("AdapterExecute", commandAddress))
+            : keccak256(abi.encode("Adapter", commandAddress));
         address service = serviceRegistry.getServiceAddress(adapterHash);
         return service;
     }
@@ -124,7 +130,7 @@ contract AutomationBot {
             "bot/invalid-trigger-data"
         );
 
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(
@@ -163,7 +169,7 @@ contract AutomationBot {
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
         // TODO: pass adapter type // make adapter address command dependent ?
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
 
@@ -202,7 +208,9 @@ contract AutomationBot {
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            IAdapter adapter = IAdapter(getAdapterAddress(getCommandAddress(triggerTypes[i])));
+            IAdapter adapter = IAdapter(
+                getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
+            );
             AutomationBot(automationBot).addRecord(
                 triggerTypes[i],
                 continuous[i],
@@ -275,7 +283,7 @@ contract AutomationBot {
         }
 
         if (removeAllowance) {
-            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
@@ -307,7 +315,8 @@ contract AutomationBot {
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress));
+        IAdapter dpmAdapter = IAdapter(getAdapterAddress(commandAddress, false));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, true));
         (bool status, ) = address(adapter).delegatecall(
             abi.encodeWithSelector(
                 adapter.getCoverage.selector,
@@ -317,14 +326,19 @@ contract AutomationBot {
                 coverageAmount
             )
         );
-        require(status, "bot/failed-to-draw-dai");
+        require(status, "bot/failed-to-draw-coverage");
         {
-            (bool statusAllow, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, true)
+            (bool statusAllow, ) = address(dpmAdapter).delegatecall(
+                abi.encodeWithSelector(
+                    dpmAdapter.permit.selector,
+                    triggerData,
+                    commandAddress,
+                    true
+                )
             );
             require(statusAllow, "bot/permit-failed");
 
-            command.execute(executionData, triggerData);
+            command.execute(executionData, triggerData); //command must be whitelisted
             (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
             if (!continuous) {
                 clearTrigger(triggerId);
