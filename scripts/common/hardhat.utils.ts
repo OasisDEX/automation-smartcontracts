@@ -260,6 +260,7 @@ export class HardhatUtils {
     }
 
     public async getGasSettings() {
+        console.log('Getting gas settings...')
         if (this.hre.network.name !== Network.MAINNET) {
             return {}
         }
@@ -267,6 +268,15 @@ export class HardhatUtils {
         const { suggestBaseFee } = await this.getGasPrice()
         const maxPriorityFeePerGas = new BigNumber(2).shiftedBy(9).toFixed(0)
         const maxFeePerGas = new BigNumber(suggestBaseFee).shiftedBy(9).plus(maxPriorityFeePerGas).toFixed(0)
+
+        console.log(
+            'gas settings:',
+            { maxPriorityFeePerGas, maxFeePerGas },
+            {
+                maxFeePerGas: EthersBN.from(maxFeePerGas),
+                maxPriorityFeePerGas: EthersBN.from(maxPriorityFeePerGas),
+            },
+        )
         return {
             maxFeePerGas: EthersBN.from(maxFeePerGas),
             maxPriorityFeePerGas: EthersBN.from(maxPriorityFeePerGas),

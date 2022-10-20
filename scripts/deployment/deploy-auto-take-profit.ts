@@ -10,19 +10,23 @@ async function main() {
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    const system = await utils.getDefaultSystem()
-
-    system.autoTakeProfitCommand = (await utils.deployContract(hre.ethers.getContractFactory('AutoTakeProfitCommand'), [
+    const instance = (await utils.deployContract(hre.ethers.getContractFactory('AutoTakeProfitCommand'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
     ])) as AutoTakeProfitCommand
-    console.log(`AutoTakeProfitCommand Deployed: ${system.autoTakeProfitCommand.address}`)
 
+    const instanceNoCheck = (await utils.deployContract(hre.ethers.getContractFactory('AutoTakeProfitCommandNoCheck'), [
+        utils.addresses.AUTOMATION_SERVICE_REGISTRY,
+    ])) as AutoTakeProfitCommand
+    console.log(`AutoTakeProfitCommand Deployed: ${instance.address}`)
+    console.log(`AutoTakeProfitCommand No check Deployed: ${instanceNoCheck.address}`)
+    /*
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
         getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
     ])
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
         getCommandHash(TriggerType.AUTO_TP_DAI),
     ])
+    */
 }
 
 main().catch(error => {
