@@ -14,7 +14,7 @@ import {
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 
 // Block dependent test, works for 13998517
 
@@ -554,6 +554,9 @@ describe('CloseCommand', async () => {
                         0,
                         178000,
                         hardhatUtils.addresses.DAI,
+                        {
+                            gasLimit:5000000
+                        }
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

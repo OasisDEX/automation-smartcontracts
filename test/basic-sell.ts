@@ -1,4 +1,4 @@
-import hre from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import { BytesLike, utils, BigNumber as EtherBN } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
@@ -15,13 +15,13 @@ import {
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
 
-const testCdpId = parseInt(process.env.CDP_ID || '13288')
+const testCdpId = parseInt(process.env.CDP_ID || '29031')
 const maxGweiPrice = 1000
 
 // BLOCK_NUMBER=14997398
-describe('BasicSellCommand', () => {
-    const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
-    const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
+describe.only('BasicSellCommand', async () => {
+    let [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+    let [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
 
@@ -63,6 +63,16 @@ describe('BasicSellCommand', () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+
+        const collRatio = ethers.utils.formatEther(await system.mcdView.getRatio(testCdpId, true))
+
+        const collRationNum = Math.floor(10000 * parseFloat(collRatio))
+
+        correctExecutionRatio = collRationNum + 1000
+        correctTargetRatio = collRationNum + 2000
+
+        incorrectExecutionRatio = collRationNum - 1000
+        incorrectTargetRatio = collRationNum - 2000
     })
 
     beforeEach(async () => {
@@ -152,7 +162,7 @@ describe('BasicSellCommand', () => {
                 TriggerType.BASIC_SELL,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
-                new BigNumber(4000).shiftedBy(18).toFixed(),
+                new BigNumber(1000).shiftedBy(18).toFixed(),
                 50,
                 maxBaseFee,
             )
@@ -269,7 +279,7 @@ describe('BasicSellCommand', () => {
                     .execute(
                         system.mcdUtils.address,
                         system.mcdUtils.interface.encodeFunctionData('drawDebt', [
-                            EtherBN.from(10).pow(18).mul(1_010_000),
+                            EtherBN.from(10).pow(18).mul(22_284),
                             testCdpId,
                             hardhatUtils.addresses.CDP_MANAGER,
                             proxyOwnerAddress,
