@@ -3,7 +3,6 @@ import {
     AutomationBot,
     ConstantMultipleValidator,
     AutomationExecutor,
-    AutomationSwap,
     BasicBuyCommand,
     BasicSellCommand,
     CloseCommand,
@@ -34,7 +33,6 @@ export interface DeployedSystem {
     automationBotStorage: AutomationBotStorage
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
-    automationSwap: AutomationSwap
     mcdView: McdView
     closeCommand?: CloseCommand
     autoTakeProfitCommand?: AutoTakeProfitCommand
@@ -138,21 +136,8 @@ export async function deploySystem({
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [
-            AutomationBotInstance.address,
-            addresses.DAI,
-            addresses.WETH,
-            utils.hre.network.name === Network.MAINNET ? addresses.ZERO_FEE_EXCHANGE : addresses.EXCHANGE,
-        ],
+        [AutomationBotInstance.address, addresses.DAI, addresses.WETH],
     )
-
-    if (logDebug) console.log('Deploying AutomationSwap....')
-    const AutomationSwapInstance: AutomationSwap = await utils.deployContract(
-        ethers.getContractFactory('AutomationSwap'),
-        [AutomationExecutorInstance.address, addresses.DAI],
-    )
-
-    await AutomationExecutorInstance.addCallers([AutomationSwapInstance.address])
 
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
     const McdViewInstance: McdView = deployMcdView
@@ -196,7 +181,6 @@ export async function deploySystem({
         console.log(`DPMAdapter deployed to: ${DPMAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
-        console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
@@ -214,7 +198,6 @@ export async function deploySystem({
         makerAdapter: MakerAdapterInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
-        automationSwap: AutomationSwapInstance,
         mcdView: McdViewInstance,
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
@@ -347,12 +330,6 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         system.automationExecutor.address,
-    )
-
-    if (logDebug) console.log('Adding AUTOMATION_SWAP to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
-        system.automationSwap.address,
     )
 
     if (logDebug) console.log('Adding MCD_UTILS command to ServiceRegistry....')

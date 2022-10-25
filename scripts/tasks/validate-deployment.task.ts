@@ -34,11 +34,6 @@ task('validate-deployment', 'Validate the current deployment')
                 addressFromConfig: addresses.AUTOMATION_EXECUTOR,
             },
             {
-                name: AutomationServiceName.AUTOMATION_SWAP,
-                hash: getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP),
-                addressFromConfig: addresses.AUTOMATION_SWAP,
-            },
-            {
                 name: AutomationServiceName.MCD_UTILS,
                 hash: getServiceNameHash(AutomationServiceName.MCD_UTILS),
                 addressFromConfig: addresses.AUTOMATION_MCD_UTILS,
