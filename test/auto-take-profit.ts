@@ -504,7 +504,7 @@ describe('AutoTakeProfitCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it.only('it should wipe all debt and collateral', async () => {
+                it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
