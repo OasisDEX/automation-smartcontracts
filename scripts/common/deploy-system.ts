@@ -14,10 +14,18 @@ import {
     AutomationBotStorage,
     AutoTakeProfitCommand,
 } from '../../typechain'
+import { AAVEAdapter } from '../../typechain/AAVEAdapter'
+import { DPMAdapter } from '../../typechain/DPMAdapter'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
-import { getCommandHash, getServiceNameHash, getValidatorHash, getAdapterNameHash } from './utils'
+import {
+    getCommandHash,
+    getServiceNameHash,
+    getValidatorHash,
+    getAdapterNameHash,
+    getExecuteAdapterNameHash,
+} from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -117,6 +125,16 @@ export async function deploySystem({
         addresses.DAI,
     ])
 
+    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DAI,
+    ])
+
+    const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DAI,
+    ])
+
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
@@ -133,6 +151,7 @@ export async function deploySystem({
         ethers.getContractFactory('AutomationSwap'),
         [AutomationExecutorInstance.address, addresses.DAI],
     )
+
     await AutomationExecutorInstance.addCallers([AutomationSwapInstance.address])
 
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
@@ -173,6 +192,8 @@ export async function deploySystem({
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
         console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
         console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
+        console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance.address}`)
+        console.log(`DPMAdapter deployed to: ${DPMAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`AutomationSwap deployed to: ${AutomationSwapInstance.address}`)
@@ -215,8 +236,12 @@ export async function configureRegistryEntries(
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
 
-    const ensureCorrectAdapter = async (address: string, adapter: string) => {
-        await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+        if (!isExecute) {
+            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+        } else {
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+        }
     }
 
     const ensureMcdViewWhitelist = async (address: string) => {
@@ -238,6 +263,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -254,6 +280,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address, true)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
@@ -265,6 +292,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address, true)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -276,6 +304,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address, true)
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
