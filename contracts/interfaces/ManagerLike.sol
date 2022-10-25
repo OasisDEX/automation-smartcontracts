@@ -16,6 +16,8 @@ interface ManagerLike {
 
     function urns(uint256) external view returns (address);
 
+    function open(bytes32 ilk, address usr) external returns (uint256);
+
     function cdpAllow(
         uint256 cdp,
         address usr,
@@ -46,4 +48,6 @@ interface ManagerLike {
         address,
         uint256
     ) external;
+
+    event NewCdp(address indexed usr, address indexed own, uint256 indexed cdp);
 }
