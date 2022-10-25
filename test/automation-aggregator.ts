@@ -225,7 +225,7 @@ describe('AutomationExecutor', async () => {
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
 
-        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+        it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
             await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
 
             const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
@@ -239,7 +239,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                15000,
+                12700,
                 TestDAIInstance.address,
             )
 
@@ -251,7 +251,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                15000,
+                12700,
                 TestDAIInstance.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
@@ -259,9 +259,12 @@ describe('AutomationExecutor', async () => {
             await expect(tx).not.to.be.reverted
 
             const receipt = await (await tx).wait()
+            console.log('gasUsed', receipt.gasUsed.toNumber(), estimation.toNumber());
             const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
             const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
             const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
+            console.log('txCost', txCost.toString());
+            console.log('diff', ownerBalanceBefore.sub(ownerBalanceAfter).toString());
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
             expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
