@@ -24,7 +24,6 @@ import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
-import "hardhat/console.sol";
 
 contract MakerAdapter {
     ServiceRegistry public immutable serviceRegistry;
@@ -76,7 +75,10 @@ contract MakerAdapter {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
-        require(canCall(msg.sender, manager, cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+        require(
+            canCall(address(this), manager, cdpId, cdpOwner),
+            "maker-adapter/not-allowed-to-call"
+        ); //missing check to fail permit if msg.sender has no permissions
         if (allowance && !canCall(target, manager, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);

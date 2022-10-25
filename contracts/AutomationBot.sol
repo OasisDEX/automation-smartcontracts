@@ -123,6 +123,7 @@ contract AutomationBot {
         bytes memory triggerData
     ) external {
         lock();
+
         address commandAddress = getCommandAddress(triggerType);
 
         require(
@@ -211,6 +212,7 @@ contract AutomationBot {
             IAdapter adapter = IAdapter(
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
+
             AutomationBot(automationBot).addRecord(
                 triggerTypes[i],
                 continuous[i],
@@ -232,6 +234,7 @@ contract AutomationBot {
                 require(status, "bot/permit-failed");
             }
         }
+
         AutomationBot(automationBot).emitGroupDetails(groupType, triggerIds);
     }
 

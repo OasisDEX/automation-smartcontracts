@@ -166,9 +166,11 @@ describe('AutoTakeProfitCommand', async () => {
                         [triggerData],
                         [TriggerType.AUTO_TP_COLLATERAL],
                     ])
+                    
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
+                    
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -479,9 +481,13 @@ describe('AutoTakeProfitCommand', async () => {
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
+                    console.log("Preparing stuff");
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
+
+                    console.log("tx eexecuted");
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
 
@@ -498,7 +504,7 @@ describe('AutoTakeProfitCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it('it should wipe all debt and collateral', async () => {
+                it.only('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,

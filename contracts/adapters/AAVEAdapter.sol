@@ -8,7 +8,6 @@ import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
-import "hardhat/console.sol";
 
 contract AAVEAdapter {
     ServiceRegistry public immutable serviceRegistry;
