@@ -31,10 +31,6 @@ task('verify-automation')
                 ],
             },
             {
-                address: addresses.AUTOMATION_SWAP,
-                constructorArguments: [addresses.AUTOMATION_EXECUTOR, addresses.DAI],
-            },
-            {
                 address: addresses.AUTOMATION_MCD_UTILS,
                 constructorArguments: [
                     addresses.AUTOMATION_SERVICE_REGISTRY,
