@@ -1,7 +1,6 @@
 import hre from 'hardhat'
 import { AutoTakeProfitCommand } from '../../typechain'
-import { AddressRegistry, getCommandHash, HardhatUtils, TriggerType } from '../common'
-import { configureRegistryEntries } from '../common/deploy-system'
+import { HardhatUtils } from '../common'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -19,14 +18,6 @@ async function main() {
     ])) as AutoTakeProfitCommand
     console.log(`AutoTakeProfitCommand Deployed: ${instance.address}`)
     console.log(`AutoTakeProfitCommand No check Deployed: ${instanceNoCheck.address}`)
-    /*
-    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
-    ])
-    await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AUTO_TP_DAI),
-    ])
-    */
 }
 
 main().catch(error => {
