@@ -1,4 +1,4 @@
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import {
     AutomationBot,
@@ -16,7 +16,7 @@ import {
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerGroupType } from './types'
+import { AutomationServiceName, Network } from './types'
 import { getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
 
 export interface DeployedSystem {
@@ -276,7 +276,7 @@ export async function configureRegistryEntries(
     )
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+        getValidatorHash(TriggerGroupType.ConstantMultiple),
         system.constantMultipleValidator.address,
     )
 

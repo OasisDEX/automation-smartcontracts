@@ -1,13 +1,6 @@
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { task } from 'hardhat/config'
-import {
-    AutomationServiceName,
-    getCommandHash,
-    getServiceNameHash,
-    getValidatorHash,
-    HardhatUtils,
-    TriggerGroupType,
-} from '../common'
+import { AutomationServiceName, getCommandHash, getServiceNameHash, getValidatorHash, HardhatUtils } from '../common'
 
 // Requires ServiceRegistry address to be configured correctly
 task('validate-deployment', 'Validate the current deployment')
@@ -95,7 +88,7 @@ task('validate-deployment', 'Validate the current deployment')
             },
             {
                 name: 'TriggerGroupType.CONSTANT_MULTIPLE',
-                hash: getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+                hash: getValidatorHash(TriggerGroupType.ConstantMultiple),
                 addressFromConfig: addresses.CONSTANT_MULTIPLE_VALIDATOR,
             },
         ]

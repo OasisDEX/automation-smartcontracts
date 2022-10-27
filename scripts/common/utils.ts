@@ -1,8 +1,8 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 import { BytesLike, utils, Contract } from 'ethers'
 import { BigNumber } from 'bignumber.js'
-import { AutomationServiceName, Network, TriggerGroupType } from './types'
-import { TriggerType } from '@oasisdex/automation'
+import { AutomationServiceName, Network } from './types'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 export const zero = new BigNumber(0)
 export const one = new BigNumber(1)

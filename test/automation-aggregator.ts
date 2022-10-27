@@ -11,10 +11,9 @@ import {
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
-import { TriggerGroupType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
@@ -94,7 +93,7 @@ describe('AutomationAggregatorBot', async () => {
     })
 
     describe('addTriggerGroup', async () => {
-        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+        const groupTypeId = TriggerGroupType.ConstantMultiple
         // data for the owner vault
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
         const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
@@ -553,7 +552,7 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('removeTriggers', async () => {
-        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+        const groupTypeId = TriggerGroupType.ConstantMultiple
         const replacedTriggerId = [0, 0]
 
         // current coll ratio : 1.859946411122229468
@@ -710,7 +709,7 @@ describe('AutomationAggregatorBot', async () => {
     })
     describe('cdpAllowed', async () => {
         beforeEach(async () => {
-            const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+            const groupTypeId = TriggerGroupType.ConstantMultiple
             const replacedTriggerId = [0, 0]
 
             // current coll ratio : 1.859946411122229468

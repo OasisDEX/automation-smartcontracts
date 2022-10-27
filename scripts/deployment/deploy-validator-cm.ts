@@ -1,6 +1,7 @@
+import { TriggerGroupType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { ConstantMultipleValidator } from '../../typechain'
-import { AddressRegistry, getValidatorHash, HardhatUtils, TriggerGroupType } from '../common'
+import { AddressRegistry, getValidatorHash, HardhatUtils } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
@@ -19,7 +20,7 @@ async function main() {
     console.log(`ConstantMultipleValidator Deployed: ${system.constantMultipleValidator.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+        getValidatorHash(TriggerGroupType.ConstantMultiple),
     ])
 }
 
