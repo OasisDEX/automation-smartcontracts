@@ -7,11 +7,11 @@ import {
     HardhatUtils,
     encodeTriggerData,
     forgeUnoswapCalldata,
-    TriggerType,
     ONE_INCH_V4_ROUTER,
     generateTpOrSlExecutionData,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -144,7 +144,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         nextPrice.add('1000'),
                         1000,
                     )
@@ -160,7 +160,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         0,
                         triggerData,
                     ])
@@ -214,7 +214,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         nextPrice.sub(1000),
                         1000,
                     )
@@ -230,7 +230,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         0,
                         triggerData,
                     ])
@@ -383,7 +383,12 @@ describe('AutoTakeProfitCommmand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
+                    triggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.AutoTakeProfitToDai,
+                        nextPrice.add('1000'),
+                        1000,
+                    )
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -396,7 +401,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.AUTO_TP_DAI,
+                        TriggerType.AutoTakeProfitToDai,
                         0,
                         triggerData,
                     ])
@@ -438,7 +443,12 @@ describe('AutoTakeProfitCommmand', async () => {
                     //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.sub(1000), 1000)
+                    triggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.AutoTakeProfitToDai,
+                        nextPrice.sub(1000),
+                        1000,
+                    )
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -451,7 +461,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.AUTO_TP_DAI,
+                        TriggerType.AutoTakeProfitToDai,
                         0,
                         triggerData,
                     ])

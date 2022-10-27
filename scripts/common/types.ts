@@ -11,21 +11,6 @@ export function isSupportedNetwork(network: string): network is Network {
     return Object.values<string>(Network).includes(network)
 }
 
-export enum TriggerType {
-    CLOSE_TO_COLLATERAL = 1,
-    CLOSE_TO_DAI = 2,
-    BASIC_BUY = 3,
-    BASIC_SELL = 4,
-    CM_BASIC_BUY = 5,
-    CM_BASIC_SELL = 6,
-    AUTO_TP_COLLATERAL = 7,
-    AUTO_TP_DAI = 8,
-}
-
-export enum TriggerGroupType {
-    CONSTANT_MULTIPLE = 1,
-}
-
 export enum AutomationServiceName {
     CDP_MANAGER = 'CDP_MANAGER',
     MCD_SPOT = 'MCD_SPOT',

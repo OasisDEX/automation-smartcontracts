@@ -10,9 +10,10 @@ import {
     TestExchange,
     TestWETH,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, TriggerType, HardhatUtils } from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TestERC20 } from '../typechain/TestERC20'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
@@ -86,9 +87,9 @@ describe('AutomationExecutor', async () => {
         )
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        let hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        let hash = getCommandHash(TriggerType.StopLossToDai)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
-        hash = getCommandHash(TriggerType.CLOSE_TO_COLLATERAL)
+        hash = getCommandHash(TriggerType.StopLossToCollateral)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)

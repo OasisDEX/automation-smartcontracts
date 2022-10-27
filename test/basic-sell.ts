@@ -3,16 +3,10 @@ import { BytesLike, utils, BigNumber as EtherBN } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { BigNumber } from 'bignumber.js'
-import {
-    encodeTriggerData,
-    forgeUnoswapCalldata,
-    getEvents,
-    HardhatUtils,
-    toRatio,
-    TriggerType,
-} from '../scripts/common'
+import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, toRatio } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
@@ -35,7 +29,7 @@ describe('BasicSellCommand', () => {
     const createTrigger = async (triggerData: BytesLike) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             0,
             triggerData,
         ])
@@ -75,7 +69,7 @@ describe('BasicSellCommand', () => {
         it('should fail if target coll ratio is lower than execution ratio', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
@@ -89,7 +83,7 @@ describe('BasicSellCommand', () => {
         it('should fail if cdp is not encoded correctly', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
@@ -103,7 +97,7 @@ describe('BasicSellCommand', () => {
         it('should fail if deviation is less the minimum', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
@@ -117,7 +111,7 @@ describe('BasicSellCommand', () => {
         it('should fail if trigger type is not encoded correctly', async () => {
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
-                [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
+                [testCdpId, TriggerType.StopLossToCollateral, correctExecutionRatio, correctTargetRatio, 0, false],
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -125,7 +119,7 @@ describe('BasicSellCommand', () => {
         it('should successfully create the trigger', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
@@ -150,7 +144,7 @@ describe('BasicSellCommand', () => {
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(4000).shiftedBy(18).toFixed(),

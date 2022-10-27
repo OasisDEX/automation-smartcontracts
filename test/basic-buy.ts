@@ -10,10 +10,10 @@ import {
     HardhatUtils,
     ONE_INCH_V4_ROUTER,
     toRatio,
-    TriggerType,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
@@ -33,7 +33,7 @@ describe('BasicBuyCommand', () => {
     const createTrigger = async (triggerData: BytesLike) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             0,
             triggerData,
         ])
@@ -74,7 +74,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.52)]
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 executionRatio,
                 targetRatio,
                 0,
@@ -89,7 +89,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.45)]
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 executionRatio,
                 targetRatio,
                 0,
@@ -104,7 +104,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 executionRatio,
                 targetRatio,
                 0,
@@ -119,7 +119,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
-                [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, executionRatio, targetRatio, 0, false],
+                [testCdpId, TriggerType.StopLossToCollateral, executionRatio, targetRatio, 0, false],
             )
             await expect(createTrigger(triggerData)).to.be.reverted
         })
@@ -128,7 +128,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 executionRatio,
                 targetRatio,
                 0,
@@ -143,7 +143,7 @@ describe('BasicBuyCommand', () => {
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 executionRatio,
                 targetRatio,
                 0,
@@ -167,7 +167,7 @@ describe('BasicBuyCommand', () => {
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),

@@ -3,8 +3,8 @@ import { expect } from 'chai'
 import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator } from '../typechain'
-import { TriggerGroupType, TriggerType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 const maxGweiPrice = 1000
@@ -46,7 +46,7 @@ describe('ConstantMultipleValidator', async () => {
     })
 
     describe('addTriggerGroup', async () => {
-        const groupTypeId = TriggerGroupType.CONSTANT_MULTIPLE
+        const groupTypeId = TriggerGroupType.ConstantMultiple
 
         // current coll ratio : 1.859946411122229468
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(1.8)]
@@ -55,7 +55,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -66,7 +66,7 @@ describe('ConstantMultipleValidator', async () => {
         // basic sell
         let bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             sellExecutionRatio,
             sellTargetRatio,
             0,
@@ -102,7 +102,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
@@ -122,7 +122,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
@@ -142,7 +142,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
@@ -162,7 +162,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
@@ -182,7 +182,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
@@ -202,7 +202,7 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
