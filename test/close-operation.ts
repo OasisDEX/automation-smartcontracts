@@ -8,10 +8,10 @@ import {
     encodeTriggerData,
     forgeUnoswapCalldata,
     generateTpOrSlExecutionData,
-    TriggerType,
     ONE_INCH_V4_ROUTER,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -131,7 +131,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -146,7 +146,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         0,
                         triggerData,
                     ])
@@ -197,7 +197,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -212,7 +212,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         0,
                         triggersData,
                     ])
@@ -357,7 +357,7 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -372,7 +372,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         0,
                         triggersData,
                     ])
@@ -416,7 +416,7 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -431,7 +431,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         0,
                         triggersData,
                     ])

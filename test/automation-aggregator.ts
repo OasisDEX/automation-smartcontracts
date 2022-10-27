@@ -11,9 +11,10 @@ import {
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, DsProxyLike, AutomationBotAggregator, MPALike } from '../typechain'
-import { TriggerGroupType, TriggerType } from '../scripts/common'
+import { TriggerGroupType } from '../scripts/common'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
@@ -101,7 +102,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             buyExecutionRatio,
             buyTargetRatio,
             '4472665974900000000000',
@@ -112,7 +113,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             sellExecutionRatio,
             sellTargetRatio,
             '4472665974900000000000',
@@ -126,7 +127,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
@@ -137,7 +138,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
@@ -291,7 +292,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
@@ -300,7 +301,7 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
             await createTx.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotAggregatorInstance.interface.encodeFunctionData('addTriggerGroup', [
@@ -328,7 +329,7 @@ describe('AutomationAggregatorBot', async () => {
             // basic sell
             const oldBbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
@@ -338,7 +339,7 @@ describe('AutomationAggregatorBot', async () => {
             )
             const oldBsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
@@ -346,8 +347,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BasicSell)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
@@ -363,7 +364,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
@@ -373,7 +374,7 @@ describe('AutomationAggregatorBot', async () => {
             )
             const oldBsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
@@ -381,8 +382,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BasicSell)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
@@ -409,7 +410,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
@@ -418,8 +419,8 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
 
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
+            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
@@ -446,7 +447,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
@@ -456,7 +457,7 @@ describe('AutomationAggregatorBot', async () => {
             )
             const oldBsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
@@ -464,8 +465,8 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BASIC_BUY)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BASIC_SELL)
+            const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy)
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BasicSell)
             await createTx.wait()
             await createTx2.wait()
             const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
@@ -562,7 +563,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             buyExecutionRatio,
             buyTargetRatio,
             0,
@@ -573,7 +574,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             sellExecutionRatio,
             sellTargetRatio,
             0,
@@ -586,7 +587,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic buy
         const beforeBbTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.BASIC_BUY,
+            TriggerType.BasicBuy,
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
@@ -597,7 +598,7 @@ describe('AutomationAggregatorBot', async () => {
         // basic sell
         const beforeBsTriggerData = encodeTriggerData(
             beforeTestCdpId,
-            TriggerType.BASIC_SELL,
+            TriggerType.BasicSell,
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
@@ -719,7 +720,7 @@ describe('AutomationAggregatorBot', async () => {
             // basic buy
             const bbTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_BUY,
+                TriggerType.BasicBuy,
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
@@ -730,7 +731,7 @@ describe('AutomationAggregatorBot', async () => {
             // basic sell
             const bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,

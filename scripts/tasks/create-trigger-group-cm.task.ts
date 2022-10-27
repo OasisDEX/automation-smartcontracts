@@ -1,3 +1,4 @@
+import { TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
@@ -8,7 +9,6 @@ import {
     getEvents,
     HardhatUtils,
     Network,
-    TriggerType,
     isLocalNetwork,
     TriggerGroupType,
 } from '../common'
@@ -74,8 +74,8 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             })
         }
 
-        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_BUY, ...args.bb)
-        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_SELL, ...args.bs)
+        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BasicBuy, ...args.bb)
+        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BasicSell, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
 

@@ -1,3 +1,4 @@
+import { TriggerType } from '@oasisdex/automation'
 import { task } from 'hardhat/config'
 import {
     AutomationServiceName,
@@ -6,7 +7,6 @@ import {
     getValidatorHash,
     HardhatUtils,
     TriggerGroupType,
-    TriggerType,
 } from '../common'
 
 // Requires ServiceRegistry address to be configured correctly
@@ -50,32 +50,32 @@ task('validate-deployment', 'Validate the current deployment')
             },
             {
                 name: 'TriggerType.CLOSE_TO_COLLATERAL',
-                hash: getCommandHash(TriggerType.CLOSE_TO_COLLATERAL),
+                hash: getCommandHash(TriggerType.StopLossToCollateral),
                 addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
             },
             {
                 name: 'TriggerType.CLOSE_TO_DAI',
-                hash: getCommandHash(TriggerType.CLOSE_TO_DAI),
+                hash: getCommandHash(TriggerType.StopLossToDai),
                 addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
             },
             {
                 name: 'TriggerType.AUTO_TP_COLLATERAL',
-                hash: getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+                hash: getCommandHash(TriggerType.AutoTakeProfitToCollateral),
                 addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
             },
             {
                 name: 'TriggerType.AUTO_TP_DAI',
-                hash: getCommandHash(TriggerType.AUTO_TP_DAI),
+                hash: getCommandHash(TriggerType.AutoTakeProfitToDai),
                 addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
             },
             {
                 name: 'TriggerType.BASIC_BUY',
-                hash: getCommandHash(TriggerType.BASIC_BUY),
+                hash: getCommandHash(TriggerType.BasicBuy),
                 addressFromConfig: addresses.AUTOMATION_BASIC_BUY_COMMAND,
             },
             {
                 name: 'TriggerType.BASIC_SELL',
-                hash: getCommandHash(TriggerType.BASIC_SELL),
+                hash: getCommandHash(TriggerType.BasicSell),
                 addressFromConfig: addresses.AUTOMATION_BASIC_SELL_COMMAND,
             },
             {

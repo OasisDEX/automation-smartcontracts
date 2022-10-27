@@ -1,10 +1,11 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, TriggerType, HardhatUtils, AutomationServiceName } from '../scripts/common'
+import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { AutomationBot, ServiceRegistry, DsProxyLike, DummyCommand, AutomationExecutor } from '../typechain'
 import { DummyRollingCommand } from '../typechain/DummyRollingCommand'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -55,7 +56,7 @@ describe('AutomationBot', async () => {
             'function cdpAllow(address,uint,address,uint)',
         ])
 
-        const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        const hash = getCommandHash(TriggerType.StopLossToDai)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
         const rollingCommandHash = getCommandHash(100)
         await system.serviceRegistry.addNamedService(rollingCommandHash, DummyRollingCommandInstance.address)

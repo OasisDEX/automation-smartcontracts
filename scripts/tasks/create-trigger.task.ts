@@ -1,3 +1,4 @@
+import { TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
@@ -10,7 +11,6 @@ import {
     HardhatUtils,
     Network,
     bignumberToTopic,
-    TriggerType,
     isLocalNetwork,
     getCommandAddress,
 } from '../common'
@@ -26,7 +26,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
-    .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
+    .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
     .addParam(
         'params',
         "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
