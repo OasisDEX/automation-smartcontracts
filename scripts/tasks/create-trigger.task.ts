@@ -105,6 +105,8 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
+        // TODO ŁW fix here
+        // need to deploy automation v2 to hh/testnet
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SINGLE_TRIGGER,
             [args.continuous],
@@ -129,7 +131,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
 
         const tx = await proxy.connect(signer).execute(bot.address, addTriggerData, await hardhatUtils.getGasSettings())
         const receipt = await tx.wait()
-
+        // check if it works
         const [triggerAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerAdded'))
 
         if (!triggerAddedEvent) {
