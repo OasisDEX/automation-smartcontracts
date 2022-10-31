@@ -1,4 +1,5 @@
-import { isSupportedNetwork, Network, TriggerType } from './types'
+import { TriggerType } from '@oasisdex/automation'
+import { isSupportedNetwork, Network } from './types'
 
 export const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 export const ONE_INCH_V4_ROUTER = '0x1111111254fb6c44bac0bed2854e76f90643097d'
@@ -125,15 +126,15 @@ export function getCommandAddress(network: string | Network, type: TriggerType) 
     const addresses = getAddressesFor(network)
 
     switch (type) {
-        case TriggerType.CLOSE_TO_COLLATERAL:
-        case TriggerType.CLOSE_TO_DAI:
+        case TriggerType.StopLossToCollateral:
+        case TriggerType.StopLossToDai:
             return addresses.AUTOMATION_CLOSE_COMMAND
-        case TriggerType.AUTO_TP_COLLATERAL:
-        case TriggerType.AUTO_TP_DAI:
+        case TriggerType.AutoTakeProfitToCollateral:
+        case TriggerType.AutoTakeProfitToDai:
             return addresses.AUTOMATION_AUTO_TP_COMMAND
-        case TriggerType.BASIC_BUY:
+        case TriggerType.BasicBuy:
             return addresses.AUTOMATION_BASIC_BUY_COMMAND
-        case TriggerType.BASIC_SELL:
+        case TriggerType.BasicSell:
             return addresses.AUTOMATION_BASIC_SELL_COMMAND
         default:
             throw new Error(`Cannot get command address. Trigger Type: ${type}`)

@@ -1,7 +1,6 @@
 import BigNumber from 'bignumber.js'
-import { Signer } from 'ethers'
 import { types } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, Network, isLocalNetwork, getEvents } from '../common'
+import { coalesceNetwork, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
