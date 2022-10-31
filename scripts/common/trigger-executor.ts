@@ -1,3 +1,4 @@
+import { TriggerType } from '@oasisdex/automation'
 import { getCloseToCollateralParams, getCloseToDaiParams, getMultiplyParams } from '@oasisdex/multiply'
 import { MarketParams, VaultInfoForClosing } from '@oasisdex/multiply/lib/src/internal/types'
 import BigNumber from 'bignumber.js'
@@ -5,7 +6,7 @@ import { BytesLike, Signer, utils, BigNumber as EthersBN } from 'ethers'
 import { getStartBlocksFor, ONE_INCH_V4_ROUTER } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { getQuote, getSwap } from './one-inch'
-import { BaseExecutionArgs, Network, TriggerType } from './types'
+import { BaseExecutionArgs, Network } from './types'
 import {
     bignumberToTopic,
     decodeBasicTriggerData,
@@ -96,20 +97,24 @@ export class TriggerExecutor {
         slippage: BigNumber,
     ) {
         switch (triggerType) {
-            case TriggerType.CLOSE_TO_COLLATERAL:
-            case TriggerType.CLOSE_TO_DAI:
-                return this.getStopLossExecutionData(vault, triggerType === TriggerType.CLOSE_TO_COLLATERAL, slippage)
-            case TriggerType.AUTO_TP_COLLATERAL:
-            case TriggerType.AUTO_TP_DAI:
-                return this.getStopLossExecutionData(vault, triggerType === TriggerType.AUTO_TP_COLLATERAL, slippage)
-            case TriggerType.BASIC_BUY:
-            case TriggerType.BASIC_SELL: {
+            case TriggerType.StopLossToCollateral:
+            case TriggerType.StopLossToDai:
+                return this.getStopLossExecutionData(vault, triggerType === TriggerType.StopLossToCollateral, slippage)
+            case TriggerType.AutoTakeProfitToCollateral:
+            case TriggerType.AutoTakeProfitToDai:
+                return this.getStopLossExecutionData(
+                    vault,
+                    triggerType === TriggerType.AutoTakeProfitToCollateral,
+                    slippage,
+                )
+            case TriggerType.BasicBuy:
+            case TriggerType.BasicSell: {
                 const [, , , target] = decodeTriggerData(triggerType, triggerData)
                 return await this.getBasicBuySellExecutionData(
                     vault,
                     new BigNumber(target.toString()),
                     slippage,
-                    triggerType === TriggerType.BASIC_BUY,
+                    triggerType === TriggerType.BasicBuy,
                 )
             }
             default:
@@ -119,15 +124,15 @@ export class TriggerExecutor {
 
     private getMPAMethod(triggerType: TriggerType) {
         switch (triggerType) {
-            case TriggerType.CLOSE_TO_COLLATERAL:
-            case TriggerType.AUTO_TP_COLLATERAL:
+            case TriggerType.StopLossToCollateral:
+            case TriggerType.AutoTakeProfitToCollateral:
                 return 'closeVaultExitCollateral'
-            case TriggerType.CLOSE_TO_DAI:
-            case TriggerType.AUTO_TP_DAI:
+            case TriggerType.StopLossToDai:
+            case TriggerType.AutoTakeProfitToDai:
                 return 'closeVaultExitDai'
-            case TriggerType.BASIC_BUY:
+            case TriggerType.BasicBuy:
                 return 'increaseMultiple'
-            case TriggerType.BASIC_SELL:
+            case TriggerType.BasicSell:
                 return 'decreaseMultiple'
 
             default:

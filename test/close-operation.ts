@@ -8,11 +8,10 @@ import {
     encodeTriggerData,
     forgeUnoswapCalldata,
     generateTpOrSlExecutionData,
-    TriggerType,
     ONE_INCH_V4_ROUTER,
-    TriggerGroupType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -135,7 +134,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -148,7 +147,7 @@ describe('CloseCommand', async () => {
                     )
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggerData],
@@ -203,7 +202,7 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_COLLATERAL,
+                        TriggerType.StopLossToCollateral,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -217,7 +216,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggersData],
@@ -328,6 +327,8 @@ describe('CloseCommand', async () => {
                     )
 
                     await tx.wait()
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
@@ -368,7 +369,7 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -382,7 +383,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggersData],
@@ -430,7 +431,7 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.CLOSE_TO_DAI,
+                        TriggerType.StopLossToDai,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -444,7 +445,7 @@ describe('CloseCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggersData],
@@ -480,6 +481,9 @@ describe('CloseCommand', async () => {
                         hardhatUtils.addresses.DAI,
                     )
                     await tx.wait()
+
+                    const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 

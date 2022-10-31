@@ -1,3 +1,4 @@
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import {
     AutomationBot,
@@ -15,8 +16,8 @@ import {
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
-import { getCommandHash, getServiceNameHash, getValidatorHash, getAdapterNameHash } from './utils'
+import { AutomationServiceName, Network } from './types'
+import { getAdapterNameHash, getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -212,10 +213,10 @@ export async function configureRegistryEntries(
 
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_COLLATERAL), system.closeCommand.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToCollateral), system.closeCommand.address)
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.CLOSE_TO_DAI), system.closeCommand.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToDai), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
@@ -226,12 +227,15 @@ export async function configureRegistryEntries(
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
             system.autoTakeProfitCommand.address,
         )
 
         if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.AUTO_TP_DAI), system.autoTakeProfitCommand.address)
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AutoTakeProfitToDai),
+            system.autoTakeProfitCommand.address,
+        )
 
         if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
@@ -239,10 +243,26 @@ export async function configureRegistryEntries(
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
     }
+    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
+            system.autoTakeProfitCommand.address,
+        )
+
+        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AutoTakeProfitToDai),
+            system.autoTakeProfitCommand.address,
+        )
+
+        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
+    }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_BUY), system.basicBuy.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BasicBuy), system.basicBuy.address)
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicBuy.address)
@@ -253,7 +273,7 @@ export async function configureRegistryEntries(
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BASIC_SELL), system.basicSell.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BasicSell), system.basicSell.address)
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
@@ -285,7 +305,7 @@ export async function configureRegistryEntries(
 
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')
     await ensureServiceRegistryEntry(
-        getValidatorHash(TriggerGroupType.CONSTANT_MULTIPLE),
+        getValidatorHash(TriggerGroupType.ConstantMultiple),
         system.constantMultipleValidator.address,
     )
 
