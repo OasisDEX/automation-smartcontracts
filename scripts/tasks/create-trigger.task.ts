@@ -27,7 +27,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
-    // .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
+    .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
     .addParam(
         'params',
         "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
