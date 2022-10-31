@@ -3,17 +3,10 @@ import { BytesLike, utils, BigNumber as EtherBN } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { BigNumber } from 'bignumber.js'
-import {
-    encodeTriggerData,
-    forgeUnoswapCalldata,
-    getEvents,
-    HardhatUtils,
-    toRatio,
-    TriggerGroupType,
-    TriggerType,
-} from '../scripts/common'
+import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, toRatio } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
@@ -35,7 +28,7 @@ describe('BasicSellCommand', () => {
 
     const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
         const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
-            TriggerGroupType.SINGLE_TRIGGER,
+            TriggerGroupType.SingleTrigger,
             [continuous],
             [0],
             [triggerData],
@@ -77,62 +70,62 @@ describe('BasicSellCommand', () => {
         it('should fail if target coll ratio is lower than execution ratio', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it.skip('should fail if trigger type is not encoded correctly', async () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
-                [testCdpId, TriggerType.CLOSE_TO_COLLATERAL, correctExecutionRatio, correctTargetRatio, 0, false],
+                [testCdpId, TriggerType.StopLossToCollateral, correctExecutionRatio, correctTargetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData, TriggerType.BASIC_SELL, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData, TriggerType.BASIC_SELL, false)
+            const tx = createTrigger(triggerData, TriggerType.BasicSell, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -149,14 +142,14 @@ describe('BasicSellCommand', () => {
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BASIC_SELL,
+                TriggerType.BasicSell,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(4000).shiftedBy(18).toFixed(),
                 50,
                 maxBaseFee,
             )
-            const createTriggerTx = await createTrigger(triggerData, TriggerType.BASIC_SELL, continuous)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.BasicSell, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }

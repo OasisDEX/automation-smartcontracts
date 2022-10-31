@@ -1,7 +1,7 @@
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
-import { max } from 'lodash'
 import {
     coalesceNetwork,
     encodeTriggerData,
@@ -10,10 +10,8 @@ import {
     HardhatUtils,
     Network,
     bignumberToTopic,
-    TriggerType,
     isLocalNetwork,
     getCommandAddress,
-    TriggerGroupType,
 } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
@@ -28,8 +26,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
-    .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
-    .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
+    .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
     .addParam(
         'params',
         "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
@@ -65,7 +62,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                         topics: filter,
                         fromBlock: startBlocks.AUTOMATION_BOT,
                     })
-                    return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber())
+                    return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber() as number)
                 }),
             )
             const activeTriggerIds = addedTriggerIds.filter(
@@ -78,7 +75,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                     )}`,
                 )
             }
-            triggerIdToReplace = max(activeTriggerIds) ?? 0
+            triggerIdToReplace = Math.max(...activeTriggerIds) ?? 0
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -106,7 +103,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
-            TriggerGroupType.SINGLE_TRIGGER,
+            TriggerGroupType.SingleTrigger,
             [args.continuous],
             [triggerIdToReplace],
             [triggerData],

@@ -1,17 +1,9 @@
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
 
-import {
-    coalesceNetwork,
-    encodeTriggerData,
-    getEvents,
-    HardhatUtils,
-    Network,
-    TriggerType,
-    isLocalNetwork,
-    TriggerGroupType,
-} from '../common'
+import { coalesceNetwork, encodeTriggerData, getEvents, HardhatUtils, Network, isLocalNetwork } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
@@ -25,7 +17,7 @@ interface CreateTriggerGroupArgs extends BaseTaskArgs {
 // eg use block : 15162445 and npx hardhat create-trigger-group-cm --vault 29032 --type 1 --bb '[23200,21900,"0",true,100,200]' --bs  '[21200,21900,"0",true,100,200]' --network hardhat
 createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automation trigger group for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
-    .addParam('type', 'The trigger group type', TriggerGroupType.CONSTANT_MULTIPLE, types.int)
+    .addParam('type', 'The trigger group type', TriggerGroupType.ConstantMultiple, types.int)
     .addParam('replaced', 'Replaced triggers ids', [0, 0], types.json)
     .addParam(
         'bb',
@@ -70,8 +62,8 @@ createTask<CreateTriggerGroupArgs>('create-trigger-group-cm', 'Creates an automa
             })
         }
 
-        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_BUY, ...args.bb)
-        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BASIC_SELL, ...args.bs)
+        const bbTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BasicBuy, ...args.bb)
+        const bsTriggerData = encodeTriggerData(args.vault.toNumber(), TriggerType.BasicSell, ...args.bs)
 
         const triggersData = [bbTriggerData, bsTriggerData]
         /* 

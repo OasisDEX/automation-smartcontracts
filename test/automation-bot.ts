@@ -4,7 +4,6 @@ import { Contract, Signer, utils } from 'ethers'
 import {
     getEvents,
     getCommandHash,
-    TriggerType,
     HardhatUtils,
     AutomationServiceName,
     getAdapterNameHash,
@@ -19,6 +18,8 @@ import {
     AutomationBotStorage,
     MakerAdapter,
 } from '../typechain'
+import { TriggerGroupType } from '@oasisdex/automation'
+import { TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
@@ -65,7 +66,7 @@ describe('AutomationBot', async () => {
             'function cdpAllow(address,uint,address,uint)',
         ])
 
-        const hash = getCommandHash(TriggerType.CLOSE_TO_DAI)
+        const hash = getCommandHash(TriggerType.StopLossToDai)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
@@ -130,7 +131,7 @@ describe('AutomationBot', async () => {
 
         it('should fail if called not through delegatecall', async () => {
             const tx = AutomationBotInstance.addTriggers(
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
@@ -142,7 +143,7 @@ describe('AutomationBot', async () => {
         it('should fail if called by a non-owner address', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
@@ -156,7 +157,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
@@ -192,7 +193,7 @@ describe('AutomationBot', async () => {
         it('should emit TriggerAdded if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
@@ -209,7 +210,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [7],
                 [triggerData],
@@ -224,7 +225,7 @@ describe('AutomationBot', async () => {
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -321,7 +322,7 @@ describe('AutomationBot', async () => {
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -454,7 +455,7 @@ describe('AutomationBot', async () => {
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -527,7 +528,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
@@ -654,7 +655,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [true],
                 [0],
                 [triggerData],
@@ -716,7 +717,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
@@ -768,7 +769,7 @@ describe('AutomationBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                Math.pow(2, 16) - 1,
+                TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],

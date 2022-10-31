@@ -1,6 +1,7 @@
+import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { BasicSellCommand } from '../../typechain'
-import { HardhatUtils, AddressRegistry, getCommandHash, TriggerType } from '../common'
+import { HardhatUtils, AddressRegistry, getCommandHash } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
@@ -18,7 +19,7 @@ async function main() {
     console.log(`BasicSell Deployed: ${system.basicSell!.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.BASIC_SELL),
+        getCommandHash(TriggerType.BasicSell),
     ])
 }
 

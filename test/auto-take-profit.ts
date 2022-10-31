@@ -7,16 +7,15 @@ import {
     HardhatUtils,
     encodeTriggerData,
     forgeUnoswapCalldata,
-    TriggerType,
     ONE_INCH_V4_ROUTER,
     generateTpOrSlExecutionData,
-    TriggerGroupType,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '26125')
 
-describe('AutoTakeProfitCommand', async () => {
+describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let AutomationBotInstance: AutomationBot
@@ -145,7 +144,7 @@ describe('AutoTakeProfitCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         nextPrice.add('1000'),
                         1000,
                     )
@@ -160,11 +159,11 @@ describe('AutoTakeProfitCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggerData],
-                        [TriggerType.AUTO_TP_COLLATERAL],
+                        [TriggerType.AutoTakeProfitToCollateral],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -217,7 +216,7 @@ describe('AutoTakeProfitCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AUTO_TP_COLLATERAL,
+                        TriggerType.AutoTakeProfitToCollateral,
                         nextPrice.sub(1000),
                         1000,
                     )
@@ -232,11 +231,11 @@ describe('AutoTakeProfitCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggerData],
-                        [TriggerType.AUTO_TP_COLLATERAL],
+                        [TriggerType.AutoTakeProfitToCollateral],
                     ])
 
                     // manipulate the next price to pass the trigger validation
@@ -391,7 +390,12 @@ describe('AutoTakeProfitCommand', async () => {
                     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.add('1000'), 1000)
+                    triggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.AutoTakeProfitToDai,
+                        nextPrice.add('1000'),
+                        1000,
+                    )
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -403,11 +407,11 @@ describe('AutoTakeProfitCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggerData],
-                        [TriggerType.AUTO_TP_DAI],
+                        [TriggerType.AutoTakeProfitToDai],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -448,7 +452,12 @@ describe('AutoTakeProfitCommand', async () => {
                     //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
-                    triggerData = encodeTriggerData(testCdpId, TriggerType.AUTO_TP_DAI, nextPrice.sub(1000), 1000)
+                    triggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.AutoTakeProfitToDai,
+                        nextPrice.sub(1000),
+                        1000,
+                    )
 
                     executionData = generateTpOrSlExecutionData(
                         MPAInstance,
@@ -460,11 +469,11 @@ describe('AutoTakeProfitCommand', async () => {
 
                     // addTrigger
                     const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SINGLE_TRIGGER,
+                        TriggerGroupType.SingleTrigger,
                         [false],
                         [0],
                         [triggerData],
-                        [TriggerType.AUTO_TP_DAI],
+                        [TriggerType.AutoTakeProfitToDai],
                     ])
 
                     // manipulate the next price to pass the trigger validation
