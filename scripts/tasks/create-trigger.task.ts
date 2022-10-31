@@ -1,3 +1,4 @@
+import { CommandContractType, encodeTriggerDataByType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
@@ -10,7 +11,6 @@ import {
     HardhatUtils,
     Network,
     bignumberToTopic,
-    TriggerType,
     isLocalNetwork,
     getCommandAddress,
     TriggerGroupType,
@@ -28,7 +28,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
-    .addParam('type', 'The trigger type', TriggerType.CLOSE_TO_DAI, types.int)
+    .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
     .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
     .addParam(
         'params',
@@ -103,9 +103,21 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                 })
             ).wait()
         }
-
-        const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
+        console.log('args')
+        console.log(args)
+        const commands = {
+            [TriggerType.BasicBuy]: CommandContractType.BasicBuyCommand,
+            [TriggerType.BasicSell]: CommandContractType.BasicSellCommand,
+        }
+        // const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
+        const type = commands[(args.type as 3) || 4]
+        const triggerData = encodeTriggerDataByType(type, [args.vault.toNumber(), args.type, ...args.params])
         // TODO ŁW fix here
+        console.log(`Trigger data: ${triggerData}`)
+        console.log(`Trigger id to replace: ${triggerIdToReplace}`)
+        console.log(`Continuous: ${args.continuous}`)
+        console.log(`Signer: ${await signer.getAddress()}`)
+        console.log('args.type', args.type)
         // need to deploy automation v2 to hh/testnet
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SINGLE_TRIGGER,
