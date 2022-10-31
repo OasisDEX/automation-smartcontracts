@@ -1,6 +1,7 @@
+import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { AutoTakeProfitCommand } from '../../typechain'
-import { AddressRegistry, getCommandHash, HardhatUtils, TriggerType } from '../common'
+import { AddressRegistry, getCommandHash, HardhatUtils } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
@@ -18,10 +19,10 @@ async function main() {
     console.log(`AutoTakeProfitCommand Deployed: ${system.autoTakeProfitCommand.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AUTO_TP_COLLATERAL),
+        getCommandHash(TriggerType.AutoTakeProfitToDai),
     ])
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AUTO_TP_DAI),
+        getCommandHash(TriggerType.AutoTakeProfitToCollateral),
     ])
 }
 
