@@ -76,7 +76,20 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                     )}`,
                 )
             }
-            triggerIdToReplace = Math.max(...activeTriggerIds) ?? 0
+            console.log('activeTriggerIds')
+            console.log(activeTriggerIds)
+            console.log('Trigger ID to replace')
+            console.log(Math.max(...activeTriggerIds))
+            console.log('Array.isArray(activeTriggerIds)')
+            console.log(Array.isArray(activeTriggerIds))
+            console.log('!activeTriggerIds.length')
+            console.log(!activeTriggerIds.length)
+            console.log('Array.isArray(activeTriggerIds) &&  activeTriggerIds.length !== 0')
+            console.log(Array.isArray(activeTriggerIds) && activeTriggerIds.length !== 0)
+            triggerIdToReplace =
+                Array.isArray(activeTriggerIds) && activeTriggerIds.length !== 0
+                    ? Math.max(...activeTriggerIds) ?? 0
+                    : 0
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
