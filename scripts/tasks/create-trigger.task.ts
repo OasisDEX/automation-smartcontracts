@@ -105,13 +105,21 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                 })
             ).wait()
         }
-        const commands = {
+        const typesToCommandsMap = {
+            [TriggerType.StopLossToCollateral]: CommandContractType.CloseCommand,
+            [TriggerType.StopLossToDai]: CommandContractType.CloseCommand,
             [TriggerType.BasicBuy]: CommandContractType.BasicBuyCommand,
             [TriggerType.BasicSell]: CommandContractType.BasicSellCommand,
+            [TriggerType.AutoTakeProfitToCollateral]: CommandContractType.AutoTakeProfitCommand,
+            [TriggerType.AutoTakeProfitToDai]: CommandContractType.AutoTakeProfitCommand,
         }
         // const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
-        const type = commands[(args.type as 3) || 4]
-        const triggerData = encodeTriggerDataByType(type, [args.vault.toNumber(), args.type, ...args.params])
+        const triggerType = args.type as TriggerType
+        if (!(triggerType in typesToCommandsMap)) {
+            throw new Error(`Unknown trigger type ${triggerType}`)
+        }
+        const commandType = typesToCommandsMap[triggerType]
+        const triggerData = encodeTriggerDataByType(commandType, [args.vault.toNumber(), args.type, ...args.params])
         // TODO ŁW fix here
         console.log(`Trigger data: ${triggerData}`)
         console.log(`Trigger id to replace: ${triggerIdToReplace}`)
