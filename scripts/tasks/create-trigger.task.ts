@@ -113,20 +113,13 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
             [TriggerType.AutoTakeProfitToCollateral]: CommandContractType.AutoTakeProfitCommand,
             [TriggerType.AutoTakeProfitToDai]: CommandContractType.AutoTakeProfitCommand,
         }
-        // const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const triggerType = args.type as TriggerType
         if (!(triggerType in typesToCommandsMap)) {
             throw new Error(`Unknown trigger type ${triggerType}`)
         }
         const commandType = typesToCommandsMap[triggerType]
         const triggerData = encodeTriggerDataByType(commandType, [args.vault.toNumber(), args.type, ...args.params])
-        // TODO ŁW fix here
-        console.log(`Trigger data: ${triggerData}`)
-        console.log(`Trigger id to replace: ${triggerIdToReplace}`)
-        console.log(`Continuous: ${args.continuous}`)
-        console.log(`Signer: ${await signer.getAddress()}`)
-        console.log('args.type', args.type)
-        // need to deploy automation v2 to hh/testnet
+
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SingleTrigger,
             [args.continuous],
