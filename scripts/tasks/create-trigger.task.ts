@@ -76,16 +76,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                     )}`,
                 )
             }
-            console.log('activeTriggerIds')
-            console.log(activeTriggerIds)
-            console.log('Trigger ID to replace')
-            console.log(Math.max(...activeTriggerIds))
-            console.log('Array.isArray(activeTriggerIds)')
-            console.log(Array.isArray(activeTriggerIds))
-            console.log('!activeTriggerIds.length')
-            console.log(!activeTriggerIds.length)
-            console.log('Array.isArray(activeTriggerIds) &&  activeTriggerIds.length !== 0')
-            console.log(Array.isArray(activeTriggerIds) && activeTriggerIds.length !== 0)
+
             triggerIdToReplace =
                 Array.isArray(activeTriggerIds) && activeTriggerIds.length !== 0
                     ? Math.max(...activeTriggerIds) ?? 0
@@ -114,8 +105,6 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                 })
             ).wait()
         }
-        console.log('args')
-        console.log(args)
         const commands = {
             [TriggerType.BasicBuy]: CommandContractType.BasicBuyCommand,
             [TriggerType.BasicSell]: CommandContractType.BasicSellCommand,
