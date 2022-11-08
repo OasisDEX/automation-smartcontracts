@@ -31,15 +31,8 @@ describe('AutomationBot', async () => {
 
         const system = await deploySystem({ utils, addCommands: false })
 
-        DummyCommandInstance = (await dummyCommandFactory.deploy(
-            system.serviceRegistry.address,
-            true,
-            true,
-            false,
-            true,
-        )) as DummyCommand
+        DummyCommandInstance = (await dummyCommandFactory.deploy(true, true, false, true)) as DummyCommand
         DummyRollingCommandInstance = (await dummyRollingCommandFactory.deploy(
-            system.serviceRegistry.address,
             true,
             true,
             false,
@@ -78,8 +71,19 @@ describe('AutomationBot', async () => {
         cdpId: number,
         operator: string,
         allow: number,
-    ) =>
-        proxy
+    ) => {
+        console.log(
+            proxy.interface.encodeFunctionData('execute', [
+                DssProxyActions.address,
+                DssProxyActions.interface.encodeFunctionData('cdpAllow', [
+                    hardhatUtils.addresses.CDP_MANAGER,
+                    cdpId,
+                    operator,
+                    allow,
+                ]),
+            ]),
+        )
+        return proxy
             .connect(signer)
             .execute(
                 DssProxyActions.address,
@@ -90,6 +94,7 @@ describe('AutomationBot', async () => {
                     allow,
                 ]),
             )
+    }
 
     beforeEach(async () => {
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
