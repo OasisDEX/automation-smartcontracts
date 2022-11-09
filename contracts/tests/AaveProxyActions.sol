@@ -40,6 +40,7 @@ contract AaveProxyActions {
 
     function openPosition() external payable {
         IWETH(weth).deposit{ value: msg.value }();
+        IERC20(weth).approve(address(aave), msg.value);
         aave.supply(weth, msg.value, address(this), 0);
     }
 
