@@ -15,10 +15,12 @@ import {
     AutoTakeProfitCommand,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
+import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
+import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
-import { AutomationServiceName, Network, TriggerType, TriggerGroupType, AdapterType } from './types'
+import { AutomationServiceName, Network } from './types'
 import {
     getCommandHash,
     getServiceNameHash,
@@ -40,6 +42,8 @@ export interface DeployedSystem {
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
+    dummyAaveWithdrawCommand?: DummyAaveWithdrawCommand
+    aaveProxyActions?: AaveProxyActions
 }
 
 export interface DeploySystemArgs {
@@ -205,6 +209,8 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
+        aaveProxyActions: undefined, //TODO: add AaveProxyActions
+        dummyAaveWithdrawCommand: undefined, //TODO: add DummyAaveWithdrawCommand
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
