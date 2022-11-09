@@ -1,4 +1,3 @@
-import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
@@ -13,22 +12,26 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
+    console.log('Deploying AaveProxyActions')
+
     system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveProxyActions'), [
         utils.addresses.WETH,
         utils.addresses.WETH_AAVE,
         utils.addresses.AAVE_ETH_LENDING_POOL,
     ])) as AaveProxyActions
 
-    await system.aaveProxyActions.deployed()
+    const apa = await system.aaveProxyActions.deployed()
+
+    console.log('Deployed AaveProxyActions: ' + apa.address)
 
     system.dummyAaveWithdrawCommand = (await utils.deployContract(
         hre.ethers.getContractFactory('DummyAaveWithdrawCommand'),
-        [system.aaveProxyActions.address],
+        [apa.address, utils.addresses.USDC_AAVE],
     )) as DummyAaveWithdrawCommand
 
-    await system.dummyAaveWithdrawCommand.deployed()
-    console.log(`DummyAaveWithdrawCommand Deployed: ${system.dummyAaveWithdrawCommand!.address}`)
-    console.log(`AaveProxyActions Deployed: ${system.aaveProxyActions!.address}`)
+    const command = await system.dummyAaveWithdrawCommand.deployed()
+    console.log(`DummyAaveWithdrawCommand Deployed: ${command!.address}`)
+    console.log(`AaveProxyActions Deployed: ${apa!.address}`)
 }
 
 main().catch(error => {
