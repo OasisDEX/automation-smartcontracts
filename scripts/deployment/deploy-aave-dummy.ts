@@ -15,8 +15,8 @@ async function main() {
     console.log('Deploying AaveProxyActions')
 
     system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveProxyActions'), [
-        utils.addresses.WETH,
         utils.addresses.WETH_AAVE,
+        utils.addresses.AAVE_POOL,
         utils.addresses.AAVE_ETH_LENDING_POOL,
     ])) as AaveProxyActions
 
