@@ -1,3 +1,6 @@
+// WORK IN PROGRESS
+// It could be tested on local network but fails due to UNPREDICTABLE_GAS_LIMIT issues
+// To be continued after goerli deployment...
 import BigNumber from 'bignumber.js'
 import { Signer } from 'ethers'
 import { types } from 'hardhat/config'
@@ -24,8 +27,6 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
-        console.log('bot loaded')
-        console.log(bot)
         const storage = await hre.ethers.getContractAt(
             'AutomationBotStorage',
             hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
@@ -52,7 +53,7 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
-
+        // use removeTrigger or removeTriggers also for single trigger? ~Ł
         const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
             [args.trigger.toString()],
             args.allowance,
