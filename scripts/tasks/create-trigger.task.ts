@@ -1,4 +1,4 @@
-import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
+import { CommandContractType, encodeTriggerDataByType, TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
@@ -27,6 +27,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
     .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
+    .addParam('continuous', 'Is trigger supposed to be continuous', false, types.boolean)
     .addParam(
         'params',
         "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
@@ -75,7 +76,11 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                     )}`,
                 )
             }
-            triggerIdToReplace = Math.max(...activeTriggerIds) ?? 0
+
+            triggerIdToReplace =
+                Array.isArray(activeTriggerIds) && activeTriggerIds.length !== 0
+                    ? Math.max(...activeTriggerIds) ?? 0
+                    : 0
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -100,8 +105,21 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                 })
             ).wait()
         }
+        const typesToCommandsMap = {
+            [TriggerType.StopLossToCollateral]: CommandContractType.CloseCommand,
+            [TriggerType.StopLossToDai]: CommandContractType.CloseCommand,
+            [TriggerType.BasicBuy]: CommandContractType.BasicBuyCommand,
+            [TriggerType.BasicSell]: CommandContractType.BasicSellCommand,
+            [TriggerType.AutoTakeProfitToCollateral]: CommandContractType.AutoTakeProfitCommand,
+            [TriggerType.AutoTakeProfitToDai]: CommandContractType.AutoTakeProfitCommand,
+        }
+        const triggerType = args.type as TriggerType
+        if (!(triggerType in typesToCommandsMap)) {
+            throw new Error(`Unknown trigger type ${triggerType}`)
+        }
+        const commandType = typesToCommandsMap[triggerType]
+        const triggerData = encodeTriggerDataByType(commandType, [args.vault.toNumber(), args.type, ...args.params])
 
-        const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SingleTrigger,
             [args.continuous],
@@ -126,7 +144,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
 
         const tx = await proxy.connect(signer).execute(bot.address, addTriggerData, await hardhatUtils.getGasSettings())
         const receipt = await tx.wait()
-
+        // check if it works
         const [triggerAddedEvent] = getEvents(receipt, bot.interface.getEvent('TriggerAdded'))
 
         if (!triggerAddedEvent) {

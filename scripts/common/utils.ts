@@ -77,10 +77,17 @@ function getTriggerDataTypes(triggerType: TriggerType) {
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
 }
-
+// replace with common encodeTriggerDataByType ?
 export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
     const args = [vaultId, triggerType, ...rest]
     const types = getTriggerDataTypes(triggerType)
+    // TODO ŁW I want to use methods from common to be consistent with oasis-borrow
+    // const types = getDefinitionForCommandType(triggerType),
+
+    console.log('args')
+    console.log(args)
+    console.log('types')
+    console.log(types)
     return utils.defaultAbiCoder.encode(types, args)
 }
 

@@ -1,10 +1,15 @@
+// WORK IN PROGRESS
+// It could be tested on local network but fails due to UNPREDICTABLE_GAS_LIMIT issues
+// To be continued after goerli deployment...
 import BigNumber from 'bignumber.js'
+import { Signer } from 'ethers'
 import { types } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, Network } from '../common'
+import { coalesceNetwork, getEvents, HardhatUtils, isLocalNetwork, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
 interface RemoveTriggerArgs extends BaseTaskArgs {
+    vault: BigNumber
     trigger: BigNumber
     allowance: boolean
     forked?: Network
@@ -13,6 +18,7 @@ interface RemoveTriggerArgs extends BaseTaskArgs {
 createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
     .addParam('trigger', 'The trigger ID', '', params.bignumber)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
+    .addParam('vault', 'The vault ID', '', params.bignumber) // previously it was available in trigger but no longer is
     .setAction(async (args: RemoveTriggerArgs, hre) => {
         const { name: network } = hre.network
         console.log(
@@ -25,9 +31,9 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             'AutomationBotStorage',
             hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
         )
-
-        /*         const triggerInfo = await storage.activeTriggers(args.trigger.toString())
-        if (triggerInfo.commandAddress.eq('0x0000000000000000000000000000000000000000')) {
+        const vault = args.vault.toString()
+        const triggerInfo = await storage.activeTriggers(args.trigger.toString())
+        if (triggerInfo.commandAddress === '0x0000000000000000000000000000000000000000') {
             throw new Error(`Trigger with id ${args.trigger.toString()} is not active`)
         }
 
@@ -47,8 +53,8 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             console.log(`Impersonating proxy owner ${currentProxyOwner}...`)
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
-
-        const removeTriggerData = bot.interface.encodeFunctionData('removeTriggers', [
+        // use removeTrigger or removeTriggers also for single trigger? ~Ł
+        const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
             [args.trigger.toString()],
             args.allowance,
         ])
@@ -73,5 +79,5 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n')) */
+        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n'))
     })
