@@ -25,6 +25,7 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
+import "hardhat/console.sol";
 
 contract BasicSellCommand is BaseMPACommand {
     using RatioUtils for uint256;
@@ -79,6 +80,13 @@ contract BasicSellCommand is BaseMPACommand {
         (, uint256 liquidationRatio) = spot.ilks(ilk);
         bool validBaseFeeOrNearLiquidation = baseFeeIsValid(trigger.maxBaseFeeInGwei) ||
             nextCollRatio <= liquidationRatio.rayToWad();
+
+        console.log(trigger.execCollRatio.wad() > nextCollRatio);
+        console.log(trigger.minSellPrice < nextPrice);
+        console.log(futureDebt > dustLimit);
+        console.log(validBaseFeeOrNearLiquidation);
+        console.log("dust limit:", dustLimit);
+        console.log("futureDebt: ", futureDebt);
 
         return
             trigger.execCollRatio.wad() > nextCollRatio &&

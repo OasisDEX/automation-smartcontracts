@@ -14,7 +14,7 @@ import {
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
 
-const testCdpId = parseInt(process.env.CDP_ID || '13288')
+const testCdpId = parseInt(process.env.CDP_ID || '29019')
 const maxGweiPrice = 1000
 
 // BLOCK_NUMBER=14997398
@@ -252,7 +252,14 @@ describe('BasicSellCommand', () => {
         afterEach(async () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
-
+        it.only('executes the trigger', async () => {
+            const triggerData =
+                '0x000000000000000000000000000000000000000000000000000000000000715b000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000038a40000000000000000000000000000000000000000000000000000000000003a9800000000000000000000000000000000000000000000003635c9adc5dea0000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000064000000000000000000000000000000000000000000000000000000000000012c'
+            const createTriggerTx = await createTrigger(triggerData)
+            await createTriggerTx.wait()
+            await executeTrigger(1, new BigNumber(15000), triggerData)
+            await expect(executeTrigger(934, new BigNumber(15000), triggerData)).not.to.be.reverted
+        })
         it('executes the trigger', async () => {
             const { triggerId, triggerData } = await createTriggerForExecution(
                 correctExecutionRatio,
