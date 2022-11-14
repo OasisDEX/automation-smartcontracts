@@ -20,12 +20,12 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
-import "./interfaces/BotLike.sol";
+import "./interfaces/BotV2Like.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
 contract AutomationBotStorage {
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     struct TriggerRecord {
         bytes32 triggerHash;

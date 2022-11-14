@@ -18,49 +18,40 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
 
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
-import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
-import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
-import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
-import {
-    IV3SwapRouter
-} from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
-import "hardhat/console.sol";
-
 contract AutomationExecutor {
-    using SafeERC20 for ERC20;
+    using SafeERC20 for IERC20;
 
     event CallerAdded(address indexed caller);
     event CallerRemoved(address indexed caller);
 
-    IV3SwapRouter public immutable uniswapRouter;
-    IUniswapV3Factory public immutable uniswapFactory;
     BotLike public immutable bot;
-    ERC20 public immutable dai;
+    IERC20 public immutable dai;
     IWETH public immutable weth;
+
+    address public exchange;
     address public owner;
 
     mapping(address => bool) public callers;
 
     constructor(
         BotLike _bot,
-        ERC20 _dai,
-        IWETH _weth
+        IERC20 _dai,
+        IWETH _weth,
+        address _exchange
     ) {
         bot = _bot;
         weth = _weth;
         dai = _dai;
+        exchange = _exchange;
         owner = msg.sender;
         callers[owner] = true;
-        uniswapRouter = IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-        uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     }
 
     modifier onlyOwner() {
@@ -76,6 +67,11 @@ contract AutomationExecutor {
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "executor/invalid-new-owner");
         owner = newOwner;
+    }
+
+    function setExchange(address newExchange) external onlyOwner {
+        require(newExchange != address(0), "executor/invalid-new-exchange");
+        exchange = newExchange;
     }
 
     function addCallers(address[] calldata _callers) external onlyOwner {
@@ -97,7 +93,6 @@ contract AutomationExecutor {
         }
     }
 
-    // TODO: remove cdpId
     function execute(
         bytes calldata executionData,
         uint256 cdpId,
@@ -106,18 +101,10 @@ contract AutomationExecutor {
         uint256 triggerId,
         uint256 daiCoverage,
         uint256 minerBribe,
-        int256 gasRefund,
-        address coverageToken
+        int256 gasRefund
     ) external auth(msg.sender) {
         uint256 initialGasAvailable = gasleft();
-        bot.execute(
-            executionData,
-            triggerData,
-            commandAddress,
-            triggerId,
-            daiCoverage,
-            coverageToken
-        );
+        bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 
         if (minerBribe > 0) {
             block.coinbase.transfer(minerBribe);
@@ -131,97 +118,38 @@ contract AutomationExecutor {
         );
     }
 
-    // token 1 / token0
-    function getTick(address uniswapV3Pool, uint32 twapInterval)
-        public
-        view
-        returns (uint160 sqrtPriceX96)
-    {
-        if (twapInterval == 0) {
-            // return the current price if twapInterval == 0
-            (sqrtPriceX96, , , , , , ) = IUniswapV3Pool(uniswapV3Pool).slot0();
-        } else {
-            uint32[] memory secondsAgos = new uint32[](2);
-            // past ---secondsAgo---> present
-            secondsAgos[0] = 1 + twapInterval; // secondsAgo
-            secondsAgos[1] = 1; // now
-
-            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(uniswapV3Pool).observe(secondsAgos);
-
-            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(
-                int24((tickCumulatives[1] - tickCumulatives[0]) / int56(uint56(twapInterval)))
-            );
-        }
-        return sqrtPriceX96;
-    }
-
-    function getPrice(address tokenIn, uint24[] memory fees)
-        public
-        view
-        returns (uint256 price, uint24 fee)
-    {
-        uint24 biggestPoolFee;
-        IUniswapV3Pool biggestPool;
-        uint256 highestPoolBalance;
-        uint256 currentPoolBalance;
-        for (uint8 i; i < fees.length; i++) {
-            IUniswapV3Pool pool = IUniswapV3Pool(
-                uniswapFactory.getPool(tokenIn, address(weth), fees[i])
-            );
-            currentPoolBalance = weth.balanceOf(address(pool));
-            if (currentPoolBalance > highestPoolBalance) {
-                biggestPoolFee = fees[i];
-                biggestPool = pool;
-                highestPoolBalance = currentPoolBalance;
-            }
-        }
-
-        uint160 sqrtPriceX96 = getTick(address(biggestPool), 60);
-        address token0 = biggestPool.token0();
-        uint256 decimals = ERC20(tokenIn).decimals();
-
-        if (token0 == tokenIn) {
-            return (
-                (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192,
-                biggestPoolFee
-            );
-        } else {
-            return (
-                (((2**192) * (10**decimals)) / ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96))))),
-                biggestPoolFee
-            );
-        }
-    }
-
-    function swapToEth(
-        address tokenIn,
-        uint256 amountIn,
-        uint256 amountOutMin,
-        uint24 fee
-    ) external auth(msg.sender) returns (uint256) {
+    function swap(
+        address otherAsset,
+        bool toDai,
+        uint256 amount,
+        uint256 receiveAtLeast,
+        address callee,
+        bytes calldata withData
+    ) external auth(msg.sender) {
+        IERC20 fromToken = toDai ? IERC20(otherAsset) : dai;
         require(
-            amountIn > 0 && amountIn <= ERC20(tokenIn).balanceOf(address(this)),
+            amount > 0 && amount <= fromToken.balanceOf(address(this)),
             "executor/invalid-amount"
         );
-        if (tokenIn == address(weth)) {
-            weth.withdraw(amountIn);
-            return amountIn;
+
+        fromToken.safeApprove(exchange, amount);
+        if (toDai) {
+            IExchange(exchange).swapTokenForDai(
+                otherAsset,
+                amount,
+                receiveAtLeast,
+                callee,
+                withData
+            );
+        } else {
+            IExchange(exchange).swapDaiForToken(
+                otherAsset,
+                amount,
+                receiveAtLeast,
+                callee,
+                withData
+            );
         }
-        ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));
-
-        bytes memory path = abi.encodePacked(tokenIn, uint24(fee), address(weth));
-
-        IV3SwapRouter.ExactInputParams memory params = IV3SwapRouter.ExactInputParams({
-            path: path,
-            recipient: address(this),
-            amountIn: amountIn,
-            amountOutMinimum: amountOutMin
-        });
-
-        ERC20(tokenIn).approve(address(uniswapRouter), amountIn);
-        uint256 amount = uniswapRouter.exactInput(params);
-        weth.withdraw(amount);
-        return amount;
     }
 
     function withdraw(address asset, uint256 amount) external onlyOwner {
@@ -230,11 +158,15 @@ contract AutomationExecutor {
             (bool sent, ) = payable(owner).call{ value: amount }("");
             require(sent, "executor/withdrawal-failed");
         } else {
-            ERC20(asset).safeTransfer(owner, amount);
+            IERC20(asset).safeTransfer(owner, amount);
         }
     }
 
-    function revokeAllowance(ERC20 token, address target) external onlyOwner {
+    function unwrapWETH(uint256 amount) external onlyOwner {
+        weth.withdraw(amount);
+    }
+
+    function revokeAllowance(IERC20 token, address target) external onlyOwner {
         token.safeApprove(target, 0);
     }
 
