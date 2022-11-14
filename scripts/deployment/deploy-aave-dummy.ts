@@ -1,7 +1,8 @@
+import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
-import { HardhatUtils } from '../common'
+import { getCommandHash, HardhatUtils } from '../common'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -30,6 +31,11 @@ async function main() {
     )) as DummyAaveWithdrawCommand
 
     const command = await system.dummyAaveWithdrawCommand.deployed()
+
+    const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
+
+    await system.serviceRegistry.addNamedService(commandHash, command.address)
+
     console.log(`DummyAaveWithdrawCommand Deployed: ${command!.address}`)
     console.log(`AaveProxyActions Deployed: ${apa!.address}`)
 }
