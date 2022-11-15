@@ -490,13 +490,10 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
-                    console.log("Preparing stuff");
-
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
 
-                    console.log("tx eexecuted");
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
 

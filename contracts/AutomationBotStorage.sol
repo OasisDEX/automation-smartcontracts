@@ -25,7 +25,7 @@ import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
 contract AutomationBotStorage {
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT";
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     struct TriggerRecord {
         bytes32 triggerHash;

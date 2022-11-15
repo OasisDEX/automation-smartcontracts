@@ -69,7 +69,7 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
             await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
         } else {
             console.log(
-                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}`,
+                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
             )
         }
     }

@@ -125,6 +125,10 @@ contract AutomationExecutor {
         uint256 finalGasAvailable = gasleft();
         uint256 etherUsed = tx.gasprice *
             uint256(int256(initialGasAvailable - finalGasAvailable) - gasRefund);
+        console.log("etherUsed", etherUsed);
+        console.log("gasRefund", uint256(gasRefund));
+        console.log("initialGasAvailable", initialGasAvailable);
+        console.log("finalGasAvailable", finalGasAvailable);
 
         payable(msg.sender).transfer(
             address(this).balance > etherUsed ? etherUsed : address(this).balance

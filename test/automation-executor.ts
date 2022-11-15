@@ -208,7 +208,7 @@ describe('AutomationExecutor', async () => {
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
 
-        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+        it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
             await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
 
             const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
@@ -245,6 +245,12 @@ describe('AutomationExecutor', async () => {
             const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
             const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
             const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
+            console.log("executorBalanceBefore", executorBalanceBefore.toString());
+            console.log("executorBalanceAfter", executorBalanceAfter.toString());
+            console.log("executorBalanceDiff", executorBalanceBefore.sub(executorBalanceAfter).toString());
+            console.log("txCost", txCost.toString());
+            console.log("receipt.gasUsed", receipt.gasUsed.toString());
+            console.log("ownerBalanceDiff", ownerBalanceBefore.sub(ownerBalanceAfter).toString());
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
             expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
