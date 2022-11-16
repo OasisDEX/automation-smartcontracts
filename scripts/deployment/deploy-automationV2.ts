@@ -124,10 +124,8 @@ async function main() {
     await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, DpmAdapterInstance.address)
     await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, AaveAdapterInstance.address, true)
 
-    console.log('Adding signers to executor:')
-    for (let i = 0; i < utils.addresses.SIGNERS.length; i++) {
-        await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
-    }
+    console.log('Adding signers to executor:', utils.addresses.SIGNERS)
+    await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
 
     console.log('Done')
 }
