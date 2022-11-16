@@ -153,7 +153,7 @@ export async function deploySystem({
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [AutomationBotInstance.address, addresses.DAI, addresses.WETH],
+        [AutomationBotInstance.address, addresses.DAI, addresses.WETH, ServiceRegistryInstance.address],
     )
 
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
