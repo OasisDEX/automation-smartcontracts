@@ -23,6 +23,8 @@ export enum AutomationServiceName {
     MCD_VAT = 'MCD_VAT',
     MCD_UTILS = 'MCD_UTILS',
     MULTIPLY_PROXY_ACTIONS = 'MULTIPLY_PROXY_ACTIONS',
+    UNISWAP_ROUTER = 'UNISWAP_ROUTER',
+    UNISWAP_FACTORY = 'UNISWAP_FACTORY',
 }
 
 export interface OneInchQuoteResponse {

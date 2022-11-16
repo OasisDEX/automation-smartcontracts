@@ -1,14 +1,6 @@
 import hre from 'hardhat'
 import { constants } from 'ethers'
-import {
-    AAVEAdapter,
-    AutomationBot,
-    AutomationBotStorage,
-    AutomationExecutor,
-    DPMAdapter,
-    MakerAdapter,
-    ServiceRegistry,
-} from '../../typechain'
+import { AutomationBot, AutomationBotStorage, AutomationExecutor, DPMAdapter, ServiceRegistry } from '../../typechain'
 import {
     AutomationServiceName,
     getAdapterNameHash,
@@ -71,44 +63,66 @@ async function main() {
         automationStorage.address,
     )
     console.log(`AutomationStorage Added to ServiceRegistry`)
+
     console.log('Deploying AutomationV2')
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
         [system.serviceRegistry.address, automationStorage.address],
     )
+    console.log(`AutomationBot Deployed: ${AutomationBotInstance.address}`)
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         automationStorage.address,
     )
     console.log(`AutomationBot added to ServiceRegistry`)
 
+    console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
+    await system.serviceRegistry.addNamedService(
+        await system.serviceRegistry.getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
+        utils.addresses.UNISWAP_V3_ROUTER,
+    )
+
+    console.log('Adding UNISWAP_FACTORY tp ServiceRegistry....')
+    await system.serviceRegistry.addNamedService(
+        await system.serviceRegistry.getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
+        utils.addresses.UNISWAP_FACTORY,
+    )
+
     console.log('Deploying ExecutorV2')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
         [AutomationBotInstance.address, utils.addresses.DAI, utils.addresses.WETH],
     )
-
+    console.log(`ExecutorV2 Deployed: ${AutomationExecutorInstance.address}`)
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
         AutomationExecutorInstance.address,
     )
+    console.log(`ExecutorV2 added to ServiceRegistry`)
 
     console.log('Deploying DPMAdapter')
     const DpmAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
         system.serviceRegistry.address,
         utils.addresses.DPM_GUARD,
     ])
+    console.log(`DPMAdapter Deployed: ${DpmAdapterInstance.address}`)
 
     console.log('Deploying AAVEAdapter')
     const AaveAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         system.serviceRegistry.address,
         utils.addresses.DAI,
     ])
+    console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
 
     console.log('ensuring Adapters')
 
     await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, DpmAdapterInstance.address)
     await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, AaveAdapterInstance.address, true)
+
+    console.log('Adding signers to executor:')
+    for (let i = 0; i < utils.addresses.SIGNERS.length; i++) {
+        await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
+    }
 
     console.log('Done')
 }

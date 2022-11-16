@@ -98,6 +98,18 @@ export async function deploySystem({
         [delay],
     )
 
+    if (logDebug) console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
+        addresses.UNISWAP_V3_ROUTER,
+    )
+
+    if (logDebug) console.log('Adding UNISWAP_FACTORY tp ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
+        addresses.UNISWAP_FACTORY,
+    )
+
     if (logDebug) console.log('Deploying McdUtils....')
     const McdUtilsInstance: McdUtils = await utils.deployContract(ethers.getContractFactory('McdUtils'), [
         ServiceRegistryInstance.address,
