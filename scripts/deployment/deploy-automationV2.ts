@@ -91,7 +91,12 @@ async function main() {
     console.log('Deploying ExecutorV2')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [AutomationBotInstance.address, utils.addresses.DAI, utils.addresses.WETH],
+        [
+            AutomationBotInstance.address,
+            utils.addresses.DAI,
+            utils.addresses.WETH,
+            utils.addresses.AUTOMATION_SERVICE_REGISTRY,
+        ],
     )
     console.log(`ExecutorV2 Deployed: ${AutomationExecutorInstance.address}`)
     await ensureServiceRegistryEntry(
