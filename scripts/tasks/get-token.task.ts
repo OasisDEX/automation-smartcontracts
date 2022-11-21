@@ -11,8 +11,8 @@ interface GetTokenArgs extends BaseTaskArgs {
     token: keyof typeof tokens
 }
 task<GetTokenArgs>('get-token', 'Gets you all tokens you need')
+    .addParam('token', 'token to get eg. reth')
     .addOptionalParam('to', '[Optional] address to transfer tokens to, default address 0')
-    .addOptionalParam('token', '[Optional] get just one token, default all tokens')
     .addOptionalParam('forked', 'Forked network')
     .setAction(async (args: GetTokenArgs, hre) => {
         const signer = hre.ethers.provider.getSigner(0)
