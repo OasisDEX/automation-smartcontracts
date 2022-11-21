@@ -21,5 +21,9 @@ task<GetTokenArgs>('get-token', 'Gets you all tokens you need')
 
         const tokenToGet = tokens[args.token]
 
-        await hardhatUtils.setTokenBalance(recipient, tokenToGet, ethers.BigNumber.from('0x3635C9ADC5DEA00000'))
+        await hardhatUtils.setTokenBalance(
+            recipient,
+            tokenToGet,
+            ethers.BigNumber.from('1000').mul(ethers.constants.WeiPerEther),
+        )
     })
