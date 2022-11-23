@@ -16,29 +16,28 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-pragma solidity ^0.8.0;
+pragma solidity 0.8.17;
 import "../interfaces/ICommand.sol";
 import "../interfaces/ManagerLike.sol";
 import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
-import "../ServiceRegistry.sol";
-import "../McdView.sol";
+import { IOperationExecutor } from "../interfaces/IOperationExecutor.sol";
+import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import {
     ILendingPoolAddressesProvider
 } from "../interfaces/AAVE/ILendingPoolAddressesProvider.sol";
 
 contract StopLossAAVE is ICommand {
-    address public immutable serviceRegistry;
+    IServiceRegistry public immutable serviceRegistry;
     // goerli - 0x4bd5643ac6f66a5237E18bfA7d47cF22f1c9F210
     // mainnet - 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9
-    ILendingPool public lendingPool;
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MCD_VIEW_KEY = "MCD_VIEW";
-    string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
+    ILendingPool public immutable lendingPool;
+
+    string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
     string private constant AAVE_POOL = "AAVE_POOL";
 
-    constructor(address _serviceRegistry, ILendingPool _lendingPool) {
+    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
     }
@@ -56,9 +55,6 @@ contract StopLossAAVE is ICommand {
             (StopLossTriggerData)
         );
 
-        address lendingPoolAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            AAVE_POOL
-        );
         // do we need to?
         // ILendingPoolV2(ILendingPoolAddressesProviderV2(_market).getLendingPool());
         (
@@ -68,9 +64,7 @@ contract StopLossAAVE is ICommand {
             ,
             ,
 
-        ) = ILendingPool(lendingPoolAddress).getUserAccountData(
-                stopLossTriggerData.positionAddress
-            );
+        ) = lendingPool.getUserAccountData(stopLossTriggerData.positionAddress);
 
         return !(totalCollateralETH > 0 && totalDebtETH > 0);
     }
@@ -81,21 +75,11 @@ contract StopLossAAVE is ICommand {
             (StopLossTriggerData)
         );
 
-        address lendingPoolAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            AAVE_POOL
-        );
         // do we need to?
         // ILendingPoolV2(ILendingPoolAddressesProviderV2(_market).getLendingPool());
-        (
-            uint256 totalCollateralETH,
-            uint256 totalDebtETH,
-            uint256 availableBorrowsETH,
-            ,
-            ,
-
-        ) = ILendingPool(lendingPoolAddress).getUserAccountData(
-                stopLossTriggerData.positionAddress
-            );
+        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
+            stopLossTriggerData.positionAddress
+        );
 
         if (totalDebtETH == 0) return false;
 
@@ -107,7 +91,9 @@ contract StopLossAAVE is ICommand {
     function execute(bytes calldata executionData, bytes memory triggerData) external override {
         (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
 
-        address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
+        IOperationExecutor opExec = IOperationExecutor(
+            serviceRegistry.getRegisteredService(OPERATION_EXECUTOR)
+        );
 
         bytes4 prefix = abi.decode(executionData, (bytes4));
         bytes4 expectedSelector;
@@ -124,9 +110,9 @@ contract StopLossAAVE is ICommand {
         //since all global values in this contract are either const or immutable, this delegate call do not break any storage
         //this is simplest approach, most similar to way we currently call dsProxy
         // solhint-disable-next-line avoid-low-level-calls
-        (bool status, ) = mpaAddress.delegatecall(executionData);
+        // (bool status, ) = opExec.executeOp(xxx, executionData);
 
-        require(status, "execution failed");
+        //require(status, "execution failed");
     }
 
     function isTriggerDataValid(bool continuous, bytes memory triggerData)
