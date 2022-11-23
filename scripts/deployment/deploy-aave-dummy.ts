@@ -33,6 +33,7 @@ async function main() {
     const command = await system.dummyAaveWithdrawCommand.deployed()
 
     const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
+    await system.serviceRegistry.removeNamedService(commandHash)
 
     await system.serviceRegistry.addNamedService(commandHash, command.address)
 

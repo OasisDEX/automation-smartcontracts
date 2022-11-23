@@ -64,6 +64,7 @@ contract DummyAaveWithdrawCommand is ICommand {
             aaveProxyActions,
             abi.encodeWithSelector(AaveProxyActions.drawDebt.selector, token, recipient, amount)
         );
+        lastCall[proxy] = block.timestamp;
     }
 
     function isTriggerDataValid(bool continuous, bytes memory triggerData)
