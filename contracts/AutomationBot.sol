@@ -331,9 +331,9 @@ contract AutomationBot {
         );
         require(status, "bot/failed-to-draw-coverage");
         {
-            (bool statusAllow, ) = address(dpmAdapter).delegatecall(
+            (bool statusAllow, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
-                    dpmAdapter.permit.selector,
+                    adapter.permit.selector,
                     triggerData,
                     commandAddress,
                     true
