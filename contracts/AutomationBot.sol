@@ -318,8 +318,8 @@ contract AutomationBot {
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter dpmAdapter = IAdapter(getAdapterAddress(commandAddress, false));
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, true));
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
         (bool status, ) = address(adapter).delegatecall(
             abi.encodeWithSelector(
                 adapter.getCoverage.selector,
