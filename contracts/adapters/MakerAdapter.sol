@@ -30,7 +30,7 @@ contract MakerAdapter {
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
-    address public immutable self;
+    address private immutable self;
 
     modifier onlyDelegate() {
         require(address(this) != self, "bot/only-delegate");
