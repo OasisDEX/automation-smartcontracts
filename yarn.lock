@@ -797,10 +797,10 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@oasisdex/automation@1.2.7-alpha.2":
-  version "1.2.7-alpha.2"
-  resolved "https://registry.yarnpkg.com/@oasisdex/automation/-/automation-1.2.7-alpha.2.tgz#4d5c44b3aa19b50f05d04477a46859750cff8d7a"
-  integrity sha512-YPGQSi4FEMB7dTZ4XVB3IlO8amrG6bqIShDbNWcQM3G3SyxxBXPxlcWxyIN+jWmn3Hs0IvIY/WUDQnssV/RZOg==
+"@oasisdex/automation@^1.2.6":
+  version "1.2.6"
+  resolved "https://registry.yarnpkg.com/@oasisdex/automation/-/automation-1.2.6.tgz#00a9566dd6dd586532ed21028096f707a63c6307"
+  integrity sha512-CSGlcTyRnv7Lp9rGq/ezz28FO4NqIQFLMRflCPJrmoMk2MtVwnSs6HBLhgmYZom2DXPbhwcKwKQYYjOShEJYig==
   dependencies:
     ethers "^5.6.2"
 

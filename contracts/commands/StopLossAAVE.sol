@@ -18,26 +18,32 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity 0.8.17;
 import "../interfaces/ICommand.sol";
-import "../interfaces/ManagerLike.sol";
 import "../interfaces/BotLike.sol";
-import "../interfaces/MPALike.sol";
 import { IOperationExecutor } from "../interfaces/IOperationExecutor.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import {
     ILendingPoolAddressesProvider
 } from "../interfaces/AAVE/ILendingPoolAddressesProvider.sol";
+import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
+import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 
 contract StopLossAAVE is ICommand {
     IServiceRegistry public immutable serviceRegistry;
     // goerli - 0x4bd5643ac6f66a5237E18bfA7d47cF22f1c9F210
     // mainnet - 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9
     ILendingPool public immutable lendingPool;
+    AaveProxyActions public immutable aaveProxyActions;
 
     string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
     string private constant AAVE_POOL = "AAVE_POOL";
 
-    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
+    constructor(
+        IServiceRegistry _serviceRegistry,
+        ILendingPool _lendingPool,
+        AaveProxyActions _aaveProxyActions
+    ) {
+        aaveProxyActions = _aaveProxyActions;
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
     }
@@ -45,6 +51,8 @@ contract StopLossAAVE is ICommand {
     struct StopLossTriggerData {
         address positionAddress;
         uint16 triggerType;
+        address collateralToken;
+        address debtToken;
         uint256 slLevel;
         uint32 maxBaseFeeInGwei;
     }
@@ -55,16 +63,9 @@ contract StopLossAAVE is ICommand {
             (StopLossTriggerData)
         );
 
-        // do we need to?
-        // ILendingPoolV2(ILendingPoolAddressesProviderV2(_market).getLendingPool());
-        (
-            uint256 totalCollateralETH,
-            uint256 totalDebtETH,
-            uint256 availableBorrowsETH,
-            ,
-            ,
-
-        ) = lendingPool.getUserAccountData(stopLossTriggerData.positionAddress);
+        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
+            stopLossTriggerData.positionAddress
+        );
 
         return !(totalCollateralETH > 0 && totalDebtETH > 0);
     }
@@ -75,7 +76,7 @@ contract StopLossAAVE is ICommand {
             (StopLossTriggerData)
         );
 
-        // do we need to?
+        // TODO : should we fetch pool address each time ?
         // ILendingPoolV2(ILendingPoolAddressesProviderV2(_market).getLendingPool());
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress
@@ -83,34 +84,21 @@ contract StopLossAAVE is ICommand {
 
         if (totalDebtETH == 0) return false;
 
-        uint256 collRatio = totalCollateralETH / totalDebtETH;
-        bool vaultNotDebtless = totalDebtETH != 0;
-        return vaultNotDebtless && collRatio <= stopLossTriggerData.slLevel * 10**16;
+        uint256 collRatio = (10**8 * totalCollateralETH) / totalDebtETH;
+        bool vaultHasDebt = totalDebtETH != 0;
+        return vaultHasDebt && collRatio <= stopLossTriggerData.slLevel * 10**8;
     }
 
     function execute(bytes calldata executionData, bytes memory triggerData) external override {
-        (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
-
-        IOperationExecutor opExec = IOperationExecutor(
-            serviceRegistry.getRegisteredService(OPERATION_EXECUTOR)
+        StopLossTriggerData memory stopLossTriggerData = abi.decode(
+            triggerData,
+            (StopLossTriggerData)
         );
-
-        bytes4 prefix = abi.decode(executionData, (bytes4));
-        bytes4 expectedSelector;
-
-        // here we call opExecutor
-
-        /*       if (triggerType == 1) {
-            expectedSelector = MPALike.closeVaultExitCollateral.selector;
-        } else if (triggerType == 2) {
-            expectedSelector = MPALike.closeVaultExitDai.selector;
-        } else revert("unsupported-triggerType"); */
-
-        require(prefix == expectedSelector, "wrong-payload");
-        //since all global values in this contract are either const or immutable, this delegate call do not break any storage
-        //this is simplest approach, most similar to way we currently call dsProxy
-        // solhint-disable-next-line avoid-low-level-calls
-        // (bool status, ) = opExec.executeOp(xxx, executionData);
+        /* 
+        IAccountImplementation(stopLossTriggerData.positionAddress).execute(
+            aaveProxyActions,
+            abi.encodeWithSelector(AaveProxyActions.FUNCTION.selector, param1,param2,param3)
+        ); */
 
         //require(status, "execution failed");
     }
