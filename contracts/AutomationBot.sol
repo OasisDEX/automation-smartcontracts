@@ -318,11 +318,11 @@ contract AutomationBot {
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter dpmAdapter = IAdapter(getAdapterAddress(commandAddress, false));
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, true));
-        (bool status, ) = address(adapter).delegatecall(
+        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
+        (bool status, ) = address(executableAdapter).delegatecall(
             abi.encodeWithSelector(
-                adapter.getCoverage.selector,
+                executableAdapter.getCoverage.selector,
                 triggerData,
                 msg.sender,
                 coverageToken,
@@ -331,13 +331,8 @@ contract AutomationBot {
         );
         require(status, "bot/failed-to-draw-coverage");
         {
-            (bool statusAllow, ) = address(dpmAdapter).delegatecall(
-                abi.encodeWithSelector(
-                    dpmAdapter.permit.selector,
-                    triggerData,
-                    commandAddress,
-                    true
-                )
+            (bool statusAllow, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, true)
             );
             require(statusAllow, "bot/permit-failed");
 

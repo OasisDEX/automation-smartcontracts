@@ -28,7 +28,7 @@ createTask<CreateDPMArgs>('open-aave-position', 'Creates an automation trigger f
             hardhatUtils.addresses.AUTOMATION_AAVE_PROXY_ACTIONS,
         )) as AaveProxyActions
 
-        const encodedData = aave_pa.interface.encodeFunctionData('openPosition', [])
+        const encodedData = aave_pa.interface.encodeFunctionData('openPosition')
 
         const creationReceipt = await (
             await account.execute(aave_pa.address, encodedData, {

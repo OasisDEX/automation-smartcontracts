@@ -30,7 +30,7 @@ contract DPMAdapter {
     ServiceRegistry public immutable serviceRegistry;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
-    address public immutable self;
+    address private immutable self;
     IAccountGuard public immutable accountGuard;
 
     modifier onlyDelegate() {
