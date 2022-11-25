@@ -16,9 +16,9 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
-pragma solidity 0.8.17;
-import "../interfaces/ICommand.sol";
-import "../interfaces/BotLike.sol";
+pragma solidity 0.8.13;
+import { ICommand } from "../interfaces/ICommand.sol";
+import { BotLike } from "../interfaces/BotLike.sol";
 import { IOperationExecutor } from "../interfaces/IOperationExecutor.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";

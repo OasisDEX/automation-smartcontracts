@@ -16,6 +16,8 @@ import {
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
+import { AccountFactory } from '../../typechain/AccountFactory'
+import { AccountGuard } from '../../typechain/AccountGuard'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
@@ -44,6 +46,8 @@ export interface DeployedSystem {
     makerAdapter: MakerAdapter
     dummyAaveWithdrawCommand?: DummyAaveWithdrawCommand
     aaveProxyActions?: AaveProxyActions
+    dpmFactory: AccountFactory
+    accountGuard: AccountGuard
 }
 
 export interface DeploySystemArgs {
@@ -150,6 +154,17 @@ export async function deploySystem({
         addresses.DAI,
     ])
 
+    const GuardInstance: AccountGuard = await utils.deployContract(ethers.getContractFactory('AccountGuard'), [])
+
+    const DmpFactoryInstance: AccountFactory = await utils.deployContract(ethers.getContractFactory('AccountFactory'), [
+        GuardInstance.address,
+    ])
+
+    const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
+        ethers.getContractFactory('AaveProxyActions'),
+        [addresses.WETH, addresses.AAVE_POOL],
+    )
+
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
@@ -221,8 +236,10 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
-        aaveProxyActions: undefined, //TODO: add AaveProxyActions
+        aaveProxyActions: AaveProxyActionsInstance,
         dummyAaveWithdrawCommand: undefined, //TODO: add DummyAaveWithdrawCommand
+        dpmFactory: DmpFactoryInstance,
+        accountGuard: GuardInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
