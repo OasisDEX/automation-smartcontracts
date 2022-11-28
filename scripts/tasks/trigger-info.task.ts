@@ -30,7 +30,9 @@ task<TriggerInfoArgs>('trigger-info')
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
         const { addresses } = hardhatUtils
+        console.log(`before getStartBlocksFor`)
         const startBlocks = getStartBlocksFor(args.forked || hre.network.name)
+        console.log(`after getStartBlocksFor`)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
         const storage = await hre.ethers.getContractAt(
@@ -38,12 +40,14 @@ task<TriggerInfoArgs>('trigger-info')
             hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
         )
 
+        console.log(`before getLogs`)
         const events = await hre.ethers.provider.getLogs({
             address: addresses.AUTOMATION_BOT,
             topics: [bot.interface.getEventTopic('TriggerAdded'), bignumberToTopic(args.trigger)],
             fromBlock: startBlocks.AUTOMATION_BOT,
         })
 
+        console.log(`after getLogs`)
         if (events.length !== 1) {
             throw new Error(
                 `Error looking up events. Expected to find a single TriggerAdded Event. Received: ${events.length}`,
@@ -52,11 +56,11 @@ task<TriggerInfoArgs>('trigger-info')
 
         const [event] = events
         const { commandAddress, triggerData } = bot.interface.decodeEventLog('TriggerAdded', event.data, event.topics)
-        /* 
+
         const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
         const trigger = await storage.activeTriggers(args.trigger.toString())
-        console.log(`Active: ${!trigger.cdpId.eq(0)}`)
+        console.log(`Active: ${trigger.commandAddress}`)
 
         const command = await hre.ethers.getContractAt('ICommand', commandAddress)
         const mcdView = await hre.ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW)
@@ -70,7 +74,7 @@ task<TriggerInfoArgs>('trigger-info')
         const vaultOwner = await cdpManager.owns(vaultId.toString(), opts)
         const proxy = await hre.ethers.getContractAt('DsProxyLike', vaultOwner)
         const proxyOwner = await proxy.owner(opts)
-        const isExecutionLegal = await command.isExecutionLegal(vaultId.toString(), triggerData, opts)
+        const isExecutionLegal = await command.isExecutionLegal(vaultId.toString(), triggerData)
         const ilk = await cdpManager.ilks(vaultId.toString(), opts)
         const { ilkDecimals } = await hardhatUtils.getIlkData(ilk, opts)
         const [coll, debt] = await mcdView.getVaultInfo(vaultId.toString(), opts)
@@ -90,7 +94,7 @@ task<TriggerInfoArgs>('trigger-info')
             `Coll Ratio: ${toBaseUnits(collRatio, 16)}`,
             `Next Coll Ratio: ${toBaseUnits(nextCollRatio, 16)}`,
         ]
-        console.log(`\n${vaultInfo.join('\n')}`) */
+        console.log(`\n${vaultInfo.join('\n')}`)
     })
 
 function toBaseUnits(val: EthersBN, decimals = 18) {
