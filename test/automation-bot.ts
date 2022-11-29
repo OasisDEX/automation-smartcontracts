@@ -21,7 +21,7 @@ import {
 import { TriggerGroupType } from '@oasisdex/automation'
 import { TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
 

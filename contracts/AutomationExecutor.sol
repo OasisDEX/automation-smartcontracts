@@ -33,7 +33,6 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import {
     IV3SwapRouter
 } from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
-import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
@@ -133,10 +132,6 @@ contract AutomationExecutor {
         uint256 finalGasAvailable = gasleft();
         uint256 etherUsed = tx.gasprice *
             uint256(int256(initialGasAvailable - finalGasAvailable) - gasRefund);
-        console.log("etherUsed", etherUsed);
-        console.log("gasRefund", uint256(gasRefund));
-        console.log("initialGasAvailable", initialGasAvailable);
-        console.log("finalGasAvailable", finalGasAvailable);
 
         payable(msg.sender).transfer(
             address(this).balance > etherUsed ? etherUsed : address(this).balance

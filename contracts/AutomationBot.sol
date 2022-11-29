@@ -334,6 +334,7 @@ contract AutomationBot {
             (bool statusAllow, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, true)
             );
+
             require(statusAllow, "bot/permit-failed");
 
             command.execute(executionData, triggerData); //command must be whitelisted

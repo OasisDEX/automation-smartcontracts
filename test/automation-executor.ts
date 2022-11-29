@@ -14,7 +14,7 @@ import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdap
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
 const dummyTriggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 1, 101])

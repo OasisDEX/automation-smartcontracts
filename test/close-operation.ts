@@ -13,7 +13,7 @@ import {
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 

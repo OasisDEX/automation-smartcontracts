@@ -301,22 +301,6 @@ export async function configureRegistryEntries(
         await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
         await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address, true)
     }
-    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
-        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
-            system.autoTakeProfitCommand.address,
-        )
-
-        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToDai),
-            system.autoTakeProfitCommand.address,
-        )
-
-        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
-        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
-    }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
