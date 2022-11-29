@@ -13,9 +13,9 @@ import {
     MakerAdapter,
     AutomationBotStorage,
     AutoTakeProfitCommand,
+    AaveProxyActions,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
-import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
@@ -42,6 +42,8 @@ export interface DeployedSystem {
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
+    aaveAdapter?: AAVEAdapter
+    dpmAdapter?: DPMAdapter
     dummyAaveWithdrawCommand?: DummyAaveWithdrawCommand
     aaveProxyActions?: AaveProxyActions
 }
@@ -110,6 +112,17 @@ export async function deploySystem({
         addresses.UNISWAP_FACTORY,
     )
 
+    const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
+        ethers.getContractFactory('AaveProxyActions'),
+        [addresses.WETH_AAVE, addresses.AAVE_POOL],
+    )
+
+    if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
+        AaveProxyActionsInstance.address,
+    )
+
     if (logDebug) console.log('Deploying McdUtils....')
     const McdUtilsInstance: McdUtils = await utils.deployContract(ethers.getContractFactory('McdUtils'), [
         ServiceRegistryInstance.address,
@@ -140,14 +153,13 @@ export async function deploySystem({
         addresses.DAI,
     ])
 
-    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
-        ServiceRegistryInstance.address,
-        addresses.DAI,
-    ])
-
     const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         ServiceRegistryInstance.address,
-        addresses.DAI,
+    ])
+
+    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DPM_GUARD,
     ])
 
     if (logDebug) console.log('Deploying AutomationExecutor....')
@@ -223,6 +235,8 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveProxyActions: undefined, //TODO: add AaveProxyActions
         dummyAaveWithdrawCommand: undefined, //TODO: add DummyAaveWithdrawCommand
+        aaveAdapter: AAVEAdapterInstance,
+        dpmAdapter: DPMAdapterInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)

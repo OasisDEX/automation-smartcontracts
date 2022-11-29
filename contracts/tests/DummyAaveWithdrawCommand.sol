@@ -19,7 +19,8 @@
 pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
-import "./AaveProxyActions.sol";
+import "../helpers/AaveProxyActions.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
     address public immutable aaveProxyActions;
@@ -64,6 +65,7 @@ contract DummyAaveWithdrawCommand is ICommand {
             aaveProxyActions,
             abi.encodeWithSelector(AaveProxyActions.drawDebt.selector, token, recipient, amount)
         );
+        IERC20(token).transfer(recipient, amount);
         lastCall[proxy] = block.timestamp;
     }
 

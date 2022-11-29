@@ -2,6 +2,8 @@
 /// AAVEAdapter.sol
 pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
+import "../helpers/AaveProxyActions.sol";
+import "../interfaces/IAccountImplementation.sol";
 import "../interfaces/ManagerLike.sol";
 import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
@@ -11,15 +13,10 @@ import "../McdUtils.sol";
 
 contract AAVEAdapter {
     ServiceRegistry public immutable serviceRegistry;
-    address private immutable dai;
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MCD_UTILS_KEY = "MCD_UTILS";
-    address public immutable self;
+    string private constant AAVE_PROXY_ACTIONS = "AAVE_PROXY_ACTIONS";
 
-    constructor(ServiceRegistry _serviceRegistry, address _dai) {
-        self = address(this);
+    constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        dai = _dai;
     }
 
     function decode(bytes memory triggerData)
@@ -37,6 +34,17 @@ contract AAVEAdapter {
         uint256 amount
     ) external {
         (address proxy, ) = decode(triggerData);
+        address aavePA = serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
+        //reverts if code fails
+        IAccountImplementation(proxy).execute(
+            aavePA,
+            abi.encodeWithSelector(
+                AaveProxyActions.drawDebt.selector,
+                coverageToken,
+                receiver,
+                amount
+            )
+        );
 
         //todo: call proxy to withdraw coverageToken from aave
         //todo: call proxy to transfer coverageToken to receiver

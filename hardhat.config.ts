@@ -76,7 +76,7 @@ const config: HardhatUserConfig = {
                     'goerli',
                     process.env.ALCHEMY_NODE_GOERLI,
                     process.env.PRIVATE_KEY_GOERLI!,
-                    500000000000,
+                    5000000000,
                 ),
             ].filter(Boolean) as [string, HardhatNetworkConfig][],
         ),

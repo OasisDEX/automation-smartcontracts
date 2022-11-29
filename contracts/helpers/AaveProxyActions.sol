@@ -36,7 +36,7 @@ contract AaveProxyActions {
     //goerli: 0x2e3A2fb8473316A02b8A297B982498E661E1f6f5
     //mainnet: 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
     address public immutable weth;
-    //goerli: 0xd5B55D3Ed89FDa19124ceB5baB620328287b915d
+    //goerli: 0x4bd5643ac6f66a5237E18bfA7d47cF22f1c9F210
     IAAVE public immutable aave;
 
     constructor(address _weth, address _aave) {
