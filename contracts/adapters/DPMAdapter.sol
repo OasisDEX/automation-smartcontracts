@@ -55,6 +55,14 @@ contract DPMAdapter {
     function canCall(bytes memory triggerData, address operator) public view returns (bool) {
         (address proxyAddress, ) = decode(triggerData);
         address positionOwner = accountGuard.owners(proxyAddress);
+        console.log("canCall accountGuard", address(accountGuard));
+        console.log(
+            "accountGuard.owners(proxyAddress)",
+            proxyAddress,
+            accountGuard.owners(proxyAddress)
+        );
+        console.log("canCall adapter", positionOwner, address(this));
+        console.log("canCall adapter", proxyAddress);
         return accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
     }
 
@@ -63,9 +71,18 @@ contract DPMAdapter {
         address target,
         bool allowance
     ) public {
+        console.log("permit called", msg.sender, address(this));
         require(canCall(triggerData, msg.sender), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+
+        console.log("canCall checked for", msg.sender);
         (address proxyAddress, ) = decode(triggerData);
+
+        console.log(
+            "accountGuard.canCall(proxyAddress, target)",
+            accountGuard.canCall(proxyAddress, target)
+        );
         if (allowance != accountGuard.canCall(proxyAddress, target)) {
+            console.log("setting permit for:", proxyAddress, target);
             accountGuard.permit(target, proxyAddress, allowance);
         }
     }

@@ -16,6 +16,18 @@ interface IAAVE {
         address to
     ) external;
 
+    function getUserAccountData(address user)
+        external
+        view
+        returns (
+            uint256 totalCollateralETH,
+            uint256 totalDebtETH,
+            uint256 availableBorrowsETH,
+            uint256 currentLiquidationThreshold,
+            uint256 ltv,
+            uint256 healthFactor
+        );
+
     function borrow(
         address asset,
         uint256 amount,
@@ -45,9 +57,18 @@ contract AaveProxyActions {
     }
 
     function openPosition() external payable {
+        console.log("openPosition", address(this));
         IWETH(weth).deposit{ value: msg.value }();
+        console.log("balanceBefore", IWETH(weth).balanceOf(address(this)));
         IERC20(weth).approve(address(aave), msg.value);
         aave.deposit(weth, msg.value, address(this), 0);
+        console.log("balanceAfter", IWETH(weth).balanceOf(address(this)));
+
+        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
+            address(this)
+        );
+        console.log("totalCollateralETH", totalCollateralETH);
+        console.log("totalDebtETH", totalDebtETH);
     }
 
     function drawDebt(
@@ -55,8 +76,23 @@ contract AaveProxyActions {
         address recipient,
         uint256 amount
     ) external {
-        aave.borrow(token, amount, 2, 0, address(this));
-        IERC20(token).transfer(recipient, amount);
+        console.log("drawDebt recipient", recipient);
+        console.log("drawDebt aave", address(aave));
+        console.log("drawDebt owner", address(this));
+        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
+            address(this)
+        );
+        console.log("totalCollateralETH", totalCollateralETH);
+        console.log("totalDebtETH", totalDebtETH);
+        console.log("amount", amount);
+        if (amount > 0) {
+            aave.borrow(token, amount, 1, 0, address(this));
+            console.log("balanceAfter", IERC20(token).balanceOf(address(this)));
+            IERC20(token).transfer(recipient, amount);
+            console.log("balanceAfter2", IERC20(token).balanceOf(address(this)));
+        }
+
+        emit Borrow(address(this), token, amount);
     }
 
     function repayDebt(address token, uint256 amount) external {
@@ -66,6 +102,7 @@ contract AaveProxyActions {
         );
         IERC20(token).approve(address(aave), amount);
         aave.repay(token, amount, 2, address(this));
+        emit Repay(address(this), token, amount);
     }
 
     function depositCollateral(address token, uint256 amount) external {
@@ -75,6 +112,7 @@ contract AaveProxyActions {
         );
         IERC20(token).approve(address(aave), amount);
         aave.deposit(token, amount, address(this), 0);
+        emit Deposit(address(this), token, amount);
     }
 
     function withdrawCollateral(
@@ -84,5 +122,14 @@ contract AaveProxyActions {
     ) external {
         aave.withdraw(token, amount, address(this));
         IERC20(token).transfer(recipient, amount);
+        emit Withdraw(address(this), token, amount);
     }
+
+    event Deposit(address indexed depositor, address indexed token, uint256 amount);
+
+    event Withdraw(address indexed depositor, address indexed token, uint256 amount);
+
+    event Borrow(address indexed depositor, address indexed token, uint256 amount);
+
+    event Repay(address indexed depositor, address indexed token, uint256 amount);
 }

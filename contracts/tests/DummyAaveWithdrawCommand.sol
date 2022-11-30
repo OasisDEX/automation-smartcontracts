@@ -65,7 +65,6 @@ contract DummyAaveWithdrawCommand is ICommand {
             aaveProxyActions,
             abi.encodeWithSelector(AaveProxyActions.drawDebt.selector, token, recipient, amount)
         );
-        IERC20(token).transfer(recipient, amount);
         lastCall[proxy] = block.timestamp;
     }
 

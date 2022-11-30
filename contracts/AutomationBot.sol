@@ -132,6 +132,7 @@ contract AutomationBot {
         );
 
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        console.log("permissions check", address(msg.sender));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(
@@ -213,16 +214,7 @@ contract AutomationBot {
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
-            AutomationBot(automationBot).addRecord(
-                triggerTypes[i],
-                continuous[i],
-                replacedTriggerId[i],
-                triggerData[i]
-            );
-
-            triggerIds[i] = firstTriggerId + i;
-
-            if (i == triggerData.length - 1) {
+            if (i == 0) {
                 (bool status, ) = address(adapter).delegatecall(
                     abi.encodeWithSelector(
                         adapter.permit.selector,
@@ -233,6 +225,15 @@ contract AutomationBot {
                 );
                 require(status, "bot/permit-failed");
             }
+
+            AutomationBot(automationBot).addRecord(
+                triggerTypes[i],
+                continuous[i],
+                replacedTriggerId[i],
+                triggerData[i]
+            );
+
+            triggerIds[i] = firstTriggerId + i;
         }
 
         AutomationBot(automationBot).emitGroupDetails(groupType, triggerIds);

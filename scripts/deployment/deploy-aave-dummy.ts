@@ -104,12 +104,12 @@ async function main() {
 
     console.log('Deploying DummyAaveWithdrawCommand')
 
-    system.dummyAaveWithdrawCommand = (await utils.deployContract(
+    const dummyAaveWithdrawCommand = (await utils.deployContract(
         hre.ethers.getContractFactory('DummyAaveWithdrawCommand'),
         [apa.address, utils.addresses.USDC_AAVE],
     )) as DummyAaveWithdrawCommand
 
-    const command = await system.dummyAaveWithdrawCommand.deployed()
+    const command = await dummyAaveWithdrawCommand.deployed()
 
     const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
 
@@ -120,8 +120,8 @@ async function main() {
 
     await system.serviceRegistry.addNamedService(commandHash, command.address)
 
-    await ensureCorrectAdapter(system.dummyAaveWithdrawCommand.address, system.dpmAdapter.address)
-    await ensureCorrectAdapter(system.dummyAaveWithdrawCommand.address, system.aaveAdapter.address, true)
+    await ensureCorrectAdapter(dummyAaveWithdrawCommand.address, system.dpmAdapter.address)
+    await ensureCorrectAdapter(dummyAaveWithdrawCommand.address, system.aaveAdapter.address, true)
 
     console.log(`DummyAaveWithdrawCommand Deployed: ${command!.address}`)
     console.log(`AaveProxyActions Deployed: ${apa!.address}`)

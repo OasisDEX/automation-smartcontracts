@@ -8,5 +8,5 @@ interface AccountFactoryLike {
 
     function createAccount(address user) external returns (address);
 
-    event AccountCreated(address proxy, address indexed user, uint256 indexed vaultId);
+    event AccountCreated(address indexed proxy, address indexed user, uint256 indexed vaultId);
 }

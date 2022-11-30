@@ -16,7 +16,7 @@ dotenv.config()
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
-const blockNumber = process.env.BLOCK_NUMBER || '16039340'
+const blockNumber = process.env.BLOCK_NUMBER || '16047227'
 
 function createHardhatNetwork(network: string, node: string | undefined, key: string | undefined, gasPrice: number) {
     if (!node || !key) {

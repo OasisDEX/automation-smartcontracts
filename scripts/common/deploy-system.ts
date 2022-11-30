@@ -44,7 +44,6 @@ export interface DeployedSystem {
     makerAdapter: MakerAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
-    dummyAaveWithdrawCommand?: DummyAaveWithdrawCommand
     aaveProxyActions?: AaveProxyActions
 }
 
@@ -211,6 +210,7 @@ export async function deploySystem({
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
+        console.log(`AaveProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
@@ -233,8 +233,7 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
-        aaveProxyActions: undefined, //TODO: add AaveProxyActions
-        dummyAaveWithdrawCommand: undefined, //TODO: add DummyAaveWithdrawCommand
+        aaveProxyActions: AaveProxyActionsInstance,
         aaveAdapter: AAVEAdapterInstance,
         dpmAdapter: DPMAdapterInstance,
     }
