@@ -12,9 +12,9 @@ const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
 describe('BasicSellCommand', () => {
-    let correctExecutionRatio : any;
-    let correctTargetRatio : any;
-    
+    let correctExecutionRatio: number
+    let correctTargetRatio: number
+
     const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
@@ -58,10 +58,10 @@ describe('BasicSellCommand', () => {
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
 
-        const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId,true);
-        let ratioAtNext = rawRatio.div("10000000000000000").toNumber()/100;
-        correctExecutionRatio = toRatio(ratioAtNext+0.01);
-        correctTargetRatio = toRatio(ratioAtNext+0.03);
+        const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        correctExecutionRatio = toRatio(ratioAtNext + 0.01)
+        correctTargetRatio = toRatio(ratioAtNext + 0.03)
     })
 
     beforeEach(async () => {
@@ -262,7 +262,6 @@ describe('BasicSellCommand', () => {
         })
 
         it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
-
             const ratio = await system.mcdView.getRatio(testCdpId, false)
             let nextRatio = await system.mcdView.getRatio(testCdpId, true)
             const oraclePrice = await system.mcdView.getPrice(ethAIlk)
@@ -270,23 +269,22 @@ describe('BasicSellCommand', () => {
             console.log('ratio', ratio.toString())
             console.log('nextRatio', nextRatio.toString())
 
-
             const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
             const osmAddress = await osmMom.osms(ethAIlk)
-            
+
             const manager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
             const ilk = await manager.ilks(testCdpId)
             const spot = await hre.ethers.getContractAt('SpotterLike', hardhatUtils.addresses.MCD_SPOT)
             const [, liqRatio] = await spot.ilks(ilk)
 
-            const newNextPrice = oraclePrice.div(nextRatio).mul(liqRatio.div(1000000000)).toString();
+            const newNextPrice = oraclePrice.div(nextRatio).mul(liqRatio.div(1000000000)).toString()
 
-            console.log('nextRatio', nextRatio.toString());
-            console.log('liqRatio', liqRatio.toString());
-            console.log('oraclePrice', oraclePrice.toString());
-            console.log('newNextPrice', newNextPrice);
-            
-            let updatedNextPrice = hre.ethers.utils.hexConcat([
+            console.log('nextRatio', nextRatio.toString())
+            console.log('liqRatio', liqRatio.toString())
+            console.log('oraclePrice', oraclePrice.toString())
+            console.log('newNextPrice', newNextPrice)
+
+            const updatedNextPrice = hre.ethers.utils.hexConcat([
                 hre.ethers.utils.hexZeroPad('0x1', 16),
                 hre.ethers.utils.hexZeroPad(EthersBN.from(newNextPrice.toString()).toHexString(), 16),
             ])

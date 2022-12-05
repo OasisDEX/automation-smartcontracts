@@ -9,7 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     ONE_INCH_V4_ROUTER,
-    toRatio
+    toRatio,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
@@ -266,24 +266,22 @@ describe('BasicBuyCommand', () => {
         })
 
         it('executes the trigger', async () => {
-            
-            const rawRatio = await system.mcdView.getRatio(testCdpId,true);
-            let ratioAtNext = rawRatio.div("10000000000000000").toNumber()/100;
-            console.log("ratioAtNext",ratioAtNext);
-            const executionRatio = toRatio(ratioAtNext-0.01);
-            const targetRatio = toRatio(ratioAtNext-0.03);
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
-            
 
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
         it('clears the trigger if `continuous` is set to false', async () => {
-            const rawRatio = await system.mcdView.getRatio(testCdpId,true);
-            let ratioAtNext = rawRatio.div("10000000000000000").toNumber()/100;
-            console.log("ratioAtNext",ratioAtNext);
-            const executionRatio = toRatio(ratioAtNext-0.01);
-            const targetRatio = toRatio(ratioAtNext-0.03);
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
@@ -303,11 +301,11 @@ describe('BasicBuyCommand', () => {
         })
 
         it('keeps the trigger if `continuous` is set to true', async () => {
-            const rawRatio = await system.mcdView.getRatio(testCdpId,true);
-            let ratioAtNext = rawRatio.div("10000000000000000").toNumber()/100;
-            console.log("ratioAtNext",ratioAtNext);
-            const executionRatio = toRatio(ratioAtNext-0.01);
-            const targetRatio = toRatio(ratioAtNext-0.03);
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
             const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)

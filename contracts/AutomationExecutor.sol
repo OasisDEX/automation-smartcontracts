@@ -66,8 +66,6 @@ contract AutomationExecutor {
         uniswapFactory = IUniswapV3Factory(
             _serviceRegistry.getRegisteredService(UNISWAP_FACTORY_KEY)
         );
-        //uniswapRouter = IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-        //uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     }
 
     modifier onlyOwner() {

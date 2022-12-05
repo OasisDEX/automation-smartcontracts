@@ -44,10 +44,10 @@ describe('AutomationAggregatorBot', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-    let sellExecutionRatio : number;
-    let sellTargetRatio : number;
-    let buyExecutionRatio : number;
-    let buyTargetRatio : number;
+    let sellExecutionRatio: number
+    let sellTargetRatio: number
+    let buyExecutionRatio: number
+    let buyTargetRatio: number
     let createTrigger: (
         triggerData: BytesLike,
         triggerType: TriggerType,
@@ -88,13 +88,13 @@ describe('AutomationAggregatorBot', async () => {
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
 
-        const rawRatio = await system.mcdView.getRatio(testCdpId,true);
-        let ratioAtNext = rawRatio.div("10000000000000000").toNumber()/100;
-        console.log("ratioAtNext",ratioAtNext);
-        sellExecutionRatio = toRatio(ratioAtNext+0.01);
-        sellTargetRatio = toRatio(ratioAtNext+0.93);
-        buyExecutionRatio = toRatio(ratioAtNext-0.01);
-        buyTargetRatio = toRatio(ratioAtNext-0.11);
+        const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        console.log('ratioAtNext', ratioAtNext)
+        sellExecutionRatio = toRatio(ratioAtNext + 0.01)
+        sellTargetRatio = toRatio(ratioAtNext + 0.93)
+        buyExecutionRatio = toRatio(ratioAtNext - 0.01)
+        buyTargetRatio = toRatio(ratioAtNext - 0.11)
 
         createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
@@ -117,7 +117,8 @@ describe('AutomationAggregatorBot', async () => {
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
-    describe('addTriggerGroup', async () => { //TODO: why this is not executed? 
+    describe('addTriggerGroup', async () => {
+        //TODO: why this is not executed?
         const groupTypeId = TriggerGroupType.ConstantMultiple
 
         const bbTriggerData = encodeTriggerData(

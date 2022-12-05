@@ -165,11 +165,9 @@ describe('AutoTakeProfitCommmand', async () => {
                         [triggerData],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
-                    
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -248,7 +246,6 @@ describe('AutoTakeProfitCommmand', async () => {
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
-
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
@@ -491,9 +488,9 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
-                    console.log("Adding trigger");
+                    console.log('Adding trigger')
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
-                    console.log("trigger added");
+                    console.log('trigger added')
 
                     updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),

@@ -74,7 +74,6 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             "auto-take-profit/no-owner"
         );
         bool vaultNotEmpty = nextCollRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-
         return
             vaultNotEmpty &&
             baseFeeIsValid(trigger.maxBaseFeeInGwei) &&
@@ -96,6 +95,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         bytes32 ilk = manager.ilks(trigger.cdpId);
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
+
         require(trigger.executionPrice > nextPrice, "auto-take-profit/tp-level-too-low");
         return (trigger.triggerType == 7 || trigger.triggerType == 8);
     }
