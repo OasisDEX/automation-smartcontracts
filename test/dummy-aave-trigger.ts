@@ -25,23 +25,13 @@ describe.only('AAVE integration', async () => {
 
 
         utils = new HardhatUtils(hre);
-        const provider = new ethers.providers.JsonRpcProvider(
-            "http://localhost:8545"
-          );
-        await provider.send("hardhat_impersonateAccount", ['0x1b3cb81e51011b549d78bf720b0d924ac763a7c2']);
-        const donor = provider.getSigner('0x1b3cb81e51011b549d78bf720b0d924ac763a7c2');
-
-        donor.sendTransaction({
-            to: '0x060c23F67FEBb04F4b5d5c205633a04005985a94',
-            value: ethers.utils.parseEther('100')
-        })
         
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         system = await deploySystem({ utils, addCommands: true, logDebug:true })
         console.log("System deployed")
-        DPMFactory = await hre.ethers.getContractAt('AccountFactoryLike', "0x24432a08869578aAf4d1eadA12e1e78f171b1a2b");//utils.addresses.DPM_FACTORY);
+        DPMFactory = await hre.ethers.getContractAt('AccountFactoryLike', utils.addresses.DPM_FACTORY);//utils.addresses.DPM_FACTORY);
         AutomationBotInstance = await hre.ethers.getContractAt('AutomationBot', utils.addresses.AUTOMATION_BOT_V2);
-        DPMGuard = await hre.ethers.getContractAt('IAccountGuard', "0x707531c9999AaeF9232C8FEfBA31FBa4cB78d84a");// utils.addresses.DPM_GUARD);
+        DPMGuard = await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD);// utils.addresses.DPM_GUARD);
         console.log("before account creation", DPMFactory.address)
         const tx = await (await DPMFactory["createAccount(address)"](executorAddress)).wait();
         console.log("account created")

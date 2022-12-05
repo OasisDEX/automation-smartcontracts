@@ -132,7 +132,6 @@ contract AutomationBot {
         );
 
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
-        console.log("permissions check", address(msg.sender));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(

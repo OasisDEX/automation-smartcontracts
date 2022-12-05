@@ -35,9 +35,6 @@ contract AAVEAdapter {
     ) external {
         (address proxy, ) = decode(triggerData);
 
-        console.log("getCoverage called", msg.sender, address(this));
-        console.log("getCoverage called", proxy, coverageToken);
-
         address aavePA = serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
         //reverts if code fails
         IAccountImplementation(proxy).execute(
