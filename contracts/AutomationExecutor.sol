@@ -24,6 +24,7 @@ import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
 import { IExchange } from "./interfaces/IExchange.sol";
 import { ICommand } from "./interfaces/ICommand.sol";
+import "./ServiceRegistry.sol";
 
 import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
@@ -32,13 +33,14 @@ import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3
 import {
     IV3SwapRouter
 } from "@uniswap/swap-router-contracts/contracts/interfaces/IV3SwapRouter.sol";
-import "hardhat/console.sol";
 
 contract AutomationExecutor {
     using SafeERC20 for ERC20;
 
     event CallerAdded(address indexed caller);
     event CallerRemoved(address indexed caller);
+    string private constant UNISWAP_ROUTER_KEY = "UNISWAP_ROUTER";
+    string private constant UNISWAP_FACTORY_KEY = "UNISWAP_FACTORY";
 
     IV3SwapRouter public immutable uniswapRouter;
     IUniswapV3Factory public immutable uniswapFactory;
@@ -52,15 +54,18 @@ contract AutomationExecutor {
     constructor(
         BotLike _bot,
         ERC20 _dai,
-        IWETH _weth
+        IWETH _weth,
+        ServiceRegistry _serviceRegistry
     ) {
         bot = _bot;
         weth = _weth;
         dai = _dai;
         owner = msg.sender;
         callers[owner] = true;
-        uniswapRouter = IV3SwapRouter(0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45);
-        uniswapFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+        uniswapRouter = IV3SwapRouter(_serviceRegistry.getRegisteredService(UNISWAP_ROUTER_KEY));
+        uniswapFactory = IUniswapV3Factory(
+            _serviceRegistry.getRegisteredService(UNISWAP_FACTORY_KEY)
+        );
     }
 
     modifier onlyOwner() {

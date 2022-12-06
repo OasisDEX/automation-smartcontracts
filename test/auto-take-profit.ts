@@ -13,7 +13,7 @@ import {
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -242,7 +242,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
                     const updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(1000000).toString()).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
@@ -481,16 +481,26 @@ describe('AutoTakeProfitCommmand', async () => {
                     const osmAddress = await osmMom.osms(ethAIlk)
 
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
-                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                    let updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(1000000).toString()).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
+                    console.log('Adding trigger')
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+                    console.log('trigger added')
+
+                    updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.toString()).toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
 

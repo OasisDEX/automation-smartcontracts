@@ -15,7 +15,7 @@ async function main() {
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    await deploySystem({ utils, addCommands: true, deployMcdView: false, logDebug: true })
+    await deploySystem({ utils, addCommands: false, deployMcdView: false, logDebug: true })
 }
 
 // We recommend this pattern to be able to use async/await everywhere

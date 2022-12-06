@@ -16,7 +16,7 @@ import { getMultiplyParams } from '@oasisdex/multiply'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
-const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '26125')
+const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '8027')
 const maxGweiPrice = 1000
 
 const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
@@ -44,6 +44,10 @@ describe('AutomationAggregatorBot', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
+    let sellExecutionRatio: number
+    let sellTargetRatio: number
+    let buyExecutionRatio: number
+    let buyTargetRatio: number
     let createTrigger: (
         triggerData: BytesLike,
         triggerType: TriggerType,
@@ -83,6 +87,15 @@ describe('AutomationAggregatorBot', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+
+        const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        console.log('ratioAtNext', ratioAtNext)
+        sellExecutionRatio = toRatio(ratioAtNext + 0.01)
+        sellTargetRatio = toRatio(ratioAtNext + 0.93)
+        buyExecutionRatio = toRatio(ratioAtNext - 0.01)
+        buyTargetRatio = toRatio(ratioAtNext - 0.11)
+
         createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
             const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -105,12 +118,9 @@ describe('AutomationAggregatorBot', async () => {
     })
 
     describe('addTriggerGroup', async () => {
+        //TODO: why this is not executed?
         const groupTypeId = TriggerGroupType.ConstantMultiple
-        // data for the owner vault
-        const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-        const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
 
-        // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
             TriggerType.BasicBuy,

@@ -13,11 +13,21 @@ import {
     MakerAdapter,
     AutomationBotStorage,
     AutoTakeProfitCommand,
+    AaveProxyActions,
 } from '../../typechain'
+import { AAVEAdapter } from '../../typechain/AAVEAdapter'
+import { DPMAdapter } from '../../typechain/DPMAdapter'
+import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network } from './types'
-import { getAdapterNameHash, getCommandHash, getServiceNameHash, getValidatorHash } from './utils'
+import {
+    getCommandHash,
+    getServiceNameHash,
+    getValidatorHash,
+    getAdapterNameHash,
+    getExecuteAdapterNameHash,
+} from './utils'
 
 export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
@@ -32,6 +42,9 @@ export interface DeployedSystem {
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
+    aaveAdapter?: AAVEAdapter
+    dpmAdapter?: DPMAdapter
+    aaveProxyActions?: AaveProxyActions
 }
 
 export interface DeploySystemArgs {
@@ -57,7 +70,7 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
             await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
         } else {
             console.log(
-                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}`,
+                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
             )
         }
     }
@@ -84,6 +97,29 @@ export async function deploySystem({
     const ServiceRegistryInstance: ServiceRegistry = await utils.deployContract(
         ethers.getContractFactory('ServiceRegistry'),
         [delay],
+    )
+
+    if (logDebug) console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
+        addresses.UNISWAP_V3_ROUTER,
+    )
+
+    if (logDebug) console.log('Adding UNISWAP_FACTORY tp ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
+        addresses.UNISWAP_FACTORY,
+    )
+
+    const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
+        ethers.getContractFactory('AaveProxyActions'),
+        [addresses.WETH_AAVE, addresses.AAVE_POOL],
+    )
+
+    if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
+        AaveProxyActionsInstance.address,
     )
 
     if (logDebug) console.log('Deploying McdUtils....')
@@ -116,10 +152,19 @@ export async function deploySystem({
         addresses.DAI,
     ])
 
+    const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
+        ServiceRegistryInstance.address,
+    ])
+
+    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DPM_GUARD,
+    ])
+
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [AutomationBotInstance.address, addresses.DAI, addresses.WETH],
+        [AutomationBotInstance.address, addresses.DAI, addresses.WETH, ServiceRegistryInstance.address],
     )
 
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
@@ -160,9 +205,12 @@ export async function deploySystem({
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
         console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
         console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
+        console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance.address}`)
+        console.log(`DPMAdapter deployed to: ${DPMAdapterInstance.address}`)
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
+        console.log(`AaveProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
             console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
@@ -185,6 +233,9 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
+        aaveProxyActions: AaveProxyActionsInstance,
+        aaveAdapter: AAVEAdapterInstance,
+        dpmAdapter: DPMAdapterInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -200,8 +251,12 @@ export async function configureRegistryEntries(
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
 
-    const ensureCorrectAdapter = async (address: string, adapter: string) => {
-        await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+        if (!isExecute) {
+            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+        } else {
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+        }
     }
 
     const ensureMcdViewWhitelist = async (address: string) => {
@@ -223,6 +278,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -242,22 +298,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
-    }
-    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
-        if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
-            system.autoTakeProfitCommand.address,
-        )
-
-        if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToDai),
-            system.autoTakeProfitCommand.address,
-        )
-
-        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
-        await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address, true)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
@@ -269,6 +310,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address, true)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -280,6 +322,7 @@ export async function configureRegistryEntries(
 
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address, true)
     }
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')

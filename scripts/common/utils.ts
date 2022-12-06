@@ -23,6 +23,10 @@ export function getAdapterNameHash(command: string) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['Adapter', command]))
 }
 
+export function getExecuteAdapterNameHash(command: string) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['AdapterExecute', command]))
+}
+
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
     const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))

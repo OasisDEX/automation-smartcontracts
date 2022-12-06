@@ -9,7 +9,7 @@ import {
     getEvents,
     HardhatUtils,
     ONE_INCH_V4_ROUTER,
-    toRatio
+    toRatio,
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
@@ -266,19 +266,25 @@ describe('BasicBuyCommand', () => {
         })
 
         it('executes the trigger', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
-            await expect(executeTrigger(triggerId, targetRatio, triggerData)).not.to.be.reverted
+            await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
         it('clears the trigger if `continuous` is set to false', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
@@ -295,12 +301,15 @@ describe('BasicBuyCommand', () => {
         })
 
         it('keeps the trigger if `continuous` is set to true', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
             const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
 
