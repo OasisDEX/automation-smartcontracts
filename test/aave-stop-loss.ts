@@ -1,5 +1,5 @@
-import hre from 'hardhat'
-import { BigNumber as EthersBN, BytesLike, Contract, Signer } from 'ethers'
+import hre, { ethers } from 'hardhat'
+import { BigNumber as EthersBN, Contract, utils } from 'ethers'
 import {
     AutomationBot,
     DsProxyLike,
@@ -8,15 +8,20 @@ import {
     IAccountImplementation,
     AaveProxyActions,
 } from '../typechain'
-import { getEvents, HardhatUtils, encodeTriggerData, generateTpOrSlExecutionData } from '../scripts/common'
+import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { AccountFactory } from '../typechain/AccountFactory'
 import { AccountGuard } from '../typechain/AccountGuard'
+import BigNumber from 'bignumber.js'
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
-
-// Block dependent test, works for 13998517
+export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
+    const iface = new utils.Interface([
+        'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
+    ])
+    const pool = `0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`
+    return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
+}
 
 describe.only('AAVEStopLoss', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -32,13 +37,24 @@ describe.only('AAVEStopLoss', async () => {
     let snapshotId: string
 
     before(async () => {
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: 16133571,
+                    },
+                },
+            ],
+        })
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
         // executor is the deployer
         const executor = hre.ethers.provider.getSigner(0)
         const receiver = hre.ethers.provider.getSigner(1)
         executorAddress = await executor.getAddress()
         receiverAddress = await receiver.getAddress()
-
+        setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
         // DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
 
         AutomationBotInstance = system.automationBot
@@ -50,8 +66,11 @@ describe.only('AAVEStopLoss', async () => {
         const factoryReceipt = await (
             await factory.connect(receiver).functions['createAccount(address)'](receiverAddress)
         ).wait()
+
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         const proxyAddress = AccountCreatedEvent.args.proxy.toString()
+        console.log('receiverAddress', receiverAddress)
+        console.log('proxyAddress', proxyAddress)
         const account = (await hre.ethers.getContractAt(
             'IAccountImplementation',
             proxyAddress,
@@ -59,15 +78,83 @@ describe.only('AAVEStopLoss', async () => {
         // whitelist aave proxy actions
         await guard.connect(executor).setWhitelist(aave_pa.address, true)
 
-        const encodedData = aave_pa.interface.encodeFunctionData('openPosition')
-
-        const creationReceipt = await (
-            await account.connect(receiver).execute(aave_pa.address, encodedData, {
+        // 1. deposit 1 eth of collateral
+        const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
+        await (
+            await account.connect(receiver).execute(aave_pa.address, encodedOpenData, {
                 value: EthersBN.from(1).mul(EthersBN.from(10).pow(18)),
                 gasLimit: 3000000,
             })
         ).wait()
-        console.log(creationReceipt)
+
+        // 2. draw 1000 USDC debt
+        const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
+            hardhatUtils.addresses.USDC,
+            proxyAddress,
+            EthersBN.from(1000).mul(EthersBN.from(10).pow(6)),
+        ])
+
+        const drawDebtReceipt = await (
+            await account.connect(receiver).execute(aave_pa.address, encodedDrawDebtData, {
+                gasLimit: 3000000,
+            })
+        ).wait()
+
+        // 3. close vault using FL
+        const aToken = await ethers.getContractAt('ERC20', '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e')
+        const aTokenBalance = await aToken.balanceOf(proxyAddress)
+        console.log('aToken balance', aTokenBalance)
+
+        const amountInWei = aTokenBalance
+        const fee = EthersBN.from(20)
+        const feeBase = EthersBN.from(10000)
+        const data = await getSwap(
+            hardhatUtils.addresses.WETH,
+            hardhatUtils.addresses.USDC,
+            receiverAddress,
+            new BigNumber(aTokenBalance.toString()),
+            new BigNumber('10'),
+        )
+        //console.log(data)
+
+        await hardhatUtils.setTokenBalance(
+            aave_pa.address,
+            hardhatUtils.addresses.WETH,
+            hre.ethers.utils.parseEther('10'),
+        )
+        const exchangeData = {
+            fromAsset: hardhatUtils.addresses.WETH_AAVE,
+            toAsset: hardhatUtils.addresses.USDC,
+            amount: amountInWei.add(amountInWei.mul(fee).div(feeBase)),
+            receiveAtLeast: 0,
+            fee: fee,
+            withData: data.tx.data,
+            collectFeeInFromToken: false,
+        }
+        const aaveData = {
+            debtToken: hardhatUtils.addresses.USDC,
+            collateralToken: hardhatUtils.addresses.WETH_AAVE,
+            fundsReceiver: receiverAddress,
+        }
+
+        const serviceRegistry = {
+            aaveProxyActions: aave_pa.address,
+            lender: receiverAddress,
+            exchange: hardhatUtils.addresses.SWAP,
+        }
+        const encodedClosePositionData = aave_pa.interface.encodeFunctionData('closePosition', [
+            exchangeData,
+            aaveData,
+            serviceRegistry,
+        ])
+
+        const closePositionReceipt = await (
+            await account.connect(receiver).execute(aave_pa.address, encodedClosePositionData, {
+                gasLimit: 3000000,
+            })
+        ).wait()
+
+        //console.log(drawDebtReceipt)
     })
 
     describe('isTriggerDataValid', () => {

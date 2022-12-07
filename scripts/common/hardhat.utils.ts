@@ -60,6 +60,8 @@ export class HardhatUtils {
                 'DummyAaveWithdrawCommand',
                 this.addresses.AUTOMATION_DUMMY_AAVE,
             ),
+            dpmFactory: await this.hre.ethers.getContractAt('DpmFactory', this.addresses.DPM_FACTORY),
+            accountGuard: await this.hre.ethers.getContractAt('AccountGuard', this.addresses.DPM_GUARD),
         }
     }
 

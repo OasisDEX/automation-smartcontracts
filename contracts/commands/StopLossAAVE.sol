@@ -94,6 +94,7 @@ contract StopLossAAVE is ICommand {
             triggerData,
             (StopLossTriggerData)
         );
+
         /* 
         IAccountImplementation(stopLossTriggerData.positionAddress).execute(
             aaveProxyActions,
