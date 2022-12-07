@@ -8,8 +8,7 @@ interface IValidator {
         bytes[] memory triggersData
     ) external view returns (bool);
 
-    function decode(bytes[] memory triggersData)
-        external
-        view
-        returns (uint256[] calldata cdpIds, uint256[] calldata triggerTypes);
+    function decode(
+        bytes[] memory triggersData
+    ) external view returns (uint256[] calldata cdpIds, uint256[] calldata triggerTypes);
 }

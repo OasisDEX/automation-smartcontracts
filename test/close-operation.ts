@@ -485,6 +485,9 @@ describe('CloseCommand', async () => {
                     const receipt = await tx.wait()
                     console.log('gas used', receipt.gasUsed.toNumber())
 
+                    await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
+
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
 
                     expect(debt.toNumber()).to.be.equal(0)

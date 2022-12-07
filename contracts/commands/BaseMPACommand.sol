@@ -43,7 +43,9 @@ abstract contract BaseMPACommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function getVaultAndMarketInfo(uint256 cdpId)
+    function getVaultAndMarketInfo(
+        uint256 cdpId
+    )
         public
         view
         returns (
@@ -71,7 +73,7 @@ abstract contract BaseMPACommand is ICommand {
     }
 
     function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
-        return block.basefee <= maxAcceptableBaseFeeInGwei * (10**9);
+        return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
     }
 
     function deviationIsValid(uint256 deviation) public pure returns (bool) {
