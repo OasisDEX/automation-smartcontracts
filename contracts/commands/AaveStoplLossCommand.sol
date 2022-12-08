@@ -27,6 +27,7 @@ import {
 } from "../interfaces/AAVE/ILendingPoolAddressesProvider.sol";
 import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
+import "hardhat/console.sol";
 
 contract AaveStoplLossCommand is ICommand {
     IServiceRegistry public immutable serviceRegistry;
@@ -106,7 +107,7 @@ contract AaveStoplLossCommand is ICommand {
 
     function isTriggerDataValid(bool continuous, bytes memory triggerData)
         external
-        pure
+        view
         override
         returns (bool)
     {
@@ -114,6 +115,7 @@ contract AaveStoplLossCommand is ICommand {
             triggerData,
             (StopLossTriggerData)
         );
+
         return
             !continuous &&
             stopLossTriggerData.slLevel > 100 &&

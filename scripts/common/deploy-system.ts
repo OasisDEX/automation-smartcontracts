@@ -46,6 +46,8 @@ export interface DeployedSystem {
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
+    aaveAdapter: AAVEAdapter
+    dpmAdapter: DPMAdapter
     dummyAaveWithdrawCommand?: DummyAaveWithdrawCommand
     aaveProxyActions?: AaveProxyActions
     dpmFactory: AccountFactory
@@ -239,6 +241,8 @@ export async function deploySystem({
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
         makerAdapter: MakerAdapterInstance,
+        aaveAdapter: AAVEAdapterInstance,
+        dpmAdapter: DPMAdapterInstance,
         constantMultipleValidator: ConstantMultipleValidatorInstance,
         automationExecutor: AutomationExecutorInstance,
         mcdView: McdViewInstance,
@@ -379,6 +383,9 @@ export async function configureRegistryEntries(
             getCommandHash(10),
             system.aaveStoplLossCommand.address,
         )
+
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter.address)
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter.address, true)
     }
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)

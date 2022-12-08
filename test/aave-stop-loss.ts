@@ -8,6 +8,7 @@ import {
     IAccountImplementation,
     AaveProxyActions,
     AaveStoplLossCommand,
+    ILendingPool,
 } from '../typechain'
 import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
@@ -15,6 +16,7 @@ import { AccountFactory } from '../typechain/AccountFactory'
 import { AccountGuard } from '../typechain/AccountGuard'
 import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
+import { TriggerGroupType } from '@oasisdex/automation'
 
 describe.only('AaveStoplLossCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -29,6 +31,7 @@ describe.only('AaveStoplLossCommand', async () => {
     let executorAddress: string
     let snapshotId: string
     let aaveStopLoss: AaveStoplLossCommand
+    let aavePool: ILendingPool
 
     before(async () => {
         await hre.network.provider.request({
@@ -37,6 +40,7 @@ describe.only('AaveStoplLossCommand', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: 16140410,
                     },
                 },
             ],
@@ -48,7 +52,7 @@ describe.only('AaveStoplLossCommand', async () => {
         executorAddress = await executor.getAddress()
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
-        // DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
+        aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
 
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
@@ -64,6 +68,7 @@ describe.only('AaveStoplLossCommand', async () => {
 
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         const proxyAddress = AccountCreatedEvent.args.proxy.toString()
+        console.log('aaveStopLoss', aaveStopLoss.address)
         console.log('receiverAddress', receiverAddress)
         console.log('proxyAddress', proxyAddress)
         const account = (await hre.ethers.getContractAt(
@@ -72,6 +77,7 @@ describe.only('AaveStoplLossCommand', async () => {
         )) as IAccountImplementation
         // whitelist aave proxy actions
         await guard.connect(executor).setWhitelist(aave_pa.address, true)
+        await guard.connect(executor).setWhitelist(automationBotInstance.address, true)
 
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
@@ -94,6 +100,8 @@ describe.only('AaveStoplLossCommand', async () => {
                 gasLimit: 3000000,
             })
         ).wait()
+        let userData = await aavePool.getUserAccountData(proxyAddress)
+        const ltv = userData.totalDebtETH.mul(1000).div(userData.totalCollateralETH)
 
         // 3. close vault using FL
         const aToken = await ethers.getContractAt('ERC20', '0x030bA81f1c18d280636F32af80b9AAd02Cf0854e')
@@ -148,6 +156,22 @@ describe.only('AaveStoplLossCommand', async () => {
                 gasLimit: 3000000,
             })
         ).wait()
+
+        userData = await aavePool.getUserAccountData(proxyAddress)
+     
+        const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+        const trigerDecodedData = [proxyAddress, 10, hardhatUtils.addresses.WETH, hardhatUtils.addresses.USDC, ltv, 300]
+        const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+
+        const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SingleTrigger,
+            [false],
+            [0],
+            [triggerData],
+            [10],
+        ])
+        const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+       // executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
     })
 
     describe('isTriggerDataValid', () => {
@@ -156,7 +180,7 @@ describe.only('AaveStoplLossCommand', async () => {
 
     describe('execute', async () => {
         before(async () => {
-            console.log('befre')
+            //
         })
 
         describe('closeToCollateral operation', async () => {

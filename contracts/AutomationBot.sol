@@ -26,6 +26,7 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -132,8 +133,10 @@ contract AutomationBot {
         );
 
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
-        require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
+        console.log("za adapterem", address(adapter));
 
+        require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
+        console.log("za adapterem cancall");
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
                 getTriggersHash(triggerData, commandAddress),
