@@ -165,11 +165,11 @@ describe('AutoTakeProfitCommmand', async () => {
                         [triggerData],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
-                    
+
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
                     const txRes = await tx.wait()
-                    
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
