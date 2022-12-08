@@ -8,8 +8,8 @@ import { ISwap } from "./../interfaces/ISwap.sol";
 import "hardhat/console.sol";
 
 struct AaveData {
-    address collateralToken;
-    address debtToken;
+    address collateralTokenAddress;
+    address debtTokenAddress;
     address payable fundsReceiver;
 }
 
@@ -43,9 +43,11 @@ contract AaveProxyActions is IFlashLoanReceiver {
 
     struct FlData {
         address receiverAddress;
+        address initiator;
         address[] assets;
         uint256[] amounts;
         uint256[] modes;
+        uint256[] premiums;
         address onBehalfOf;
         bytes params;
         uint16 referralCode;
@@ -59,48 +61,72 @@ contract AaveProxyActions is IFlashLoanReceiver {
         address initiator,
         bytes calldata params
     ) external returns (bool) {
+        // stack too deep
+        FlData memory flData;
+        flData.amounts = amounts;
+        flData.assets = assets;
+        flData.premiums = premiums;
+        flData.initiator = initiator;
+        flData.params = params;
+
+        console.log("X----------------------");
+        console.log("| premium", flData.premiums[0]);
+        console.log("| amount", flData.amounts[0]);
+        console.log("| payback amount", flData.amounts[0] + flData.premiums[0]);
+        console.log("X----------------------");
+
         require(msg.sender == address(aave), "aapa/caller-must-be-lending-pool");
-        // total amount of FL to repay
-        uint256 paybackAmount = amounts[0] + premiums[0];
+        // require(initiator == address(aave), "aapa/caller-must-be-lending-pool");
+
         // FL token / debt token
         address debtTokenAddress = assets[0];
         IERC20 debtToken = IERC20(debtTokenAddress);
-        console.log("X----------------------");
-        console.log("| premium", premiums[0]);
-        console.log("| amount", amounts[0]);
-        console.log("| payback amount", paybackAmount);
-        console.log("X----------------------");
+
         // repay debt of initiator (proxy) that equals to
-        repayDebt(debtTokenAddress, amounts[0], initiator);
+        repayDebt(debtTokenAddress, flData.amounts[0], flData.initiator);
 
         (
             address collateralATokenAddress,
-            address collateralToken,
+            address collateralTokenAddress,
             address exchangeAddress,
             EarnSwapData.SwapData memory exchangeData
-        ) = abi.decode(params, (address, address, address, EarnSwapData.SwapData));
+        ) = abi.decode(flData.params, (address, address, address, EarnSwapData.SwapData));
+        IERC20 collateralToken = IERC20(collateralTokenAddress);
+        uint256 aTokenBalance = IERC20(collateralATokenAddress).balanceOf(flData.initiator);
 
-        uint256 aTokenBalance = IERC20(collateralATokenAddress).balanceOf(initiator);
         // pull tokens from proxy
-        IERC20(collateralATokenAddress).transferFrom(initiator, address(this), aTokenBalance);
-        aave.withdraw(collateralToken, (type(uint256).max), address(this));
-
-        debtToken.approve(address(aave), paybackAmount);
-        IERC20(collateralToken).approve(exchangeAddress, type(uint256).max);
-        uint256 collTokenBalance = IERC20(collateralToken).balanceOf(address(this));
-        console.log("collateral balance :", collTokenBalance);
-        uint256 a = ISwap(exchangeAddress).swapTokens(exchangeData);
-        console.log("returned from swap", a);
-        uint256 usdBalance = debtToken.balanceOf(address(this));
-        debtToken.transfer(initiator, usdBalance - paybackAmount);
-        IERC20(collateralToken).transfer(
-            initiator,
-            IERC20(collateralToken).balanceOf(address(this))
+        IERC20(collateralATokenAddress).transferFrom(
+            flData.initiator,
+            address(this),
+            aTokenBalance
         );
+        // withdraw colateral - we use max to get all of collateral
+        aave.withdraw(collateralTokenAddress, (type(uint256).max), address(this));
+        // approve swap to be able to transfer out the collateral token - TODO change max to actual aToken/coll token  balance
+        collateralToken.approve(exchangeAddress, type(uint256).max);
+
+        uint256 paybackReceivedFromSwap = ISwap(exchangeAddress).swapTokens(exchangeData);
+        console.log("returned from swap", paybackReceivedFromSwap);
+        require(
+            paybackReceivedFromSwap > (flData.amounts[0] + flData.premiums[0]),
+            "aapa/recieved-too-little-from-swap"
+        );
+        uint256 usdBalance = debtToken.balanceOf(address(this));
+        // send remaining debtToken to proxy TODO - send to user
+        debtToken.transfer(flData.initiator, usdBalance - (flData.amounts[0] + flData.premiums[0]));
+        // send remaining collateralToken to proxy TODO - send to user
+        collateralToken.transfer(flData.initiator, collateralToken.balanceOf(address(this)));
+
+        // approve pool to be able payback the loan
+        debtToken.approve(address(aave), flData.amounts[0] + flData.premiums[0]);
+
+        // logging to be sure
         usdBalance = debtToken.balanceOf(address(this));
-        console.log("usdBalance", usdBalance);
-        collTokenBalance = IERC20(collateralToken).balanceOf(address(this));
-        console.log("collateral balance :", collTokenBalance);
+        console.log("X----------------------");
+        console.log("| usdBalance = loan + premium => ", usdBalance);
+        uint256 collTokenBalance = collateralToken.balanceOf(address(this));
+        console.log("| collateral balance = 0 ? => ", collTokenBalance);
+        console.log("X----------------------");
 
         return true;
     }
@@ -111,10 +137,12 @@ contract AaveProxyActions is IFlashLoanReceiver {
         AddressRegistry calldata addressRegistry
     ) public {
         DataTypes.ReserveData memory collReserveData = aave.getReserveData(
-            aaveData.collateralToken
+            aaveData.collateralTokenAddress
         );
 
-        DataTypes.ReserveData memory debtReserveData = aave.getReserveData(aaveData.debtToken);
+        DataTypes.ReserveData memory debtReserveData = aave.getReserveData(
+            aaveData.debtTokenAddress
+        );
         console.log(
             "debtReserveData.variableDebtTokenAddress",
             debtReserveData.variableDebtTokenAddress
@@ -131,7 +159,7 @@ contract AaveProxyActions is IFlashLoanReceiver {
             FlData memory flData;
 
             address[] memory debtTokens = new address[](1);
-            debtTokens[0] = address(aaveData.debtToken);
+            debtTokens[0] = address(aaveData.debtTokenAddress);
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = (101 * totalToRepay) / 100;
             uint256[] memory modes = new uint256[](1);
@@ -144,7 +172,7 @@ contract AaveProxyActions is IFlashLoanReceiver {
             flData.onBehalfOf = address(this);
             flData.params = abi.encode(
                 collReserveData.aTokenAddress,
-                aaveData.collateralToken,
+                aaveData.collateralTokenAddress,
                 addressRegistry.exchange,
                 exchangeData
             );

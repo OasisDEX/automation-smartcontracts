@@ -7,6 +7,7 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
+    AaveStoplLossCommand,
 } from '../typechain'
 import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
@@ -15,19 +16,11 @@ import { AccountGuard } from '../typechain/AccountGuard'
 import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 
-export function forgeUnoswapCalldata(fromToken: string, fromAmount: string, toAmount: string, toDai = true): string {
-    const iface = new utils.Interface([
-        'function unoswap(address srcToken, uint256 amount, uint256 minReturn, bytes32[] calldata pools) public payable returns(uint256 returnAmount)',
-    ])
-    const pool = `0x${toDai ? '8' : '0'}0000000000000003b6d0340a478c2975ab1ea89e8196811f51a7b7ade33eb11`
-    return iface.encodeFunctionData('unoswap', [fromToken, fromAmount, toAmount, [pool]])
-}
-
-describe.only('AAVEStopLoss', async () => {
+describe.only('AaveStoplLossCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
-    let AutomationBotInstance: AutomationBot
-    let AutomationExecutorInstance: AutomationExecutor
+    let automationBotInstance: AutomationBot
+    let automationExecutorInstance: AutomationExecutor
     let DAIInstance: Contract
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
@@ -35,6 +28,7 @@ describe.only('AAVEStopLoss', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
+    let aaveStopLoss: AaveStoplLossCommand
 
     before(async () => {
         await hre.network.provider.request({
@@ -43,7 +37,6 @@ describe.only('AAVEStopLoss', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16133571,
                     },
                 },
             ],
@@ -57,8 +50,10 @@ describe.only('AAVEStopLoss', async () => {
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
         // DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
 
-        AutomationBotInstance = system.automationBot
-        // AutomationExecutorInstance = system.automationExecutor
+        automationBotInstance = system.automationBot
+        automationExecutorInstance = system.automationExecutor
+        aaveStopLoss = system.aaveStoplLossCommand!
+
         const factory = system.dpmFactory as AccountFactory
         const aave_pa = system.aaveProxyActions as AaveProxyActions
         const guard = system.accountGuard as AccountGuard
@@ -132,8 +127,8 @@ describe.only('AAVEStopLoss', async () => {
             collectFeeInFromToken: false,
         }
         const aaveData = {
-            debtToken: hardhatUtils.addresses.USDC,
-            collateralToken: hardhatUtils.addresses.WETH_AAVE,
+            debtTokenAddress: hardhatUtils.addresses.USDC,
+            collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
             fundsReceiver: receiverAddress,
         }
 
@@ -153,8 +148,6 @@ describe.only('AAVEStopLoss', async () => {
                 gasLimit: 3000000,
             })
         ).wait()
-
-        //console.log(drawDebtReceipt)
     })
 
     describe('isTriggerDataValid', () => {

@@ -28,7 +28,7 @@ import {
 import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 
-contract StopLossAAVE is ICommand {
+contract AaveStoplLossCommand is ICommand {
     IServiceRegistry public immutable serviceRegistry;
     // goerli - 0x4bd5643ac6f66a5237E18bfA7d47cF22f1c9F210
     // mainnet - 0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9
