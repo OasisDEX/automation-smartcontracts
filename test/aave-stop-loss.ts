@@ -158,9 +158,16 @@ describe.only('AaveStoplLossCommand', async () => {
         ).wait()
 
         userData = await aavePool.getUserAccountData(proxyAddress)
-     
+
         const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
-        const trigerDecodedData = [proxyAddress, 10, hardhatUtils.addresses.WETH, hardhatUtils.addresses.USDC, ltv, 300]
+        const trigerDecodedData = [
+            proxyAddress,
+            10,
+            hardhatUtils.addresses.WETH,
+            hardhatUtils.addresses.USDC,
+            ltv.sub(1),
+            300,
+        ]
         const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
 
         const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -170,8 +177,9 @@ describe.only('AaveStoplLossCommand', async () => {
             [triggerData],
             [10],
         ])
+
         const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-       // executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
+        // executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
     })
 
     describe('isTriggerDataValid', () => {

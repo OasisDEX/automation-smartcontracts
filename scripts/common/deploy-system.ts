@@ -144,6 +144,12 @@ export async function deploySystem({
 
     if (logDebug) console.log('Deploying AutomationBot....')
 
+    const GuardInstance: AccountGuard = await utils.deployContract(ethers.getContractFactory('AccountGuard'), [])
+
+    const DmpFactoryInstance: AccountFactory = await utils.deployContract(ethers.getContractFactory('AccountFactory'), [
+        GuardInstance.address,
+    ])
+
     const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
         ServiceRegistryInstance.address,
         addresses.DAI,
@@ -151,18 +157,12 @@ export async function deploySystem({
 
     const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
         ServiceRegistryInstance.address,
-        addresses.DAI,
+        GuardInstance.address,
     ])
 
     const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         ServiceRegistryInstance.address,
         addresses.DAI,
-    ])
-
-    const GuardInstance: AccountGuard = await utils.deployContract(ethers.getContractFactory('AccountGuard'), [])
-
-    const DmpFactoryInstance: AccountFactory = await utils.deployContract(ethers.getContractFactory('AccountFactory'), [
-        GuardInstance.address,
     ])
 
     const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
