@@ -98,7 +98,7 @@ contract AaveStoplLossCommand is ICommand {
 
         IAccountImplementation(stopLossTriggerData.positionAddress).execute(
             address(aaveProxyActions),
-            abi.encodeWithSelector(AaveProxyActions.closePosition.selector, executionData)
+            executionData
         );
 
         //require(status, "execution failed");

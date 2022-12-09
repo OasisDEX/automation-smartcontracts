@@ -71,6 +71,8 @@ describe.only('AaveStoplLossCommand', async () => {
         console.log('aaveStopLoss', aaveStopLoss.address)
         console.log('receiverAddress', receiverAddress)
         console.log('proxyAddress', proxyAddress)
+        console.log('bot', automationBotInstance.address)
+        console.log('executor', automationExecutorInstance.address)
         const account = (await hre.ethers.getContractAt(
             'IAccountImplementation',
             proxyAddress,
@@ -79,6 +81,7 @@ describe.only('AaveStoplLossCommand', async () => {
         await guard.connect(executor).setWhitelist(aave_pa.address, true)
         await guard.connect(executor).setWhitelist(automationBotInstance.address, true)
         await guard.connect(receiver).permit(automationBotInstance.address, proxyAddress, true)
+        await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
         await (
@@ -146,7 +149,9 @@ describe.only('AaveStoplLossCommand', async () => {
             exchange: hardhatUtils.addresses.SWAP,
         }
         const encodedClosePositionData = aave_pa.interface.encodeFunctionData('closePosition', [
-            [exchangeData, aaveData, serviceRegistry],
+            exchangeData,
+            aaveData,
+            serviceRegistry,
         ])
         // dont close for now use automation
         /*         const closePositionReceipt = await (
