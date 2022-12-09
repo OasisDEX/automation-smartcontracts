@@ -41,6 +41,12 @@ contract AaveProxyActions is IFlashLoanReceiver {
         aave = ILendingPool(_aave);
     }
 
+    struct ExecutionData {
+        EarnSwapData.SwapData exchangeData;
+        AaveData aaveData;
+        AddressRegistry addressRegistry;
+    }
+
     struct FlData {
         address receiverAddress;
         address initiator;
@@ -131,17 +137,13 @@ contract AaveProxyActions is IFlashLoanReceiver {
         return true;
     }
 
-    function closePosition(
-        EarnSwapData.SwapData calldata exchangeData,
-        AaveData memory aaveData,
-        AddressRegistry calldata addressRegistry
-    ) public {
+    function closePosition(ExecutionData calldata executionData) public {
         DataTypes.ReserveData memory collReserveData = aave.getReserveData(
-            aaveData.collateralTokenAddress
+            executionData.aaveData.collateralTokenAddress
         );
 
         DataTypes.ReserveData memory debtReserveData = aave.getReserveData(
-            aaveData.debtTokenAddress
+            executionData.aaveData.debtTokenAddress
         );
         console.log(
             "debtReserveData.variableDebtTokenAddress",
@@ -152,29 +154,29 @@ contract AaveProxyActions is IFlashLoanReceiver {
         );
         // TODO change to actual aToken balance
         IERC20(collReserveData.aTokenAddress).approve(
-            addressRegistry.aaveProxyActions,
+            executionData.addressRegistry.aaveProxyActions,
             type(uint256).max
         );
         {
             FlData memory flData;
 
             address[] memory debtTokens = new address[](1);
-            debtTokens[0] = address(aaveData.debtTokenAddress);
+            debtTokens[0] = address(executionData.aaveData.debtTokenAddress);
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = (101 * totalToRepay) / 100;
             uint256[] memory modes = new uint256[](1);
             modes[0] = uint256(0);
 
-            flData.receiverAddress = addressRegistry.aaveProxyActions;
+            flData.receiverAddress = executionData.addressRegistry.aaveProxyActions;
             flData.assets = debtTokens;
             flData.amounts = amounts;
             flData.modes = modes;
             flData.onBehalfOf = address(this);
             flData.params = abi.encode(
                 collReserveData.aTokenAddress,
-                aaveData.collateralTokenAddress,
-                addressRegistry.exchange,
-                exchangeData
+                executionData.aaveData.collateralTokenAddress,
+                executionData.addressRegistry.exchange,
+                executionData.exchangeData
             );
             flData.referralCode = 0;
             aave.flashLoan(

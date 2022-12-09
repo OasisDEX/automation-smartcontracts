@@ -78,7 +78,7 @@ describe.only('AaveStoplLossCommand', async () => {
         // whitelist aave proxy actions
         await guard.connect(executor).setWhitelist(aave_pa.address, true)
         await guard.connect(executor).setWhitelist(automationBotInstance.address, true)
-
+        await guard.connect(receiver).permit(automationBotInstance.address, proxyAddress, true)
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
         await (
@@ -146,16 +146,14 @@ describe.only('AaveStoplLossCommand', async () => {
             exchange: hardhatUtils.addresses.SWAP,
         }
         const encodedClosePositionData = aave_pa.interface.encodeFunctionData('closePosition', [
-            exchangeData,
-            aaveData,
-            serviceRegistry,
+            [exchangeData, aaveData, serviceRegistry],
         ])
-
-        const closePositionReceipt = await (
+        // dont close for now use automation
+        /*         const closePositionReceipt = await (
             await account.connect(receiver).execute(aave_pa.address, encodedClosePositionData, {
                 gasLimit: 3000000,
             })
-        ).wait()
+        ).wait() */
 
         userData = await aavePool.getUserAccountData(proxyAddress)
 
@@ -177,9 +175,22 @@ describe.only('AaveStoplLossCommand', async () => {
             [triggerData],
             [10],
         ])
-
+        // add trigger
         const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-        // executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
+        //executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
+        // execute trigger
+        const tx2 = await automationExecutorInstance.execute(
+            encodedClosePositionData,
+            0,
+            triggerData,
+            aaveStopLoss.address,
+            '1',
+            '0',
+            '0',
+            178000,
+            hardhatUtils.addresses.USDC,
+            { gasLimit: 3000000 },
+        )
     })
 
     describe('isTriggerDataValid', () => {
