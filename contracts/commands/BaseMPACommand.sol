@@ -43,7 +43,9 @@ abstract contract BaseMPACommand is ICommand {
         serviceRegistry = _serviceRegistry;
     }
 
-    function getVaultAndMarketInfo(uint256 cdpId)
+    function getVaultAndMarketInfo(
+        uint256 cdpId
+    )
         public
         view
         returns (
@@ -71,7 +73,7 @@ abstract contract BaseMPACommand is ICommand {
     }
 
     function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
-        return block.basefee <= maxAcceptableBaseFeeInGwei * (10**9);
+        return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
     }
 
     function deviationIsValid(uint256 deviation) public pure returns (bool) {
@@ -92,22 +94,5 @@ abstract contract BaseMPACommand is ICommand {
             .getRegisteredService(MPA_KEY)
             .delegatecall(executionData);
         require(status, string(reason));
-    }
-
-    function recreateTrigger(
-        uint256 cdpId,
-        uint16 triggerType,
-        bytes memory triggerData
-    ) internal virtual {
-        (bool status, ) = msg.sender.delegatecall(
-            abi.encodeWithSelector(
-                AutomationBot(msg.sender).addTrigger.selector,
-                cdpId,
-                triggerType,
-                0,
-                triggerData
-            )
-        );
-        require(status, "base-mpa-command/trigger-recreation-failed");
     }
 }

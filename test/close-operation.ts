@@ -11,9 +11,9 @@ import {
     ONE_INCH_V4_ROUTER,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
@@ -46,7 +46,6 @@ describe('CloseCommand', async () => {
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as CloseCommand
         McdViewInstance = system.mcdView
-
         await McdViewInstance.approve(executorAddress, true)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -57,6 +56,10 @@ describe('CloseCommand', async () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, McdViewInstance.address)
+    })
+
+    describe('isTriggerDataValid', () => {
+        //TODO: add test checking that continuous true is disallowed
     })
 
     describe('execute', async () => {
@@ -142,17 +145,18 @@ describe('CloseCommand', async () => {
                         exchangeData,
                         serviceRegistry,
                     )
-
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.StopLossToCollateral,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [1],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -172,6 +176,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -210,15 +215,17 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.StopLossToCollateral,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [1],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -235,6 +242,7 @@ describe('CloseCommand', async () => {
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -248,7 +256,7 @@ describe('CloseCommand', async () => {
                     )
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -268,6 +276,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -279,10 +288,11 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
@@ -313,8 +323,10 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
+                    await tx.wait()
                     const receipt = await tx.wait()
                     console.log('gas used', receipt.gasUsed.toNumber())
 
@@ -370,15 +382,17 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.StopLossToDai,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [2],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -398,6 +412,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -429,15 +444,17 @@ describe('CloseCommand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.StopLossToDai,
-                        0,
-                        triggersData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggersData],
+                        [2],
                     ])
-                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
+                    const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })
@@ -461,9 +478,14 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
+                    await tx.wait()
 
                     const receipt = await tx.wait()
+                    console.log('gas used', receipt.gasUsed.toNumber())
+
+                    await tx.wait()
                     console.log('gas used', receipt.gasUsed.toNumber())
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -472,7 +494,7 @@ describe('CloseCommand', async () => {
                     expect(collateral.toNumber()).to.be.equal(0)
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -491,6 +513,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -502,10 +525,11 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
-
+                    console.log(`execution cost : ${receipt.gasUsed}`)
                     await expect(tx).not.to.be.reverted
                     const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
                     const executorBalanceAfter = await hre.ethers.provider.getBalance(
@@ -536,6 +560,7 @@ describe('CloseCommand', async () => {
                         0,
                         0,
                         178000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

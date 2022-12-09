@@ -11,9 +11,9 @@ import {
     generateTpOrSlExecutionData,
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
-const testCdpId = parseInt(process.env.CDP_ID || '26125')
+const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
@@ -158,11 +158,12 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AutoTakeProfitToCollateral,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [TriggerType.AutoTakeProfitToCollateral],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -186,6 +187,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -228,18 +230,19 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AutoTakeProfitToCollateral,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [TriggerType.AutoTakeProfitToCollateral],
                     ])
 
                     // manipulate the next price to pass the trigger validation
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
                     const updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(1000000).toString()).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
@@ -263,6 +266,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const receipt = await tx.wait()
@@ -286,6 +290,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -299,7 +304,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -319,6 +324,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -329,6 +335,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -399,11 +406,12 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AutoTakeProfitToDai,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [TriggerType.AutoTakeProfitToDai],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -427,6 +435,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
@@ -459,11 +468,12 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
 
                     // addTrigger
-                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTrigger', [
-                        testCdpId,
-                        TriggerType.AutoTakeProfitToDai,
-                        0,
-                        triggerData,
+                    const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [TriggerType.AutoTakeProfitToDai],
                     ])
 
                     // manipulate the next price to pass the trigger validation
@@ -471,16 +481,26 @@ describe('AutoTakeProfitCommmand', async () => {
                     const osmAddress = await osmMom.osms(ethAIlk)
 
                     const nextPriceStorage = await hre.ethers.provider.getStorageAt(osmAddress, 4)
-                    const updatedNextPrice = hre.ethers.utils.hexConcat([
+                    let updatedNextPrice = hre.ethers.utils.hexConcat([
                         hre.ethers.utils.hexZeroPad('0x1', 16),
-                        hre.ethers.utils.hexZeroPad(EthersBN.from('3592759999999999999999').toHexString(), 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.sub(1000000).toString()).toHexString(), 16),
                     ])
 
                     await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
+                    console.log('Adding trigger')
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
+                    console.log('trigger added')
+
+                    updatedNextPrice = hre.ethers.utils.hexConcat([
+                        hre.ethers.utils.hexZeroPad('0x1', 16),
+                        hre.ethers.utils.hexZeroPad(EthersBN.from(nextPrice.toString()).toHexString(), 16),
+                    ])
+
+                    await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
 
                     const txRes = await tx.wait()
+
                     const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
 
@@ -507,6 +527,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
                     const receipt = await tx.wait()
                     console.log('         gas used', receipt.gasUsed.toNumber())
@@ -517,7 +538,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     expect(collateral.toNumber()).to.be.equal(0)
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -536,6 +557,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -547,6 +569,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -583,6 +606,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         0,
                         0,
                         185000,
+                        hardhatUtils.addresses.DAI,
                     )
 
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)

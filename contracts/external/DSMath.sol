@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 contract DSMath {
@@ -34,8 +34,8 @@ contract DSMath {
         return x >= y ? x : y;
     }
 
-    uint256 internal constant WAD = 10**18;
-    uint256 internal constant RAY = 10**27;
+    uint256 internal constant WAD = 10 ** 18;
+    uint256 internal constant RAY = 10 ** 27;
 
     function wmul(uint256 x, uint256 y) internal pure returns (uint256 z) {
         z = add(mul(x, y), WAD / 2) / WAD;

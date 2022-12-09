@@ -13,7 +13,7 @@ import {
 } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
@@ -30,12 +30,13 @@ describe('BasicBuyCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BasicBuy,
-            0,
-            triggerData,
+    const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
+        const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SingleTrigger,
+            [continuous],
+            [0],
+            [triggerData],
+            [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data)
@@ -78,11 +79,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicBuy, false)).to.be.reverted
         })
 
         it('should fail if target target coll ratio is lte liquidation ratio', async () => {
@@ -93,11 +93,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicBuy, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
@@ -108,20 +107,20 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicBuy, false)).to.be.reverted
         })
 
-        it('should fail if trigger type is not encoded correctly', async () => {
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
+            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.StopLossToCollateral, executionRatio, targetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicBuy, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
@@ -132,11 +131,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicBuy, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
@@ -147,11 +145,10 @@ describe('BasicBuyCommand', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData)
+            const tx = createTrigger(triggerData, TriggerType.BasicBuy, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -171,11 +168,10 @@ describe('BasicBuyCommand', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),
-                continuous,
                 50,
                 maxGweiPrice,
             )
-            const createTriggerTx = await createTrigger(triggerData)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.BasicBuy, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
@@ -257,6 +253,7 @@ describe('BasicBuyCommand', () => {
                 0,
                 0,
                 0,
+                hardhatUtils.addresses.DAI,
             )
         }
 
@@ -268,40 +265,64 @@ describe('BasicBuyCommand', () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it('executes the trigger', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+        it('executes the trigger [ @skip-on-coverage ]', async () => {
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
-            await expect(executeTrigger(triggerId, targetRatio, triggerData)).not.to.be.reverted
+            await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('does not recreate the trigger if `continuous` is set to false', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+        it('clears the trigger if `continuous` is set to false [ @skip-on-coverage ]', async () => {
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(addEvents.length).to.eq(0)
+            const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
+            expect(executeEvents.length).to.eq(1)
+            expect(removeEvents.length).to.eq(1)
+            expect(finalTriggerRecord.triggerHash).to.eq(
+                '0x0000000000000000000000000000000000000000000000000000000000000000',
+            )
+            expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
-        it('recreates the trigger if `continuous` is set to true', async () => {
-            const executionRatio = toRatio(2.55)
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
+        it('keeps the trigger if `continuous` is set to true [ @skip-on-coverage ]', async () => {
+            const rawRatio = await system.mcdView.getRatio(testCdpId, true)
+            const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+            console.log('ratioAtNext', ratioAtNext)
+            const executionRatio = toRatio(ratioAtNext - 0.01)
+            const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
+
+            const triggerHash = hre.ethers.utils.solidityKeccak256(
+                ['bytes', 'address', 'address'],
+                [triggerData, system.serviceRegistry.address, system.basicBuy?.address],
+            )
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(1)
-            const [event] = events
-            expect(event.args.triggerData).to.eq(triggerData)
-            expect(event.args.commandAddress).to.eq(system.basicBuy!.address)
-            expect(event.args.cdpId).to.eq(testCdpId)
+            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            expect(finalTriggerRecord.triggerHash).to.eq(triggerHash)
+            expect(finalTriggerRecord.continuous).to.eq(true)
+            expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })
 })

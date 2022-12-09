@@ -19,6 +19,14 @@ export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }
 
+export function getAdapterNameHash(command: string) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['Adapter', command]))
+}
+
+export function getExecuteAdapterNameHash(command: string) {
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['AdapterExecute', command]))
+}
+
 export function getEvents(receipt: ContractReceipt, eventAbi: utils.EventFragment) {
     const iface = new utils.Interface([eventAbi])
     const filteredEvents = receipt.logs?.filter(({ topics }) => topics[0] === iface.getEventTopic(eventAbi.name))
@@ -40,21 +48,34 @@ export function generateRandomAddress() {
 }
 
 function getTriggerDataTypes(triggerType: TriggerType) {
+    //TODO: That should be extractable from common
     switch (triggerType) {
         case TriggerType.StopLossToCollateral:
         case TriggerType.StopLossToDai:
             return ['uint256', 'uint16', 'uint256']
         case TriggerType.AutoTakeProfitToCollateral:
         case TriggerType.AutoTakeProfitToDai:
-            //    uint256 cdpId, uint16 triggerType, uint256 executionPrice, uint32 maxBaseFeeInGwei;
             return ['uint256', 'uint16', 'uint256', 'uint32']
-
         case TriggerType.BasicBuy:
-            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 maxBuyPrice, bool continuous, uint64 deviation, uint32 baseFee
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
+            return [
+                'uint256',
+                'uint16',
+                'uint256',
+                'uint256',
+                'uint256',
+                /* 'bool', TODO: Handle past triggers */ 'uint64',
+                `uint32`,
+            ]
         case TriggerType.BasicSell:
-            // uint256 cdpId, uint16 triggerType, uint256 execCollRatio, uint256 targetCollRatio, uint256 minSellPrice, bool continuous, uint64 deviation, uint32 baseFee
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', `uint32`]
+            return [
+                'uint256',
+                'uint16',
+                'uint256',
+                'uint256',
+                'uint256',
+                /*  'bool', TODO: Handle past triggers */ 'uint64',
+                `uint32`,
+            ]
 
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)

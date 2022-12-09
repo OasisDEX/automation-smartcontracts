@@ -431,7 +431,7 @@ export class TriggerExecutor {
         args: BaseExecutionArgs,
     ) {
         const { automationExecutor, automationBot } = await this.hardhatUtils.getDefaultSystem()
-
+        // TODO: consider other coverage tokens
         const transactionData = {
             to: automationExecutor.address,
             data: automationExecutor.interface.encodeFunctionData('execute', [
@@ -443,6 +443,7 @@ export class TriggerExecutor {
                 0,
                 0,
                 args.refund.toNumber(),
+                this.addresses.DAI,
             ]),
         }
 

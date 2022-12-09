@@ -1,19 +1,20 @@
 import hre from 'hardhat'
-import { BytesLike, utils, BigNumber as EtherBN } from 'ethers'
+import { BytesLike, utils, BigNumber as EthersBN } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { BigNumber } from 'bignumber.js'
 import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, toRatio } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import { DsProxyLike, MPALike } from '../typechain'
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-// BLOCK_NUMBER=14997398
 describe('BasicSellCommand', () => {
-    const [correctExecutionRatio, correctTargetRatio] = [toRatio(2.6), toRatio(2.8)]
+    let correctExecutionRatio: number
+    let correctTargetRatio: number
+
     const [incorrectExecutionRatio, incorrectTargetRatio] = [toRatio(1.52), toRatio(1.51)]
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
@@ -26,12 +27,13 @@ describe('BasicSellCommand', () => {
     let executorAddress: string
     let snapshotId: string
 
-    const createTrigger = async (triggerData: BytesLike) => {
-        const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
-            testCdpId,
-            TriggerType.BasicSell,
-            0,
-            triggerData,
+    const createTrigger = async (triggerData: BytesLike, triggerType: TriggerType, continuous: boolean) => {
+        const data = system.automationBot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SingleTrigger,
+            [continuous],
+            [0],
+            [triggerData],
+            [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
         return usersProxy.connect(signer).execute(system.automationBot.address, data)
@@ -55,6 +57,11 @@ describe('BasicSellCommand', () => {
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+
+        const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        correctExecutionRatio = toRatio(ratioAtNext + 0.01)
+        correctTargetRatio = toRatio(ratioAtNext + 0.03)
     })
 
     beforeEach(async () => {
@@ -73,11 +80,10 @@ describe('BasicSellCommand', () => {
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
@@ -87,11 +93,10 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
@@ -101,19 +106,19 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                false,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
-        it('should fail if trigger type is not encoded correctly', async () => {
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
+            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
                 ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
                 [testCdpId, TriggerType.StopLossToCollateral, correctExecutionRatio, correctTargetRatio, 0, false],
             )
-            await expect(createTrigger(triggerData)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
@@ -123,11 +128,10 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                false,
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData)
+            const tx = createTrigger(triggerData, TriggerType.BasicSell, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -147,12 +151,11 @@ describe('BasicSellCommand', () => {
                 TriggerType.BasicSell,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
-                new BigNumber(4000).shiftedBy(18).toFixed(),
-                continuous,
+                new BigNumber(100).shiftedBy(18).toFixed(),
                 50,
                 maxBaseFee,
             )
-            const createTriggerTx = await createTrigger(triggerData)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.BasicSell, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
@@ -236,6 +239,7 @@ describe('BasicSellCommand', () => {
                 0,
                 0,
                 0,
+                hardhatUtils.addresses.DAI,
             )
         }
 
@@ -257,28 +261,38 @@ describe('BasicSellCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
-            await (
-                await usersProxy
-                    .connect(await hardhatUtils.impersonate(proxyOwnerAddress))
-                    .execute(
-                        system.mcdUtils.address,
-                        system.mcdUtils.interface.encodeFunctionData('drawDebt', [
-                            EtherBN.from(10).pow(18).mul(1_010_000),
-                            testCdpId,
-                            hardhatUtils.addresses.CDP_MANAGER,
-                            proxyOwnerAddress,
-                        ]),
-                    )
-            ).wait()
-
+        it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price [ @skip-on-coverage ]', async () => {
             const ratio = await system.mcdView.getRatio(testCdpId, false)
-            const nextRatio = await system.mcdView.getRatio(testCdpId, true)
+            let nextRatio = await system.mcdView.getRatio(testCdpId, true)
+            const oraclePrice = await system.mcdView.getPrice(ethAIlk)
+
+            console.log('ratio', ratio.toString())
+            console.log('nextRatio', nextRatio.toString())
+
+            const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+            const osmAddress = await osmMom.osms(ethAIlk)
 
             const manager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
             const ilk = await manager.ilks(testCdpId)
             const spot = await hre.ethers.getContractAt('SpotterLike', hardhatUtils.addresses.MCD_SPOT)
             const [, liqRatio] = await spot.ilks(ilk)
+
+            const newNextPrice = oraclePrice.div(nextRatio).mul(liqRatio.div(1000000000)).toString()
+
+            console.log('nextRatio', nextRatio.toString())
+            console.log('liqRatio', liqRatio.toString())
+            console.log('oraclePrice', oraclePrice.toString())
+            console.log('newNextPrice', newNextPrice)
+
+            const updatedNextPrice = hre.ethers.utils.hexConcat([
+                hre.ethers.utils.hexZeroPad('0x1', 16),
+                hre.ethers.utils.hexZeroPad(EthersBN.from(newNextPrice.toString()).toHexString(), 16),
+            ])
+
+            await hre.ethers.provider.send('hardhat_setStorageAt', [osmAddress, '0x4', updatedNextPrice])
+
+            nextRatio = await system.mcdView.getRatio(testCdpId, true)
+
             expect(ratio).to.be.gt(liqRatio.div(1e9))
             expect(nextRatio).to.be.lt(liqRatio.div(1e9))
 
@@ -288,7 +302,7 @@ describe('BasicSellCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('does not recreate the trigger if `continuous` is set to false', async () => {
+        it('clears trigger if `continuous` is set to false', async () => {
             const executionRatio = correctExecutionRatio
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
@@ -296,24 +310,34 @@ describe('BasicSellCommand', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(addEvents.length).to.eq(0)
+            const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            const executeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerExecuted'))
+            expect(executeEvents.length).to.eq(1)
+            expect(removeEvents.length).to.eq(1)
+            expect(finalTriggerRecord.triggerHash).to.eq(
+                '0x0000000000000000000000000000000000000000000000000000000000000000',
+            )
+            expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
-        it('recreates the trigger if `continuous` is set to true', async () => {
+        it('keeps trigger if `continuous` is set to true', async () => {
             const executionRatio = correctExecutionRatio
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
+            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.eq(1)
-            const [event] = events
-            expect(event.args.triggerData).to.eq(triggerData)
-            expect(event.args.commandAddress).to.eq(system.basicSell!.address)
-            expect(event.args.cdpId).to.eq(testCdpId)
+            expect(events.length).to.eq(0)
+            const removeEvent = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
+            expect(removeEvent.length).to.eq(0)
+            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })
 })

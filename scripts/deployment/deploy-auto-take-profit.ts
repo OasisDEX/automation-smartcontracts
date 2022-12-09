@@ -19,10 +19,10 @@ async function main() {
     console.log(`AutoTakeProfitCommand Deployed: ${system.autoTakeProfitCommand.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AutoTakeProfitToCollateral),
+        getCommandHash(TriggerType.AutoTakeProfitToDai),
     ])
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.AutoTakeProfitToDai),
+        getCommandHash(TriggerType.AutoTakeProfitToCollateral),
     ])
 }
 

@@ -1,4 +1,4 @@
-//SPDX-License-Identifier: Unlicense
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
 import "../interfaces/ICommand.sol";
@@ -40,29 +40,23 @@ contract DummyCommand is ICommand {
         revertsInExecute = _revertsInExecute;
     }
 
-    function isTriggerDataValid(uint256, bytes memory) external view override returns (bool) {
+    function isTriggerDataValid(bool, bytes memory) external view override returns (bool) {
         return validTriggerData;
     }
 
     function isExecutionCorrect(
-        uint256, // cdpId
         bytes memory // triggerData
     ) external view override returns (bool) {
         return finalCheckReturn;
     }
 
     function isExecutionLegal(
-        uint256, // cdpId
         bytes memory // triggerData
     ) external view override returns (bool) {
         return initialCheckReturn;
     }
 
-    function execute(
-        bytes calldata,
-        uint256,
-        bytes memory
-    ) external virtual {
+    function execute(bytes calldata, bytes memory) external virtual {
         require(!revertsInExecute, "command failed");
     }
 }

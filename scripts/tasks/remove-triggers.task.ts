@@ -23,10 +23,6 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
-        const aggregator = await hre.ethers.getContractAt(
-            'AutomationBotAggregator',
-            hardhatUtils.addresses.AUTOMATION_BOT_AGGREGATOR,
-        )
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -49,14 +45,14 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
                 value: EthersBN.from(10).pow(18),
             })
         }
-
-        const removeTriggerGroupData = aggregator.interface.encodeFunctionData('removeTriggers', [
+        /* 
+        const removeTriggerGroupData = bot.interface.encodeFunctionData('removeTriggers', [
             args.triggers.map(item => item.toString()),
             args.allowance,
         ])
 
         const info = [
-            `Automation Aggregator Bot: ${aggregator.address}`,
+            `Automation Aggregator Bot: ${bot.address}`,
             `Vault ID: ${args.vault.toString()}`,
             `DSProxy: ${proxyAddress}`,
             `Signer: ${await signer.getAddress()}`,
@@ -67,7 +63,7 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
             return
         }
 
-        const tx = await proxy.connect(signer).execute(aggregator.address, removeTriggerGroupData, {
+        const tx = await proxy.connect(signer).execute(bot.address, removeTriggerGroupData, {
             gasLimit: 20000000,
         })
         const receipt = await tx.wait()
@@ -76,5 +72,5 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
             .filter(event => event.address == bot.address)
             .map(item => item.args.triggerId.toNumber())
 
-        console.log([`Trigger group was succesfully removed`, `Trigger ids: ${triggerIds}`].concat(info).join('\n'))
+        console.log([`Trigger group was succesfully removed`, `Trigger ids: ${triggerIds}`].concat(info).join('\n')) */
     })

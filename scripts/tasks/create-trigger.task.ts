@@ -1,8 +1,7 @@
-import { TriggerType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
-import { max } from 'lodash'
 import {
     coalesceNetwork,
     encodeTriggerData,
@@ -19,6 +18,7 @@ import { params } from './params'
 
 interface CreateTriggerArgs extends BaseTaskArgs {
     vault: BigNumber
+    continuous: boolean
     type: number
     noreplace: boolean
     params: any[]
@@ -62,7 +62,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                         topics: filter,
                         fromBlock: startBlocks.AUTOMATION_BOT,
                     })
-                    return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber())
+                    return logs.map(log => bot.interface.parseLog(log).args.triggerId.toNumber() as number)
                 }),
             )
             const activeTriggerIds = addedTriggerIds.filter(
@@ -75,7 +75,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
                     )}`,
                 )
             }
-            triggerIdToReplace = max(activeTriggerIds) ?? 0
+            triggerIdToReplace = Math.max(...activeTriggerIds) ?? 0
         }
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
@@ -102,11 +102,12 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
-        const addTriggerData = bot.interface.encodeFunctionData('addTrigger', [
-            args.vault.toString(),
-            args.type,
-            triggerIdToReplace,
-            triggerData,
+        const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
+            TriggerGroupType.SingleTrigger,
+            [args.continuous],
+            [triggerIdToReplace],
+            [triggerData],
+            [args.type],
         ])
 
         const info = [

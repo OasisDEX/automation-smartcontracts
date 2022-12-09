@@ -36,97 +36,77 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
+    function decode(
+        bytes memory triggerData
+    ) public pure returns (AutoTakeProfitTriggerData memory) {
+        return abi.decode(triggerData, (AutoTakeProfitTriggerData));
+    }
+
     /// @notice Returns the correctness of the vault state post execution of the command.
-    /// @param cdpId The CDP id
+    /// @param triggerData trigger data - AutoTakeProfitTriggerData
     /// @return Correctness of the trigger execution
-    function isExecutionCorrect(uint256 cdpId, bytes memory) external view override returns (bool) {
+    function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
+        AutoTakeProfitTriggerData memory trigger = decode(triggerData);
+
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         McdView viewerContract = McdView(viewAddress);
-        (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
+        (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(trigger.cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
     /// @notice Checks the validity of the trigger data when the trigger is executed
-    /// @param _cdpId The CDP id
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data during execution
-    function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        override
-        returns (bool)
-    {
-        AutoTakeProfitTriggerData memory autoTakeProfitTriggerData = abi.decode(
-            triggerData,
-            (AutoTakeProfitTriggerData)
-        );
+    function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
+        AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(_cdpId);
+        bytes32 ilk = manager.ilks(trigger.cdpId);
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
-        uint256 nextCollRatio = mcdView.getRatio(_cdpId, true);
+        uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
         require(
             ManagerLike(ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY))
-                .owns(_cdpId) != address(0),
+                .owns(trigger.cdpId) != address(0),
             "auto-take-profit/no-owner"
         );
         bool vaultNotEmpty = nextCollRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         return
             vaultNotEmpty &&
-            baseFeeIsValid(autoTakeProfitTriggerData.maxBaseFeeInGwei) &&
-            nextPrice >= autoTakeProfitTriggerData.executionPrice;
+            baseFeeIsValid(trigger.maxBaseFeeInGwei) &&
+            nextPrice >= trigger.executionPrice;
     }
 
     /// @notice Checks the validity of the trigger data when the trigger is created
-    /// @param _cdpId The CDP id
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        override
-        returns (bool)
-    {
-        AutoTakeProfitTriggerData memory autoTakeProfitTriggerData = abi.decode(
-            triggerData,
-            (AutoTakeProfitTriggerData)
-        );
+    function isTriggerDataValid(
+        bool,
+        bytes memory triggerData
+    ) external view override returns (bool) {
+        AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
-        bytes32 ilk = manager.ilks(_cdpId);
+        bytes32 ilk = manager.ilks(trigger.cdpId);
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
-        require(
-            autoTakeProfitTriggerData.executionPrice > nextPrice,
-            "auto-take-profit/tp-level-too-low"
-        );
-        return
-            _cdpId == autoTakeProfitTriggerData.cdpId &&
-            (autoTakeProfitTriggerData.triggerType == 7 ||
-                autoTakeProfitTriggerData.triggerType == 8);
+        require(trigger.executionPrice > nextPrice, "auto-take-profit/tp-level-too-low");
+        return (trigger.triggerType == 7 || trigger.triggerType == 8);
     }
 
     /// @notice Executes the trigger
     /// @param executionData Execution data from the Automation Worker
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
-    function execute(
-        bytes calldata executionData,
-        uint256,
-        bytes memory triggerData
-    ) external override {
-        AutoTakeProfitTriggerData memory autoTakeProfitTriggerData = abi.decode(
-            triggerData,
-            (AutoTakeProfitTriggerData)
-        );
+    function execute(bytes calldata executionData, bytes memory triggerData) external override {
+        AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
 
-        if (autoTakeProfitTriggerData.triggerType == 7) {
+        if (trigger.triggerType == 7) {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
-        } else if (autoTakeProfitTriggerData.triggerType == 8) {
+        } else if (trigger.triggerType == 8) {
             validateSelector(MPALike.closeVaultExitDai.selector, executionData);
         } else revert("auto-take-profit/unsupported-trigger-type");
 

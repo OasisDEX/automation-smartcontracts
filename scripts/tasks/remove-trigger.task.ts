@@ -1,7 +1,6 @@
 import BigNumber from 'bignumber.js'
-import { Signer } from 'ethers'
 import { types } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, Network, isLocalNetwork, getEvents } from '../common'
+import { coalesceNetwork, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
@@ -22,14 +21,15 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
+        const storage = await hre.ethers.getContractAt(
+            'AutomationBotStorage',
+            hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
+        )
 
-        const triggerInfo = await bot.activeTriggers(args.trigger.toString())
-        if (triggerInfo.cdpId.eq(0)) {
+        /*         const triggerInfo = await storage.activeTriggers(args.trigger.toString())
+        if (triggerInfo.commandAddress.eq('0x0000000000000000000000000000000000000000')) {
             throw new Error(`Trigger with id ${args.trigger.toString()} is not active`)
         }
-
-        const vault = triggerInfo.cdpId.toString()
-        console.log(`Vault: ${vault}`)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
         console.log(`Address: ${await signer.getAddress()}`)
@@ -48,9 +48,8 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             signer = await hardhatUtils.impersonate(currentProxyOwner)
         }
 
-        const removeTriggerData = bot.interface.encodeFunctionData('removeTrigger', [
-            vault,
-            args.trigger.toString(),
+        const removeTriggerData = bot.interface.encodeFunctionData('removeTriggers', [
+            [args.trigger.toString()],
             args.allowance,
         ])
 
@@ -74,5 +73,5 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
             throw new Error(`Failed to remove trigger. Contract Receipt: ${JSON.stringify(receipt)}`)
         }
 
-        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n'))
+        console.log([`Trigger with id ${args.trigger.toString()} was succesfully removed`].concat(info).join('\n')) */
     })
