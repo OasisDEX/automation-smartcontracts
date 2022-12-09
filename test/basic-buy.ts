@@ -265,7 +265,7 @@ describe('BasicBuyCommand', () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it('executes the trigger', async () => {
+        it('executes the trigger [ @skip-on-coverage ]', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)
@@ -276,7 +276,7 @@ describe('BasicBuyCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('clears the trigger if `continuous` is set to false', async () => {
+        it('clears the trigger if `continuous` is set to false [ @skip-on-coverage ]', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)
@@ -300,7 +300,7 @@ describe('BasicBuyCommand', () => {
             expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
-        it('keeps the trigger if `continuous` is set to true', async () => {
+        it('keeps the trigger if `continuous` is set to true [ @skip-on-coverage ]', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)
