@@ -20,14 +20,9 @@ import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 describe.only('AaveStoplLossCommand', async () => {
-    /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
-    let DAIInstance: Contract
-    let MPAInstance: MPALike
-    let usersProxy: DsProxyLike
-    let proxyOwnerAddress: string
     let proxyAddress: string
     let receiverAddress: string
     let executorAddress: string
@@ -37,6 +32,7 @@ describe.only('AaveStoplLossCommand', async () => {
     let aave_pa: AaveProxyActions
     let receiver: Signer
     let account: IAccountImplementation
+    let ltv: EthersBN
     before(async () => {
         await hre.network.provider.request({
             method: 'hardhat_reset',
@@ -50,21 +46,19 @@ describe.only('AaveStoplLossCommand', async () => {
             ],
         })
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-        // executor is the deployer
         const executor = hre.ethers.provider.getSigner(0)
         receiver = hre.ethers.provider.getSigner(1)
         executorAddress = await executor.getAddress()
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
-        aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
 
+        // TODO factory and guard from mainnet not system
+        aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
         aaveStopLoss = system.aaveStoplLossCommand!
         aave_pa = system.aaveProxyActions as AaveProxyActions
-
         const factory = system.dpmFactory as AccountFactory
-
         const guard = system.accountGuard as AccountGuard
 
         const factoryReceipt = await (
@@ -73,17 +67,24 @@ describe.only('AaveStoplLossCommand', async () => {
 
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         proxyAddress = AccountCreatedEvent.args.proxy.toString()
-        console.log('aaveStopLoss', aaveStopLoss.address)
-        console.log('receiverAddress', receiverAddress)
-        console.log('proxyAddress', proxyAddress)
-        console.log('bot', automationBotInstance.address)
-        console.log('executor', automationExecutorInstance.address)
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
-        // whitelist aave proxy actions
+
+        console.log('X---------ADDRESSES---------X')
+        console.log('| aaveStopLoss', aaveStopLoss.address)
+        console.log('| receiverAddress', receiverAddress)
+        console.log('| proxyAddress', proxyAddress)
+        console.log('| bot', automationBotInstance.address)
+        console.log('| executor', automationExecutorInstance.address)
+        console.log('| user account', account.address)
+        console.log('X---------------------------X')
+
+        // WHITELISTING
         await guard.connect(executor).setWhitelist(aave_pa.address, true)
         await guard.connect(executor).setWhitelist(automationBotInstance.address, true)
-        await guard.connect(receiver).permit(automationBotInstance.address, proxyAddress, true)
+        await guard.connect(executor).setWhitelist(aaveStopLoss.address, true)
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
+
+        // TODO: take multiply poistion from mainnet
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
         await (
@@ -105,18 +106,6 @@ describe.only('AaveStoplLossCommand', async () => {
                 gasLimit: 3000000,
             })
         ).wait()
-
-        // dont close for now use automation
-        /*         const closePositionReceipt = await (
-            await account.connect(receiver).execute(aave_pa.address, encodedClosePositionData, {
-                gasLimit: 3000000,
-            })
-        ).wait() */
-
-        // userData = await aavePool.getUserAccountData(proxyAddress)
-
-        //executionData = generateTpOrSlExecutionData(MPAInstance, true, cdpData, exchangeData, serviceRegistry)
-        // execute trigger
     })
 
     describe('isTriggerDataValid', () => {
@@ -124,16 +113,14 @@ describe.only('AaveStoplLossCommand', async () => {
     })
 
     describe('execute', async () => {
-        before(async () => {
-            //
-        })
-
         describe('closeToCollateral operation', async () => {
             let encodedClosePositionData: string
             let triggerData: string
+            let triggerId: number
+
             before(async () => {
                 const userData = await aavePool.getUserAccountData(proxyAddress)
-                const ltv = userData.totalDebtETH.mul(1000).div(userData.totalCollateralETH)
+                ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
 
                 // 3. close vault using FL
                 const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_AWETH_TOKEN)
@@ -159,8 +146,8 @@ describe.only('AaveStoplLossCommand', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountInWei.add(amountInWei.mul(fee).div(feeBase)),
-                    receiveAtLeast: 0,
+                    amount: amountInWei /* TODO: on multiply add fee  .add(amountInWei.mul(fee).div(feeBase)) */,
+                    receiveAtLeast: 0 /* TODO calcualte amount including slippage, */,
                     fee: fee,
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
@@ -168,51 +155,54 @@ describe.only('AaveStoplLossCommand', async () => {
                 const aaveData = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
                     collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
+                    borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
 
                 const serviceRegistry = {
-                    aaveProxyActions: aave_pa.address,
-                    lender: receiverAddress,
+                    aaveStopLoss: aaveStopLoss.address,
                     exchange: hardhatUtils.addresses.SWAP,
                 }
-                encodedClosePositionData = aave_pa.interface.encodeFunctionData('closePosition', [
+                encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
                     serviceRegistry,
                 ])
-
-                const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
-                const trigerDecodedData = [
-                    proxyAddress,
-                    10,
-                    hardhatUtils.addresses.WETH,
-                    hardhatUtils.addresses.USDC,
-                    ltv.sub(1),
-                    300,
-                ]
-                triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
-
-                const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
-                    TriggerGroupType.SingleTrigger,
-                    [false],
-                    [0],
-                    [triggerData],
-                    [10],
-                ])
-                // add trigger
-                await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-
-                //console.log(data)
             })
 
-            describe('when Trigger is below current col ratio', async () => {
+            describe('when Trigger is below current LTV', async () => {
+                before(async () => {
+                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDecodedData = [
+                        proxyAddress,
+                        10,
+                        hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.USDC,
+                        ltv.sub(1),
+                        300,
+                    ]
+                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+
+                    const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [10],
+                    ])
+                    // add trigger
+                    const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+                    const txRes = await tx.wait()
+                    const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
+                })
+
                 beforeEach(async () => {
-                    console.log('before each')
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                 })
 
                 afterEach(async () => {
-                    console.log('after each')
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should execute trigger', async () => {
@@ -221,7 +211,7 @@ describe.only('AaveStoplLossCommand', async () => {
                         0,
                         triggerData,
                         aaveStopLoss.address,
-                        '1',
+                        triggerId,
                         '0',
                         '0',
                         178000,
@@ -231,6 +221,59 @@ describe.only('AaveStoplLossCommand', async () => {
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
+                })
+            })
+            describe('when Trigger is above current LTV', async () => {
+                before(async () => {
+                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDecodedData = [
+                        proxyAddress,
+                        10,
+                        hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.USDC,
+                        ltv.add(1),
+                        300,
+                    ]
+                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+
+                    const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
+                        TriggerGroupType.SingleTrigger,
+                        [false],
+                        [0],
+                        [triggerData],
+                        [10],
+                    ])
+
+                    const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+                    const txRes = await tx.wait()
+                    console.log('gasUsed', txRes.gasUsed)
+                    const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
+                    triggerId = event.args.triggerId.toNumber()
+                })
+
+                beforeEach(async () => {
+                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+                })
+
+                afterEach(async () => {
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
+                })
+
+                it('should NOT execute trigger', async () => {
+                    const tx = automationExecutorInstance.execute(
+                        encodedClosePositionData,
+                        0,
+                        triggerData,
+                        aaveStopLoss.address,
+                        triggerId,
+                        '0',
+                        '0',
+                        178000,
+                        hardhatUtils.addresses.USDC,
+                        { gasLimit: 3000000 },
+                    )
+
+                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
         })
