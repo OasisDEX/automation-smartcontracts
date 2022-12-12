@@ -32,11 +32,7 @@ contract AaveProxyActions {
         );
     }
 
-    function drawDebt(
-        address token,
-        address recipient,
-        uint256 amount
-    ) external {
+    function drawDebt(address token, address recipient, uint256 amount) external {
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
             address(this)
         );
@@ -49,11 +45,7 @@ contract AaveProxyActions {
         emit Borrow(address(this), token, amount);
     }
 
-    function repayDebt(
-        address token,
-        uint256 amount,
-        address user
-    ) public {
+    function repayDebt(address token, uint256 amount, address user) public {
         require(
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-repay-balance"
@@ -74,11 +66,7 @@ contract AaveProxyActions {
         emit Deposit(address(this), token, amount);
     }
 
-    function withdrawCollateral(
-        address token,
-        address recipient,
-        uint256 amount
-    ) external {
+    function withdrawCollateral(address token, address recipient, uint256 amount) external {
         aave.withdraw(token, amount, address(this));
         IERC20(token).transfer(recipient, amount);
         emit Withdraw(address(this), token, amount);

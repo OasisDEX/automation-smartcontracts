@@ -22,11 +22,9 @@ contract AAVEAdapter {
         dai = _dai;
     }
 
-    function decode(bytes memory triggerData)
-        public
-        pure
-        returns (address proxyAddress, uint256 triggerType)
-    {
+    function decode(
+        bytes memory triggerData
+    ) public pure returns (address proxyAddress, uint256 triggerType) {
         (proxyAddress, triggerType) = abi.decode(triggerData, (address, uint16));
     }
 

@@ -52,12 +52,7 @@ contract AutomationExecutor {
 
     mapping(address => bool) public callers;
 
-    constructor(
-        BotLike _bot,
-        ERC20 _dai,
-        IWETH _weth,
-        ServiceRegistry _serviceRegistry
-    ) {
+    constructor(BotLike _bot, ERC20 _dai, IWETH _weth, ServiceRegistry _serviceRegistry) {
         bot = _bot;
         weth = _weth;
         dai = _dai;
@@ -144,11 +139,10 @@ contract AutomationExecutor {
     }
 
     // token 1 / token0
-    function getTick(address uniswapV3Pool, uint32 twapInterval)
-        public
-        view
-        returns (uint160 sqrtPriceX96)
-    {
+    function getTick(
+        address uniswapV3Pool,
+        uint32 twapInterval
+    ) public view returns (uint160 sqrtPriceX96) {
         if (twapInterval == 0) {
             // return the current price if twapInterval == 0
             (sqrtPriceX96, , , , , , ) = IUniswapV3Pool(uniswapV3Pool).slot0();
@@ -167,11 +161,10 @@ contract AutomationExecutor {
         return sqrtPriceX96;
     }
 
-    function getPrice(address tokenIn, uint24[] memory fees)
-        public
-        view
-        returns (uint256 price, uint24 fee)
-    {
+    function getPrice(
+        address tokenIn,
+        uint24[] memory fees
+    ) public view returns (uint256 price, uint24 fee) {
         uint24 biggestPoolFee;
         IUniswapV3Pool biggestPool;
         uint256 highestPoolBalance;
@@ -194,12 +187,13 @@ contract AutomationExecutor {
 
         if (token0 == tokenIn) {
             return (
-                (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10**decimals)) / 2**192,
+                (uint256(sqrtPriceX96) * (uint256(sqrtPriceX96)) * (10 ** decimals)) / 2 ** 192,
                 biggestPoolFee
             );
         } else {
             return (
-                (((2**192) * (10**decimals)) / ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96))))),
+                (((2 ** 192) * (10 ** decimals)) /
+                    ((uint256(sqrtPriceX96) * (uint256(sqrtPriceX96))))),
                 biggestPoolFee
             );
         }

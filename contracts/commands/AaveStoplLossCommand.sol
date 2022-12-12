@@ -216,7 +216,7 @@ contract AaveStoplLossCommand is ICommand, IFlashLoanReceiver {
 
         if (totalDebtETH == 0) return false;
 
-        uint256 ltv = (10**8 * totalDebtETH) / totalCollateralETH;
+        uint256 ltv = (10 ** 8 * totalDebtETH) / totalCollateralETH;
         console.log("ltv", ltv);
         console.log("stopLossTriggerData.slLevel", stopLossTriggerData.slLevel);
         bool vaultHasDebt = totalDebtETH != 0;
@@ -244,12 +244,10 @@ contract AaveStoplLossCommand is ICommand, IFlashLoanReceiver {
         trustedCaller = address(0);
     }
 
-    function isTriggerDataValid(bool continuous, bytes memory triggerData)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        bool continuous,
+        bytes memory triggerData
+    ) external pure override returns (bool) {
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)

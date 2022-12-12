@@ -45,11 +45,9 @@ contract DPMAdapter {
         accountGuard = _accountGuard; //hesitating if that should not be taken from serviceRegistry if needed, but this way it is immutable
     }
 
-    function decode(bytes memory triggerData)
-        public
-        pure
-        returns (address proxyAddress, uint256 triggerType)
-    {
+    function decode(
+        bytes memory triggerData
+    ) public pure returns (address proxyAddress, uint256 triggerType) {
         (proxyAddress, triggerType) = abi.decode(triggerData, (address, uint16));
     }
 
@@ -59,11 +57,7 @@ contract DPMAdapter {
         return accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
     }
 
-    function permit(
-        bytes memory triggerData,
-        address target,
-        bool allowance
-    ) public {
+    function permit(bytes memory triggerData, address target, bool allowance) public {
         require(canCall(triggerData, msg.sender), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         (address proxyAddress, ) = decode(triggerData);
 
@@ -72,12 +66,7 @@ contract DPMAdapter {
         }
     }
 
-    function getCoverage(
-        bytes memory,
-        address,
-        address,
-        uint256
-    ) external pure {
+    function getCoverage(bytes memory, address, address, uint256) external pure {
         revert("dpm-adapter/coverage-not-supported");
     }
 }
