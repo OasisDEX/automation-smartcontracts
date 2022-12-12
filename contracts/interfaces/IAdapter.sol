@@ -21,7 +21,11 @@ pragma solidity ^0.8.0;
 interface IAdapter {
     function canCall(bytes memory triggerData, address operator) external returns (bool);
 
-    function permit(bytes memory triggerData, address target, bool allowance) external;
+    function permit(
+        bytes memory triggerData,
+        address target,
+        bool allowance
+    ) external;
 
     function getCoverage(
         bytes memory triggerData,

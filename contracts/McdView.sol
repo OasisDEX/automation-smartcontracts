@@ -37,7 +37,13 @@ contract McdView is DSMath {
     address public owner;
     mapping(address => bool) public whitelisted;
 
-    constructor(address _vat, address _manager, address _spotter, address _mom, address _owner) {
+    constructor(
+        address _vat,
+        address _manager,
+        address _spotter,
+        address _mom,
+        address _owner
+    ) {
         manager = ManagerLike(_manager);
         vat = VatLike(_vat);
         spotter = SpotterLike(_spotter);
@@ -68,7 +74,7 @@ contract McdView is DSMath {
         (, uint256 mat) = spotter.ilks(ilk);
         (, , uint256 spot, , ) = vat.ilks(ilk);
 
-        return div(rmul(rmul(spot, spotter.par()), mat), 10 ** 9);
+        return div(rmul(rmul(spot, spotter.par()), mat), 10**9);
     }
 
     /// @notice Gets oracle next price of the asset

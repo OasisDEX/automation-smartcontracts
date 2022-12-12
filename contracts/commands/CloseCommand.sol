@@ -55,7 +55,7 @@ contract CloseCommand is ICommand {
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         uint256 collRatio = McdView(viewAddress).getRatio(cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-        return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
+        return vaultNotEmpty && collRatio <= slLevel * 10**16;
     }
 
     function execute(bytes calldata executionData, bytes memory triggerData) external override {
@@ -81,10 +81,12 @@ contract CloseCommand is ICommand {
         require(status, "execution failed");
     }
 
-    function isTriggerDataValid(
-        bool continuous,
-        bytes memory triggerData
-    ) external pure override returns (bool) {
+    function isTriggerDataValid(bool continuous, bytes memory triggerData)
+        external
+        pure
+        override
+        returns (bool)
+    {
         (, uint16 triggerType, uint256 slLevel) = abi.decode(
             triggerData,
             (uint256, uint16, uint256)

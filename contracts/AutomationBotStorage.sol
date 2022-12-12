@@ -69,10 +69,10 @@ contract AutomationBotStorage {
         return uint256(counter.triggersGroupCounter);
     }
 
-    function updateTriggerRecord(
-        uint256 id,
-        TriggerRecord memory record
-    ) external auth(msg.sender) {
+    function updateTriggerRecord(uint256 id, TriggerRecord memory record)
+        external
+        auth(msg.sender)
+    {
         activeTriggers[id] = record;
     }
 

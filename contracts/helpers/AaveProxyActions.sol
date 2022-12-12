@@ -10,11 +10,13 @@ interface IAAVE {
         uint16 referralCode
     ) external;
 
-    function withdraw(address asset, uint256 amount, address to) external;
+    function withdraw(
+        address asset,
+        uint256 amount,
+        address to
+    ) external;
 
-    function getUserAccountData(
-        address user
-    )
+    function getUserAccountData(address user)
         external
         view
         returns (
@@ -34,7 +36,12 @@ interface IAAVE {
         address onBehalfOf
     ) external;
 
-    function repay(address asset, uint256 amount, uint256 rateMode, address onBehalfOf) external;
+    function repay(
+        address asset,
+        uint256 amount,
+        uint256 rateMode,
+        address onBehalfOf
+    ) external;
 }
 
 contract AaveProxyActions {
@@ -59,7 +66,11 @@ contract AaveProxyActions {
         );
     }
 
-    function drawDebt(address token, address recipient, uint256 amount) external {
+    function drawDebt(
+        address token,
+        address recipient,
+        uint256 amount
+    ) external {
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
             address(this)
         );
@@ -91,7 +102,11 @@ contract AaveProxyActions {
         emit Deposit(address(this), token, amount);
     }
 
-    function withdrawCollateral(address token, address recipient, uint256 amount) external {
+    function withdrawCollateral(
+        address token,
+        address recipient,
+        uint256 amount
+    ) external {
         aave.withdraw(token, amount, address(this));
         IERC20(token).transfer(recipient, amount);
         emit Withdraw(address(this), token, amount);

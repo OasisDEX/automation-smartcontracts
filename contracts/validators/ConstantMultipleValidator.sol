@@ -34,9 +34,11 @@ import { IValidator } from "../interfaces/IValidator.sol";
 contract ConstantMultipleValidator is IValidator {
     using RatioUtils for uint256;
 
-    function decode(
-        bytes[] memory triggerData
-    ) public pure returns (uint256[] memory cdpIds, uint256[] memory triggerTypes) {
+    function decode(bytes[] memory triggerData)
+        public
+        pure
+        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
+    {
         cdpIds = new uint256[](triggerData.length);
         triggerTypes = new uint256[](triggerData.length);
         for (uint256 i = 0; i < triggerData.length; i++) {

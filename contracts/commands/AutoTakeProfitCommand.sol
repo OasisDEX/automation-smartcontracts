@@ -36,9 +36,11 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
-    function decode(
-        bytes memory triggerData
-    ) public pure returns (AutoTakeProfitTriggerData memory) {
+    function decode(bytes memory triggerData)
+        public
+        pure
+        returns (AutoTakeProfitTriggerData memory)
+    {
         return abi.decode(triggerData, (AutoTakeProfitTriggerData));
     }
 
@@ -81,10 +83,12 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @notice Checks the validity of the trigger data when the trigger is created
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
-    function isTriggerDataValid(
-        bool,
-        bytes memory triggerData
-    ) external view override returns (bool) {
+    function isTriggerDataValid(bool, bytes memory triggerData)
+        external
+        view
+        override
+        returns (bool)
+    {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));

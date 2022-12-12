@@ -34,7 +34,7 @@ contract AutomationBot {
         bool continuous;
     }
 
-    uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
+    uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2**16 - 1;
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
     string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
@@ -73,10 +73,11 @@ contract AutomationBot {
         return commandAddress;
     }
 
-    function getAdapterAddress(
-        address commandAddress,
-        bool isExecute
-    ) public view returns (address) {
+    function getAdapterAddress(address commandAddress, bool isExecute)
+        public
+        view
+        returns (address)
+    {
         require(commandAddress != address(0), "bot/unknown-trigger-type");
         bytes32 adapterHash = isExecute
             ? keccak256(abi.encode("AdapterExecute", commandAddress))
@@ -86,10 +87,11 @@ contract AutomationBot {
     }
 
     // works correctly in any context
-    function getTriggersHash(
-        bytes memory triggerData,
-        address commandAddress
-    ) private view returns (bytes32) {
+    function getTriggersHash(bytes memory triggerData, address commandAddress)
+        private
+        view
+        returns (bytes32)
+    {
         bytes32 triggersHash = keccak256(
             abi.encodePacked(triggerData, serviceRegistry, commandAddress)
         );
