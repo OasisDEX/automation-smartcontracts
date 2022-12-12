@@ -56,10 +56,6 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
-            dummyAaveWithdrawCommand: await this.hre.ethers.getContractAt(
-                'DummyAaveWithdrawCommand',
-                this.addresses.AUTOMATION_DUMMY_AAVE,
-            ),
         }
     }
 

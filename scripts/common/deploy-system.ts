@@ -14,6 +14,7 @@ import {
     AutomationBotStorage,
     AutoTakeProfitCommand,
     AaveProxyActions,
+    AaveStoplLossCommand,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -39,6 +40,7 @@ export interface DeployedSystem {
     mcdView: McdView
     closeCommand?: CloseCommand
     autoTakeProfitCommand?: AutoTakeProfitCommand
+    aaveStoplLossCommand?: AaveStoplLossCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter: MakerAdapter
@@ -87,6 +89,7 @@ export async function deploySystem({
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
     let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
+    let AaveStoplLossInstance: AaveStoplLossCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -198,6 +201,12 @@ export async function deploySystem({
         AutoTakeProfitInstance = (await utils.deployContract(ethers.getContractFactory('AutoTakeProfitCommand'), [
             ServiceRegistryInstance.address,
         ])) as AutoTakeProfitCommand
+
+        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStoplLossCommand'), [
+            ServiceRegistryInstance.address,
+            addresses.AAVE_POOL,
+            AaveProxyActionsInstance.address,
+        ])) as AaveStoplLossCommand
     }
 
     if (logDebug) {
@@ -217,6 +226,7 @@ export async function deploySystem({
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
             console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
+            console.log(`AaveStoplLossCommanddeployed to: ${AaveStoplLossInstance!.address}`)
         }
     }
 
@@ -233,6 +243,7 @@ export async function deploySystem({
         basicSell: BasicSellInstance,
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
+        aaveStoplLossCommand: AaveStoplLossInstance,
         aaveProxyActions: AaveProxyActionsInstance,
         aaveAdapter: AAVEAdapterInstance,
         dpmAdapter: DPMAdapterInstance,
@@ -340,7 +351,17 @@ export async function configureRegistryEntries(
         await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
         await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address, true)
     }
+    if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            // TODO - add to common
+            getCommandHash(10),
+            system.aaveStoplLossCommand.address,
+        )
 
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
+    }
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
