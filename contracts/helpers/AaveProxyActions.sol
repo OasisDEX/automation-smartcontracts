@@ -2,9 +2,6 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWETH } from "./../interfaces/IWETH.sol";
 import { ILendingPool } from "./../interfaces/AAVE/ILendingPool.sol";
-import { DataTypes } from "../libs/AAVEDataTypes.sol";
-import { EarnSwapData } from "./../libs/EarnSwapData.sol";
-import { ISwap } from "./../interfaces/ISwap.sol";
 import "hardhat/console.sol";
 
 struct AaveData {
