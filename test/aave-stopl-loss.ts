@@ -39,7 +39,7 @@ describe.only('AaveStoplLossCommand', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16174474,
+                        blockNumber: 16176665,
                     },
                 },
             ],

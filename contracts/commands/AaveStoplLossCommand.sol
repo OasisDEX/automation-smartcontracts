@@ -23,7 +23,7 @@ import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { EarnSwapData } from "./../libs/EarnSwapData.sol";
+import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
@@ -61,7 +61,7 @@ struct CloseData {
 
 interface AaveStopLoss {
     function closePosition(
-        EarnSwapData.SwapData calldata exchangeData,
+        SwapData calldata exchangeData,
         AaveData memory aaveData,
         AddressRegistry calldata addressRegistry
     ) external;
@@ -72,12 +72,6 @@ interface AaveStopLoss {
 }
 
 contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
-    IServiceRegistry public immutable serviceRegistry;
-    ILendingPool public immutable lendingPool;
-    AaveProxyActions public immutable aaveProxyActions;
-    address public trustedCaller;
-    address public immutable self;
-
     string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
     string private constant AAVE_POOL = "AAVE_POOL";
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
@@ -86,12 +80,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
         AaveProxyActions _aaveProxyActions
-    ) {
-        aaveProxyActions = _aaveProxyActions;
-        serviceRegistry = _serviceRegistry;
-        lendingPool = _lendingPool;
-        self = address(this);
-    }
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions) {}
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -100,77 +89,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
         require(selector == expectedSelector, "base-aave-fl-command/invalid-selector");
-    }
-
-    // fl callback
-    function executeOperation(
-        address[] calldata assets,
-        uint256[] calldata amounts,
-        uint256[] calldata premiums,
-        address initiator,
-        bytes calldata params
-    ) external returns (bool) {
-        require(initiator == trustedCaller, "aaveSl/caller-not-initiator");
-        require(msg.sender == address(lendingPool), "aaveSl/caller-must-be-lending-pool");
-
-        FlData memory flData;
-        flData.assets = assets;
-        flData.amounts = amounts;
-        flData.premiums = premiums;
-        flData.initiator = initiator;
-        flData.params = params;
-
-        (
-            address aTokenAddress,
-            address collateralTokenAddress,
-            address exchangeAddress,
-            address borrower,
-            address fundsReceiver,
-            EarnSwapData.SwapData memory exchangeData
-        ) = abi.decode(
-                flData.params,
-                (address, address, address, address, address, EarnSwapData.SwapData)
-            );
-        require(initiator == borrower, "aaveSl/initiator-not-borrower");
-
-        {
-            IERC20(flData.assets[0]).approve(address(lendingPool), flData.amounts[0]);
-            lendingPool.repay(flData.assets[0], flData.amounts[0], 2, borrower);
-        }
-
-        IERC20 collateralToken = IERC20(collateralTokenAddress);
-        uint256 aTokenBalance = IERC20(aTokenAddress).balanceOf(borrower);
-
-        IERC20(aTokenAddress).transferFrom(borrower, address(this), aTokenBalance);
-
-        lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), address(this));
-
-        collateralToken.approve(exchangeAddress, type(uint256).max);
-
-        uint256 paybackReceivedFromSwap = ISwap(exchangeAddress).swapTokens(exchangeData);
-
-        require(
-            paybackReceivedFromSwap > (flData.amounts[0] + flData.premiums[0]),
-            "aaveSl/recieved-too-little-from-swap"
-        );
-
-        // transferAll
-        uint256 usdBalance = IERC20(flData.assets[0]).balanceOf(address(this));
-
-        IERC20(flData.assets[0]).transfer(
-            fundsReceiver,
-            usdBalance - (flData.amounts[0] + flData.premiums[0])
-        );
-
-        collateralToken.transfer(fundsReceiver, collateralToken.balanceOf(address(this)));
-
-        // this remains
-        IERC20(flData.assets[0]).approve(
-            address(lendingPool),
-            flData.amounts[0] + flData.premiums[0]
-        );
-
-        return true;
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
@@ -236,7 +154,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     }
 
     function closePosition(
-        EarnSwapData.SwapData calldata exchangeData,
+        SwapData calldata exchangeData,
         AaveData memory aaveData,
         AddressRegistry calldata addressRegistry
     ) external {
@@ -301,5 +219,82 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             aaveData.fundsReceiver,
             IERC20(aaveData.debtTokenAddress).balanceOf(aaveData.borrower)
         );
+    }
+
+    function flashloanAction(bytes memory data) internal override {
+        FlData memory flData;
+        (flData.assets, flData.amounts, flData.premiums, flData.initiator, flData.params) = abi
+            .decode(data, (address[], uint256[], uint256[], address, bytes));
+        (
+            address aTokenAddress,
+            address collateralTokenAddress,
+            address exchangeAddress,
+            address borrower,
+            address fundsReceiver,
+            SwapData memory exchangeData
+        ) = abi.decode(flData.params, (address, address, address, address, address, SwapData));
+
+        require(flData.initiator == borrower, "aaveSl/initiator-not-borrower");
+
+        IERC20 collateralToken = IERC20(collateralTokenAddress);
+        IERC20 debtToken = IERC20(flData.assets[0]);
+        IERC20 aToken = IERC20(aTokenAddress);
+        uint256 flTotal = (flData.amounts[0] + flData.premiums[0]);
+        uint256 aTokenBalance = aToken.balanceOf(borrower);
+
+        _repay(address(debtToken), borrower, flData.amounts[0]);
+        _pullTokenAndWithdraw(aToken, collateralTokenAddress, borrower, aTokenBalance);
+        _exchange(
+            collateralToken,
+            debtToken,
+            exchangeAddress,
+            aTokenBalance,
+            flTotal,
+            exchangeData
+        );
+        _transfer(address(collateralToken), fundsReceiver, 0);
+        _transfer(address(debtToken), fundsReceiver, debtToken.balanceOf(self) - flTotal);
+    }
+
+    function _transfer(address token, address to, uint256 amount) internal {
+        if (amount == 0) {
+            IERC20(token).transfer(to, IERC20(token).balanceOf(self));
+        } else {
+            IERC20(token).transfer(to, amount);
+        }
+    }
+
+    function _repay(address token, address onBehalf, uint256 amount) internal {
+        IERC20(token).approve(address(lendingPool), amount);
+        lendingPool.repay(token, amount, 2, onBehalf);
+    }
+
+    function _exchange(
+        IERC20 collateralToken,
+        IERC20 debtToken,
+        address exchangeAddress,
+        uint256 balance,
+        uint256 flTotal,
+        SwapData memory exchangeData
+    ) internal {
+        collateralToken.approve(exchangeAddress, balance);
+
+        uint256 debtTokenBalanceBefore = debtToken.balanceOf(self);
+        ISwap(exchangeAddress).swapTokens(exchangeData);
+        require(
+            (debtToken.balanceOf(self) - debtTokenBalanceBefore) > (flTotal),
+            "aaveSl/recieved-too-little-from-swap"
+        );
+    }
+
+    function _pullTokenAndWithdraw(
+        IERC20 aToken,
+        address collateralTokenAddress,
+        address borrower,
+        uint256 balance
+    ) internal {
+        aToken.transferFrom(borrower, self, balance);
+
+        lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), self);
     }
 }

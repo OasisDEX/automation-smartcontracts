@@ -19,12 +19,12 @@
 
 pragma solidity ^0.8.0;
 
-import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
-import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
+import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
+import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 
 interface IFlashLoanReceiver {
     function executeOperation(
@@ -37,6 +37,12 @@ interface IFlashLoanReceiver {
 }
 
 abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
+    IServiceRegistry public immutable serviceRegistry;
+    ILendingPool public immutable lendingPool;
+    AaveProxyActions public immutable aaveProxyActions;
+    address public trustedCaller;
+    address public immutable self;
+
     struct FlData {
         address initiator;
         address[] assets;
@@ -46,4 +52,38 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
         address onBehalfOf;
         bytes params;
     }
+
+    constructor(
+        IServiceRegistry _serviceRegistry,
+        ILendingPool _lendingPool,
+        AaveProxyActions _aaveProxyActions
+    ) {
+        aaveProxyActions = _aaveProxyActions;
+        serviceRegistry = _serviceRegistry;
+        lendingPool = _lendingPool;
+        self = address(this);
+    }
+
+    function executeOperation(
+        address[] calldata assets,
+        uint256[] calldata amounts,
+        uint256[] calldata premiums,
+        address initiator,
+        bytes calldata params
+    ) external returns (bool) {
+        require(initiator == trustedCaller, "aaveSl/caller-not-initiator");
+        require(msg.sender == address(lendingPool), "aaveSl/caller-must-be-lending-pool");
+
+        bytes memory data = abi.encode(assets, amounts, premiums, initiator, params);
+
+        flashloanAction(data);
+
+        for (uint256 i = 0; i < assets.length; i++) {
+            IERC20(assets[i]).approve(address(lendingPool), amounts[i] + premiums[i]);
+        }
+
+        return true;
+    }
+
+    function flashloanAction(bytes memory _data) internal virtual;
 }
