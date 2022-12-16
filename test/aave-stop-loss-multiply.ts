@@ -112,7 +112,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
-                ltv.sub(1),
+                ltv.sub(10),
                 300,
             ]
             const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -136,7 +136,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
-                ltv.sub(1),
+                ltv.sub(10),
                 300,
             ]
             const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -231,7 +231,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.add(1),
+                        ltv.add(10),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -275,7 +275,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.sub(1),
+                        ltv.sub(10),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -399,7 +399,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.add(1),
+                        ltv.add(10),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -444,7 +444,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.sub(1),
+                        ltv.sub(10),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -486,7 +486,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
-                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310588554163')
+                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310503221059')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
