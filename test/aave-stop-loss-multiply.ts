@@ -190,7 +190,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 const flFee = EthersBN.from(9)
 
                 const data =
-                    '0x2e95b6c8000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc200000000000000000000000000000000000000000000000002c3b8f9bb43d4d1000000000000000000000000000000000000000000000000000000000d98916c0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340b4e16d0168e52d35cacd2c6185b44281ec28c9dcb03a8694'
+                    '0xe449022e00000000000000000000000000000000000000000000000002c3b8f9b4be2749000000000000000000000000000000000000000000000000000000000cf8ade00000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000180000000000000000000000088e6a0c2ddd26feeb64f039a2c41296fcb3f5640b03a8694'
                 await hardhatUtils.setTokenBalance(
                     aave_pa.address,
                     hardhatUtils.addresses.WETH,
@@ -317,6 +317,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
+                    expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
@@ -348,8 +349,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 const flFee = EthersBN.from(9)
                 const feeBase = EthersBN.from(10000)
                 const data =
-                    '0x2e95b6c8000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000164fe77c6a959000000000000000000000000000000000000000000000000000000000006dbb2230000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000180000000000000003b6d0340b4e16d0168e52d35cacd2c6185b44281ec28c9dcb03a8694'
-
+                    '0xe449022e0000000000000000000000000000000000000000000000000164fe779791fd4800000000000000000000000000000000000000000000000000000000068a67e30000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000180000000000000000000000088e6a0c2ddd26feeb64f039a2c41296fcb3f5640b03a8694'
                 await hardhatUtils.setTokenBalance(
                     aave_pa.address,
                     hardhatUtils.addresses.WETH,
@@ -486,6 +486,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
+                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310588554163')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
