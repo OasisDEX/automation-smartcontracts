@@ -360,6 +360,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
+                    // TODO @halaprix increase the amount so we cover the coverage
                     amount: amountToSwap.mul(100).div(100),
                     receiveAtLeast: vTokenBalance
                         .add(vTokenBalance.mul(flFee).div(feeBase))
