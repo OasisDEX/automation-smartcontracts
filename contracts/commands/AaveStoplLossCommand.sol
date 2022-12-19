@@ -28,7 +28,7 @@ import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
-import "hardhat/console.sol";
+
 struct AaveData {
     address collateralTokenAddress;
     address debtTokenAddress;
