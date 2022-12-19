@@ -27,7 +27,8 @@ import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
-
+import { IWETH } from "../interfaces/IWETH.sol";
+import "hardhat/console.sol";
 struct AaveData {
     address collateralTokenAddress;
     address debtTokenAddress;
@@ -79,8 +80,9 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     constructor(
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
-        AaveProxyActions _aaveProxyActions
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions) {}
+        AaveProxyActions _aaveProxyActions,
+        address _WETH
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions, _WETH) {}
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -252,7 +254,13 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             flTotal,
             exchangeData
         );
-        _transfer(address(collateralToken), fundsReceiver, 0);
+        if (address(collateralToken) == WETH) {
+            uint256 balance = IERC20(WETH).balanceOf(self);
+            IWETH(WETH).withdraw(balance);
+            payable(fundsReceiver).transfer(balance);
+        } else {
+            _transfer(address(collateralToken), fundsReceiver, 0);
+        }
         _transfer(address(debtToken), fundsReceiver, debtToken.balanceOf(self) - flTotal);
     }
 
@@ -297,4 +305,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
 
         lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), self);
     }
+
+    receive() external payable {}
 }

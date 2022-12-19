@@ -42,6 +42,7 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
     AaveProxyActions public immutable aaveProxyActions;
     address public trustedCaller;
     address public immutable self;
+    address public immutable WETH;
 
     struct FlData {
         address initiator;
@@ -56,12 +57,14 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
     constructor(
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
-        AaveProxyActions _aaveProxyActions
+        AaveProxyActions _aaveProxyActions,
+        address _WETH
     ) {
         aaveProxyActions = _aaveProxyActions;
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
         self = address(this);
+        WETH = _WETH;
     }
 
     function executeOperation(

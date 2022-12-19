@@ -268,7 +268,8 @@ describe('AaveStoplLossCommand', async () => {
                 })
 
                 it('should execute trigger', async () => {
-                    await automationExecutorInstance.execute(
+                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         0,
                         triggerData,
@@ -280,8 +281,16 @@ describe('AaveStoplLossCommand', async () => {
                         hardhatUtils.addresses.USDC,
                         { gasLimit: 3000000 },
                     )
+                    const txRes = await tx.wait()
+                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
+                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
+                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
+                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
+                    txData.wethBalance = returnedEth.toString()
+                    txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
+                    expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
@@ -443,7 +452,8 @@ describe('AaveStoplLossCommand', async () => {
                 })
 
                 it('should execute trigger', async () => {
-                    await automationExecutorInstance.execute(
+                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         0,
                         triggerData,
@@ -455,9 +465,16 @@ describe('AaveStoplLossCommand', async () => {
                         hardhatUtils.addresses.USDC,
                         { gasLimit: 3000000 },
                     )
-
+                    const txRes = await tx.wait()
+                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
+                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
+                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
+                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
+                    txData.wethBalance = returnedEth.toString()
+                    txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
+                    expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
@@ -485,7 +502,6 @@ describe('AaveStoplLossCommand', async () => {
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
-                    console.log('gasUsed', txRes.gasUsed)
                     const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
                 })

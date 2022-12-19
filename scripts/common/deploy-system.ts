@@ -206,6 +206,7 @@ export async function deploySystem({
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
             AaveProxyActionsInstance.address,
+            addresses.WETH,
         ])) as AaveStoplLossCommand
     }
 
