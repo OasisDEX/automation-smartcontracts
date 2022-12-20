@@ -43,14 +43,6 @@ async function main() {
 
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
-    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
-        if (!isExecute) {
-            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
-        } else {
-            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
-        }
-    }
-
     console.log('Deploying AutomationStorage')
     const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
         ethers.getContractFactory('AutomationBotStorage'),
@@ -115,7 +107,6 @@ async function main() {
     console.log('Deploying AAVEAdapter')
     const AaveAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         system.serviceRegistry.address,
-        utils.addresses.DAI,
     ])
     console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
 

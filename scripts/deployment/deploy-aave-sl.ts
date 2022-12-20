@@ -1,8 +1,10 @@
 import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
+import { constants } from 'ethers'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils } from '../common'
+import { ServiceRegistry } from '../../typechain'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {
