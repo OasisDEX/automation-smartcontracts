@@ -4,7 +4,13 @@ import hre from 'hardhat'
 import { ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
-import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils } from '../common'
+import {
+    getAdapterNameHash,
+    getCommandHash,
+    getExecuteAdapterNameHash,
+    getExternalNameHash,
+    HardhatUtils,
+} from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {
@@ -58,6 +64,8 @@ async function main() {
     const apa = await system.aaveProxyActions.deployed()
 
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
+
+    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
 
     const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
         if (!isExecute) {

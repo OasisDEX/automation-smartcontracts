@@ -98,7 +98,14 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-
+        address weth = address(serviceRegistry.getRegisteredService(WETH));
+        require(
+            IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
+                IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
+                IERC20(weth).balanceOf(self) == 0 &&
+                self.balance == 0,
+            "base-aave-fl-command/contract-not-empty"
+        );
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress
         );
@@ -258,7 +265,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         if (address(collateralToken) == weth) {
             uint256 balance = IERC20(weth).balanceOf(self);
             IWETH(weth).withdraw(balance);
-            payable(fundsReceiver).transfer(balance);
+            payable(fundsReceiver).transfer(self.balance);
         } else {
             _transfer(address(collateralToken), fundsReceiver, 0);
         }
