@@ -18,36 +18,15 @@ interface ManagerLike {
 
     function open(bytes32 ilk, address usr) external returns (uint256);
 
-    function cdpAllow(
-        uint256 cdp,
-        address usr,
-        uint256 ok
-    ) external;
+    function cdpAllow(uint256 cdp, address usr, uint256 ok) external;
 
-    function frob(
-        uint256,
-        int256,
-        int256
-    ) external;
+    function frob(uint256, int256, int256) external;
 
-    function flux(
-        uint256,
-        address,
-        uint256
-    ) external;
+    function flux(uint256, address, uint256) external;
 
-    function move(
-        uint256,
-        address,
-        uint256
-    ) external;
+    function move(uint256, address, uint256) external;
 
-    function exit(
-        address,
-        uint256,
-        address,
-        uint256
-    ) external;
+    function exit(address, uint256, address, uint256) external;
 
     event NewCdp(address indexed usr, address indexed own, uint256 indexed cdp);
 }

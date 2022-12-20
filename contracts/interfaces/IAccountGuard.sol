@@ -6,9 +6,5 @@ interface IAccountGuard {
 
     function canCall(address proxy, address operator) external view returns (bool);
 
-    function permit(
-        address caller,
-        address target,
-        bool allowance
-    ) external;
+    function permit(address caller, address target, bool allowance) external;
 }

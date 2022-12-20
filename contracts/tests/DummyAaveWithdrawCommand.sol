@@ -67,12 +67,10 @@ contract DummyAaveWithdrawCommand is ICommand {
         lastCall[proxy] = block.timestamp;
     }
 
-    function isTriggerDataValid(bool continuous, bytes memory triggerData)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        bool continuous,
+        bytes memory triggerData
+    ) external pure override returns (bool) {
         (, uint16 triggerType, , , ) = abi.decode(
             triggerData,
             (address, uint16, uint256, uint256, address)

@@ -85,9 +85,9 @@ contract AaveStoplLossCommand is ICommand {
 
         if (totalDebtETH == 0) return false;
 
-        uint256 collRatio = (10**8 * totalCollateralETH) / totalDebtETH;
+        uint256 collRatio = (10 ** 8 * totalCollateralETH) / totalDebtETH;
         bool vaultHasDebt = totalDebtETH != 0;
-        return vaultHasDebt && collRatio <= stopLossTriggerData.slLevel * 10**8;
+        return vaultHasDebt && collRatio <= stopLossTriggerData.slLevel * 10 ** 8;
     }
 
     function execute(bytes calldata executionData, bytes memory triggerData) external override {
@@ -104,12 +104,10 @@ contract AaveStoplLossCommand is ICommand {
         //require(status, "execution failed");
     }
 
-    function isTriggerDataValid(bool continuous, bytes memory triggerData)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        bool continuous,
+        bytes memory triggerData
+    ) external view override returns (bool) {
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)

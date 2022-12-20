@@ -43,11 +43,9 @@ contract MakerAdapter {
         dai = _dai;
     }
 
-    function decode(bytes memory triggerData)
-        public
-        pure
-        returns (uint256 cdpId, uint256 triggerType)
-    {
+    function decode(
+        bytes memory triggerData
+    ) public pure returns (uint256 cdpId, uint256 triggerType) {
         (cdpId, triggerType) = abi.decode(triggerData, (uint256, uint16));
     }
 
@@ -67,11 +65,7 @@ contract MakerAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    function permit(
-        bytes memory triggerData,
-        address target,
-        bool allowance
-    ) public {
+    function permit(bytes memory triggerData, address target, bool allowance) public {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
