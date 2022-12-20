@@ -2,7 +2,28 @@ import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
-import { getCommandHash, HardhatUtils } from '../common'
+import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils } from '../common'
+
+const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
+    return async (hash: string, address: string): Promise<void> => {
+        if (address === constants.AddressZero) {
+            console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
+            return
+        }
+
+        const existingAddress = await serviceRegistry.getServiceAddress(hash)
+        const gasSettings = await utils.getGasSettings()
+        if (existingAddress === constants.AddressZero) {
+            await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
+        } else if (overwrite.includes(hash)) {
+            await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
+        } else {
+            console.log(
+                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
+            )
+        }
+    }
+}
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -22,6 +43,16 @@ async function main() {
 
     const apa = await system.aaveProxyActions.deployed()
 
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
+
+    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+        if (!isExecute) {
+            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+        } else {
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+        }
+    }
+
     console.log('Deployed AaveProxyActions: ' + apa.address)
 
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveStoplLossCommand'), [
@@ -36,6 +67,9 @@ async function main() {
     await system.serviceRegistry.removeNamedService(commandHash)
 
     await system.serviceRegistry.addNamedService(commandHash, stopLossCommand.address)
+
+    await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
+    await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
 
     console.log(`AaveStoplLossCommand Deployed: ${stopLossCommand!.address}`)
     console.log(`AaveProxyActions Deployed: ${apa!.address}`)
