@@ -16,7 +16,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe.only('AaveStoplLossCommand-Multiply', async () => {
+describe('AaveStoplLossCommand-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
