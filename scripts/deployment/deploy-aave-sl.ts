@@ -3,7 +3,13 @@ import hre from 'hardhat'
 import { constants } from 'ethers'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
-import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils } from '../common'
+import {
+    getAdapterNameHash,
+    getCommandHash,
+    getExecuteAdapterNameHash,
+    getExternalNameHash,
+    HardhatUtils,
+} from '../common'
 import { ServiceRegistry } from '../../typechain'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
@@ -47,6 +53,8 @@ async function main() {
 
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
+    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
+
     const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
         if (!isExecute) {
             await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
@@ -65,7 +73,8 @@ async function main() {
 
     const stopLossCommand = await tx.deployed()
 
-    const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
+    // TODO - add to common
+    const commandHash = getCommandHash(10)
     await system.serviceRegistry.removeNamedService(commandHash)
 
     await system.serviceRegistry.addNamedService(commandHash, stopLossCommand.address)
