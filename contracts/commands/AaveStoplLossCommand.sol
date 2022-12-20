@@ -76,13 +76,13 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
     string private constant AAVE_POOL = "AAVE_POOL";
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
+    string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
-        AaveProxyActions _aaveProxyActions,
-        address _WETH
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions, _WETH) {}
+        AaveProxyActions _aaveProxyActions
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions) {}
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -254,9 +254,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             flTotal,
             exchangeData
         );
-        if (address(collateralToken) == WETH) {
-            uint256 balance = IERC20(WETH).balanceOf(self);
-            IWETH(WETH).withdraw(balance);
+        address weth = address(serviceRegistry.getRegisteredService(WETH));
+        if (address(collateralToken) == weth) {
+            uint256 balance = IERC20(weth).balanceOf(self);
+            IWETH(weth).withdraw(balance);
             payable(fundsReceiver).transfer(balance);
         } else {
             _transfer(address(collateralToken), fundsReceiver, 0);
@@ -302,7 +303,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         uint256 balance
     ) internal {
         aToken.transferFrom(borrower, self, balance);
-
         lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), self);
     }
 
