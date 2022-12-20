@@ -1,11 +1,25 @@
 import { TriggerType } from '@oasisdex/automation'
+import { constants } from 'ethers'
 import hre from 'hardhat'
+import { ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {
+        if (utils.hre.network.name === 'local') {
+            const newSigner = await utils.impersonate('0x85f9b7408afE6CEb5E46223451f5d4b832B522dc')
+            serviceRegistry = serviceRegistry.connect(newSigner)
+
+            const delay = await serviceRegistry.requiredDelay()
+            if (delay.toNumber() > 0) {
+                await serviceRegistry.changeRequiredDelay(0)
+                await utils.forwardTime(delay.toNumber() + 1)
+                await serviceRegistry.changeRequiredDelay(0)
+            }
+        }
+
         if (address === constants.AddressZero) {
             console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
             return
@@ -64,9 +78,8 @@ async function main() {
     const stopLossCommand = await tx.deployed()
 
     const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
-    await system.serviceRegistry.removeNamedService(commandHash)
 
-    await system.serviceRegistry.addNamedService(commandHash, stopLossCommand.address)
+    ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
 
     await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)

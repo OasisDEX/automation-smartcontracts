@@ -1,6 +1,13 @@
 import hre from 'hardhat'
 import { constants } from 'ethers'
-import { AutomationBot, AutomationBotStorage, AutomationExecutor, DPMAdapter, ServiceRegistry } from '../../typechain'
+import {
+    AAVEAdapter,
+    AutomationBot,
+    AutomationBotStorage,
+    AutomationExecutor,
+    DPMAdapter,
+    ServiceRegistry,
+} from '../../typechain'
 import {
     AutomationServiceName,
     getAdapterNameHash,
@@ -11,6 +18,18 @@ import {
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {
+        if (utils.hre.network.name === 'local') {
+            const newSigner = await utils.impersonate('0x85f9b7408afE6CEb5E46223451f5d4b832B522dc')
+            serviceRegistry = serviceRegistry.connect(newSigner)
+
+            const delay = await serviceRegistry.requiredDelay()
+            if (delay.toNumber() > 0) {
+                await serviceRegistry.changeRequiredDelay(0)
+                await utils.forwardTime(delay.toNumber() + 1)
+                await serviceRegistry.changeRequiredDelay(0)
+            }
+        }
+
         if (address === constants.AddressZero) {
             console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
             return
@@ -76,15 +95,16 @@ async function main() {
     )
     console.log(`AutomationBot added to ServiceRegistry`)
 
-    console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
-    await system.serviceRegistry.addNamedService(
-        await system.serviceRegistry.getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
+    console.log('Adding UNISWAP_ROUTER to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
         utils.addresses.UNISWAP_V3_ROUTER,
     )
 
     console.log('Adding UNISWAP_FACTORY tp ServiceRegistry....')
-    await system.serviceRegistry.addNamedService(
-        await system.serviceRegistry.getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
+
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
         utils.addresses.UNISWAP_FACTORY,
     )
 
@@ -110,18 +130,23 @@ async function main() {
         system.serviceRegistry.address,
         utils.addresses.DPM_GUARD,
     ])
+
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.DPM_ADAPTER), DpmAdapterInstance.address)
+
     console.log(`DPMAdapter Deployed: ${DpmAdapterInstance.address}`)
 
     console.log('Deploying AAVEAdapter')
-    const AaveAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
+    const AaveAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         system.serviceRegistry.address,
-        utils.addresses.DAI,
     ])
     console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
 
-    console.log('ensuring Adapters')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AAVE_ADAPTER),
+        AaveAdapterInstance.address,
+    )
 
-    console.log('Adding signers to executor:', utils.addresses.SIGNERS)
+    console.log('Adding signers to executor:')
     await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
 
     console.log('Done')

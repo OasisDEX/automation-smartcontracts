@@ -6,7 +6,7 @@ import axios from 'axios'
 import NodeCache from 'node-cache'
 import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
-import { EtherscanGasPrice, Network } from './types'
+import { AutomationServiceName, EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 
@@ -26,6 +26,11 @@ export class HardhatUtils {
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
+        const serviceRegistry = await this.hre.ethers.getContractAt(
+            'ServiceRegistry',
+            this.addresses.AUTOMATION_SERVICE_REGISTRY,
+        )
+
         return {
             serviceRegistry: await this.hre.ethers.getContractAt(
                 'ServiceRegistry',
@@ -55,6 +60,14 @@ export class HardhatUtils {
             basicSell: await this.hre.ethers.getContractAt(
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
+            ),
+            aaveAdapter: await this.hre.ethers.getContractAt(
+                'AAVEAdapter',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
+            ),
+            dpmAdapter: await this.hre.ethers.getContractAt(
+                'DPMAdapter',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
             ),
         }
     }
@@ -121,6 +134,10 @@ export class HardhatUtils {
         return newSigner
     }
 
+    public async forwardTime(timeIncrease: number): Promise<void> {
+        return await this.moveTime(timeIncrease)
+    }
+
     public async timeTravel(timeIncrease: number) {
         await this.hre.network.provider.request({
             method: 'evm_increaseTime',
@@ -155,6 +172,16 @@ export class HardhatUtils {
         await this.hre.network.provider.request({
             method: 'hardhat_impersonateAccount',
             params: [account],
+        })
+    }
+
+    private async moveTime(seconds: number) {
+        await this.hre.network.provider.request({
+            method: 'evm_increaseTime',
+            params: [seconds],
+        })
+        await this.hre.network.provider.request({
+            method: 'evm_mine',
         })
     }
 
