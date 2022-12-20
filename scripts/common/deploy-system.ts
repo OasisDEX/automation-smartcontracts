@@ -18,7 +18,6 @@ import {
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
-import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network } from './types'
@@ -28,6 +27,7 @@ import {
     getValidatorHash,
     getAdapterNameHash,
     getExecuteAdapterNameHash,
+    getExternalNameHash,
 } from './utils'
 
 export interface DeployedSystem {
@@ -206,7 +206,6 @@ export async function deploySystem({
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
             AaveProxyActionsInstance.address,
-            addresses.WETH,
         ])) as AaveStoplLossCommand
     }
 
@@ -277,6 +276,7 @@ export async function configureRegistryEntries(
             await (await system.mcdView.approve(address, true, await utils.getGasSettings())).wait()
         }
     }
+    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
 
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
