@@ -9,6 +9,7 @@ jobs:
         with:
           node-version: 18
           cache: 'yarn'
+          fail-on: high
         env:    
           ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
