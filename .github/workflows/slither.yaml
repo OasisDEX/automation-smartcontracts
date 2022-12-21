@@ -8,4 +8,9 @@ jobs:
       - uses: crytic/slither-action@v0.2.0
         with:
           node-version: 18
-          cache: 'npm'
+          cache: 'yarn'
+          env:    
+            ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
+            ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+            ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}  
+          
