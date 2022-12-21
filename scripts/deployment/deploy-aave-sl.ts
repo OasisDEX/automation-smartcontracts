@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { ServiceRegistry } from '../../typechain'
+import { IAccountGuard, ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
@@ -91,6 +91,15 @@ async function main() {
 
     await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
+
+    if (utils.hre.network.name === 'local') {
+        const guardDeployerAddress = '0x060c23f67febb04f4b5d5c205633a04005985a94'
+        const guardDeployer = await utils.impersonate(guardDeployerAddress)
+        const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
+        await guard.connect(guardDeployer).setWhitelist(apa.address, true)
+        await guard.connect(guardDeployer).setWhitelist(stopLossCommand.address, true)
+        console.log("Guard's whitelist updated")
+    }
 
     console.log(`AaveStoplLossCommand Deployed: ${stopLossCommand!.address}`)
     console.log(`AaveProxyActions Deployed: ${apa!.address}`)
