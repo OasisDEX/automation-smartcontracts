@@ -99,11 +99,12 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             (StopLossTriggerData)
         );
         address weth = address(serviceRegistry.getRegisteredService(WETH));
+        require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
                 IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
-                IERC20(weth).balanceOf(self) == 0 &&
-                self.balance == 0,
+                (stopLossTriggerData.collateralToken != weth ||
+                    (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
             "base-aave-fl-command/contract-not-empty"
         );
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
@@ -263,8 +264,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         );
         address weth = address(serviceRegistry.getRegisteredService(WETH));
         if (address(collateralToken) == weth) {
+            expectRecive();
             uint256 balance = IERC20(weth).balanceOf(self);
             IWETH(weth).withdraw(balance);
+            ethReceived();
             payable(fundsReceiver).transfer(self.balance);
         } else {
             _transfer(address(collateralToken), fundsReceiver, 0);
@@ -313,5 +316,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), self);
     }
 
-    receive() external payable {}
+    receive() external payable {
+        require(reciveExpected == true, "aaveSl/unexpected-eth-receive");
+    }
 }

@@ -43,6 +43,8 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
     address public trustedCaller;
     address public immutable self;
 
+    bool public reciveExpected;
+
     struct FlData {
         address initiator;
         address[] assets;
@@ -62,6 +64,14 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver {
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
         self = address(this);
+    }
+
+    function expectRecive() internal {
+        reciveExpected = true;
+    }
+
+    function ethReceived() internal {
+        reciveExpected = false;
     }
 
     function executeOperation(
