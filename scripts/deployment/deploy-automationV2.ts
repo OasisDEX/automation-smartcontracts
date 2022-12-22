@@ -84,7 +84,7 @@ async function main() {
     console.log(`AutomationBot Deployed: ${AutomationBotInstance.address}`)
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-        automationStorage.address,
+        AutomationBotInstance.address,
     )
     console.log(`AutomationBot added to ServiceRegistry`)
 
