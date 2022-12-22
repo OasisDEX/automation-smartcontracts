@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { IAccountGuard, ServiceRegistry } from '../../typechain'
+import { AaveStoplLossCommand, IAccountGuard, ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
@@ -81,11 +81,11 @@ async function main() {
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
         utils.addresses.AAVE_POOL,
         apa.address,
-    ])) as DummyAaveWithdrawCommand
+    ])) as AaveStoplLossCommand
 
     const stopLossCommand = await tx.deployed()
-
-    const commandHash = getCommandHash(TriggerType.SimpleAAVESell)
+    // TODO change 10 when the command is in common
+    const commandHash = getCommandHash(10)
 
     ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
 
