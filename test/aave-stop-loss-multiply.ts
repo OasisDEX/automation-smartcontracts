@@ -77,7 +77,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
         await guard.connect(guardDeployer).setWhitelist(aaveStopLoss.address, true)
-        await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
+       // await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
         /*   // TODO: take multiply poistion from mainnet
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
