@@ -201,7 +201,7 @@ contract AutomationExecutor {
             weth.withdraw(amountIn);
             return amountIn;
         }
-        ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));
+        ERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
 
         bytes memory path = abi.encodePacked(tokenIn, uint24(fee), address(weth));
 
@@ -212,7 +212,6 @@ contract AutomationExecutor {
             amountOutMinimum: amountOutMin
         });
 
-        ERC20(tokenIn).approve(address(uniswapRouter), amountIn);
         uint256 amount = uniswapRouter.exactInput(params);
         weth.withdraw(amount);
         return amount;
