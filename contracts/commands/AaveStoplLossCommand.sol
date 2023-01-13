@@ -146,7 +146,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-        // TODO what slLevel should be ?
+
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 8 &&

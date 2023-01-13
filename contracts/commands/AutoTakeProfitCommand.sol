@@ -82,7 +82,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
     function isTriggerDataValid(
-        bool,
+        bool continuous,
         bytes memory triggerData
     ) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
@@ -93,7 +93,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
         require(trigger.executionPrice > nextPrice, "auto-take-profit/tp-level-too-low");
-        return (trigger.triggerType == 7 || trigger.triggerType == 8);
+        return !continuous && (trigger.triggerType == 7 || trigger.triggerType == 8);
     }
 
     /// @notice Executes the trigger
