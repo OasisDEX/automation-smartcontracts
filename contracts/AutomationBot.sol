@@ -252,13 +252,13 @@ contract AutomationBot is BotLike {
     function emitGroupDetails(uint16 triggerGroupType, uint256[] memory triggerIds) external {
         require(lockCount == triggerIds.length, "bot/group-inconsistent");
         unlock();
-        automationBotStorage.increaseGroupCounter();
 
         emit TriggerGroupAdded(
             automationBotStorage.triggersGroupCounter(),
             triggerGroupType,
             triggerIds
         );
+        automationBotStorage.increaseGroupCounter();
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
