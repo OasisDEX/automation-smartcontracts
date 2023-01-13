@@ -86,6 +86,10 @@ contract AutomationBot {
         return service;
     }
 
+    function clearlock() external {
+        lockCount = 0;
+    }
+
     // works correctly in any context
     function getTriggersHash(
         bytes memory triggerData,
@@ -200,6 +204,7 @@ contract AutomationBot {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        AutomationBot(automationBot).clearlock();
 
         if (groupType != SINGLE_TRIGGER_GROUP_TYPE) {
             IValidator validator = getValidatorAddress(groupType);
@@ -284,6 +289,7 @@ contract AutomationBot {
     ) external onlyDelegate {
         require(triggerData.length > 0, "bot/remove-at-least-one");
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        AutomationBot(automationBot).clearlock();
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
