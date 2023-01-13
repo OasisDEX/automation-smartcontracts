@@ -180,7 +180,6 @@ describe('AutomationExecutor', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -196,7 +195,6 @@ describe('AutomationExecutor', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.connect(notOwner).execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -216,7 +214,6 @@ describe('AutomationExecutor', async () => {
 
             const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -228,7 +225,6 @@ describe('AutomationExecutor', async () => {
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -273,7 +269,6 @@ describe('AutomationExecutor', async () => {
 
             const estimation = await AutomationExecutorInstance.estimateGas.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -285,7 +280,6 @@ describe('AutomationExecutor', async () => {
 
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,

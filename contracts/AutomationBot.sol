@@ -36,7 +36,6 @@ contract AutomationBot {
 
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
-    string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
 
     ServiceRegistry public immutable serviceRegistry;
@@ -352,8 +351,6 @@ contract AutomationBot {
     }
 
     event ApprovalRemoved(bytes indexed triggerData, address approvedEntity);
-
-    event ApprovalGranted(bytes indexed triggerData, address approvedEntity);
 
     event TriggerRemoved(uint256 indexed triggerId);
 

@@ -1,13 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import {
-    getEvents,
-    getCommandHash,
-    HardhatUtils,
-    AutomationServiceName,
-    getAdapterNameHash,
-} from '../scripts/common'
+import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -675,7 +669,6 @@ describe('AutomationBot', async () => {
             const executionReceipt = await (
                 await AutomationExecutorInstance.execute(
                     executionData,
-                    testCdpId,
                     triggerData,
                     DummyCommandInstance.address,
                     triggerId,
@@ -736,7 +729,6 @@ describe('AutomationBot', async () => {
             const executionReceipt = await (
                 await AutomationExecutorInstance.execute(
                     executionData,
-                    testCdpId,
                     triggerData,
                     DummyCommandInstance.address,
                     triggerId,
@@ -795,7 +787,6 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -820,7 +811,6 @@ describe('AutomationBot', async () => {
 
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -840,7 +830,6 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -862,7 +851,6 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -881,7 +869,6 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(true, false, false)
             const result = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -900,7 +887,6 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,

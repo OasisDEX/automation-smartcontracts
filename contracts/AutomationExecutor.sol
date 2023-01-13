@@ -45,16 +45,14 @@ contract AutomationExecutor {
     IV3SwapRouter public immutable uniswapRouter;
     IUniswapV3Factory public immutable uniswapFactory;
     BotLike public immutable bot;
-    ERC20 public immutable dai;
     IWETH public immutable weth;
     address public owner;
 
     mapping(address => bool) public callers;
 
-    constructor(BotLike _bot, ERC20 _dai, IWETH _weth, ServiceRegistry _serviceRegistry) {
+    constructor(BotLike _bot, IWETH _weth, ServiceRegistry _serviceRegistry) {
         bot = _bot;
         weth = _weth;
-        dai = _dai;
         owner = msg.sender;
         callers[owner] = true;
         uniswapRouter = IV3SwapRouter(_serviceRegistry.getRegisteredService(UNISWAP_ROUTER_KEY));
@@ -97,14 +95,12 @@ contract AutomationExecutor {
         }
     }
 
-    // TODO: remove cdpId
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage,
+        uint256 txCoverage,
         uint256 minerBribe,
         int256 gasRefund,
         address coverageToken
@@ -115,7 +111,7 @@ contract AutomationExecutor {
             triggerData,
             commandAddress,
             triggerId,
-            daiCoverage,
+            txCoverage,
             coverageToken
         );
 
