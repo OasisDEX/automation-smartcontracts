@@ -6,7 +6,8 @@ interface BotLike {
         uint256 triggerType,
         bool continuous,
         uint256 replacedTriggerId,
-        bytes memory triggerData
+        bytes memory triggerData,
+        bytes memory replacedTriggerData
     ) external;
 
     function removeRecord(

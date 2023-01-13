@@ -74,6 +74,7 @@ describe('ConstantMultipleValidator', async () => {
         )
 
         const replacedTriggerId = [0, 0]
+        const replacedTriggerData = ["0x", "0x"]
 
         it('should successfully create a trigger group with correct ratios', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -89,6 +90,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -114,6 +116,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -135,6 +138,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, false],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -156,6 +160,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -177,6 +182,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -198,6 +204,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -219,6 +226,7 @@ describe('ConstantMultipleValidator', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)

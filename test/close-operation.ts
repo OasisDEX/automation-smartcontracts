@@ -151,6 +151,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [1],
                     ])
 
@@ -220,6 +221,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        ["0x"],
                         [1],
                     ])
 
@@ -387,6 +389,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        ["0x"],
                         [2],
                     ])
 
@@ -449,6 +452,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
+                        ["0x"],
                         [2],
                     ])
 

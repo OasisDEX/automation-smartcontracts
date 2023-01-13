@@ -16,7 +16,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe.only('AaveStoplLossCommand-Multiply', async () => {
+describe('AaveStoplLossCommand-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
@@ -122,9 +122,10 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
-            const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+            const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply, {gasLimit: 3000000})
             await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
         })
         it('should add the trigger with continuous set to false', async () => {
@@ -146,6 +147,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -241,6 +243,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -285,6 +288,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -409,6 +413,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -454,6 +459,7 @@ describe.only('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
                     // add trigger

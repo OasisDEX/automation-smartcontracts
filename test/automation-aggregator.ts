@@ -102,6 +102,7 @@ describe('AutomationAggregatorBot', async () => {
                 [continuous],
                 [0],
                 [triggerData],
+                ["0x"],
                 [triggerType],
             ])
             const signer = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -164,6 +165,8 @@ describe('AutomationAggregatorBot', async () => {
             maxGweiPrice,
         )
         const replacedTriggerId = [0, 0]
+
+        const replacedTriggerData = ["0x", "0x"]//TODO: check if not beforeBsTriggerData
 
         async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
             const collRatio = await system.mcdView.getRatio(testCdpId, true)
@@ -252,6 +255,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [beforeBbTriggerData, beforeBsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await beforeOwnerProxy
@@ -273,6 +277,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -290,6 +295,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -304,6 +310,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [Number(triggerCounter) - 1, Number(triggerCounter)],
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx2 = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply2)
@@ -336,6 +343,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [triggersCounterBefore.toNumber(), 0],
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -381,6 +389,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bsTriggerData, bbTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -416,6 +425,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -451,6 +461,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -494,6 +505,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 [triggersCounterBefore.toNumber(), triggersCounterBefore.toNumber() - 1],
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
@@ -514,6 +526,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             await expect(notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)).to.be
@@ -525,6 +538,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             )
             await expect(tx).to.be.revertedWith('bot/only-delegate')
@@ -536,6 +550,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -552,6 +567,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -577,6 +593,7 @@ describe('AutomationAggregatorBot', async () => {
     describe('removeTriggers', async () => {
         const groupTypeId = TriggerGroupType.ConstantMultiple
         const replacedTriggerId = [0, 0]
+        const replacedTriggerData = ["0x", "0x"]
 
         // current coll ratio : 1.859946411122229468
         const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
@@ -634,6 +651,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [beforeBbTriggerData, beforeBsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const dataToSupplyAdd = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -641,6 +659,7 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             await beforeOwnerProxy.connect(beforeOwner).execute(AutomationBotInstance.address, beforeDataToSupplyAdd)
@@ -729,6 +748,7 @@ describe('AutomationAggregatorBot', async () => {
         beforeEach(async () => {
             const groupTypeId = TriggerGroupType.ConstantMultiple
             const replacedTriggerId = [0, 0]
+            const replacedTriggerData = ["0x", "0x"]
 
             // current coll ratio : 1.859946411122229468
             const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
@@ -761,7 +781,8 @@ describe('AutomationAggregatorBot', async () => {
                 [true, true],
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                replacedTriggerData,
+                [TriggerType.BasicBuy, TriggerType.BasicSell]
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
         })

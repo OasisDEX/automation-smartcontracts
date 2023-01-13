@@ -26,6 +26,7 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot {
     struct TriggerRecord {
@@ -118,7 +119,8 @@ contract AutomationBot {
         uint256 triggerType,
         bool continuous,
         uint256 replacedTriggerId,
-        bytes memory triggerData
+        bytes memory triggerData,
+        bytes memory replacedTriggerData
     ) external {
         lock();
 
@@ -131,6 +133,10 @@ contract AutomationBot {
 
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
+        require(
+            replacedTriggerId == 0 || adapter.canCall(replacedTriggerData, msg.sender),
+            "bot/no-permissions-replace"
+        );
 
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
@@ -141,7 +147,6 @@ contract AutomationBot {
         );
 
         if (replacedTriggerId != 0) {
-            // TODO: previously it checked if cdpIds are the same
             (bytes32 replacedTriggersHash, , ) = automationBotStorage.activeTriggers(
                 replacedTriggerId
             );
@@ -189,6 +194,7 @@ contract AutomationBot {
         bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
+        bytes[] memory replacedTriggerData,
         uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
     ) external onlyDelegate {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
@@ -227,7 +233,8 @@ contract AutomationBot {
                 triggerTypes[i],
                 continuous[i],
                 replacedTriggerId[i],
-                triggerData[i]
+                triggerData[i],
+                replacedTriggerData[i]
             );
 
             triggerIds[i] = firstTriggerId + i;

@@ -116,6 +116,7 @@ describe('AAVE integration', async () => {
             [true],
             [0],
             [triggerData],
+            ["0x"],
             [TriggerType.SimpleAAVESell],
         ])
         const tx = DPMAccount.execute(system.automationBot.address, dataToSupply, {
@@ -136,6 +137,7 @@ describe('AAVE integration', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [TriggerType.SimpleAAVESell],
             ])
             const tx = await DPMAccount.execute(system.automationBot.address, dataToSupply, {
