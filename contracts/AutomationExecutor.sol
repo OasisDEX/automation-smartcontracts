@@ -88,6 +88,7 @@ contract AutomationExecutor {
         uint256 length = _callers.length;
         for (uint256 i = 0; i < length; ++i) {
             address caller = _callers[i];
+            require(callers[caller], "executor/absent-caller");
             callers[caller] = false;
             emit CallerRemoved(caller);
         }

@@ -124,6 +124,15 @@ describe('AutomationExecutor', async () => {
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
         })
 
+        it('should not be able to whitelist new callers twice', async () => {
+            const caller = generateRandomAddress()
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+            const tx = AutomationExecutorInstance.addCallers([caller])
+            await expect(tx).to.be.revertedWith('executor/duplicate-whitelist')
+        })
+
         it('should revert with executor/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
             const tx = AutomationExecutorInstance.connect(notOwner).addCallers([caller])
@@ -132,12 +141,21 @@ describe('AutomationExecutor', async () => {
     })
 
     describe('removeCaller', () => {
-        it('should be able to whitelist new callers', async () => {
+        it('should be able to whitelist new callers and remove them', async () => {
             const caller = generateRandomAddress()
             await AutomationExecutorInstance.addCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
             await AutomationExecutorInstance.removeCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+        })
+
+        it('should revert on removing not existing whitelist entry', async () => {
+            const caller = generateRandomAddress()
+            const secondCaller = generateRandomAddress()
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+            const tx = AutomationExecutorInstance.removeCallers([secondCaller])
+            await expect(tx).to.be.revertedWith('executor/absent-caller')
         })
 
         it('should revert with executor/only-owner on unauthorized sender', async () => {
