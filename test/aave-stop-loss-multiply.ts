@@ -125,7 +125,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 ["0x"],
                 [10],
             ])
-            const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply, {gasLimit: 3000000})
+            const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
         })
         it('should add the trigger with continuous set to false', async () => {
