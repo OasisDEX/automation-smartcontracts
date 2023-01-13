@@ -205,7 +205,7 @@ contract AutomationBot is BotLike {
             );
         }
 
-        uint256 firstTriggerId = automationBotStorage.triggersCounter();
+        uint256 firstTriggerId = automationBotStorage.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
