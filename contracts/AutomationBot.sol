@@ -27,10 +27,10 @@ import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
 
-contract AutomationBot {
+contract AutomationBot is BotLike {
     struct TriggerRecord {
         bytes32 triggerHash;
-        address commandAddress; // or type ? do we allow execution of the same command with new contract - waht if contract rev X is broken ? Do we force migration (can we do it)?
+        address commandAddress;
         bool continuous;
     }
 

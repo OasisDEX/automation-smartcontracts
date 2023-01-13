@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// CloseCommand.sol
+/// DPMAdapter.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,11 +22,12 @@ import "../interfaces/IAccountGuard.sol";
 import "../interfaces/ManagerLike.sol";
 import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
+import "../interfaces/IAdapter.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract DPMAdapter {
+contract DPMAdapter is IAdapter {
     ServiceRegistry public immutable serviceRegistry;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
