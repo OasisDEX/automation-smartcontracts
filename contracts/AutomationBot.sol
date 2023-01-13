@@ -166,7 +166,6 @@ contract AutomationBot {
         uint256 triggerId
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
-        // TODO: pass adapter type // make adapter address command dependent ?
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
@@ -188,9 +187,13 @@ contract AutomationBot {
         bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
-        uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
+        uint256[] memory triggerTypes
     ) external onlyDelegate {
-        // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
+        require(
+            replacedTriggerId.length == triggerData.length &&
+                triggerData.length == triggerTypes.length,
+            "bot/invalid-input-length"
+        );
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
@@ -275,6 +278,8 @@ contract AutomationBot {
         bool removeAllowance
     ) external onlyDelegate {
         require(triggerData.length > 0, "bot/remove-at-least-one");
+        require(triggerData.length == triggerIds.length, "bot/invalid-input-length");
+
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
