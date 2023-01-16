@@ -204,7 +204,7 @@ contract AutomationBot {
         // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        AutomationBot(automationBot).clearlock();
+        AutomationBot(automationBot).clearLock();
 
         if (groupType != SINGLE_TRIGGER_GROUP_TYPE) {
             IValidator validator = getValidatorAddress(groupType);
