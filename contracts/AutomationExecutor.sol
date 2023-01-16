@@ -104,6 +104,8 @@ contract AutomationExecutor {
         int256 gasRefund,
         address coverageToken
     ) external auth(msg.sender) {
+        require(gasRefund < 10 ** 12, "executor/gas-refund-too-high");
+
         uint256 initialGasAvailable = gasleft();
         bot.execute(
             executionData,
