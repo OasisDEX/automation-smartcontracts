@@ -67,8 +67,8 @@ contract BasicSellCommand is BaseMPACommand {
         uint256 dustLimit = getDustLimit(ilk);
         uint256 debt = getVaultDebt(trigger.cdpId);
         uint256 wad = RatioUtils.WAD;
-        uint256 futureDebt = (debt * nextCollRatio - debt * wad) /
-            (trigger.targetCollRatio.wad() - wad);
+        (, uint256 upperTarget) = trigger.targetCollRatio.bounds(trigger.deviation);
+        uint256 futureDebt = (debt * nextCollRatio - debt * wad) / (upperTarget.wad() - wad);
 
         SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
