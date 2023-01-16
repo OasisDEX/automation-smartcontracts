@@ -27,7 +27,7 @@ import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract DPMAdapter is IAdapter {
+contract DPMAdapter is ISecurityAdapter {
     ServiceRegistry public immutable serviceRegistry;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
@@ -65,9 +65,5 @@ contract DPMAdapter is IAdapter {
         if (allowance != accountGuard.canCall(proxyAddress, target)) {
             accountGuard.permit(target, proxyAddress, allowance);
         }
-    }
-
-    function getCoverage(bytes memory, address, address, uint256) external pure {
-        revert("dpm-adapter/coverage-not-supported");
     }
 }

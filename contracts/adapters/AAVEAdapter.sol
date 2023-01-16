@@ -28,7 +28,7 @@ import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract AAVEAdapter is IAdapter {
+contract AAVEAdapter is IExecutableAdapter {
     ServiceRegistry public immutable serviceRegistry;
     string private constant AAVE_PROXY_ACTIONS = "AAVE_PROXY_ACTIONS";
 
@@ -62,11 +62,4 @@ contract AAVEAdapter is IAdapter {
             )
         );
     }
-
-    function canCall(bytes memory, address) external virtual returns (bool) {}
-
-    function permit(bytes memory triggerData, address target, bool allowance) external {}
-
-    //todo: call proxy to withdraw coverageToken from aave
-    //todo: call proxy to transfer coverageToken to receiver
 }
