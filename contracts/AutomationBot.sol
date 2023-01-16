@@ -224,6 +224,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     )
                 );
                 require(status, "bot/permit-failed");
+                emit ApprovalGranted(triggerData[i], address(automationBot));
             }
 
             AutomationBot(automationBot).addRecord(
@@ -357,6 +358,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     event ApprovalRemoved(bytes indexed triggerData, address approvedEntity);
+
+    event ApprovalGranted(bytes indexed triggerData, address approvedEntity);
 
     event TriggerRemoved(uint256 indexed triggerId);
 

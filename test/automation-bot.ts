@@ -201,7 +201,7 @@ describe('AutomationBot', async () => {
             expect(events[0].args.triggerId).to.be.equal(1)
         })
 
-        it.only('should emit TriggerAdded if called by user being an owner of proxy and the id[0] is == 1', async () => {
+        it('should emit TriggerAdded if called by user being an owner of proxy and the id[0] is == 1', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
