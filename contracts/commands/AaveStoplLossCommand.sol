@@ -121,7 +121,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         return vaultHasDebt && ltv >= stopLossTriggerData.slLevel;
     }
 
-    function execute(bytes calldata executionData, bytes memory triggerData) external override {
+    function execute(
+        bytes calldata executionData,
+        bytes memory triggerData
+    ) external override nonReentrant {
         require(
             serviceRegistry.getRegisteredService(AUTOMATION_BOT) == msg.sender,
             "aaveSl/caller-not-bot"

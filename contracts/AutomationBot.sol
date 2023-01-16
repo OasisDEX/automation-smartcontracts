@@ -26,8 +26,9 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract AutomationBot is BotLike {
+contract AutomationBot is BotLike, ReentrancyGuard {
     struct TriggerRecord {
         bytes32 triggerHash;
         address commandAddress;
@@ -315,7 +316,7 @@ contract AutomationBot is BotLike {
         uint256 triggerId,
         uint256 coverageAmount,
         address coverageToken
-    ) external auth(msg.sender) {
+    ) external auth(msg.sender) nonReentrant {
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
 

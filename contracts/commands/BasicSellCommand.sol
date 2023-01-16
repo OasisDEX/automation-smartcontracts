@@ -82,7 +82,7 @@ contract BasicSellCommand is BaseMPACommand {
             validBaseFeeOrNearLiquidation;
     }
 
-    function execute(bytes calldata executionData, bytes memory triggerData) external {
+    function execute(bytes calldata executionData, bytes memory triggerData) external nonReentrant {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         validateTriggerType(trigger.triggerType, 4);

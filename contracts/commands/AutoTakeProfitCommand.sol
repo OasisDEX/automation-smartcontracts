@@ -99,7 +99,10 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @notice Executes the trigger
     /// @param executionData Execution data from the Automation Worker
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
-    function execute(bytes calldata executionData, bytes memory triggerData) external override {
+    function execute(
+        bytes calldata executionData,
+        bytes memory triggerData
+    ) external override nonReentrant {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
