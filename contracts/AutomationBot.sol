@@ -86,7 +86,7 @@ contract AutomationBot {
         return service;
     }
 
-    function clearlock() external {
+    function clearLock() external {
         lockCount = 0;
     }
 
