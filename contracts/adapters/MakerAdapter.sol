@@ -34,7 +34,7 @@ contract MakerAdapter is IAdapter {
     address private immutable self;
 
     modifier onlyDelegate() {
-        require(address(this) != self, "bot/only-delegate");
+        require(address(this) != self, "maker-adapter/only-delegate");
         _;
     }
 
@@ -66,7 +66,7 @@ contract MakerAdapter is IAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public {
+    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);

@@ -35,7 +35,7 @@ contract DPMAdapter is IAdapter {
     IAccountGuard public immutable accountGuard;
 
     modifier onlyDelegate() {
-        require(address(this) != self, "bot/only-delegate");
+        require(address(this) != self, "dpm-adapter/only-delegate");
         _;
     }
 
@@ -57,7 +57,7 @@ contract DPMAdapter is IAdapter {
         return accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public {
+    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
         require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
 
         (address proxyAddress, ) = decode(triggerData);

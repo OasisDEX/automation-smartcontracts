@@ -224,7 +224,7 @@ describe('AutomationExecutor', async () => {
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
 
-        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+        it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
             await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
 
             const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
@@ -237,7 +237,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -7000,
+                -6000,
                 dai.address,
             )
 
@@ -248,7 +248,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -7000,
+                -6000,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )

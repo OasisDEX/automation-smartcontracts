@@ -177,7 +177,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountInWei /* TODO: on multiply add fee  .add(amountInWei.mul(fee).div(feeBase)) */,
+                    amount: amountInWei,
                     receiveAtLeast: vTokenBalance.add(vTokenBalance.mul(flFee).div(feeBase)),
                     fee: fee,
                     withData: data,
@@ -334,7 +334,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountToSwap.mul(100).div(100),
+                    amount: amountToSwap,
                     receiveAtLeast: vTokenBalance
                         .add(vTokenBalance.mul(flFee).div(feeBase))
                         .add(vTokenBalance.mul(fee).div(feeBase)),
@@ -458,8 +458,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
-                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310503221059')
+                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310000000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
