@@ -326,16 +326,14 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
-        (bool status, ) = address(executableAdapter).delegatecall(
-            abi.encodeWithSelector(
-                executableAdapter.getCoverage.selector,
-                triggerData,
-                msg.sender,
-                coverageToken,
-                coverageAmount
-            )
+
+        automationBotStorage.executeCoverage(
+            triggerData,
+            msg.sender,
+            address(executableAdapter),
+            coverageToken,
+            coverageAmount
         );
-        require(status, "bot/failed-to-draw-coverage");
         {
             automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
         }

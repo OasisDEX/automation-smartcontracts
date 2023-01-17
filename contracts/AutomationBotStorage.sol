@@ -93,4 +93,23 @@ contract AutomationBotStorage {
         );
         require(status, "bot-storage/permit-failed");
     }
+
+    function executeCoverage(
+        bytes memory triggerData,
+        address receiver,
+        address adapter,
+        address coverageToken,
+        uint256 coverageAmount
+    ) external auth(msg.sender) {
+        (bool status, ) = adapter.delegatecall(
+            abi.encodeWithSelector(
+                IAdapter.getCoverage.selector,
+                triggerData,
+                receiver,
+                coverageToken,
+                coverageAmount
+            )
+        );
+        require(status, "bot-storage/failed-to-draw-coverage");
+    }
 }
