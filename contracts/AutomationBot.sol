@@ -215,12 +215,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             );
 
             if (i == 0) {
-                /*    bytes memory executionData = abi.encodeWithSelector(
-                    adapter.permit.selector,
-                    triggerData[i],
-                    address(automationBotStorage),
-                    true
-                ); */
                 (bool status, ) = address(adapter).delegatecall(
                     abi.encodeWithSelector(
                         adapter.permit.selector,
@@ -344,7 +338,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(status, "bot/failed-to-draw-coverage");
         {
             automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
-            //require(statusAllow, "bot/permit-failed");
         }
         {
             command.execute(executionData, triggerData); //command must be whitelisted
