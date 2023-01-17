@@ -20,6 +20,7 @@ pragma solidity ^0.8.0;
 
 import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
+import "./interfaces/IAdapter.sol";
 import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
@@ -52,7 +53,7 @@ contract AutomationBotStorage {
     modifier auth(address caller) {
         require(
             serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY) == caller,
-            "bot/not-automation-bot"
+            "bot-storage/not-automation-bot"
         );
         _;
     }
@@ -79,5 +80,17 @@ contract AutomationBotStorage {
     function appendTriggerRecord(TriggerRecord memory record) external auth(msg.sender) {
         counter.triggersCounter++;
         activeTriggers[counter.triggersCounter] = record;
+    }
+
+    function executePermit(
+        bytes memory triggerData,
+        address target,
+        address adapter,
+        bool allowance
+    ) external auth(msg.sender) {
+        (bool status, ) = adapter.delegatecall(
+            abi.encodeWithSelector(IAdapter.permit.selector, triggerData, target, allowance)
+        );
+        require(status, "bot-storage/permit-failed");
     }
 }
