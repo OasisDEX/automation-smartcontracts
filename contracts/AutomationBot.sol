@@ -288,7 +288,7 @@ contract AutomationBot {
     ) external onlyDelegate {
         require(triggerData.length > 0, "bot/remove-at-least-one");
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        AutomationBot(automationBot).clearlock();
+        AutomationBot(automationBot).clearLock();
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
