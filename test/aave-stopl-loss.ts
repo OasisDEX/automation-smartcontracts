@@ -320,7 +320,7 @@ describe('AaveStoplLossCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it.only('should NOT execute trigger', async () => {
+                it('should NOT execute trigger', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
 

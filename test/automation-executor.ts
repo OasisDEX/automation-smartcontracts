@@ -272,7 +272,7 @@ describe('AutomationExecutor', async () => {
             await expect(tx).to.be.revertedWith('executor/not-authorized')
         })
 
-        it.only('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
+        it('should refund transaction costs if sufficient balance available on AutomationExecutor', async () => {
             await (await DummyCommandInstance.changeFlags(true, true, false)).wait()
 
             const executorBalanceBefore = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
