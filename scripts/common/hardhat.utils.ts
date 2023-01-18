@@ -37,7 +37,6 @@ export class HardhatUtils {
                 'AutomationBotStorage',
                 this.addresses.AUTOMATION_BOT_STORAGE,
             ),
-            makerAdapter: await this.hre.ethers.getContractAt('MakerAdapter', this.addresses.MAKER_ADAPTER),
             constantMultipleValidator: await this.hre.ethers.getContractAt(
                 'ConstantMultipleValidator',
                 this.addresses.CONSTANT_MULTIPLE_VALIDATOR,
@@ -56,6 +55,13 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
+            aaveStoplLossCommand: await this.hre.ethers.getContractAt(
+                'AaveStoplLossCommand',
+                this.addresses.AUTOMATION_AAVE_STOPLOSS_COMMAND,
+            ),
+            makerAdapter: await this.hre.ethers.getContractAt('MakerAdapter', this.addresses.MAKER_ADAPTER),
+            aaveAdapter: await this.hre.ethers.getContractAt('AAVEAdapter', this.addresses.AAVE_ADAPTER),
+            dpmAdapter: await this.hre.ethers.getContractAt('DPMAdapter', this.addresses.DPM_ADAPTER),
         }
     }
 

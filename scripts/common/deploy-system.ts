@@ -18,7 +18,6 @@ import {
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
-import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network } from './types'
@@ -357,7 +356,11 @@ export async function configureRegistryEntries(
             getCommandHash(10),
             system.aaveStoplLossCommand.address,
         )
-
+        await ensureServiceRegistryEntry(
+            // TODO - add to common
+            getCommandHash(11),
+            system.aaveStoplLossCommand.address,
+        )
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
@@ -395,6 +398,12 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
         addresses.MULTIPLY_PROXY_ACTIONS,
+    )
+
+    if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+        system.automationExecutor.address,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')
