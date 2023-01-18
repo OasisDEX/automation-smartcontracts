@@ -26,7 +26,7 @@ import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract MakerAdapter is IAdapter {
+contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ServiceRegistry public immutable serviceRegistry;
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";

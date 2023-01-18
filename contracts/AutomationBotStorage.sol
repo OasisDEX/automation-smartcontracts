@@ -89,7 +89,7 @@ contract AutomationBotStorage {
         bool allowance
     ) external auth(msg.sender) {
         (bool status, ) = adapter.delegatecall(
-            abi.encodeWithSelector(IAdapter.permit.selector, triggerData, target, allowance)
+            abi.encodeWithSelector(ISecurityAdapter.permit.selector, triggerData, target, allowance)
         );
         require(status, "bot-storage/permit-failed");
     }
@@ -103,7 +103,7 @@ contract AutomationBotStorage {
     ) external auth(msg.sender) {
         (bool status, ) = adapter.delegatecall(
             abi.encodeWithSelector(
-                IAdapter.getCoverage.selector,
+                IExecutableAdapter.getCoverage.selector,
                 triggerData,
                 receiver,
                 coverageToken,

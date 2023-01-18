@@ -129,7 +129,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             "bot/invalid-trigger-data"
         );
 
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(
@@ -167,7 +167,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256 triggerId
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
 
@@ -210,7 +210,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            IAdapter adapter = IAdapter(
+            ISecurityAdapter adapter = ISecurityAdapter(
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
@@ -290,8 +290,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         }
 
         if (removeAllowance) {
-            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
-
+            ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
@@ -324,8 +323,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
-        IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
+        IExecutableAdapter executableAdapter = IExecutableAdapter(
+            getAdapterAddress(commandAddress, true)
+        );
 
         automationBotStorage.executeCoverage(
             triggerData,

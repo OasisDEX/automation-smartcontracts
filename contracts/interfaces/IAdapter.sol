@@ -18,11 +18,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-interface IAdapter {
+interface ISecurityAdapter {
     function canCall(bytes memory triggerData, address operator) external returns (bool);
 
     function permit(bytes memory triggerData, address target, bool allowance) external;
+}
 
+interface IExecutableAdapter {
     function getCoverage(
         bytes memory triggerData,
         address receiver,
