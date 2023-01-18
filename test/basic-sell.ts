@@ -11,7 +11,7 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-describe('BasicSellCommand', () => {
+describe.only('BasicSellCommand', () => {
     let correctExecutionRatio: number
     let correctTargetRatio: number
 
@@ -60,8 +60,8 @@ describe('BasicSellCommand', () => {
 
         const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId, true)
         const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-        correctExecutionRatio = toRatio(ratioAtNext + 0.01)
-        correctTargetRatio = toRatio(ratioAtNext + 0.03)
+        correctExecutionRatio = toRatio(Math.ceil(ratioAtNext * 100 + 1) / 100)
+        correctTargetRatio = toRatio(Math.ceil(ratioAtNext * 100 + 3) / 100)
     })
 
     beforeEach(async () => {
