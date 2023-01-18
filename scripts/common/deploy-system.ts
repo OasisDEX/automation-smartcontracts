@@ -205,7 +205,6 @@ export async function deploySystem({
         AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStoplLossCommand'), [
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
-            AaveProxyActionsInstance.address,
         ])) as AaveStoplLossCommand
     }
 
