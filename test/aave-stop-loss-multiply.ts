@@ -291,7 +291,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
