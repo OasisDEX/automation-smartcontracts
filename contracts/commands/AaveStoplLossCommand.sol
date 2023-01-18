@@ -20,7 +20,6 @@
 pragma solidity 0.8.13;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
-import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
@@ -78,9 +77,8 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
 
     constructor(
         IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool,
-        AaveProxyActions _aaveProxyActions
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _aaveProxyActions) {}
+        ILendingPool _lendingPool
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool) {}
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");

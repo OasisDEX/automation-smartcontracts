@@ -40,7 +40,7 @@ interface IFlashLoanReceiver {
 abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, ReentrancyGuard {
     IServiceRegistry public immutable serviceRegistry;
     ILendingPool public immutable lendingPool;
-    AaveProxyActions public immutable aaveProxyActions;
+
     address public trustedCaller;
     address public immutable self;
 
@@ -54,12 +54,7 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
         bytes params;
     }
 
-    constructor(
-        IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool,
-        AaveProxyActions _aaveProxyActions
-    ) {
-        aaveProxyActions = _aaveProxyActions;
+    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
         self = address(this);
