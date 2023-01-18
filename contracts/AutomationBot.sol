@@ -219,11 +219,11 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     abi.encodeWithSelector(
                         adapter.permit.selector,
                         triggerData[i],
-                        address(automationBot),
+                        address(automationBotStorage),
                         true
                     )
                 );
-                require(status, "bot/permit-failed");
+                require(status, "bot/permit-failed-add");
                 emit ApprovalGranted(triggerData[i], address(automationBot));
             }
 
@@ -291,14 +291,16 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         if (removeAllowance) {
             IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(automationBot),
+                    address(automationBotStorage),
                     false
                 )
             );
+
             require(status, "bot/permit-removal-failed");
             emit ApprovalRemoved(triggerData[0], automationBot);
         }
@@ -324,33 +326,32 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
         IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
-        (bool status, ) = address(executableAdapter).delegatecall(
-            abi.encodeWithSelector(
-                executableAdapter.getCoverage.selector,
-                triggerData,
-                msg.sender,
-                coverageToken,
-                coverageAmount
-            )
+
+        automationBotStorage.executeCoverage(
+            triggerData,
+            msg.sender,
+            address(executableAdapter),
+            coverageToken,
+            coverageAmount
         );
-        require(status, "bot/failed-to-draw-coverage");
         {
-            (bool statusAllow, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, true)
-            );
-
-            require(statusAllow, "bot/permit-failed");
-
+            automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
+        }
+        {
             command.execute(executionData, triggerData); //command must be whitelisted
             (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
             if (!continuous) {
                 clearTrigger(triggerId);
                 emit TriggerRemoved(triggerId);
             }
-            (bool statusDisallow, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, false)
+        }
+        {
+            automationBotStorage.executePermit(
+                triggerData,
+                commandAddress,
+                address(adapter),
+                false
             );
-            require(statusDisallow, "bot/remove-permit-failed");
             require(command.isExecutionCorrect(triggerData), "bot/trigger-execution-wrong");
         }
 
