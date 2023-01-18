@@ -153,7 +153,7 @@ describe('AAVE integration', async () => {
             const status = await AaveCommandInstance.isExecutionLegal(triggerData)
             expect(status).to.be.true
         })
-        it.only('trigger execution should not fail', async () => {
+        it('trigger execution should not fail', async () => {
             const tx0 = AutomationExecutorInstance.execute(
                 '0x',
                 triggerData,
