@@ -232,7 +232,6 @@ describe('BasicSellCommand', () => {
 
             return system.automationExecutor.execute(
                 executionData,
-                testCdpId,
                 triggerData,
                 system.basicSell!.address,
                 triggerId,

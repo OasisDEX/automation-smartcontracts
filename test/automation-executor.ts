@@ -9,8 +9,17 @@ import {
     ServiceRegistry,
     TestWETH,
     ERC20,
+    AutomationBotStorage,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    HardhatUtils,
+    getAdapterNameHash,
+    AutomationServiceName,
+    getServiceNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
@@ -26,6 +35,7 @@ describe('AutomationExecutor', async () => {
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
+    let AutomationBotStorageInstance: AutomationBotStorage
     let DummyCommandInstance: DummyCommand
     let TestWETHInstance: TestWETH
     let dai: ERC20
@@ -67,6 +77,7 @@ describe('AutomationExecutor', async () => {
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
+        AutomationBotStorageInstance = system.automationBotStorage
 
         // Fund executor
         await owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) })
@@ -124,6 +135,15 @@ describe('AutomationExecutor', async () => {
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
         })
 
+        it('should not be able to whitelist new callers twice', async () => {
+            const caller = generateRandomAddress()
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+            const tx = AutomationExecutorInstance.addCallers([caller])
+            await expect(tx).to.be.revertedWith('executor/duplicate-whitelist')
+        })
+
         it('should revert with executor/only-owner on unauthorized sender', async () => {
             const caller = generateRandomAddress()
             const tx = AutomationExecutorInstance.connect(notOwner).addCallers([caller])
@@ -132,12 +152,21 @@ describe('AutomationExecutor', async () => {
     })
 
     describe('removeCaller', () => {
-        it('should be able to whitelist new callers', async () => {
+        it('should be able to whitelist new callers and remove them', async () => {
             const caller = generateRandomAddress()
             await AutomationExecutorInstance.addCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.true
             await AutomationExecutorInstance.removeCallers([caller])
             expect(await AutomationExecutorInstance.callers(caller)).to.be.false
+        })
+
+        it('should revert on removing not existing whitelist entry', async () => {
+            const caller = generateRandomAddress()
+            const secondCaller = generateRandomAddress()
+            await AutomationExecutorInstance.addCallers([caller])
+            expect(await AutomationExecutorInstance.callers(caller)).to.be.true
+            const tx = AutomationExecutorInstance.removeCallers([secondCaller])
+            await expect(tx).to.be.revertedWith('executor/absent-caller')
         })
 
         it('should revert with executor/only-owner on unauthorized sender', async () => {
@@ -180,7 +209,6 @@ describe('AutomationExecutor', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -192,11 +220,47 @@ describe('AutomationExecutor', async () => {
             await expect(tx).not.to.be.reverted
         })
 
+        it('should not revert on successful execution with updted bot and executor', async () => {
+            const AutomationBotInstance2: AutomationBot = await hardhatUtils.deployContract(
+                hre.ethers.getContractFactory('AutomationBot'),
+                [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
+            )
+            const AutomationExecutorInstance2: AutomationExecutor = await hardhatUtils.deployContract(
+                hre.ethers.getContractFactory('AutomationExecutor'),
+                [AutomationBotInstance2.address, hardhatUtils.addresses.WETH, ServiceRegistryInstance.address],
+            )
+            await (
+                await ServiceRegistryInstance.updateNamedService(
+                    getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
+                    AutomationExecutorInstance2.address,
+                )
+            ).wait()
+            await (
+                await ServiceRegistryInstance.updateNamedService(
+                    getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
+                    AutomationBotInstance2.address,
+                )
+            ).wait()
+
+            await DummyCommandInstance.changeFlags(true, true, false)
+            const tx = AutomationExecutorInstance2.execute(
+                dummyTriggerData,
+                triggerData,
+                DummyCommandInstance.address,
+                triggerId,
+                0,
+                0,
+                15000,
+                dai.address,
+            )
+
+            await expect(tx).not.to.be.reverted
+        })
+
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.connect(notOwner).execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -216,25 +280,23 @@ describe('AutomationExecutor', async () => {
 
             const estimation = await AutomationExecutorInstance.connect(owner).estimateGas.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
                 0,
                 0,
-                -7000,
+                -2800,
                 dai.address,
             )
 
             const tx = AutomationExecutorInstance.connect(owner).execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
                 0,
                 0,
-                -7000,
+                -2800,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
@@ -245,12 +307,6 @@ describe('AutomationExecutor', async () => {
             const txCost = receipt.gasUsed.mul(receipt.effectiveGasPrice).toString()
             const executorBalanceAfter = await hre.ethers.provider.getBalance(AutomationExecutorInstance.address)
             const ownerBalanceAfter = await hre.ethers.provider.getBalance(await owner.getAddress())
-            console.log('executorBalanceBefore', executorBalanceBefore.toString())
-            console.log('executorBalanceAfter', executorBalanceAfter.toString())
-            console.log('executorBalanceDiff', executorBalanceBefore.sub(executorBalanceAfter).toString())
-            console.log('txCost', txCost.toString())
-            console.log('receipt.gasUsed', receipt.gasUsed.toString())
-            console.log('ownerBalanceDiff', ownerBalanceBefore.sub(ownerBalanceAfter).toString())
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.lessThan(10) //account for some refund calculation inacurencies
             expect(ownerBalanceBefore.sub(ownerBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(-10) //account for some refund calculation inacurencies
             expect(executorBalanceBefore.sub(executorBalanceAfter).mul(1000).div(txCost).toNumber()).to.be.greaterThan(
@@ -273,7 +329,6 @@ describe('AutomationExecutor', async () => {
 
             const estimation = await AutomationExecutorInstance.estimateGas.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,
@@ -285,7 +340,6 @@ describe('AutomationExecutor', async () => {
 
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerData,
-                testCdpId,
                 triggerData,
                 DummyCommandInstance.address,
                 triggerId,

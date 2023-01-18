@@ -23,8 +23,9 @@ import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract CloseCommand is ICommand {
+contract CloseCommand is ICommand, ReentrancyGuard {
     address public immutable serviceRegistry;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
@@ -58,7 +59,10 @@ contract CloseCommand is ICommand {
         return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
     }
 
-    function execute(bytes calldata executionData, bytes memory triggerData) external override {
+    function execute(
+        bytes calldata executionData,
+        bytes memory triggerData
+    ) external override nonReentrant {
         (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);

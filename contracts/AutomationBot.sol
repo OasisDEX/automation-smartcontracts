@@ -26,17 +26,17 @@ import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "./ServiceRegistry.sol";
 import "./McdUtils.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract AutomationBot {
+contract AutomationBot is BotLike, ReentrancyGuard {
     struct TriggerRecord {
         bytes32 triggerHash;
-        address commandAddress; // or type ? do we allow execution of the same command with new contract - waht if contract rev X is broken ? Do we force migration (can we do it)?
+        address commandAddress;
         bool continuous;
     }
 
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
-    string private constant AUTOMATION_BOT_STORAGE_KEY = "AUTOMATION_BOT_STORAGE";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
 
     ServiceRegistry public immutable serviceRegistry;
@@ -129,7 +129,7 @@ contract AutomationBot {
             "bot/invalid-trigger-data"
         );
 
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
         automationBotStorage.appendTriggerRecord(
@@ -167,8 +167,7 @@ contract AutomationBot {
         uint256 triggerId
     ) external {
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
-        // TODO: pass adapter type // make adapter address command dependent ?
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
 
@@ -189,9 +188,13 @@ contract AutomationBot {
         bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
-        uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
+        uint256[] memory triggerTypes
     ) external onlyDelegate {
-        // TODO: consider adding isCdpAllow add flag in tx payload, make sense from extensibility perspective
+        require(
+            replacedTriggerId.length == triggerData.length &&
+                triggerData.length == triggerTypes.length,
+            "bot/invalid-input-length"
+        );
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
 
@@ -203,11 +206,11 @@ contract AutomationBot {
             );
         }
 
-        uint256 firstTriggerId = automationBotStorage.triggersCounter();
+        uint256 firstTriggerId = automationBotStorage.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            IAdapter adapter = IAdapter(
+            ISecurityAdapter adapter = ISecurityAdapter(
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
@@ -216,11 +219,12 @@ contract AutomationBot {
                     abi.encodeWithSelector(
                         adapter.permit.selector,
                         triggerData[i],
-                        address(automationBot),
+                        address(automationBotStorage),
                         true
                     )
                 );
-                require(status, "bot/permit-failed");
+                require(status, "bot/permit-failed-add");
+                emit ApprovalGranted(triggerData[i], address(automationBot));
             }
 
             AutomationBot(automationBot).addRecord(
@@ -250,13 +254,13 @@ contract AutomationBot {
     function emitGroupDetails(uint16 triggerGroupType, uint256[] memory triggerIds) external {
         require(lockCount == triggerIds.length, "bot/group-inconsistent");
         unlock();
-        automationBotStorage.increaseGroupCounter();
 
         emit TriggerGroupAdded(
             automationBotStorage.triggersGroupCounter(),
             triggerGroupType,
             triggerIds
         );
+        automationBotStorage.increaseGroupCounter();
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
@@ -276,6 +280,8 @@ contract AutomationBot {
         bool removeAllowance
     ) external onlyDelegate {
         require(triggerData.length > 0, "bot/remove-at-least-one");
+        require(triggerData.length == triggerIds.length, "bot/invalid-input-length");
+
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
@@ -284,15 +290,16 @@ contract AutomationBot {
         }
 
         if (removeAllowance) {
-            IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
+            ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(automationBot),
+                    address(automationBotStorage),
                     false
                 )
             );
+
             require(status, "bot/permit-removal-failed");
             emit ApprovalRemoved(triggerData[0], automationBot);
         }
@@ -311,40 +318,41 @@ contract AutomationBot {
         uint256 triggerId,
         uint256 coverageAmount,
         address coverageToken
-    ) external auth(msg.sender) {
+    ) external auth(msg.sender) nonReentrant {
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
         ICommand command = ICommand(commandAddress);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
-        IAdapter adapter = IAdapter(getAdapterAddress(commandAddress, false));
-        IAdapter executableAdapter = IAdapter(getAdapterAddress(commandAddress, true));
-        (bool status, ) = address(executableAdapter).delegatecall(
-            abi.encodeWithSelector(
-                executableAdapter.getCoverage.selector,
-                triggerData,
-                msg.sender,
-                coverageToken,
-                coverageAmount
-            )
+        ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
+        IExecutableAdapter executableAdapter = IExecutableAdapter(
+            getAdapterAddress(commandAddress, true)
         );
-        require(status, "bot/failed-to-draw-coverage");
+
+        automationBotStorage.executeCoverage(
+            triggerData,
+            msg.sender,
+            address(executableAdapter),
+            coverageToken,
+            coverageAmount
+        );
         {
-            (bool statusAllow, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, true)
-            );
-
-            require(statusAllow, "bot/permit-failed");
-
+            automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
+        }
+        {
             command.execute(executionData, triggerData); //command must be whitelisted
             (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
             if (!continuous) {
                 clearTrigger(triggerId);
                 emit TriggerRemoved(triggerId);
             }
-            (bool statusDisallow, ) = address(adapter).delegatecall(
-                abi.encodeWithSelector(adapter.permit.selector, triggerData, commandAddress, false)
+        }
+        {
+            automationBotStorage.executePermit(
+                triggerData,
+                commandAddress,
+                address(adapter),
+                false
             );
-            require(statusDisallow, "bot/remove-permit-failed");
             require(command.isExecutionCorrect(triggerData), "bot/trigger-execution-wrong");
         }
 

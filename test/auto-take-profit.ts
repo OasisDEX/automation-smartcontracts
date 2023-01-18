@@ -180,7 +180,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -259,7 +259,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -283,7 +283,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -317,7 +317,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -328,7 +328,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -428,7 +428,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -520,7 +520,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -550,7 +550,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -562,7 +562,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -599,7 +599,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,

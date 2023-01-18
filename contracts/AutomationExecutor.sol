@@ -16,17 +16,15 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 pragma solidity ^0.8.0;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IWETH } from "./interfaces/IWETH.sol";
 import { BotLike } from "./interfaces/BotLike.sol";
-import { IExchange } from "./interfaces/IExchange.sol";
-import { ICommand } from "./interfaces/ICommand.sol";
 import "./ServiceRegistry.sol";
 
-import { FullMath } from "@uniswap/v3-core/contracts/libraries/FullMath.sol";
 import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -45,16 +43,14 @@ contract AutomationExecutor {
     IV3SwapRouter public immutable uniswapRouter;
     IUniswapV3Factory public immutable uniswapFactory;
     BotLike public immutable bot;
-    ERC20 public immutable dai;
     IWETH public immutable weth;
     address public owner;
 
     mapping(address => bool) public callers;
 
-    constructor(BotLike _bot, ERC20 _dai, IWETH _weth, ServiceRegistry _serviceRegistry) {
+    constructor(BotLike _bot, IWETH _weth, ServiceRegistry _serviceRegistry) {
         bot = _bot;
         weth = _weth;
-        dai = _dai;
         owner = msg.sender;
         callers[owner] = true;
         uniswapRouter = IV3SwapRouter(_serviceRegistry.getRegisteredService(UNISWAP_ROUTER_KEY));
@@ -92,30 +88,31 @@ contract AutomationExecutor {
         uint256 length = _callers.length;
         for (uint256 i = 0; i < length; ++i) {
             address caller = _callers[i];
+            require(callers[caller], "executor/absent-caller");
             callers[caller] = false;
             emit CallerRemoved(caller);
         }
     }
 
-    // TODO: remove cdpId
     function execute(
         bytes calldata executionData,
-        uint256 cdpId,
         bytes calldata triggerData,
         address commandAddress,
         uint256 triggerId,
-        uint256 daiCoverage,
+        uint256 txCoverage,
         uint256 minerBribe,
         int256 gasRefund,
         address coverageToken
     ) external auth(msg.sender) {
+        require(gasRefund < 10 ** 12, "executor/gas-refund-too-high");
+
         uint256 initialGasAvailable = gasleft();
         bot.execute(
             executionData,
             triggerData,
             commandAddress,
             triggerId,
-            daiCoverage,
+            txCoverage,
             coverageToken
         );
 
@@ -206,7 +203,7 @@ contract AutomationExecutor {
             weth.withdraw(amountIn);
             return amountIn;
         }
-        ERC20(tokenIn).safeApprove(address(uniswapRouter), ERC20(tokenIn).balanceOf(address(this)));
+        ERC20(tokenIn).safeApprove(address(uniswapRouter), amountIn);
 
         bytes memory path = abi.encodePacked(tokenIn, uint24(fee), address(weth));
 
@@ -217,7 +214,6 @@ contract AutomationExecutor {
             amountOutMinimum: amountOutMin
         });
 
-        ERC20(tokenIn).approve(address(uniswapRouter), amountIn);
         uint256 amount = uniswapRouter.exactInput(params);
         weth.withdraw(amount);
         return amount;
