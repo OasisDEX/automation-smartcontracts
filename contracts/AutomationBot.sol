@@ -280,11 +280,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     //works correctly in context of dsProxy
-
-    // TODO: removeAllowance parameter of this method moves responsibility to decide on this to frontend.
-    // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
-    // despite there still be some active triggers which will be disables by this call.
-    // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
     function removeTriggers(
         uint256[] memory triggerIds,
         bytes[] memory triggerData,
