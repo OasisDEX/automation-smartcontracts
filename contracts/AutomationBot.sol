@@ -197,7 +197,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
         bytes[] memory replacedTriggerData,
-        uint256[] memory triggerTypes // adapter / validator -> decode trigger data to get type
+        uint256[] memory triggerTypes
     ) external onlyDelegate {
         require(
             replacedTriggerId.length == triggerData.length &&
