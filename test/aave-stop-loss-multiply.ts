@@ -99,6 +99,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -123,6 +124,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -218,6 +220,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -261,6 +264,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -383,6 +387,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -427,6 +432,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
                     // add trigger

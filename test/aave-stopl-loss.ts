@@ -130,6 +130,7 @@ describe('AaveStoplLossCommand', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -154,6 +155,7 @@ describe('AaveStoplLossCommand', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -250,6 +252,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -303,6 +306,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -424,6 +428,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
                     // add trigger
@@ -478,6 +483,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 

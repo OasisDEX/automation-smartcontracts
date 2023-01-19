@@ -11,7 +11,7 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-describe.only('BasicSellCommand', () => {
+describe('BasicSellCommand', () => {
     let correctExecutionRatio: number
     let correctTargetRatio: number
 
@@ -33,6 +33,7 @@ describe.only('BasicSellCommand', () => {
             [continuous],
             [0],
             [triggerData],
+            ["0x"],
             [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
