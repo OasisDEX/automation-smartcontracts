@@ -33,6 +33,7 @@ describe('BasicSellCommand', () => {
             [continuous],
             [0],
             [triggerData],
+            ["0x"],
             [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)

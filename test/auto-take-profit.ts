@@ -163,6 +163,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -235,6 +236,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
 
@@ -411,6 +413,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -473,6 +476,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
 

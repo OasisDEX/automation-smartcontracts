@@ -188,6 +188,7 @@ describe('AutomationExecutor', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [1],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)

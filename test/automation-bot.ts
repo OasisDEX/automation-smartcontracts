@@ -129,6 +129,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             )
             await expect(tx).to.be.revertedWith('bot/only-delegate')
@@ -141,6 +142,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             const tx = notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)
@@ -155,6 +157,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -162,18 +165,74 @@ describe('AutomationBot', async () => {
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
 
+        it('should successfully create a trigger through DSProxy and then replace it', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [triggerData],
+                ['0x'],
+                [triggerType],
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+
+            const replacedTriggerData = triggerData
+            const dataToSupplyWithReplace = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [1],
+                [triggerData],
+                [replacedTriggerData],
+                [triggerType],
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyWithReplace)
+            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+
+            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
+        })
+
+        it('should successfully create a trigger through DSProxy and then NOT replace it', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [triggerData],
+                ['0x'],
+                [triggerType],
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+
+            const dataToSupplyWithReplace = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [1],
+                [triggerData],
+                ['0x'],
+                [triggerType],
+            ])
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyWithReplace)
+            await expect(tx).to.be.reverted
+
+            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
+        })
+
         it('should successfully create a trigger if called by user having permissions over the vault', async () => {
             const [signer] = await hre.ethers.getSigners()
             const signerAddress = await signer.getAddress()
 
-            const tx = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData)
+            const tx = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, '0x')
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData)
+            const tx2 = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, '0x')
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()
@@ -191,6 +250,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -208,6 +268,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -229,6 +290,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [7],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -244,6 +306,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
+                ['0x'],
                 [2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -341,6 +404,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
+                ['0x'],
                 [2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -547,6 +611,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
+                ['0x'],
                 [2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -686,6 +751,7 @@ describe('AutomationBot', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ['0x'],
                 [2],
             ])
             const receipt = await (
@@ -747,6 +813,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [2],
             ])
             const receipt = await (
@@ -798,6 +865,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [2],
             ])
 

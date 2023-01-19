@@ -85,6 +85,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         return service;
     }
 
+    function clearLock() external {
+        lockCount = 0;
+    }
+
     // works correctly in any context
     function getTriggersHash(
         bytes memory triggerData,
@@ -118,7 +122,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256 triggerType,
         bool continuous,
         uint256 replacedTriggerId,
-        bytes memory triggerData
+        bytes memory triggerData,
+        bytes memory replacedTriggerData
     ) external {
         lock();
 
@@ -131,6 +136,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
+        require(
+            replacedTriggerId == 0 || adapter.canCall(replacedTriggerData, msg.sender),
+            "bot/no-permissions-replace"
+        );
 
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
@@ -141,7 +150,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         );
 
         if (replacedTriggerId != 0) {
-            // TODO: previously it checked if cdpIds are the same
             (bytes32 replacedTriggersHash, , ) = automationBotStorage.activeTriggers(
                 replacedTriggerId
             );
@@ -188,6 +196,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         bool[] memory continuous,
         uint256[] memory replacedTriggerId,
         bytes[] memory triggerData,
+        bytes[] memory replacedTriggerData,
         uint256[] memory triggerTypes
     ) external onlyDelegate {
         require(
@@ -197,6 +206,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         );
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        AutomationBot(automationBot).clearLock();
 
         if (groupType != SINGLE_TRIGGER_GROUP_TYPE) {
             IValidator validator = getValidatorAddress(groupType);
@@ -231,7 +241,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 triggerTypes[i],
                 continuous[i],
                 replacedTriggerId[i],
-                triggerData[i]
+                triggerData[i],
+                replacedTriggerData[i]
             );
 
             triggerIds[i] = firstTriggerId + i;
@@ -269,11 +280,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     //works correctly in context of dsProxy
-
-    // TODO: removeAllowance parameter of this method moves responsibility to decide on this to frontend.
-    // In case of a bug on frontend allowance might be revoked by setting this parameter to `true`
-    // despite there still be some active triggers which will be disables by this call.
-    // One of the solutions is to add counter of active triggers and revoke allowance only if last trigger is being deleted
     function removeTriggers(
         uint256[] memory triggerIds,
         bytes[] memory triggerData,
@@ -283,6 +289,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(triggerData.length == triggerIds.length, "bot/invalid-input-length");
 
         address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        AutomationBot(automationBot).clearLock();
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
