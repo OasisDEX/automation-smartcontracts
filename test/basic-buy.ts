@@ -247,7 +247,6 @@ describe('BasicBuyCommand', () => {
 
             return system.automationExecutor.execute(
                 executionData,
-                testCdpId,
                 triggerData,
                 system.basicBuy!.address,
                 triggerId,

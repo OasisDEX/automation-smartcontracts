@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// CloseCommand.sol
+/// MakerAdapter.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -21,11 +21,12 @@ import "../interfaces/ICommand.sol";
 import "../interfaces/ManagerLike.sol";
 import "../interfaces/BotLike.sol";
 import "../interfaces/MPALike.sol";
+import "../interfaces/IAdapter.sol";
 import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract MakerAdapter {
+contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ServiceRegistry public immutable serviceRegistry;
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
@@ -33,7 +34,7 @@ contract MakerAdapter {
     address private immutable self;
 
     modifier onlyDelegate() {
-        require(address(this) != self, "bot/only-delegate");
+        require(address(this) != self, "maker-adapter/only-delegate");
         _;
     }
 
@@ -65,7 +66,7 @@ contract MakerAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public {
+    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);

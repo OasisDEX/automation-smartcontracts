@@ -170,7 +170,6 @@ describe('CloseCommand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
                         triggerData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -237,7 +236,7 @@ describe('CloseCommand', async () => {
 
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -271,7 +270,7 @@ describe('CloseCommand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -283,7 +282,7 @@ describe('CloseCommand', async () => {
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -318,7 +317,7 @@ describe('CloseCommand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -408,7 +407,7 @@ describe('CloseCommand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -475,7 +474,7 @@ describe('CloseCommand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -510,7 +509,7 @@ describe('CloseCommand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -522,7 +521,7 @@ describe('CloseCommand', async () => {
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -557,7 +556,7 @@ describe('CloseCommand', async () => {
                 it('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,

@@ -258,7 +258,6 @@ describe('AutomationAggregatorBot', async () => {
 
             return system.automationExecutor.execute(
                 executionData,
-                testCdpId,
                 triggerData,
                 system.basicBuy!.address,
                 triggerId,
@@ -715,7 +714,7 @@ describe('AutomationAggregatorBot', async () => {
                 false,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotInstance.address)
+            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
             expect(status).to.equal(true)
         })
         it('should only remove approval if last param set to true - test TRUE', async () => {
@@ -728,7 +727,7 @@ describe('AutomationAggregatorBot', async () => {
                 true,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotInstance.address)
+            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
             expect(status).to.equal(false)
         })
         it('should revert if called not through delegatecall', async () => {
@@ -768,17 +767,26 @@ describe('AutomationAggregatorBot', async () => {
         })
     })
     describe('cdpAllowed', async () => {
+        let sellExecutionRatio: number
+        let sellTargetRatio: number
+        let buyExecutionRatio: number
+        let buyTargetRatio: number
+        let bbTriggerData: BytesLike
+        let bsTriggerData: BytesLike
+
         beforeEach(async () => {
             const groupTypeId = TriggerGroupType.ConstantMultiple
             const replacedTriggerId = [0, 0]
             const replacedTriggerData = ['0x', '0x']
 
             // current coll ratio : 1.859946411122229468
-            const [sellExecutionRatio, sellTargetRatio] = [toRatio(1.6), toRatio(2.53)]
-            const [buyExecutionRatio, buyTargetRatio] = [toRatio(2.55), toRatio(2.53)]
+            sellExecutionRatio = toRatio(1.6)
+            sellTargetRatio = toRatio(2.53)
+            buyExecutionRatio = toRatio(2.55)
+            buyTargetRatio = toRatio(2.53)
 
             // basic buy
-            const bbTriggerData = encodeTriggerData(
+            bbTriggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BasicBuy,
                 buyExecutionRatio,
@@ -788,7 +796,7 @@ describe('AutomationAggregatorBot', async () => {
                 maxGweiPrice,
             )
             // basic sell
-            const bsTriggerData = encodeTriggerData(
+            bsTriggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.BasicSell,
                 sellExecutionRatio,
@@ -822,17 +830,25 @@ describe('AutomationAggregatorBot', async () => {
         it('should return true for correct operator address', async () => {
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotInstance.address,
+                AutomationBotStorageInstance.address,
             )
-            expect(status).to.equal(true, 'approval do not exist for AutomationBot')
+
+            expect(status).to.equal(true, 'approval does exist for AutomationBotStorageInstance')
         })
         it('should return false for correct operator address', async () => {
+            const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
+                [1, 2],
+                [bbTriggerData, bsTriggerData],
+                true,
+            ])
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotInstance.address,
+                AutomationBotStorageInstance.address,
             )
-            //TODO: why was false heree originally?
-            expect(status).to.equal(true, 'approval does exist for AutomationBotAggregatorInstance')
+
+            expect(status).to.equal(false, 'approval does not exist for AutomationBotStorageInstance')
         })
     })
 })
