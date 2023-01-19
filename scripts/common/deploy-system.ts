@@ -19,6 +19,7 @@ import {
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
+import { addRegistryEntryMultisig } from '../test'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
 import { AutomationServiceName, Network } from './types'
@@ -65,11 +66,13 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
         }
 
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
-        const gasSettings = await utils.getGasSettings()
+        //const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
-            await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
+            const data = serviceRegistry.interface.encodeFunctionData('addNamedService', [hash, address])
+            await addRegistryEntryMultisig(data)
         } else if (overwrite.includes(hash)) {
-            await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
+            const data = serviceRegistry.interface.encodeFunctionData('updateNamedService', [hash, address])
+            await addRegistryEntryMultisig(data)
         } else {
             console.log(
                 `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
