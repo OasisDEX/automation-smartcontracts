@@ -1,13 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import {
-    getEvents,
-    getCommandHash,
-    HardhatUtils,
-    AutomationServiceName,
-    getAdapterNameHash,
-} from '../scripts/common'
+import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -135,7 +129,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [triggerType],
             )
             await expect(tx).to.be.revertedWith('bot/only-delegate')
@@ -148,7 +142,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [triggerType],
             ])
             const tx = notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)
@@ -163,7 +157,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [triggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -175,14 +169,14 @@ describe('AutomationBot', async () => {
             const [signer] = await hre.ethers.getSigners()
             const signerAddress = await signer.getAddress()
 
-            const tx = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, "0x")
+            const tx = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, '0x')
             await expect(tx).to.be.reverted
 
             const proxyOwner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const cdpAllowTx = executeCdpAllow(ownerProxy, proxyOwner, testCdpId, signerAddress, 1)
             await expect(cdpAllowTx).not.to.be.reverted
 
-            const tx2 = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, "0x")
+            const tx2 = AutomationBotInstance.connect(signer).addRecord(triggerType, false, 0, triggerData, '0x')
             await expect(tx2).not.to.be.reverted
 
             const receipt = await (await tx2).wait()
@@ -200,7 +194,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [triggerType],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -218,7 +212,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [7],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [triggerType],
             ])
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -234,7 +228,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -332,7 +326,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -539,7 +533,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -667,7 +661,7 @@ describe('AutomationBot', async () => {
                 [true],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
             const receipt = await (
@@ -730,7 +724,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
             const receipt = await (
@@ -783,7 +777,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [2],
             ])
 
