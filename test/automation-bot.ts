@@ -212,6 +212,7 @@ describe('AutomationBot', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ['0x'],
                 [triggerType],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)

@@ -11,7 +11,7 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-describe.only('BasicSellCommand', () => {
+describe('BasicSellCommand', () => {
     let correctExecutionRatio: number
     let correctTargetRatio: number
 
