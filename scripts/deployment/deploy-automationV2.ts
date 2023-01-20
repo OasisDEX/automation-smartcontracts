@@ -143,9 +143,9 @@ async function main() {
     await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
 
     if (utils.hre.network.name === 'local') {
-        const guardDeployerAddress = '0x060c23f67febb04f4b5d5c205633a04005985a94'
-        const guardDeployer = await utils.impersonate(guardDeployerAddress)
         const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
+        const owner = await guard.owner()
+        const guardDeployer = await utils.impersonate(owner)
         await guard.connect(guardDeployer).setWhitelist(AutomationBotInstance.address, true)
         console.log("Guard's whitelist updated")
     }
