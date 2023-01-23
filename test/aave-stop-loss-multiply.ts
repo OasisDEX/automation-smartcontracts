@@ -77,29 +77,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
         await guard.connect(guardDeployer).setWhitelist(aaveStopLoss.address, true)
-        await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
-        /*   // TODO: take multiply poistion from mainnet
-        // 1. deposit 1 eth of collateral
-        const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
-        await (
-            await account.connect(receiver).execute(aave_pa.address, encodedOpenData, {
-                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
-                gasLimit: 3000000,
-            })
-        ).wait()
-
-        // 2. draw 500 USDC debt
-        const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
-            hardhatUtils.addresses.USDC,
-            proxyAddress,
-            EthersBN.from(500).mul(EthersBN.from(10).pow(6)),
-        ])
-
-        await (
-            await account.connect(receiver).execute(aave_pa.address, encodedDrawDebtData, {
-                gasLimit: 3000000,
-            })
-        ).wait() */
     })
 
     describe('isTriggerDataValid', () => {
@@ -122,6 +99,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -146,6 +124,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -200,7 +179,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountInWei /* TODO: on multiply add fee  .add(amountInWei.mul(fee).div(feeBase)) */,
+                    amount: amountInWei,
                     receiveAtLeast: vTokenBalance.add(vTokenBalance.mul(flFee).div(feeBase)),
                     fee: fee,
                     withData: data,
@@ -241,6 +220,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -253,7 +233,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 it('should NOT execute trigger', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -285,6 +264,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -298,7 +278,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -317,7 +296,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
@@ -360,8 +338,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    // TODO @halaprix increase the amount so we cover the coverage
-                    amount: amountToSwap.mul(100).div(100),
+                    amount: amountToSwap,
                     receiveAtLeast: vTokenBalance
                         .add(vTokenBalance.mul(flFee).div(feeBase))
                         .add(vTokenBalance.mul(fee).div(feeBase)),
@@ -411,6 +388,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -424,7 +402,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 it('should NOT execute trigger', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -456,6 +433,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
                     // add trigger
@@ -469,7 +447,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -488,8 +465,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
-                    expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
+                    expect(+txData.wethBalance).to.be.greaterThan(+'98721310000000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })

@@ -24,9 +24,9 @@ import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
-import { AutomationBot } from "../AutomationBot.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-abstract contract BaseMPACommand is ICommand {
+abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     using RatioUtils for uint256;
 
     string public constant MCD_VIEW_KEY = "MCD_VIEW";

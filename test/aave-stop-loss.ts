@@ -120,7 +120,7 @@ describe('AaveStoplLossCommand', async () => {
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
-                ltv.sub(1),
+                ltv.sub(2),
                 300,
             ]
             const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -130,6 +130,7 @@ describe('AaveStoplLossCommand', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -144,7 +145,7 @@ describe('AaveStoplLossCommand', async () => {
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
-                ltv.sub(1),
+                ltv.sub(2),
                 300,
             ]
             const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -154,6 +155,7 @@ describe('AaveStoplLossCommand', async () => {
                 [false],
                 [0],
                 [triggerData],
+                ["0x"],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -240,7 +242,7 @@ describe('AaveStoplLossCommand', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.sub(1),
+                        ltv.sub(2),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -250,6 +252,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -271,7 +274,6 @@ describe('AaveStoplLossCommand', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -303,7 +305,7 @@ describe('AaveStoplLossCommand', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.add(1),
+                        ltv.add(10),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -313,6 +315,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -333,7 +336,7 @@ describe('AaveStoplLossCommand', async () => {
                 it('should NOT execute trigger', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
+
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -424,7 +427,7 @@ describe('AaveStoplLossCommand', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.sub(1),
+                        ltv.sub(2),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -434,6 +437,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
                     // add trigger
@@ -455,7 +459,6 @@ describe('AaveStoplLossCommand', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
@@ -487,7 +490,7 @@ describe('AaveStoplLossCommand', async () => {
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
-                        ltv.add(1),
+                        ltv.add(2),
                         300,
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
@@ -497,6 +500,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [10],
                     ])
 
@@ -517,7 +521,6 @@ describe('AaveStoplLossCommand', async () => {
                 it('should NOT execute trigger', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
-                        0,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,

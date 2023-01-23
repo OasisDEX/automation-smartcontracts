@@ -163,6 +163,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -180,7 +181,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -235,6 +236,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
 
@@ -259,7 +261,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -283,7 +285,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -317,7 +319,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -328,7 +330,7 @@ describe('AutoTakeProfitCommmand', async () => {
                     )
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -411,6 +413,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -428,7 +431,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -473,6 +476,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
+                        ["0x"],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
 
@@ -520,7 +524,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -550,7 +554,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -562,7 +566,7 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,
@@ -599,7 +603,7 @@ describe('AutoTakeProfitCommmand', async () => {
                 it('should send dai To receiverAddress', async () => {
                     await AutomationExecutorInstance.execute(
                         executionData,
-                        testCdpId,
+
                         triggerData,
                         AutoTakeProfitCommandInstance.address,
                         triggerId,

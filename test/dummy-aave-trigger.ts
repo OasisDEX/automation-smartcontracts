@@ -13,6 +13,7 @@ import {
 import {
     AccountFactoryLike,
     AutomationBot,
+    AutomationExecutor,
     DummyAaveWithdrawCommand,
     IAccountGuard,
     IAccountImplementation,
@@ -29,6 +30,7 @@ describe('AAVE integration', async () => {
     let DPMFactory: AccountFactoryLike
     let DPMGuard: IAccountGuard
     let AutomationBotInstance: AutomationBot
+    let AutomationExecutorInstance: AutomationExecutor
     let AaveCommandInstance: DummyAaveWithdrawCommand
     let utils: HardhatUtils
     let triggerData: string
@@ -49,6 +51,7 @@ describe('AAVE integration', async () => {
 
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
         system = await deploySystem({ utils, addCommands: true, logDebug: true })
+        AutomationExecutorInstance = system.automationExecutor
         console.log('System deployed')
         DPMFactory = await hre.ethers.getContractAt('AccountFactoryLike', utils.addresses.DPM_FACTORY) //utils.addresses.DPM_FACTORY);
         AutomationBotInstance = await hre.ethers.getContractAt('AutomationBot', utils.addresses.AUTOMATION_BOT_V2)
@@ -116,6 +119,7 @@ describe('AAVE integration', async () => {
             [true],
             [0],
             [triggerData],
+            ["0x"],
             [TriggerType.SimpleAAVESell],
         ])
         const tx = DPMAccount.execute(system.automationBot.address, dataToSupply, {
@@ -124,7 +128,7 @@ describe('AAVE integration', async () => {
 
         await expect(tx).to.not.be.reverted
 
-        const receipt = await (await tx).wait()
+        await (await tx).wait()
     })
 
     describe('Trigger added', async () => {
@@ -136,6 +140,7 @@ describe('AAVE integration', async () => {
                 [true],
                 [0],
                 [triggerData],
+                ["0x"],
                 [TriggerType.SimpleAAVESell],
             ])
             const tx = await DPMAccount.execute(system.automationBot.address, dataToSupply, {
@@ -144,10 +149,6 @@ describe('AAVE integration', async () => {
             const receipt = await tx.wait()
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             triggerId = addEvents[0].args!.triggerId.toString()
-            await system.serviceRegistry.updateNamedService(
-                getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-                executorAddress,
-            )
         })
 
         it('trigger should be immediatelly eligible', async () => {
@@ -155,21 +156,19 @@ describe('AAVE integration', async () => {
             expect(status).to.be.true
         })
         it('trigger execution should not fail', async () => {
-            const tx = DPMAccount.execute(
-                system.automationBot.address,
-                AutomationBotInstance.interface.encodeFunctionData('execute', [
-                    '0x',
-                    triggerData,
-                    AaveCommandInstance.address,
-                    triggerId,
-                    '0',
-                    utils.addresses.USDC_AAVE,
-                ]),
-                {
-                    gasLimit: 10000000,
-                },
+            const tx0 = AutomationExecutorInstance.execute(
+                '0x',
+                triggerData,
+                AaveCommandInstance.address,
+                triggerId,
+                '0',
+                '0',
+                178000,
+                utils.addresses.USDC_AAVE,
+                { gasLimit: 3000000 },
             )
-            await expect(tx).to.not.be.reverted
+
+            await expect(tx0).to.not.be.reverted
         })
     })
 })

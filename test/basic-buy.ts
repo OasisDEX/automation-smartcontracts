@@ -36,6 +36,7 @@ describe('BasicBuyCommand', () => {
             [continuous],
             [0],
             [triggerData],
+            ["0x"],
             [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
@@ -246,7 +247,6 @@ describe('BasicBuyCommand', () => {
 
             return system.automationExecutor.execute(
                 executionData,
-                testCdpId,
                 triggerData,
                 system.basicBuy!.address,
                 triggerId,

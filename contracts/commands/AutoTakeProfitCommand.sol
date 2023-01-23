@@ -66,13 +66,13 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         uint256 nextPrice = mcdView.getNextPrice(ilk);
         uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
-        require(
-            ManagerLike(ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY))
-                .owns(trigger.cdpId) != address(0),
-            "auto-take-profit/no-owner"
-        );
+        bool hasOwner = ManagerLike(
+            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
+        ).owns(trigger.cdpId) != address(0);
         bool vaultNotEmpty = nextCollRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
+
         return
+            hasOwner &&
             vaultNotEmpty &&
             baseFeeIsValid(trigger.maxBaseFeeInGwei) &&
             nextPrice >= trigger.executionPrice;
@@ -82,7 +82,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
     /// @return Correctness of the trigger data
     function isTriggerDataValid(
-        bool,
+        bool continuous,
         bytes memory triggerData
     ) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
@@ -92,14 +92,19 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
-        require(trigger.executionPrice > nextPrice, "auto-take-profit/tp-level-too-low");
-        return (trigger.triggerType == 7 || trigger.triggerType == 8);
+        return
+            (trigger.executionPrice > nextPrice) &&
+            !continuous &&
+            (trigger.triggerType == 7 || trigger.triggerType == 8);
     }
 
     /// @notice Executes the trigger
     /// @param executionData Execution data from the Automation Worker
     /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
-    function execute(bytes calldata executionData, bytes memory triggerData) external override {
+    function execute(
+        bytes calldata executionData,
+        bytes memory triggerData
+    ) external override nonReentrant {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
         address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
