@@ -5,7 +5,7 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    AaveStopLossCommand,
     ILendingPool,
     IAccountGuard,
     AccountFactoryLike,
@@ -26,7 +26,7 @@ describe('AaveStoplLossCommand', async () => {
     let receiverAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStoplLossCommand
+    let aaveStopLoss: AaveStopLossCommand
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
     let receiver: Signer
@@ -54,7 +54,7 @@ describe('AaveStoplLossCommand', async () => {
         aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
-        aaveStopLoss = system.aaveStoplLossCommand!
+        aaveStopLoss = system.aaveStopLossCommand!
         aave_pa = system.aaveProxyActions as AaveProxyActions
         const factory = (await hre.ethers.getContractAt(
             'AccountFactoryLike',
