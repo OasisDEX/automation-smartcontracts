@@ -104,12 +104,7 @@ async function main() {
     console.log('Deploying ExecutorV2')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [
-            AutomationBotInstance.address,
-            utils.addresses.DAI,
-            utils.addresses.WETH,
-            utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        ],
+        [AutomationBotInstance.address, utils.addresses.WETH, utils.addresses.AUTOMATION_SERVICE_REGISTRY],
     )
     console.log(`ExecutorV2 Deployed: ${AutomationExecutorInstance.address}`)
     await ensureServiceRegistryEntry(
@@ -140,11 +135,16 @@ async function main() {
     )
 
     console.log('Adding signers to executor:')
+
     await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
+    console.log('Signers added to executor')
 
     if (utils.hre.network.name === 'local') {
+        console.log('Setting whitelist:', utils.addresses.DPM_GUARD)
         const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
+        console.log("fetching owner's address")
         const owner = await guard.owner()
+        console.log('Impersonation')
         const guardDeployer = await utils.impersonate(owner)
         await guard.connect(guardDeployer).setWhitelist(AutomationBotInstance.address, true)
         console.log("Guard's whitelist updated")
