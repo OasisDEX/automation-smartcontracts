@@ -8,4 +8,6 @@ interface IAccountImplementation {
     ) external payable returns (bytes32 response);
 
     function send(address _target, bytes memory _data) external payable;
+
+    function guard() external view returns (address);
 }

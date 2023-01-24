@@ -88,7 +88,7 @@ export async function deploySystem({
     let BasicBuyInstance: BasicBuyCommand | undefined
     let BasicSellInstance: BasicSellCommand | undefined
     let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
-    let AaveStoplLossInstance: AaveStopLossCommand | undefined
+    let AaveStopLossInstance: AaveStopLossCommand | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -201,7 +201,8 @@ export async function deploySystem({
             ServiceRegistryInstance.address,
         ])) as AutoTakeProfitCommand
 
-        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStopLossCommand'), [
+        if (logDebug) console.log('Deploying AaveStopLoss....')
+        AaveStopLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStopLossCommand'), [
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
         ])) as AaveStopLossCommand
@@ -224,7 +225,7 @@ export async function deploySystem({
             console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
             console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
-            console.log(`AaveStoplLossCommanddeployed to: ${AaveStoplLossInstance!.address}`)
+            console.log(`AaveStoplLossCommanddeployed to: ${AaveStopLossInstance!.address}`)
         }
     }
 
