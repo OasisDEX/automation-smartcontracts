@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { AAVEAdapter } from '../../typechain'
+import { MakerAdapter } from '../../typechain'
 import { HardhatUtils } from '../common'
 
 async function main() {
@@ -11,11 +11,12 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    system.aaveAdapter = (await utils.deployContract(hre.ethers.getContractFactory('AAVEAdapter'), [
+    system.makerAdapter = (await utils.deployContract(hre.ethers.getContractFactory('MakerAdapter'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-    ])) as AAVEAdapter
+        utils.addresses.DAI,
+    ])) as MakerAdapter
 
-    console.log(`aaveAdapter Deployed: ${system.aaveAdapter!.address}`)
+    console.log(`makerAdapter Deployed: ${system.makerAdapter!.address}`)
 }
 
 main().catch(error => {

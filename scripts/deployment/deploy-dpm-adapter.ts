@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { AAVEAdapter } from '../../typechain'
+import { DPMAdapter } from '../../typechain'
 import { HardhatUtils } from '../common'
 
 async function main() {
@@ -11,11 +11,12 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    system.aaveAdapter = (await utils.deployContract(hre.ethers.getContractFactory('AAVEAdapter'), [
+    system.dpmAdapter = (await utils.deployContract(hre.ethers.getContractFactory('DPMAdapter'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-    ])) as AAVEAdapter
+        utils.addresses.DPM_GUARD,
+    ])) as DPMAdapter
 
-    console.log(`aaveAdapter Deployed: ${system.aaveAdapter!.address}`)
+    console.log(`aaveAdapter Deployed: ${system.dpmAdapter!.address}`)
 }
 
 main().catch(error => {
