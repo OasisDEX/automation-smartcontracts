@@ -16,11 +16,12 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
+const testPositionAddress = process.env.TEST_AAVE_MULTIPLY_POSITION || '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
+
 describe('AaveStoplLossCommand-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
-    let proxyAddress: string
     let receiverAddress: string
     let snapshotId: string
     let snapshotIdTop: string
@@ -43,14 +44,16 @@ describe('AaveStoplLossCommand-Multiply', async () => {
             ],
         })
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-
-        const oldGuard = '0x96a92a5E85e6e51488C6A0DF2D9BA30e9799826e'
-        proxyAddress = '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
+        account = (await hre.ethers.getContractAt(
+            'IAccountImplementation',
+            testPositionAddress,
+        )) as IAccountImplementation
+        const oldGuard = await account.guard()
         await hardhatUtils.replaceImmutableAddress(hardhatUtils.addresses.DPM_GUARD, oldGuard, system.dpmAdapter!)
         const guard = (await hre.ethers.getContractAt('IAccountGuard', oldGuard)) as IAccountGuard
         const guardDeployerAddress = await guard.owner()
         const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
-        receiver = await hardhatUtils.impersonate(await guard.owners(proxyAddress))
+        receiver = await hardhatUtils.impersonate(await guard.owners(testPositionAddress))
 
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
@@ -61,11 +64,10 @@ describe('AaveStoplLossCommand-Multiply', async () => {
         aaveStopLoss = system.aaveStoplLossCommand!
         aave_pa = system.aaveProxyActions as AaveProxyActions
 
-        account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
         const addresses = {
             aaveStopLoss: aaveStopLoss.address,
             receiverAddress,
-            proxyAddress,
+            testPositionAddress,
             bot: automationBotInstance.address,
             automationExecutor: automationExecutorInstance.address,
             userAccount: account.address,
@@ -80,11 +82,11 @@ describe('AaveStoplLossCommand-Multiply', async () => {
 
     describe('isTriggerDataValid', () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const userData = await aavePool.getUserAccountData(testPositionAddress)
             const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
             const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
-                proxyAddress,
+                testPositionAddress,
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -105,11 +107,11 @@ describe('AaveStoplLossCommand-Multiply', async () => {
             await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
         })
         it('should add the trigger with continuous set to false', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const userData = await aavePool.getUserAccountData(testPositionAddress)
             const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
             const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
-                proxyAddress,
+                testPositionAddress,
                 10,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -153,14 +155,14 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 await hre.ethers.provider.send('evm_revert', [snapshotId])
             })
             before(async () => {
-                const userData = await aavePool.getUserAccountData(proxyAddress)
+                const userData = await aavePool.getUserAccountData(testPositionAddress)
                 ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
 
                 const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_AWETH_TOKEN)
-                const aTokenBalance = await aToken.balanceOf(proxyAddress)
+                const aTokenBalance = await aToken.balanceOf(testPositionAddress)
 
                 const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
-                const vTokenBalance = await vToken.balanceOf(proxyAddress)
+                const vTokenBalance = await vToken.balanceOf(testPositionAddress)
 
                 const amountInWei = aTokenBalance
                 const fee = EthersBN.from(20)
@@ -187,7 +189,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const aaveData = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
                     collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
-                    borrower: proxyAddress,
+                    borrower: testPositionAddress,
                     fundsReceiver: receiverAddress,
                 }
 
@@ -205,7 +207,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 before(async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
-                        proxyAddress,
+                        testPositionAddress,
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -249,7 +251,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 before(async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
-                        proxyAddress,
+                        testPositionAddress,
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -294,7 +296,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.wethBalance = returnedEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
-                    const userData = await aavePool.getUserAccountData(proxyAddress)
+                    const userData = await aavePool.getUserAccountData(testPositionAddress)
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
@@ -308,11 +310,11 @@ describe('AaveStoplLossCommand-Multiply', async () => {
             let triggerId: number
 
             before(async () => {
-                const userData = await aavePool.getUserAccountData(proxyAddress)
+                const userData = await aavePool.getUserAccountData(testPositionAddress)
                 ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
 
                 const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
-                const vTokenBalance = await vToken.balanceOf(proxyAddress)
+                const vTokenBalance = await vToken.balanceOf(testPositionAddress)
 
                 // TODO @halaprix generalize it
                 /*
@@ -348,7 +350,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 const aaveData = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
                     collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
-                    borrower: proxyAddress,
+                    borrower: testPositionAddress,
                     fundsReceiver: receiverAddress,
                 }
 
@@ -373,7 +375,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 before(async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
-                        proxyAddress,
+                        testPositionAddress,
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -418,7 +420,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 before(async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
-                        proxyAddress,
+                        testPositionAddress,
                         10,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -463,7 +465,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                     txData.wethBalance = returnedEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     console.table(txData)
-                    const userData = await aavePool.getUserAccountData(proxyAddress)
+                    const userData = await aavePool.getUserAccountData(testPositionAddress)
                     expect(+txData.wethBalance).to.be.greaterThan(+'98721310000000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
