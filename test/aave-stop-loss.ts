@@ -44,8 +44,7 @@ describe('AaveStoplLossCommand', async () => {
             ],
         })
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-        const guardDeployerAddress = '0x060c23f67febb04f4b5d5c205633a04005985a94'
-        const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
+
         receiver = hre.ethers.provider.getSigner(1)
 
         receiverAddress = await receiver.getAddress()
@@ -64,6 +63,10 @@ describe('AaveStoplLossCommand', async () => {
             'IAccountGuard',
             hardhatUtils.addresses.DPM_GUARD,
         )) as IAccountGuard
+
+        const guardDeployerAddress = await guard.owner()
+        const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
+
         const factoryReceipt = await (
             await factory.connect(receiver).functions['createAccount(address)'](receiverAddress)
         ).wait()
@@ -130,7 +133,7 @@ describe('AaveStoplLossCommand', async () => {
                 [true],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -155,7 +158,7 @@ describe('AaveStoplLossCommand', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -252,7 +255,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 
@@ -315,7 +318,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 
@@ -437,7 +440,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
                     // add trigger
@@ -500,7 +503,7 @@ describe('AaveStoplLossCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 

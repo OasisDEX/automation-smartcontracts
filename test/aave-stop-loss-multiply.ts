@@ -43,9 +43,14 @@ describe('AaveStoplLossCommand-Multiply', async () => {
             ],
         })
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-        const guardDeployerAddress = '0x060c23f67febb04f4b5d5c205633a04005985a94'
+
+        const oldGuard = '0x96a92a5E85e6e51488C6A0DF2D9BA30e9799826e'
+        proxyAddress = '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
+        await hardhatUtils.replaceImmutableAddress(hardhatUtils.addresses.DPM_GUARD, oldGuard, system.dpmAdapter!)
+        const guard = (await hre.ethers.getContractAt('IAccountGuard', oldGuard)) as IAccountGuard
+        const guardDeployerAddress = await guard.owner()
         const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
-        receiver = await hardhatUtils.impersonate('0x165D0df29D9262f8EE9E9874C906EAb706A05C2c')
+        receiver = await hardhatUtils.impersonate(await guard.owners(proxyAddress))
 
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
@@ -56,12 +61,6 @@ describe('AaveStoplLossCommand-Multiply', async () => {
         aaveStopLoss = system.aaveStoplLossCommand!
         aave_pa = system.aaveProxyActions as AaveProxyActions
 
-        const guard = (await hre.ethers.getContractAt(
-            'IAccountGuard',
-            hardhatUtils.addresses.DPM_GUARD,
-        )) as IAccountGuard
-
-        proxyAddress = '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
         const addresses = {
             aaveStopLoss: aaveStopLoss.address,
@@ -99,7 +98,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [true],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [10],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -124,7 +123,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [10],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -220,7 +219,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 
@@ -264,7 +263,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 
@@ -388,7 +387,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
 
@@ -433,7 +432,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [10],
                     ])
                     // add trigger
