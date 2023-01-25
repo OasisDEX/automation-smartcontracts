@@ -2,12 +2,10 @@ import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
 import hre from 'hardhat'
 import { utils as EthUtils } from 'ethers'
 import {
-    AutomationServiceName,
     getAdapterNameHash,
     getCommandHash,
     getEvents,
     getExecuteAdapterNameHash,
-    getServiceNameHash,
     HardhatUtils,
 } from '../scripts/common'
 import {
@@ -43,25 +41,25 @@ describe('AAVE integration', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16089949,
+                        blockNumber: 16368930,
                     },
                 },
             ],
         })
 
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        system = await deploySystem({ utils, addCommands: true, logDebug: true })
+        system = await deploySystem({ utils, addCommands: true, logDebug: false })
         AutomationExecutorInstance = system.automationExecutor
         console.log('System deployed')
         DPMFactory = await hre.ethers.getContractAt('AccountFactoryLike', utils.addresses.DPM_FACTORY) //utils.addresses.DPM_FACTORY);
         AutomationBotInstance = await hre.ethers.getContractAt('AutomationBot', utils.addresses.AUTOMATION_BOT_V2)
         DPMGuard = await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD) // utils.addresses.DPM_GUARD);
-        console.log('before account creation', DPMFactory.address)
         const tx = await (await DPMFactory['createAccount(address)'](executorAddress)).wait()
         const [AccountCreatedEvent] = getEvents(tx, DPMFactory.interface.getEvent('AccountCreated'))
         console.log('account created')
         DPMAccount = await hre.ethers.getContractAt('IAccountImplementation', AccountCreatedEvent.args.proxy)
-        const signer = await utils.impersonate('0x060c23F67FEBb04F4b5d5c205633a04005985a94')
+        const guardDeployerAddress = await DPMGuard.owner()
+        const signer = await utils.impersonate(guardDeployerAddress)
         console.log('Imperosnated signer', await signer.getAddress())
         console.log('executorAddress', executorAddress)
 
@@ -119,7 +117,7 @@ describe('AAVE integration', async () => {
             [true],
             [0],
             [triggerData],
-            ["0x"],
+            ['0x'],
             [TriggerType.SimpleAAVESell],
         ])
         const tx = DPMAccount.execute(system.automationBot.address, dataToSupply, {
@@ -140,7 +138,7 @@ describe('AAVE integration', async () => {
                 [true],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [TriggerType.SimpleAAVESell],
             ])
             const tx = await DPMAccount.execute(system.automationBot.address, dataToSupply, {

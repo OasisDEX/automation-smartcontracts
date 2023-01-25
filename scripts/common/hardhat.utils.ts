@@ -69,6 +69,10 @@ export class HardhatUtils {
                 'DPMAdapter',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
             ),
+            aaveProxyActions: await this.hre.ethers.getContractAt(
+                'AaveProxyActions',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
+            ),
         }
     }
 
