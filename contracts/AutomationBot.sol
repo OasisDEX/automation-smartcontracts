@@ -234,7 +234,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     )
                 );
                 require(status, "bot/permit-failed-add");
-                emit ApprovalGranted(triggerData[i], address(automationBot));
+                emit ApprovalGranted(triggerData[i], address(automationBotStorage));
             }
 
             AutomationBot(automationBot).addRecord(
@@ -308,7 +308,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             );
 
             require(status, "bot/permit-removal-failed");
-            emit ApprovalRemoved(triggerData[0], automationBot);
+            emit ApprovalRemoved(triggerData[0], address(automationBotStorage));
         }
     }
 
