@@ -9,7 +9,7 @@ import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { AutomationServiceName, EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
-
+import { setCode } from '@nomicfoundation/hardhat-network-helpers'
 export class HardhatUtils {
     private readonly _cache = new NodeCache()
     public readonly addresses
@@ -68,6 +68,10 @@ export class HardhatUtils {
             dpmAdapter: await this.hre.ethers.getContractAt(
                 'DPMAdapter',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
+            ),
+            aaveProxyActions: await this.hre.ethers.getContractAt(
+                'AaveProxyActions',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
             ),
         }
     }
@@ -365,5 +369,13 @@ export class HardhatUtils {
         const token = await this.hre.ethers.getContractAt('ERC20', tokenAddress)
         const balanceAfter = await token.balanceOf(account)
         return balance == balanceAfter
+    }
+    public async replaceImmutableAddress(toReplace: string, replacement: string, contract: Contract) {
+        const bytecode = await this.hre.ethers.provider.getCode(contract.address)
+        const bytecodeWithReplacement = bytecode.replaceAll(
+            toReplace.toLowerCase().substring(2),
+            replacement.toLowerCase().substring(2),
+        )
+        await setCode(contract.address, bytecodeWithReplacement)
     }
 }
