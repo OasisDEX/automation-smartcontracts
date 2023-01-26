@@ -43,7 +43,7 @@ describe('AAVE integration', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16089949,
+                        blockNumber: 16368930,
                     },
                 },
             ],
@@ -59,10 +59,10 @@ describe('AAVE integration', async () => {
         console.log('before account creation', DPMFactory.address)
         const tx = await (await DPMFactory['createAccount(address)'](executorAddress)).wait()
         const [AccountCreatedEvent] = getEvents(tx, DPMFactory.interface.getEvent('AccountCreated'))
-        console.log('account created')
+        console.log('account created', AccountCreatedEvent, tx)
         DPMAccount = await hre.ethers.getContractAt('IAccountImplementation', AccountCreatedEvent.args.proxy)
-        const signer = await utils.impersonate('0x060c23F67FEBb04F4b5d5c205633a04005985a94')
-        console.log('Imperosnated signer', await signer.getAddress())
+        const signer = await utils.impersonate(await DPMGuard.owner())
+        console.log('Impersonated signer', await signer.getAddress())
         console.log('executorAddress', executorAddress)
 
         AaveCommandInstance = (await utils.deployContract(hre.ethers.getContractFactory('DummyAaveWithdrawCommand'), [

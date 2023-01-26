@@ -70,9 +70,7 @@ interface AaveStopLoss {
     function self() external returns (address);
 }
 
-contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
-    string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
-    string private constant AAVE_POOL = "AAVE_POOL";
+contract AaveStopLossCommand is BaseAAveFlashLoanCommand {
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
 
     constructor(
