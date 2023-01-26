@@ -1,6 +1,7 @@
 import hre from 'hardhat'
 import { DPMAdapter } from '../../typechain'
-import { HardhatUtils } from '../common'
+import { HardhatUtils, AddressRegistry, getAdapterNameHash } from '../common'
+import { configureRegistryEntries } from '../common/deploy-system'
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -16,7 +17,7 @@ async function main() {
         utils.addresses.DPM_GUARD,
     ])) as DPMAdapter
 
-    console.log(`aaveAdapter Deployed: ${system.dpmAdapter!.address}`)
+    console.log(`DPMAdapter Deployed: ${system.dpmAdapter!.address}`)
 }
 
 main().catch(error => {
