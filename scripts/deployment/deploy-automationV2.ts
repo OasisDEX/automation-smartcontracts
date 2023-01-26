@@ -91,12 +91,7 @@ async function main() {
     console.log('Deploying ExecutorV2')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
-        [
-            AutomationBotInstance.address,
-            utils.addresses.DAI,
-            utils.addresses.WETH,
-            utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        ],
+        [AutomationBotInstance.address, utils.addresses.WETH, utils.addresses.AUTOMATION_SERVICE_REGISTRY],
     )
     console.log(`ExecutorV2 Deployed: ${AutomationExecutorInstance.address}`)
     await ensureServiceRegistryEntry(
@@ -111,18 +106,6 @@ async function main() {
         utils.addresses.DPM_GUARD,
     ])
     console.log(`DPMAdapter Deployed: ${DpmAdapterInstance.address}`)
-
-    console.log('Deploying AAVEAdapter')
-    const AaveAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
-        system.serviceRegistry.address,
-        utils.addresses.DAI,
-    ])
-    console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
-
-    console.log('ensuring Adapters')
-
-    await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, DpmAdapterInstance.address)
-    await ensureCorrectAdapter(system.dummyAaveWithdrawCommand!.address, AaveAdapterInstance.address, true)
 
     console.log('Adding signers to executor:', utils.addresses.SIGNERS)
     await AutomationExecutorInstance.addCallers(utils.addresses.SIGNERS)
