@@ -19,7 +19,7 @@
 
 pragma solidity ^0.8.0;
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
-import { BotLike } from "../interfaces/BotLike.sol";
+
 import { MPALike } from "../interfaces/MPALike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";

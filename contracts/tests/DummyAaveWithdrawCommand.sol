@@ -20,7 +20,6 @@ pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
 import "../helpers/AaveProxyActions.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
     address public immutable aaveProxyActions;

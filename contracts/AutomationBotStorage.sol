@@ -18,12 +18,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "./interfaces/ManagerLike.sol";
-import "./interfaces/ICommand.sol";
 import "./interfaces/IAdapter.sol";
-import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
-import "./McdUtils.sol";
 
 contract AutomationBotStorage {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";

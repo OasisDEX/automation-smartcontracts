@@ -21,11 +21,7 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./external/DSMath.sol";
 import "./interfaces/ManagerLike.sol";
-import "./interfaces/ICommand.sol";
 import "./interfaces/Mcd.sol";
-import "./interfaces/BotLike.sol";
-
-import "./ServiceRegistry.sol";
 
 /// @title Getter contract for Vault info from Maker protocol
 contract McdUtils is DSMath {

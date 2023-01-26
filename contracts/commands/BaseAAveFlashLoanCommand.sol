@@ -20,9 +20,9 @@
 pragma solidity ^0.8.0;
 
 import { ICommand } from "../interfaces/ICommand.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
+
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
-import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
