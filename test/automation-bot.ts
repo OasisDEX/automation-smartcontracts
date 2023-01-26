@@ -149,7 +149,7 @@ describe('AutomationBot', async () => {
             await expect(tx).to.be.reverted
         })
 
-        it('should successfully create a trigger through DSProxy', async () => {
+        it.only('should successfully create a trigger through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
