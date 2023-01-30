@@ -46,7 +46,6 @@ struct StopLossTriggerData {
     address collateralToken;
     address debtToken;
     uint256 slLevel;
-    uint32 maxBaseFeeInGwei;
 }
 
 struct CloseData {
