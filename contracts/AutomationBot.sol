@@ -196,10 +196,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256[] memory triggerTypes
     ) external onlyDelegate {
         require(
-            replacedTriggerId.length == triggerData.length &&
+            replacedTriggerId.length == replacedTriggerData.length &&
                 triggerData.length == triggerTypes.length &&
                 triggerTypes.length == continuous.length &&
-                continuous.length == replacedTriggerData.length,
+                continuous.length == triggerData.length,
             "bot/invalid-input-length"
         );
 
