@@ -471,22 +471,30 @@ describe('AutomationAggregatorBot', async () => {
                 50,
                 maxGweiPrice,
             )
+            const oldBsTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.BasicSell,
+                sellExecutionRatio,
+                sellTargetRatio,
+                5000,
+                50,
+                maxGweiPrice,
+            )
 
             const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy, true)
-            const createTx2 = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BasicSell, true)
+            const addEvents = getEvents(await createTx.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            const addEvents2 = getEvents(await createTx2.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'))
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
+                [addEvents[0].args.triggerId.toNumber(), addEvents2[0].args.triggerId.toNumber()],
                 [bbTriggerData, bsTriggerData],
-                [oldBbTriggerData, oldBbTriggerData],
+                [oldBbTriggerData, oldBsTriggerData],
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
             const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 10000000 })
             const counterAfter = await AutomationBotStorageInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
@@ -518,13 +526,12 @@ describe('AutomationAggregatorBot', async () => {
             )
             const createTx = await createTrigger(oldBbTriggerData, TriggerType.BasicBuy, true)
             const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.BasicSell, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const addEvents = getEvents(await createTx.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            const addEvents2 = getEvents(await createTx2.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'))
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
-                [triggersCounterBefore.toNumber(), triggersCounterBefore.toNumber() - 1],
+                [addEvents[0].args.triggerId.toNumber(), addEvents2[0].args.triggerId.toNumber()],
                 [bbTriggerData, bsTriggerData],
                 [oldBbTriggerData, oldBsTriggerData],
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
@@ -773,6 +780,8 @@ describe('AutomationAggregatorBot', async () => {
         let buyTargetRatio: number
         let bbTriggerData: BytesLike
         let bsTriggerData: BytesLike
+        let firstTriggerId: number
+        let secontTriggerId: number
 
         beforeEach(async () => {
             const groupTypeId = TriggerGroupType.ConstantMultiple
@@ -815,7 +824,10 @@ describe('AutomationAggregatorBot', async () => {
                 replacedTriggerData,
                 [TriggerType.BasicBuy, TriggerType.BasicSell],
             ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const events = getEvents(await tx.wait(), AutomationBotInstance.interface.getEvent("TriggerAdded"));
+            firstTriggerId = events[0].args.triggerId;
+            secontTriggerId = events[1].args.triggerId;
         })
 
         it('should return false for bad operator address', async () => {
@@ -837,7 +849,7 @@ describe('AutomationAggregatorBot', async () => {
         })
         it('should return false for correct operator address', async () => {
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
-                [1, 2],
+                [firstTriggerId, secontTriggerId],
                 [bbTriggerData, bsTriggerData],
                 true,
             ])

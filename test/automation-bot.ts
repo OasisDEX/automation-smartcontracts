@@ -176,13 +176,17 @@ describe('AutomationBot', async () => {
                 ['0x'],
                 [triggerType],
             ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply, {
+                gasLimit: 10000000,
+            })
+
+            const events = getEvents(await tx.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'));
 
             const replacedTriggerData = triggerData
             const dataToSupplyWithReplace = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
-                [1],
+                [events[0].args.triggerId.toNumber()],
                 [triggerData],
                 [replacedTriggerData],
                 [triggerType],
@@ -258,7 +262,7 @@ describe('AutomationBot', async () => {
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
-            expect(events[0].args.triggerId).to.be.equal(1)
+            expect(events[0].args.triggerId).to.be.equal(10000000002)
         })
 
         it('should emit TriggerAdded if called by user being an owner of proxy and the id[0] is == 1', async () => {
@@ -278,8 +282,8 @@ describe('AutomationBot', async () => {
 
             expect(events.length).to.be.equal(1)
             expect(events[0].args.triggerIds.length).to.be.equal(1)
-            expect(events[0].args.triggerIds[0]).to.be.equal(1)
-            expect(events[0].args.groupId).to.be.equal(1)
+            expect(events[0].args.triggerIds[0]).to.be.equal(10000000002)
+            expect(events[0].args.groupId).to.be.equal(10000000001)
         })
 
         it('should revert if removedTriggerId is incorrect if called by user being an owner of proxy', async () => {
