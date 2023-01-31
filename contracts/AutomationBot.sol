@@ -149,7 +149,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             (bytes32 replacedTriggersHash, , ) = automationBotStorage.activeTriggers(
                 replacedTriggerId
             );
-            require(replacedTriggersHash != bytes32(0), "bot/invalid-trigger");
+            require(
+                replacedTriggersHash == getTriggersHash(replacedTriggerData, commandAddress),
+                "bot/invalid-trigger"
+            );
             clearTrigger(replacedTriggerId);
             emit TriggerRemoved(replacedTriggerId);
         }
