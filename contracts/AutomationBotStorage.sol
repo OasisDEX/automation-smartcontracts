@@ -23,6 +23,7 @@ import "./ServiceRegistry.sol";
 
 contract AutomationBotStorage {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
+    uint64 private constant COUNTER_OFFSET = 10 ** 10;
 
     struct TriggerRecord {
         bytes32 triggerHash;
@@ -43,7 +44,8 @@ contract AutomationBotStorage {
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        counter.triggersGroupCounter = 1;
+        counter.triggersCounter = COUNTER_OFFSET + 1;
+        counter.triggersGroupCounter = COUNTER_OFFSET + 1;
     }
 
     modifier auth(address caller) {
