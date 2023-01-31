@@ -12,6 +12,7 @@ import {
 } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
+import { blockNumber } from '../hardhat.config'
 
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
@@ -32,6 +33,18 @@ describe('AutoTakeProfitCommmand', async () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const buffer = 10 // base 1000, 10 = 1%
     before(async () => {
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: +blockNumber,
+                    },
+                },
+            ],
+        })
+
         const utils = new HardhatUtils(hre)
 
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
@@ -163,7 +176,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -236,7 +249,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [TriggerType.AutoTakeProfitToCollateral],
                     ])
 
@@ -413,7 +426,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -476,7 +489,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [TriggerType.AutoTakeProfitToDai],
                     ])
 
