@@ -124,6 +124,22 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         lock();
 
         address commandAddress = getCommandAddress(triggerType);
+        if (replacedTriggerId != 0) {
+            (bytes32 replacedTriggersHash, address originalCommandAddress, ) = automationBotStorage
+                .activeTriggers(replacedTriggerId);
+            ISecurityAdapter originalAdapter = ISecurityAdapter(
+                getAdapterAddress(originalCommandAddress, false)
+            );
+            require(
+                originalAdapter.canCall(replacedTriggerData, msg.sender),
+                "bot/no-permissions-replace"
+            );
+            require(
+                replacedTriggersHash ==
+                    getTriggersHash(replacedTriggerData, originalCommandAddress),
+                "bot/invalid-trigger"
+            );
+        }
 
         require(
             ICommand(commandAddress).isTriggerDataValid(continuous, triggerData),
@@ -132,10 +148,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
-        require(
-            replacedTriggerId == 0 || adapter.canCall(replacedTriggerData, msg.sender),
-            "bot/no-permissions-replace"
-        );
 
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
@@ -146,17 +158,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         );
 
         if (replacedTriggerId != 0) {
-            (bytes32 replacedTriggersHash, address originalCommandAddress, ) = automationBotStorage
-                .activeTriggers(replacedTriggerId);
-
-            require(
-                replacedTriggersHash ==
-                    getTriggersHash(replacedTriggerData, originalCommandAddress),
-                "bot/invalid-trigger"
-            );
-
             clearTrigger(replacedTriggerId);
-
             emit TriggerRemoved(replacedTriggerId);
         }
 
