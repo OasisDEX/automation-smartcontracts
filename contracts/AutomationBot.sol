@@ -2,7 +2,7 @@
 
 /// AutomationBot.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -23,7 +23,6 @@ import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "hardhat/console.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
     struct TriggerRecord {

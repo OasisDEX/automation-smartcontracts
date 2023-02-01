@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// AutomationBot.sol
+/// AutomationBotStorage.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -44,7 +44,7 @@ contract AutomationBotStorage {
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        counter.triggersCounter = COUNTER_OFFSET + 1;
+        counter.triggersCounter = COUNTER_OFFSET;
         counter.triggersGroupCounter = COUNTER_OFFSET + 1;
     }
 

@@ -1,7 +1,14 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName, getAdapterNameHash, getExecuteAdapterNameHash } from '../scripts/common'
+import {
+    getEvents,
+    getCommandHash,
+    HardhatUtils,
+    AutomationServiceName,
+    getAdapterNameHash,
+    getExecuteAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -18,9 +25,12 @@ import { impersonateAccount } from '@nomicfoundation/hardhat-network-helpers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
-const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, TriggerType.StopLossToDai, 500])
+const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(
+    ['uint256', 'uint16', 'uint256'],
+    [testCdpId, TriggerType.StopLossToDai, 500],
+)
 
-describe('AutomationBot', async () => {
+describe.only('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -34,14 +44,14 @@ describe('AutomationBot', async () => {
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
     let snapshotId: string
-    let makerAdapter : MakerAdapter
+    let makerAdapter: MakerAdapter
 
     before(async () => {
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
 
-        const system = await deploySystem({ utils:hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
+        const system = await deploySystem({ utils: hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
 
-        makerAdapter = system.makerAdapter;
+        makerAdapter = system.makerAdapter
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
             system.serviceRegistry.address,
@@ -99,12 +109,12 @@ describe('AutomationBot', async () => {
             )
 
     beforeEach(async () => {
-        console.log('snapshot');
+        console.log('snapshot')
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        console.log('revert snapshot');
+        console.log('revert snapshot')
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
@@ -184,7 +194,7 @@ describe('AutomationBot', async () => {
                 gasLimit: 10000000,
             })
 
-            const events = getEvents(await tx.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'));
+            const events = getEvents(await tx.wait(), AutomationBotInstance.interface.getEvent('TriggerAdded'))
 
             const replacedTriggerData = triggerData
             const dataToSupplyWithReplace = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -266,7 +276,7 @@ describe('AutomationBot', async () => {
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
-            expect(events[0].args.triggerId).to.be.equal(10000000002)
+            expect(events[0].args.triggerId).to.be.equal(10000000001)
         })
 
         it('should emit TriggerAdded if called by user being an owner of proxy and the id[0] is == 1', async () => {
@@ -286,7 +296,7 @@ describe('AutomationBot', async () => {
 
             expect(events.length).to.be.equal(1)
             expect(events[0].args.triggerIds.length).to.be.equal(1)
-            expect(events[0].args.triggerIds[0]).to.be.equal(10000000002)
+            expect(events[0].args.triggerIds[0]).to.be.equal(10000000001)
             expect(events[0].args.groupId).to.be.equal(10000000001)
         })
 
@@ -610,7 +620,7 @@ describe('AutomationBot', async () => {
 
     describe('removeTrigger', async () => {
         let triggerId = 0
-        let snapshotId2 = 0;
+        let snapshotId2 = 0
 
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -631,33 +641,40 @@ describe('AutomationBot', async () => {
         })
 
         describe('command update', async () => {
-            let localSnapshot = 0;
+            let localSnapshot = 0
             before(async () => {
-                
                 localSnapshot = await hre.ethers.provider.send('evm_snapshot', [])
-                const registryOwner = await ServiceRegistryInstance.owner();
-                const registryAddress = ServiceRegistryInstance.address;
-                const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner);
-                await impersonateAccount(registryOwner);
-                const newClose = await hardhatUtils.deployContract(hardhatUtils.hre.ethers.getContractFactory('CloseCommand'), [registryAddress]);
+                const registryOwner = await ServiceRegistryInstance.owner()
+                const registryAddress = ServiceRegistryInstance.address
+                const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner)
+                await impersonateAccount(registryOwner)
+                const newClose = await hardhatUtils.deployContract(
+                    hardhatUtils.hre.ethers.getContractFactory('CloseCommand'),
+                    [registryAddress],
+                )
                 const hash = getCommandHash(TriggerType.StopLossToDai)
-                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address);
-                const normalAdapterHash = getAdapterNameHash(newClose.address);
-                const executeAdapterHash = getExecuteAdapterNameHash(newClose.address);
-                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address);
-                await ServiceRegistryInstance.connect(registrySigner).addNamedService(normalAdapterHash, makerAdapter.address );
-                await ServiceRegistryInstance.connect(registrySigner).addNamedService(executeAdapterHash, makerAdapter.address);
-
-            });
+                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
+                const normalAdapterHash = getAdapterNameHash(newClose.address)
+                const executeAdapterHash = getExecuteAdapterNameHash(newClose.address)
+                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
+                await ServiceRegistryInstance.connect(registrySigner).addNamedService(
+                    normalAdapterHash,
+                    makerAdapter.address,
+                )
+                await ServiceRegistryInstance.connect(registrySigner).addNamedService(
+                    executeAdapterHash,
+                    makerAdapter.address,
+                )
+            })
 
             after(async () => {
                 await hre.ethers.provider.send('evm_revert', [localSnapshot])
-            });
+            })
 
             beforeEach(async () => {
                 snapshotId2 = await hre.ethers.provider.send('evm_snapshot', [])
             })
-    
+
             afterEach(async () => {
                 await hre.ethers.provider.send('evm_revert', [snapshotId2])
             })
@@ -669,13 +686,13 @@ describe('AutomationBot', async () => {
                     [dummyTriggerDataNoReRegister],
                     false,
                 ])
-    
-                const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply);
-                const txRes = await tx.wait();
-                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'));
-                expect(events.length).to.equal(1);
-                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId);
-            });
+
+                const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+                const txRes = await tx.wait()
+                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
+                expect(events.length).to.equal(1)
+                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId)
+            })
 
             it('should update trigger', async () => {
                 const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
@@ -687,15 +704,16 @@ describe('AutomationBot', async () => {
                     [dummyTriggerDataNoReRegister],
                     [TriggerType.StopLossToDai],
                 ])
-    
-                const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 10000000 });
-                const txRes = await tx.wait();
-                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'));
-                expect(events.length).to.equal(1);
-                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId);
-            });
-        })
 
+                const tx = await ownerProxy
+                    .connect(owner)
+                    .execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 10000000 })
+                const txRes = await tx.wait()
+                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
+                expect(events.length).to.equal(1)
+                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId)
+            })
+        })
 
         it('should fail if trying to remove trigger that does not exist', async () => {
             const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
