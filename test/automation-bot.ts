@@ -30,7 +30,7 @@ const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(
     [testCdpId, TriggerType.StopLossToDai, 500],
 )
 
-describe.only('AutomationBot', async () => {
+describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
