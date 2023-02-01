@@ -14,12 +14,13 @@ import {
 } from '../typechain'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { TriggerType } from '@oasisdex/automation'
+import { impersonateAccount } from '@nomicfoundation/hardhat-network-helpers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
-const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
+const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, TriggerType.StopLossToDai, 500])
 
-describe('AutomationBot', async () => {
+describe.only('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -37,9 +38,7 @@ describe('AutomationBot', async () => {
     before(async () => {
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
 
-        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
-
-        const system = await deploySystem({ utils, addCommands: false }) //we need them as we validate the commands mp
+        const system = await deploySystem({ utils:hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
             system.serviceRegistry.address,
@@ -624,6 +623,52 @@ describe('AutomationBot', async () => {
             const [event] = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
             triggerId = event.args.triggerId.toNumber()
         })
+
+        describe.only('command update', async () => {
+            before(async () => {
+                const registryOwner = await ServiceRegistryInstance.owner();
+                const registryAddress = ServiceRegistryInstance.address;
+                const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner);
+                await impersonateAccount(registryOwner);
+                const newClose = await hardhatUtils.deployContract(hardhatUtils.hre.ethers.getContractFactory('CloseCommand'), [registryAddress]);
+                const hash = getCommandHash(TriggerType.StopLossToDai)
+                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address);
+            });
+
+            it('should remove trigger', async () => {
+                const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
+                const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
+                    [triggerId],
+                    [dummyTriggerDataNoReRegister],
+                    false,
+                ])
+    
+                const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply);
+                const txRes = await tx.wait();
+                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'));
+                expect(events.length).to.equal(1);
+                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId);
+            });
+
+            it('should not update trigger', async () => {
+                const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
+                const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                    TriggerGroupType.SingleTrigger,
+                    [false],
+                    [triggerId],
+                    [dummyTriggerDataNoReRegister],
+                    [dummyTriggerDataNoReRegister],
+                    [TriggerType.StopLossToDai],
+                ])
+    
+                const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 10000000 });
+                const txRes = await tx.wait();
+                const events = getEvents(txRes, AutomationBotInstance.interface.getEvent('TriggerRemoved'));
+                expect(events.length).to.equal(1);
+                expect(events[0].args.triggerId.toNumber()).to.equal(triggerId);
+            });
+        })
+
 
         it('should fail if trying to remove trigger that does not exist', async () => {
             const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
