@@ -99,10 +99,12 @@ describe('AutomationBot', async () => {
             )
 
     beforeEach(async () => {
+        console.log('snapshot');
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
+        console.log('revert snapshot');
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
@@ -629,7 +631,10 @@ describe('AutomationBot', async () => {
         })
 
         describe('command update', async () => {
+            let localSnapshot = 0;
             before(async () => {
+                
+                localSnapshot = await hre.ethers.provider.send('evm_snapshot', [])
                 const registryOwner = await ServiceRegistryInstance.owner();
                 const registryAddress = ServiceRegistryInstance.address;
                 const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner);
@@ -643,6 +648,10 @@ describe('AutomationBot', async () => {
                 await ServiceRegistryInstance.connect(registrySigner).addNamedService(normalAdapterHash, makerAdapter.address );
                 await ServiceRegistryInstance.connect(registrySigner).addNamedService(executeAdapterHash, makerAdapter.address);
 
+            });
+
+            after(async () => {
+                await hre.ethers.provider.send('evm_revert', [localSnapshot])
             });
 
             beforeEach(async () => {
@@ -819,7 +828,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [2],
+                [TriggerType.StopLossToDai],
             ])
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
