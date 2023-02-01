@@ -23,6 +23,7 @@ import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "hardhat/console.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
     struct TriggerRecord {
@@ -148,12 +149,15 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         if (replacedTriggerId != 0) {
             (bytes32 replacedTriggersHash, address originalCommandAddress, ) = automationBotStorage
                 .activeTriggers(replacedTriggerId);
+
             require(
                 replacedTriggersHash ==
                     getTriggersHash(replacedTriggerData, originalCommandAddress),
                 "bot/invalid-trigger"
             );
+
             clearTrigger(replacedTriggerId);
+
             emit TriggerRemoved(replacedTriggerId);
         }
 

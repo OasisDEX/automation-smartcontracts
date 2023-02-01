@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { expect } from 'chai'
 import { Contract, Signer, utils } from 'ethers'
-import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName, getAdapterNameHash } from '../scripts/common'
+import { getEvents, getCommandHash, HardhatUtils, AutomationServiceName, getAdapterNameHash, getExecuteAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import {
     AutomationBot,
@@ -20,7 +20,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, TriggerType.StopLossToDai, 500])
 
-describe.only('AutomationBot', async () => {
+describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
@@ -34,11 +34,14 @@ describe.only('AutomationBot', async () => {
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
     let snapshotId: string
+    let makerAdapter : MakerAdapter
 
     before(async () => {
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
 
         const system = await deploySystem({ utils:hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
+
+        makerAdapter = system.makerAdapter;
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
             system.serviceRegistry.address,
@@ -605,6 +608,7 @@ describe.only('AutomationBot', async () => {
 
     describe('removeTrigger', async () => {
         let triggerId = 0
+        let snapshotId2 = 0;
 
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -624,7 +628,7 @@ describe.only('AutomationBot', async () => {
             triggerId = event.args.triggerId.toNumber()
         })
 
-        describe.only('command update', async () => {
+        describe('command update', async () => {
             before(async () => {
                 const registryOwner = await ServiceRegistryInstance.owner();
                 const registryAddress = ServiceRegistryInstance.address;
@@ -633,7 +637,21 @@ describe.only('AutomationBot', async () => {
                 const newClose = await hardhatUtils.deployContract(hardhatUtils.hre.ethers.getContractFactory('CloseCommand'), [registryAddress]);
                 const hash = getCommandHash(TriggerType.StopLossToDai)
                 await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address);
+                const normalAdapterHash = getAdapterNameHash(newClose.address);
+                const executeAdapterHash = getExecuteAdapterNameHash(newClose.address);
+                await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address);
+                await ServiceRegistryInstance.connect(registrySigner).addNamedService(normalAdapterHash, makerAdapter.address );
+                await ServiceRegistryInstance.connect(registrySigner).addNamedService(executeAdapterHash, makerAdapter.address);
+
             });
+
+            beforeEach(async () => {
+                snapshotId2 = await hre.ethers.provider.send('evm_snapshot', [])
+            })
+    
+            afterEach(async () => {
+                await hre.ethers.provider.send('evm_revert', [snapshotId2])
+            })
 
             it('should remove trigger', async () => {
                 const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
@@ -650,7 +668,7 @@ describe.only('AutomationBot', async () => {
                 expect(events[0].args.triggerId.toNumber()).to.equal(triggerId);
             });
 
-            it('should not update trigger', async () => {
+            it('should update trigger', async () => {
                 const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
                 const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                     TriggerGroupType.SingleTrigger,
