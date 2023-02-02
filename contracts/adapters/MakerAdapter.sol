@@ -17,12 +17,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
-import "../interfaces/ICommand.sol";
-import "../interfaces/ManagerLike.sol";
-import "../interfaces/BotLike.sol";
-import "../interfaces/MPALike.sol";
+
 import "../interfaces/IAdapter.sol";
-import "../ServiceRegistry.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 

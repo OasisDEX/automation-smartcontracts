@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "../interfaces/ICommand.sol";
-import "../interfaces/BotLike.sol";
-import "../ServiceRegistry.sol";
 
 contract DummyCommand is ICommand {
     address public serviceRegistry;

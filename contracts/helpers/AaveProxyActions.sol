@@ -2,7 +2,6 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWETH } from "./../interfaces/IWETH.sol";
 import { ILendingPool } from "./../interfaces/AAVE/ILendingPool.sol";
-import "hardhat/console.sol";
 
 struct AaveData {
     address collateralTokenAddress;
@@ -47,7 +46,7 @@ contract AaveProxyActions {
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-repay-balance"
         );
-        console.log("repay address", address(this));
+
         IERC20(token).approve(address(aave), amount);
         aave.repay(token, amount, 2, user);
         emit Repay(address(this), token, amount);
