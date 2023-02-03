@@ -2,7 +2,7 @@
 
 /// AutomationBot.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -18,14 +18,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "./interfaces/ManagerLike.sol";
 import "./interfaces/ICommand.sol";
-import "./interfaces/IAdapter.sol";
 import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
 import "./AutomationBotStorage.sol";
-import "./ServiceRegistry.sol";
-import "./McdUtils.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
@@ -128,6 +124,22 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         lock();
 
         address commandAddress = getCommandAddress(triggerType);
+        if (replacedTriggerId != 0) {
+            (bytes32 replacedTriggersHash, address originalCommandAddress, ) = automationBotStorage
+                .activeTriggers(replacedTriggerId);
+            ISecurityAdapter originalAdapter = ISecurityAdapter(
+                getAdapterAddress(originalCommandAddress, false)
+            );
+            require(
+                originalAdapter.canCall(replacedTriggerData, msg.sender),
+                "bot/no-permissions-replace"
+            );
+            require(
+                replacedTriggersHash ==
+                    getTriggersHash(replacedTriggerData, originalCommandAddress),
+                "bot/invalid-trigger"
+            );
+        }
 
         require(
             ICommand(commandAddress).isTriggerDataValid(continuous, triggerData),
@@ -136,10 +148,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
-        require(
-            replacedTriggerId == 0 || adapter.canCall(replacedTriggerData, msg.sender),
-            "bot/no-permissions-replace"
-        );
 
         automationBotStorage.appendTriggerRecord(
             AutomationBotStorage.TriggerRecord(
@@ -150,10 +158,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         );
 
         if (replacedTriggerId != 0) {
-            (bytes32 replacedTriggersHash, , ) = automationBotStorage.activeTriggers(
-                replacedTriggerId
-            );
-            require(replacedTriggersHash != bytes32(0), "bot/invalid-trigger");
             clearTrigger(replacedTriggerId);
             emit TriggerRemoved(replacedTriggerId);
         }
@@ -200,8 +204,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256[] memory triggerTypes
     ) external onlyDelegate {
         require(
-            replacedTriggerId.length == triggerData.length &&
-                triggerData.length == triggerTypes.length,
+            replacedTriggerId.length == replacedTriggerData.length &&
+                triggerData.length == triggerTypes.length &&
+                triggerTypes.length == continuous.length &&
+                continuous.length == triggerData.length,
             "bot/invalid-input-length"
         );
 
@@ -234,7 +240,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     )
                 );
                 require(status, "bot/permit-failed-add");
-                emit ApprovalGranted(triggerData[i], address(automationBot));
+                emit ApprovalGranted(triggerData[i], address(automationBotStorage));
             }
 
             AutomationBot(automationBot).addRecord(
@@ -308,7 +314,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             );
 
             require(status, "bot/permit-removal-failed");
-            emit ApprovalRemoved(triggerData[0], automationBot);
+            emit ApprovalRemoved(triggerData[0], address(automationBotStorage));
         }
     }
 

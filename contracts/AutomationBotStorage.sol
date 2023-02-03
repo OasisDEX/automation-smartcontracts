@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// AutomationBot.sol
+/// AutomationBotStorage.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -18,15 +18,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "./interfaces/ManagerLike.sol";
-import "./interfaces/ICommand.sol";
 import "./interfaces/IAdapter.sol";
-import "./interfaces/BotLike.sol";
 import "./ServiceRegistry.sol";
-import "./McdUtils.sol";
 
 contract AutomationBotStorage {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
+    uint64 private constant COUNTER_OFFSET = 10 ** 10;
 
     struct TriggerRecord {
         bytes32 triggerHash;
@@ -47,7 +44,8 @@ contract AutomationBotStorage {
 
     constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
-        counter.triggersGroupCounter = 1;
+        counter.triggersCounter = COUNTER_OFFSET;
+        counter.triggersGroupCounter = COUNTER_OFFSET + 1;
     }
 
     modifier auth(address caller) {

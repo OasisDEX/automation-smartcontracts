@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BaseMPACommand.sol
+/// BaseAAveFlashLoanCommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -20,9 +20,9 @@
 pragma solidity ^0.8.0;
 
 import { ICommand } from "../interfaces/ICommand.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
+
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
-import { AaveProxyActions } from "../helpers/AaveProxyActions.sol";
+
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
