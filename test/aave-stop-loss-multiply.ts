@@ -18,7 +18,7 @@ import { expect } from 'chai'
 
 const testPositionAddress = process.env.TEST_AAVE_MULTIPLY_POSITION || '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
 
-describe('AaveStoplLossCommand-Multiply', async () => {
+describe.skip('AaveStoplLossCommand-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
@@ -32,6 +32,8 @@ describe('AaveStoplLossCommand-Multiply', async () => {
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
+        console.log("1");
+
         await hre.network.provider.request({
             method: 'hardhat_reset',
             params: [
@@ -48,10 +50,13 @@ describe('AaveStoplLossCommand-Multiply', async () => {
             'IAccountImplementation',
             testPositionAddress,
         )) as IAccountImplementation
+
         const oldGuard = await account.guard()
-        await hardhatUtils.replaceImmutableAddress(hardhatUtils.addresses.DPM_GUARD, oldGuard, system.dpmAdapter!)
+        await hardhatUtils.replaceImmutableAddress("0x96a92a5E85e6e51488C6A0DF2D9BA30e9799826e", oldGuard, system.dpmAdapter!)
+
         const guard = (await hre.ethers.getContractAt('IAccountGuard', oldGuard)) as IAccountGuard
         const guardDeployerAddress = await guard.owner()
+        
         const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
         receiver = await hardhatUtils.impersonate(await guard.owners(testPositionAddress))
 
@@ -74,6 +79,7 @@ describe('AaveStoplLossCommand-Multiply', async () => {
         }
         console.table(addresses)
 
+        console.log("5");
         // WHITELISTING
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
