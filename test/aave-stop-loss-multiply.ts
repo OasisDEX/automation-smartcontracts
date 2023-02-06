@@ -52,7 +52,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
         )) as IAccountImplementation
 
         const oldGuard = await account.guard()
-        await hardhatUtils.replaceImmutableAddress("0x96a92a5E85e6e51488C6A0DF2D9BA30e9799826e", oldGuard, system.dpmAdapter!)
+        await hardhatUtils.replaceImmutableAddress(hardhatUtils.addresses.DPM_GUARD, oldGuard, system.dpmAdapter!)
 
         const guard = (await hre.ethers.getContractAt('IAccountGuard', oldGuard)) as IAccountGuard
         const guardDeployerAddress = await guard.owner()
