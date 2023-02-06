@@ -26,6 +26,8 @@ export enum AutomationServiceName {
     AAVE_PROXY_ACTIONS = 'AAVE_PROXY_ACTIONS',
     UNISWAP_ROUTER = 'UNISWAP_ROUTER',
     UNISWAP_FACTORY = 'UNISWAP_FACTORY',
+    DPM_ADAPTER = 'DPM_ADAPTER',
+    AAVE_ADAPTER = 'AAVE_ADAPTER',
 }
 
 export interface OneInchQuoteResponse {

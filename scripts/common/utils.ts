@@ -14,7 +14,9 @@ export function toRatio(units: BigNumber.Value) {
 export function isLocalNetwork(network: string) {
     return [Network.HARDHAT, Network.LOCAL].includes(network as Network)
 }
-
+export function getExternalNameHash(service: string) {
+    return utils.keccak256(Buffer.from(service))
+}
 export function getServiceNameHash(service: AutomationServiceName) {
     return utils.keccak256(Buffer.from(service))
 }

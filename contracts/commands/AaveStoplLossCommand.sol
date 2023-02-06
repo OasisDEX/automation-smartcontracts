@@ -26,6 +26,7 @@ import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
+import { IWETH } from "../interfaces/IWETH.sol";
 
 struct AaveData {
     address collateralTokenAddress;
@@ -45,7 +46,6 @@ struct StopLossTriggerData {
     address collateralToken;
     address debtToken;
     uint256 slLevel;
-    uint32 maxBaseFeeInGwei;
 }
 
 struct CloseData {
@@ -74,6 +74,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
     string private constant AAVE_POOL = "AAVE_POOL";
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
+    string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
@@ -94,7 +95,15 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-
+        address weth = address(serviceRegistry.getRegisteredService(WETH));
+        require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
+        require(
+            IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
+                IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
+                (stopLossTriggerData.collateralToken != weth ||
+                    (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
+            "base-aave-fl-command/contract-not-empty"
+        );
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress
         );
@@ -253,7 +262,16 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             flTotal,
             exchangeData
         );
-        _transfer(address(collateralToken), fundsReceiver, 0);
+        address weth = address(serviceRegistry.getRegisteredService(WETH));
+        if (address(collateralToken) == weth) {
+            expectRecive();
+            uint256 balance = IERC20(weth).balanceOf(self);
+            IWETH(weth).withdraw(balance);
+            ethReceived();
+            payable(fundsReceiver).transfer(self.balance);
+        } else {
+            _transfer(address(collateralToken), fundsReceiver, 0);
+        }
         _transfer(address(debtToken), fundsReceiver, debtToken.balanceOf(self) - flTotal);
     }
 
@@ -295,7 +313,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         uint256 balance
     ) internal {
         aToken.transferFrom(borrower, self, balance);
-
         lendingPool.withdraw(collateralTokenAddress, (type(uint256).max), self);
+    }
+
+    receive() external payable {
+        require(reciveExpected == true, "aaveSl/unexpected-eth-receive");
     }
 }
