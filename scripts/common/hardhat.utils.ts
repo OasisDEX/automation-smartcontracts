@@ -10,6 +10,7 @@ import { AutomationServiceName, EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
 import { isLocalNetwork } from './utils'
 import { setCode } from '@nomicfoundation/hardhat-network-helpers'
+import { AAVEAdapter, DPMAdapter } from '../../typechain'
 export class HardhatUtils {
     private readonly _cache = new NodeCache()
     public readonly addresses
@@ -30,6 +31,12 @@ export class HardhatUtils {
             'ServiceRegistry',
             this.addresses.AUTOMATION_SERVICE_REGISTRY,
         )
+
+        const aaveA: AAVEAdapter = await this.hre.ethers.getContractAt('AAVEAdapter', this.addresses.AAVE_ADAPTER)
+
+        const dpmA: DPMAdapter = await this.hre.ethers.getContractAt('DPMAdapter', this.addresses.DPM_ADAPTER)
+
+        const makerA: DPMAdapter = await this.hre.ethers.getContractAt('DPMAdapter', this.addresses.DPM_ADAPTER)
 
         return {
             serviceRegistry: await this.hre.ethers.getContractAt(
@@ -61,14 +68,9 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
-            aaveAdapter: await this.hre.ethers.getContractAt(
-                'AAVEAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
-            ),
-            dpmAdapter: await this.hre.ethers.getContractAt(
-                'DPMAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
-            ),
+
+            aaveAdapter: aaveA,
+            dpmAdapter: dpmA,
             aaveProxyActions: await this.hre.ethers.getContractAt(
                 'AaveProxyActions',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
@@ -80,8 +82,12 @@ export class HardhatUtils {
         _factory: F | Promise<F>,
         params: Parameters<F['deploy']>,
     ): Promise<C> {
+        console.log('deployContract')
         const factory = await _factory
-        const deployment = await factory.deploy(...params, await this.getGasSettings())
+        console.log('deployContract', params)
+        //const gasP =  await this.getGasSettings();
+        //console.log(gasP);
+        const deployment = await factory.deploy(...params, { gasPrice: 25000000000 })
         return (await deployment.deployed()) as C
     }
 

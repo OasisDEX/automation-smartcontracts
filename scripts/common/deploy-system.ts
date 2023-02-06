@@ -43,7 +43,7 @@ export interface DeployedSystem {
     aaveStoplLossCommand?: AaveStoplLossCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
-    makerAdapter: MakerAdapter
+    makerAdapter?: MakerAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveProxyActions

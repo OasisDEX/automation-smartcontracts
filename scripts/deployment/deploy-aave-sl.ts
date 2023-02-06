@@ -32,6 +32,11 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
         }
 
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
+        console.log('ServiceRegistry entry')
+        console.log('Hash:', hash)
+        console.log('existingAddress:', existingAddress)
+        console.log('desiredAddress:', address)
+        return
         const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
             await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
@@ -53,7 +58,7 @@ async function main() {
     console.log(`Network: ${network}`)
 
     const system = await utils.getDefaultSystem()
-
+    /*
     console.log('Deploying AaveProxyActions')
 
     system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveProxyActions'), [
@@ -62,12 +67,23 @@ async function main() {
     ])) as AaveProxyActions
 
     const apa = await system.aaveProxyActions.deployed()
+    console.log('Deployed AaveProxyActions: ' + apa.address)
+    */
 
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
+
+    const commandHash = getCommandHash(10)
+    const commandHash2 = getCommandHash(11)
+
+    await ensureServiceRegistryEntry(commandHash, '0xcEF8EB2D43DC1db1AB292Cb92F38Dd406EE5749f')
+    await ensureServiceRegistryEntry(commandHash2, '0xcEF8EB2D43DC1db1AB292Cb92F38Dd406EE5749f')
+
+    return
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
 
     const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+        console.log('Ensuring adapter execute=', isExecute)
         if (!isExecute) {
             await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
         } else {
@@ -75,19 +91,19 @@ async function main() {
         }
     }
 
-    console.log('Deployed AaveProxyActions: ' + apa.address)
-
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveStoplLossCommand'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
         utils.addresses.AAVE_POOL,
-        apa.address,
     ])) as AaveStoplLossCommand
 
     const stopLossCommand = await tx.deployed()
     // TODO change 10 when the command is in common
-    const commandHash = getCommandHash(10)
+    console.log(`AaveStoplLossCommand Deployed: ${stopLossCommand!.address}`)
+    //const commandHash = getCommandHash(10)
+    //const commandHash2 = getCommandHash(11)
 
-    ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
+    await ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
+    await ensureServiceRegistryEntry(commandHash2, stopLossCommand.address)
 
     await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
@@ -96,13 +112,12 @@ async function main() {
         const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
         const owner = await guard.owner()
         const guardDeployer = await utils.impersonate(owner)
-        await guard.connect(guardDeployer).setWhitelist(apa.address, true)
+        //    await guard.connect(guardDeployer).setWhitelist(apa.address, true)
         await guard.connect(guardDeployer).setWhitelist(stopLossCommand.address, true)
         console.log("Guard's whitelist updated")
     }
 
-    console.log(`AaveStoplLossCommand Deployed: ${stopLossCommand!.address}`)
-    console.log(`AaveProxyActions Deployed: ${apa!.address}`)
+    //  console.log(`AaveProxyActions Deployed: ${apa!.address}`)
 }
 
 main().catch(error => {

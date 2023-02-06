@@ -37,6 +37,11 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
         }
 
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
+        console.log('ServiceRegistry entry')
+        console.log('Hash:', hash)
+        console.log('existingAddress:', existingAddress)
+        console.log('desiredAddress:', address)
+        return
         const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
             await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
@@ -63,23 +68,26 @@ async function main() {
 
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
+    console.log('serviceRegistry', system.serviceRegistry.address)
     console.log('Deploying AutomationStorage')
+    /*
     const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
         ethers.getContractFactory('AutomationBotStorage'),
         [system.serviceRegistry.address],
     )
     const automationStorage = await AutomationBotStorageInstance.deployed()
-    console.log(`AutomationStorage Deployed: ${automationStorage.address}`)
+    */
+    console.log(`AutomationStorage Deployed: ${'0x9d3aa45e4f0e31Cbc027D88af4d6D7558fDf807D'}`)
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
-        automationStorage.address,
+        '0x9d3aa45e4f0e31Cbc027D88af4d6D7558fDf807D',
     )
     console.log(`AutomationStorage Added to ServiceRegistry`)
 
     console.log('Deploying AutomationV2')
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [system.serviceRegistry.address, automationStorage.address],
+        [system.serviceRegistry.address, '0x9d3aa45e4f0e31Cbc027D88af4d6D7558fDf807D'],
     )
     console.log(`AutomationBot Deployed: ${AutomationBotInstance.address}`)
     await ensureServiceRegistryEntry(
@@ -106,6 +114,7 @@ async function main() {
         ethers.getContractFactory('AutomationExecutor'),
         [AutomationBotInstance.address, utils.addresses.WETH, utils.addresses.AUTOMATION_SERVICE_REGISTRY],
     )
+
     console.log(`ExecutorV2 Deployed: ${AutomationExecutorInstance.address}`)
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
@@ -113,25 +122,28 @@ async function main() {
     )
     console.log(`ExecutorV2 added to ServiceRegistry`)
 
+    /*
     console.log('Deploying DPMAdapter')
     const DpmAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
         system.serviceRegistry.address,
         utils.addresses.DPM_GUARD,
     ])
+    */
 
-    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.DPM_ADAPTER), DpmAdapterInstance.address)
+    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.DPM_ADAPTER), utils.addresses.DPM_ADAPTER)
 
-    console.log(`DPMAdapter Deployed: ${DpmAdapterInstance.address}`)
-
+    console.log(`DPMAdapter Deployed: ${utils.addresses.DPM_ADAPTER}`)
+    /*
     console.log('Deploying AAVEAdapter')
     const AaveAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         system.serviceRegistry.address,
     ])
-    console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
+    */
+    console.log(`AAVEAdapter Deployed: ${utils.addresses.AAVE_ADAPTER}`)
 
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AAVE_ADAPTER),
-        AaveAdapterInstance.address,
+        utils.addresses.AAVE_ADAPTER,
     )
 
     console.log('Adding signers to executor:')
