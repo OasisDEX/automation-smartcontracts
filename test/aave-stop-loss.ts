@@ -10,7 +10,7 @@ import {
     IAccountGuard,
     AccountFactoryLike,
 } from '../typechain'
-import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
+import { getEvents, HardhatUtils, getSwap, one } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
@@ -94,7 +94,7 @@ describe('AaveStoplLossCommand', async () => {
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
         await (
             await account.connect(receiver).execute(aave_pa.address, encodedOpenData, {
-                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+                value: EthersBN.from(2).mul(EthersBN.from(10).pow(18)),
                 gasLimit: 3000000,
             })
         ).wait()
@@ -103,7 +103,7 @@ describe('AaveStoplLossCommand', async () => {
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
             hardhatUtils.addresses.USDC,
             proxyAddress,
-            EthersBN.from(500).mul(EthersBN.from(10).pow(6)),
+            EthersBN.from(800).mul(EthersBN.from(10).pow(6)),
         ])
 
         await (
@@ -275,12 +275,14 @@ describe('AaveStoplLossCommand', async () => {
 
                 it('should execute trigger', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
+
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
-                        '0',
+                        '1803049',
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
@@ -288,7 +290,7 @@ describe('AaveStoplLossCommand', async () => {
                     )
                     const txRes = await tx.wait()
                     const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
+
                     const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
                     txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
                     txData.wethBalance = returnedEth.toString()
@@ -361,30 +363,46 @@ describe('AaveStoplLossCommand', async () => {
             let triggerId: number
 
             before(async () => {
+                const addressProvider = await ethers.getContractAt(
+                    'ILendingPoolAddressesProvider',
+                    hardhatUtils.addresses.AAVE_ADDRESSES_PROVIDER,
+                )
+                const oracle = await ethers.getContractAt('IPriceOracleGetter', await addressProvider.getPriceOracle())
+                const price = await oracle.getAssetPrice(hardhatUtils.addresses.USDC)
                 const userData = await aavePool.getUserAccountData(proxyAddress)
                 ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
 
                 const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
                 const vTokenBalance = await vToken.balanceOf(proxyAddress)
+                const vTokenDecimals = await vToken.decimals()
 
-                // TODO @halaprix generalize it
-                /*
-                    const collTokenWorthInDebtToken = userData.totalCollateralETH
-                    .mul(vTokenBalance)
-                    .div(userData.totalDebtETH) 
-                */
-
-                const amountToSwap = userData.totalDebtETH
+                const debtDenominatedInCollateralToken = vTokenBalance
+                    .mul(price)
+                    .div(EthersBN.from(10).pow(vTokenDecimals))
 
                 const fee = EthersBN.from(20)
                 const flFee = EthersBN.from(9)
                 const feeBase = EthersBN.from(10000)
+                // 0.1%
+                const slippage = EthersBN.from(100)
+
+                const collTokenInclFee = debtDenominatedInCollateralToken.add(
+                    debtDenominatedInCollateralToken.mul(fee).div(feeBase),
+                )
+                const collTokenInclFeeAndSlippage = collTokenInclFee.add(collTokenInclFee.mul(slippage).div(feeBase))
+                const collTokenInclFeeAndSlippageAndFlFee = collTokenInclFeeAndSlippage.add(
+                    collTokenInclFeeAndSlippage.mul(flFee).div(feeBase),
+                )
+                // TODO: remove magic number
+                const txFeeToRefundExecutor = EthersBN.from('1438627807837639')
+                const amountToSwap = collTokenInclFeeAndSlippageAndFlFee.add(txFeeToRefundExecutor)
+
                 const data = await getSwap(
                     hardhatUtils.addresses.WETH,
                     hardhatUtils.addresses.USDC,
                     receiverAddress,
-                    new BigNumber(amountToSwap.mul(101).div(100).toString()),
-                    new BigNumber('10'),
+                    new BigNumber(amountToSwap.toString()),
+                    new BigNumber(slippage.mul(100).div(feeBase).toString()),
                 )
 
                 await hardhatUtils.setTokenBalance(
@@ -392,14 +410,17 @@ describe('AaveStoplLossCommand', async () => {
                     hardhatUtils.addresses.WETH,
                     hre.ethers.utils.parseEther('10'),
                 )
-
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH_AAVE,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountToSwap.mul(101).div(100),
-                    receiveAtLeast: vTokenBalance
-                        .add(vTokenBalance.mul(flFee).div(feeBase))
-                        .add(vTokenBalance.mul(fee).div(feeBase)),
+                    amount: amountToSwap,
+                    receiveAtLeast: EthersBN.from(
+                        data.toTokenAmount
+                            .shiftedBy(data.toTokenDecimals)
+                            .times(0.99)
+                            .integerValue(BigNumber.ROUND_DOWN)
+                            .toString(),
+                    ),
                     fee: fee,
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
@@ -416,6 +437,7 @@ describe('AaveStoplLossCommand', async () => {
                     exchange: hardhatUtils.addresses.SWAP,
                 }
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
+                    //
                     exchangeData,
                     aaveData,
                     serviceRegistry,
@@ -460,12 +482,15 @@ describe('AaveStoplLossCommand', async () => {
 
                 it('should execute trigger', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
+
+                    // TODO: remove magic number
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
-                        '0',
+                        '1803049',
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
@@ -473,7 +498,6 @@ describe('AaveStoplLossCommand', async () => {
                     )
                     const txRes = await tx.wait()
                     const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
                     const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
                     txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
                     txData.wethBalance = returnedEth.toString()

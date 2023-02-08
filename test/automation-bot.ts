@@ -109,12 +109,10 @@ describe('AutomationBot', async () => {
             )
 
     beforeEach(async () => {
-        console.log('snapshot')
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        console.log('revert snapshot')
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
