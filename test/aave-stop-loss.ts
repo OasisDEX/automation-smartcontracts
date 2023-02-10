@@ -15,7 +15,7 @@ import { deploySystem } from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { TriggerGroupType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 describe('AaveStoplLossCommand', async () => {
@@ -89,7 +89,7 @@ describe('AaveStoplLossCommand', async () => {
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
         await guard.connect(guardDeployer).setWhitelist(aaveStopLoss.address, true)
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
-        // TODO: take multiply poistion from mainnet
+
         // 1. deposit 1 eth of collateral
         const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
         await (
@@ -120,7 +120,7 @@ describe('AaveStoplLossCommand', async () => {
             const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
-                10,
+                TriggerType.AaveStopLossToCollateral,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(2),
@@ -145,7 +145,7 @@ describe('AaveStoplLossCommand', async () => {
             const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
-                10,
+                TriggerType.AaveStopLossToCollateral,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(2),
@@ -242,7 +242,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateral,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(2),
@@ -296,7 +296,7 @@ describe('AaveStoplLossCommand', async () => {
                     txData.wethBalance = returnedEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
+
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
@@ -307,14 +307,14 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToDebt,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(10),
                         300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
 
+                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
                         [false],
@@ -449,7 +449,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateral,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(2),
@@ -503,7 +503,7 @@ describe('AaveStoplLossCommand', async () => {
                     txData.wethBalance = returnedEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await aavePool.getUserAccountData(proxyAddress)
-                    // TODO check a token
+
                     expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
@@ -514,14 +514,14 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateral,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(2),
                         300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
 
+                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
                         [false],

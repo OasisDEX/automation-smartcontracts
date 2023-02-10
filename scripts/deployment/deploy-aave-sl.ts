@@ -84,8 +84,7 @@ async function main() {
     ])) as AaveStoplLossCommand
 
     const stopLossCommand = await tx.deployed()
-    // TODO change 10 when the command is in common
-    const commandHash = getCommandHash(10)
+    const commandHash = getCommandHash(TriggerType.AaveStopLossToCollateral)
 
     ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
 

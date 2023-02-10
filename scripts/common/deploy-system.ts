@@ -354,11 +354,13 @@ export async function configureRegistryEntries(
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            // TODO - add to common
-            getCommandHash(10),
+            getCommandHash(TriggerType.AaveStopLossToCollateral),
             system.aaveStoplLossCommand.address,
         )
-
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AaveStopLossToDebt),
+            system.aaveStoplLossCommand.address,
+        )
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
