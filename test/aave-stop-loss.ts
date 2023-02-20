@@ -23,13 +23,15 @@ describe('AaveStoplLossCommand', async () => {
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
     let proxyAddress: string
+    let receiver: Signer
     let receiverAddress: string
+    let randomWalletAddress: string
     let snapshotId: string
     let snapshotIdTop: string
     let aaveStopLoss: AaveStoplLossCommand
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
-    let receiver: Signer
+
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
@@ -46,9 +48,10 @@ describe('AaveStoplLossCommand', async () => {
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
 
         receiver = hre.ethers.provider.getSigner(1)
-
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
+
+        randomWalletAddress = ethers.Wallet.createRandom().address
 
         aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
         automationBotInstance = system.automationBot
@@ -178,6 +181,7 @@ describe('AaveStoplLossCommand', async () => {
         })
         describe('closeToDebtToken operation', async () => {
             let encodedClosePositionData: string
+            let encodedClosePositionNotOwnerData: string
             let triggerData: string
             let triggerId: number
 
@@ -225,6 +229,12 @@ describe('AaveStoplLossCommand', async () => {
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
+                const aaveDataNotOwner = {
+                    debtTokenAddress: hardhatUtils.addresses.USDC,
+                    collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
+                    borrower: proxyAddress,
+                    fundsReceiver: randomWalletAddress,
+                }
 
                 const serviceRegistry = {
                     aaveStopLoss: aaveStopLoss.address,
@@ -233,6 +243,11 @@ describe('AaveStoplLossCommand', async () => {
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
+                    serviceRegistry,
+                ])
+                encodedClosePositionNotOwnerData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
+                    exchangeData,
+                    aaveDataNotOwner,
                     serviceRegistry,
                 ])
             })
@@ -298,6 +313,21 @@ describe('AaveStoplLossCommand', async () => {
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
+                })
+
+                it('should NOT execute trigger if funds receiver is not the owner', async () => {
+                    const tx = automationExecutorInstance.execute(
+                        encodedClosePositionNotOwnerData,
+                        triggerData,
+                        aaveStopLoss.address,
+                        triggerId,
+                        '0',
+                        '0',
+                        178000,
+                        hardhatUtils.addresses.USDC,
+                        { gasLimit: 3000000 },
+                    )
+                    await expect(tx).to.be.revertedWith('aaveSl/funds-receiver-not-owner')
                 })
             })
             describe('when Trigger is above current LTV', async () => {

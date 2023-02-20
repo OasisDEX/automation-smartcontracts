@@ -172,6 +172,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             AaveStopLoss(addressRegistry.aaveStopLoss).trustedCaller() == address(this),
             "aaveSl/caller-not-allowed"
         );
+        require(
+            IAccountImplementation(address(this)).owner() == aaveData.fundsReceiver,
+            "aaveSl/funds-receiver-not-owner"
+        );
         require(self == msg.sender, "aaveSl/msg-sender-is-not-sl");
 
         DataTypes.ReserveData memory collReserveData = lendingPool.getReserveData(
