@@ -43,6 +43,7 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
 
     address public trustedCaller;
     address public immutable self;
+    address public immutable exchange;
 
     bool public reciveExpected;
 
@@ -56,9 +57,10 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
         bytes params;
     }
 
-    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
+    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool, address _exchange) {
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
+        exchange = _exchange;
         self = address(this);
     }
 

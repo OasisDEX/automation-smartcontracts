@@ -35,11 +35,6 @@ struct AaveData {
     address payable fundsReceiver;
 }
 
-struct AddressRegistry {
-    address aaveStopLoss;
-    address exchange;
-}
-
 struct StopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
@@ -59,11 +54,7 @@ struct CloseData {
 }
 
 interface AaveStopLoss {
-    function closePosition(
-        SwapData calldata exchangeData,
-        AaveData memory aaveData,
-        AddressRegistry calldata addressRegistry
-    ) external;
+    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external;
 
     function trustedCaller() external returns (address);
 
@@ -78,8 +69,9 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
 
     constructor(
         IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool) {}
+        ILendingPool _lendingPool,
+        address _exchange
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _exchange) {}
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -163,15 +155,8 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             (stopLossTriggerData.triggerType == 10 || stopLossTriggerData.triggerType == 11);
     }
 
-    function closePosition(
-        SwapData calldata exchangeData,
-        AaveData memory aaveData,
-        AddressRegistry calldata addressRegistry
-    ) external {
-        require(
-            AaveStopLoss(addressRegistry.aaveStopLoss).trustedCaller() == address(this),
-            "aaveSl/caller-not-allowed"
-        );
+    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external {
+        require(AaveStopLoss(self).trustedCaller() == address(this), "aaveSl/caller-not-allowed");
         require(
             IAccountImplementation(address(this)).owner() == aaveData.fundsReceiver,
             "aaveSl/funds-receiver-not-owner"
@@ -190,10 +175,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         uint256 totalCollateral = IERC20(collReserveData.aTokenAddress).balanceOf(
             aaveData.borrower
         );
-        IERC20(collReserveData.aTokenAddress).approve(
-            addressRegistry.aaveStopLoss,
-            totalCollateral
-        );
+        IERC20(collReserveData.aTokenAddress).approve(self, totalCollateral);
 
         {
             CloseData memory closeData;
@@ -205,7 +187,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             uint256[] memory modes = new uint256[](1);
             modes[0] = uint256(0);
 
-            closeData.receiverAddress = addressRegistry.aaveStopLoss;
+            closeData.receiverAddress = self;
             closeData.assets = debtTokens;
             closeData.amounts = amounts;
             closeData.modes = modes;
@@ -213,7 +195,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             closeData.params = abi.encode(
                 collReserveData.aTokenAddress,
                 aaveData.collateralTokenAddress,
-                addressRegistry.exchange,
+                exchange,
                 aaveData.borrower,
                 aaveData.fundsReceiver,
                 exchangeData

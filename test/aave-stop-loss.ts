@@ -236,19 +236,13 @@ describe('AaveStoplLossCommand', async () => {
                     fundsReceiver: randomWalletAddress,
                 }
 
-                const serviceRegistry = {
-                    aaveStopLoss: aaveStopLoss.address,
-                    exchange: hardhatUtils.addresses.SWAP,
-                }
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
-                    serviceRegistry,
                 ])
                 encodedClosePositionNotOwnerData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveDataNotOwner,
-                    serviceRegistry,
                 ])
             })
 
@@ -441,14 +435,9 @@ describe('AaveStoplLossCommand', async () => {
                     fundsReceiver: receiverAddress,
                 }
 
-                const serviceRegistry = {
-                    aaveStopLoss: aaveStopLoss.address,
-                    exchange: hardhatUtils.addresses.SWAP,
-                }
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
-                    serviceRegistry,
                 ])
             })
 
