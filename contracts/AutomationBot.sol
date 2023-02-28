@@ -258,7 +258,11 @@ contract AutomationBot {
         return automationBot;
     }
 
-    function drawDaiFromVault(uint256 cdpId, ManagerLike manager, uint256 daiCoverage) internal {
+    function drawDaiFromVault(
+        uint256 cdpId,
+        ManagerLike manager,
+        uint256 daiCoverage
+    ) internal {
         address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
 
         McdUtils utils = McdUtils(utilsAddress);

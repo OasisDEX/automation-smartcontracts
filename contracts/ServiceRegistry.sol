@@ -63,15 +63,21 @@ contract ServiceRegistry {
         owner = msg.sender;
     }
 
-    function transferOwnership(
-        address newOwner
-    ) external onlyOwner validateInput(36) delayedExecution {
+    function transferOwnership(address newOwner)
+        external
+        onlyOwner
+        validateInput(36)
+        delayedExecution
+    {
         owner = newOwner;
     }
 
-    function changeRequiredDelay(
-        uint256 newDelay
-    ) external onlyOwner validateInput(36) delayedExecution {
+    function changeRequiredDelay(uint256 newDelay)
+        external
+        onlyOwner
+        validateInput(36)
+        delayedExecution
+    {
         require(newDelay <= MAX_DELAY, "registry/invalid-delay");
         requiredDelay = newDelay;
     }
@@ -80,18 +86,22 @@ contract ServiceRegistry {
         return keccak256(abi.encodePacked(name));
     }
 
-    function addNamedService(
-        bytes32 serviceNameHash,
-        address serviceAddress
-    ) external onlyOwner validateInput(68) delayedExecution {
+    function addNamedService(bytes32 serviceNameHash, address serviceAddress)
+        external
+        onlyOwner
+        validateInput(68)
+        delayedExecution
+    {
         require(namedService[serviceNameHash] == address(0), "registry/service-override");
         namedService[serviceNameHash] = serviceAddress;
     }
 
-    function updateNamedService(
-        bytes32 serviceNameHash,
-        address serviceAddress
-    ) external onlyOwner validateInput(68) delayedExecution {
+    function updateNamedService(bytes32 serviceNameHash, address serviceAddress)
+        external
+        onlyOwner
+        validateInput(68)
+        delayedExecution
+    {
         require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = serviceAddress;
     }
@@ -110,9 +120,11 @@ contract ServiceRegistry {
         return namedService[serviceNameHash];
     }
 
-    function clearScheduledExecution(
-        bytes32 scheduledExecution
-    ) external onlyOwner validateInput(36) {
+    function clearScheduledExecution(bytes32 scheduledExecution)
+        external
+        onlyOwner
+        validateInput(36)
+    {
         require(lastExecuted[scheduledExecution] > 0, "registry/execution-not-scheduled");
         lastExecuted[scheduledExecution] = 0;
         emit ChangeCancelled(scheduledExecution);

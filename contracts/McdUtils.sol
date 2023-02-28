@@ -34,7 +34,12 @@ contract McdUtils is DSMath {
     address private immutable daiJoin;
     address public immutable jug;
 
-    constructor(address _serviceRegistry, IERC20 _dai, address _daiJoin, address _jug) {
+    constructor(
+        address _serviceRegistry,
+        IERC20 _dai,
+        address _daiJoin,
+        address _jug
+    ) {
         serviceRegistry = _serviceRegistry;
         DAI = _dai;
         daiJoin = _daiJoin;

@@ -40,7 +40,12 @@ contract AutomationExecutor {
 
     mapping(address => bool) public callers;
 
-    constructor(BotLike _bot, IERC20 _dai, IWETH _weth, address _exchange) {
+    constructor(
+        BotLike _bot,
+        IERC20 _dai,
+        IWETH _weth,
+        address _exchange
+    ) {
         bot = _bot;
         weth = _weth;
         dai = _dai;

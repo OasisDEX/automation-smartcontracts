@@ -58,7 +58,11 @@ contract DummyCommand is ICommand {
         return initialCheckReturn;
     }
 
-    function execute(bytes calldata, uint256, bytes memory) external virtual {
+    function execute(
+        bytes calldata,
+        uint256,
+        bytes memory
+    ) external virtual {
         require(!revertsInExecute, "command failed");
     }
 }

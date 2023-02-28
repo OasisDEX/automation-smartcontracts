@@ -23,10 +23,10 @@ import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 library RatioUtils {
     using SafeMath for uint256;
 
-    uint256 public constant RATIO = 10 ** 4;
-    uint256 public constant WAD = 10 ** 18;
-    uint256 public constant RAY = 10 ** 27;
-    uint256 public constant RAD = 10 ** 45;
+    uint256 public constant RATIO = 10**4;
+    uint256 public constant WAD = 10**18;
+    uint256 public constant RAY = 10**27;
+    uint256 public constant RAD = 10**45;
 
     // convert base units to ratio
     function toRatio(uint256 units) internal pure returns (uint256) {
@@ -41,10 +41,11 @@ library RatioUtils {
         return ratio.mul(RAY).div(RATIO);
     }
 
-    function bounds(
-        uint256 ratio,
-        uint64 deviation
-    ) internal pure returns (uint256 lower, uint256 upper) {
+    function bounds(uint256 ratio, uint64 deviation)
+        internal
+        pure
+        returns (uint256 lower, uint256 upper)
+    {
         uint256 offset = ratio.mul(deviation).div(RATIO);
         return (ratio.sub(offset), ratio.add(offset));
     }
