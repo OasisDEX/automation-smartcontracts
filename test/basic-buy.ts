@@ -43,7 +43,6 @@ describe('BasicBuyCommand', () => {
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
@@ -54,6 +53,7 @@ describe('BasicBuyCommand', () => {
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
         const proxyAddress = await cdpManager.owns(testCdpId)
         usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
+        receiverAddress = await usersProxy.owner()
         proxyOwnerAddress = await usersProxy.owner()
 
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
@@ -241,11 +241,12 @@ describe('BasicBuyCommand', () => {
                     false,
                 ),
             }
-
+            const addressRegistry = hardhatUtils.mpaServiceRegistry()
+            addressRegistry.multiplyProxyActions = system.multiplyProxyActions.address
             const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
                 exchangeData,
                 cdpData,
-                hardhatUtils.mpaServiceRegistry(),
+                addressRegistry,
             ])
 
             return system.automationExecutor.execute(

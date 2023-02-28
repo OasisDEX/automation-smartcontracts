@@ -45,7 +45,6 @@ describe('AutomationAggregatorBot', async () => {
 
     before(async () => {
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
         system = await deploySystem({ utils, addCommands: true })
@@ -61,6 +60,7 @@ describe('AutomationAggregatorBot', async () => {
         const proxyAddress = await cdpManager.owns(testCdpId)
         ownerProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
         ownerProxyUserAddress = await ownerProxy.owner()
+        receiverAddress = await ownerProxy.owner()
 
         const beforeProxyAddress = await cdpManager.owns(beforeTestCdpId)
         beforeOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', beforeProxyAddress)
@@ -207,11 +207,12 @@ describe('AutomationAggregatorBot', async () => {
                     false,
                 ),
             }
-
+            const addressRegistry = hardhatUtils.mpaServiceRegistry()
+            addressRegistry.multiplyProxyActions = system.multiplyProxyActions.address
             const executionData = MPAInstance.interface.encodeFunctionData('increaseMultiple', [
                 exchangeData,
                 cdpData,
-                hardhatUtils.mpaServiceRegistry(),
+                addressRegistry,
             ])
 
             return system.automationExecutor.execute(
@@ -223,6 +224,7 @@ describe('AutomationAggregatorBot', async () => {
                 0,
                 0,
                 0,
+                { gasLimit: 3000000 },
             )
         }
 

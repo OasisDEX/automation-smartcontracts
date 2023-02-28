@@ -23,30 +23,13 @@ abstract contract IVat {
 
     function dai(address) public view virtual returns (uint256);
 
-    function frob(
-        bytes32,
-        address,
-        address,
-        address,
-        int256,
-        int256
-    ) public virtual;
+    function frob(bytes32, address, address, address, int256, int256) public virtual;
 
     function hope(address) public virtual;
 
-    function move(
-        address,
-        address,
-        uint256
-    ) public virtual;
+    function move(address, address, uint256) public virtual;
 
-    function fork(
-        bytes32,
-        address,
-        address,
-        int256,
-        int256
-    ) public virtual;
+    function fork(bytes32, address, address, int256, int256) public virtual;
 }
 
 abstract contract IGem {
@@ -62,11 +45,7 @@ abstract contract IGem {
 
     function transfer(address, uint256) public virtual returns (bool);
 
-    function transferFrom(
-        address,
-        address,
-        uint256
-    ) public virtual returns (bool);
+    function transferFrom(address, address, uint256) public virtual returns (bool);
 
     function deposit() public payable virtual;
 

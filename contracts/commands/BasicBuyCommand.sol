@@ -48,11 +48,10 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
@@ -71,11 +70,10 @@ contract BasicBuyCommand is BaseMPACommand {
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionLegal(
+        uint256 cdpId,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         (
@@ -114,11 +112,10 @@ contract BasicBuyCommand is BaseMPACommand {
         }
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionCorrect(
+        uint256 cdpId,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));

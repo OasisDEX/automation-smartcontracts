@@ -46,11 +46,10 @@ contract BasicSellCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        pure
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bytes memory triggerData
+    ) external pure returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
@@ -61,11 +60,10 @@ contract BasicSellCommand is BaseMPACommand {
             deviationIsValid(trigger.deviation);
     }
 
-    function isExecutionLegal(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionLegal(
+        uint256 cdpId,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(cdpId);
@@ -104,11 +102,10 @@ contract BasicSellCommand is BaseMPACommand {
         }
     }
 
-    function isExecutionCorrect(uint256 cdpId, bytes memory triggerData)
-        external
-        view
-        returns (bool)
-    {
+    function isExecutionCorrect(
+        uint256 cdpId,
+        bytes memory triggerData
+    ) external view returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
         McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));

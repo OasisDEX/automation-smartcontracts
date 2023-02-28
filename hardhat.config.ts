@@ -86,5 +86,9 @@ const config: HardhatUserConfig = {
         username: process.env.TENDERLY_USERNAME!,
     },
 }
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+    return this.toString()
+}
 
 export default config

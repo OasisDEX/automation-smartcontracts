@@ -56,6 +56,10 @@ export class HardhatUtils {
                 'BasicSellCommand',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
+            multiplyProxyActions: await this.hre.ethers.getContractAt(
+                'MultiplyProxyActions',
+                this.addresses.MULTIPLY_PROXY_ACTIONS,
+            ),
         }
     }
 

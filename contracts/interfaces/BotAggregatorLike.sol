@@ -17,15 +17,7 @@ interface BotAggregatorLike {
         bool removeAllowance
     ) external;
 
-    function addRecord(
-        uint256 cdpId,
-        uint16 groupTypeId,
-        uint256[] memory triggerIds
-    ) external;
+    function addRecord(uint256 cdpId, uint16 groupTypeId, uint256[] memory triggerIds) external;
 
-    function removeRecord(
-        uint256 cdpId,
-        uint256 groupId,
-        uint256[] memory triggerIds
-    ) external;
+    function removeRecord(uint256 cdpId, uint256 groupId, uint256[] memory triggerIds) external;
 }
