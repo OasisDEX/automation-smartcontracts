@@ -852,6 +852,5 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 daiLeft
   );
 
-  //TODO: Test with receive
   fallback() external payable {}
 }
