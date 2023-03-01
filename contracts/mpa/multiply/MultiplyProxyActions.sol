@@ -694,7 +694,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 borrowedDaiAmount,
     uint256 ink
   ) private {
-    // TODO: 
     IExchange exchange = IExchange(addressRegistry.exchange);
     address gemAddress = address(IJoin(cdpData.gemJoin).gem());
 
@@ -803,6 +802,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
       CdpData memory cdpData,
       AddressRegistry memory addressRegistry
     ) = abi.decode(params, (uint8, ExchangeData, CdpData, AddressRegistry));
+
     require(msg.sender == address(addressRegistry.lender), "mpa-untrusted-lender");
 
     uint256 borrowedDaiAmount = amount.add(fee);
@@ -837,6 +837,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
         cdpData.borrowCollateral
       );
     }
+
     IERC20(token).approve(addressRegistry.lender, borrowedDaiAmount);
 
     return keccak256("ERC3156FlashBorrower.onFlashLoan");
