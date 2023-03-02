@@ -104,7 +104,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(exchangeData.exchangeAddress == ONE_INCH_V4 || exchangeData.exchangeAddress == ONE_INCH_V5, "mpa-exchange-not-one-inch");
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
+    address gem = address(IJoin(cdpData.gemJoin).gem());
     cdpData.ilk = ilk;
+    require((exchangeData.fromTokenAddress == gem && exchangeData.toTokenAddress == DAI) || (exchangeData.fromTokenAddress == DAI && exchangeData.toTokenAddress == gem), "mpa-wrong-gem");
     require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
     require(cdpData.gemJoin == IChainLogView(CHAIN_LOG_VIEW).getIlkJoinAddressByHash(cdpData.ilk), "mpa-wrong-gemJoin");
   }
