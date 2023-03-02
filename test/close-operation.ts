@@ -31,7 +31,7 @@ describe('CloseCommand', async () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
-    let serviceRegistry = hardhatUtils.mpaServiceRegistry()
+    const serviceRegistry = hardhatUtils.mpaServiceRegistry()
 
     before(async () => {
         const ethAIlk = utils.formatBytes32String('ETH-A')
@@ -175,9 +175,9 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
-                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
+                    await expect(tx).to.be.revertedWith('executor/illegal-execution')
                 })
             })
             describe('when Trigger is above current col ratio', async () => {
@@ -238,7 +238,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
-                        178000,
+                        180000,
                     )
 
                     const balanceAfter = await DAIInstance.balanceOf(AutomationExecutorInstance.address)
@@ -271,7 +271,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -282,7 +282,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -316,7 +316,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -398,9 +398,9 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
-                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
+                    await expect(tx).to.be.revertedWith('executor/illegal-execution')
                 })
             })
 
@@ -461,7 +461,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
 
                     const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
@@ -488,7 +488,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -499,7 +499,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -525,6 +525,7 @@ describe('CloseCommand', async () => {
                 })
 
                 it('should send dai To receiverAddress', async () => {
+                    const beforeBalance = await DAIInstance.balanceOf(receiverAddress)
                     await AutomationExecutorInstance.execute(
                         executionData,
                         testCdpId,
@@ -533,20 +534,19 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        180000,
                         { gasLimit: 3000000 },
                     )
 
-                    const afterBalance = await DAIInstance.balanceOf(receiverAddress)
+                    const afterBalance = (await DAIInstance.balanceOf(receiverAddress)).sub(beforeBalance)
 
                     const debt = EthersBN.from(debtAmount)
                     const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100)
                     const valueLocked = tradeSize.sub(debt)
 
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()
-                    /* TODO: check calcs @adamskrodzki was:
-                    expect(valueRecovered).to.be.below(1000) */
-                    expect(valueRecovered).to.be.below(1050)
+
+                    expect(valueRecovered).to.be.below(1000)
                     expect(valueRecovered).to.be.above(950)
                 })
             })
