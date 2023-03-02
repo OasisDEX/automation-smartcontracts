@@ -108,6 +108,7 @@ contract AutomationExecutor {
             ICommand(commandAddress).isExecutionLegal(cdpId, triggerData),
             "executor/illegal-execution"
         );
+        require(daiCoverage <= 1500 * 10**18, "executor/coverage-too-high");
 
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 

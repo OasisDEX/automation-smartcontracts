@@ -31,6 +31,8 @@ describe('BasicSellCommand', () => {
     let receiverAddress: string
     let executorAddress: string
     let snapshotId: string
+    const coverage = hardhatUtils.hre.ethers.utils.parseEther('1000')
+    const highCoverage = hardhatUtils.hre.ethers.utils.parseEther('1600')
 
     const createTrigger = async (triggerData: BytesLike) => {
         const data = system.automationBot.interface.encodeFunctionData('addTrigger', [
@@ -164,7 +166,12 @@ describe('BasicSellCommand', () => {
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
         }
 
-        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
+        async function executeTrigger(
+            triggerId: number,
+            targetRatio: BigNumber,
+            triggerData: BytesLike,
+            coverage: EtherBN,
+        ) {
             const collRatio = await system.mcdView.getRatio(testCdpId, true)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
             const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
@@ -240,7 +247,7 @@ describe('BasicSellCommand', () => {
                 triggerData,
                 system.basicSell!.address,
                 triggerId,
-                0,
+                coverage,
                 0,
                 0,
             )
@@ -261,9 +268,20 @@ describe('BasicSellCommand', () => {
                 false,
             )
 
-            await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
+            await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData, coverage)).not.to.be
+                .reverted
         })
+        it('doesn`t execute the trigger, due to coverage being too high', async () => {
+            const { triggerId, triggerData } = await createTriggerForExecution(
+                correctExecutionRatio,
+                correctTargetRatio,
+                false,
+            )
 
+            await expect(
+                executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData, highCoverage),
+            ).be.revertedWith('executor/coverage-too-high')
+        })
         it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price', async () => {
             await (
                 await usersProxy
@@ -292,7 +310,8 @@ describe('BasicSellCommand', () => {
             const executionRatio = toRatio(1.45)
             const targetRatio = toRatio(1.5)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false, 0)
-            await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
+            await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData, coverage)).not.to.be
+                .reverted
         })
 
         it('does not recreate the trigger if `continuous` is set to false', async () => {
@@ -300,7 +319,7 @@ describe('BasicSellCommand', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const tx = executeTrigger(triggerId, targetRatio, triggerData, coverage)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -312,7 +331,7 @@ describe('BasicSellCommand', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const tx = executeTrigger(triggerId, targetRatio, triggerData)
+            const tx = executeTrigger(triggerId, targetRatio, triggerData, coverage)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
