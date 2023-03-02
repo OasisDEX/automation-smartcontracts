@@ -75,7 +75,8 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   address public immutable CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
   address public immutable JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
   address public immutable EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
-  address public immutable ONE_INCH = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
+  address public immutable ONE_INCH_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
+  address public immutable ONE_INCH_V5 = 0x1111111254EEB25477B68fb85Ed929f73A960582;
   address public immutable CHAIN_LOG_VIEW;
   constructor(address _chainLogView) {
       SELF = address(this);
@@ -100,7 +101,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(addressRegistry.multiplyProxyActions == SELF, "mpa-self-invalid");
     require(addressRegistry.lender == IChainLogView(CHAIN_LOG_VIEW).getServiceAddress("MCD_FLASH"), "mpa-FL-invalid");
     require(addressRegistry.exchange == EXCHANGE, "mpa-exchange-invalid");
-    require(exchangeData.exchangeAddress == ONE_INCH, "mpa-exchange-not-one-inch");
+    require(exchangeData.exchangeAddress == ONE_INCH_V4 || exchangeData.exchangeAddress == ONE_INCH_V5, "mpa-exchange-not-one-inch");
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.ilk = ilk;
