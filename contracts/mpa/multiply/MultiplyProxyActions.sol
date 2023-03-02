@@ -69,15 +69,16 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   uint256 constant RAY = 10**27;
 
   address public immutable SELF;
-  address public immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-  address public immutable DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
-  address public immutable DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
-  address public immutable CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
-  address public immutable JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
-  address public immutable EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
-  address public immutable ONE_INCH_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
-  address public immutable ONE_INCH_V5 = 0x1111111254EEB25477B68fb85Ed929f73A960582;
   address public immutable CHAIN_LOG_VIEW;
+  address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  address public constant DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
+  address public constant CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
+  address public constant JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
+  address public constant EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
+  address public constant ONE_INCH_V4 = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
+  address public constant ONE_INCH_V5 = 0x1111111254EEB25477B68fb85Ed929f73A960582;
+
   constructor(address _chainLogView) {
       SELF = address(this);
       CHAIN_LOG_VIEW = _chainLogView;
