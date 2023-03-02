@@ -68,30 +68,18 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
   uint256 constant RAY = 10**27;
 
-  address public immutable WETH;
-  address public immutable DAI;
-  address public immutable DAIJOIN;
-  address public immutable CDP_MANAGER;
-  address public immutable JUG;
-  address public immutable EXCHANGE;
   address public immutable SELF;
-  address public immutable MakerChangeLog  ;
+  address public immutable WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+  address public immutable DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+  address public immutable DAIJOIN = 0x9759A6Ac90977b93B58547b4A71c78317f391A28;
+  address public immutable CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
+  address public immutable JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
+  address public immutable EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
   address public immutable ONE_INCH = 0x1111111254fb6c44bAC0beD2854e76F90643097d;
-
-  constructor(
-    address _weth,
-    address _dai,
-    address _daiJoin,
-    address _makerChangeLog
-  ) {
-    WETH = _weth;
-    DAI = _dai;
-    DAIJOIN = _daiJoin;
-    MakerChangeLog = _makerChangeLog;
-    SELF = address(this);
-    JUG = 0x19c0976f590D67707E62397C87829d896Dc0f1F1;
-    CDP_MANAGER = 0x5ef30b9986345249bc32d8928B7ee64DE9435E39;
-    EXCHANGE = 0xb5eB8cB6cED6b6f8E13bcD502fb489Db4a726C7B;
+  address public immutable CHAIN_LOG_VIEW;
+  constructor(address _chainLogView) {
+      SELF = address(this);
+      CHAIN_LOG_VIEW = _chainLogView;
   }
 
   modifier logMethodName(
@@ -110,14 +98,14 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(addressRegistry.jug == JUG, "mpa-jug-invalid");
     require(addressRegistry.manager == CDP_MANAGER, "mpa-manager-invalid");
     require(addressRegistry.multiplyProxyActions == SELF, "mpa-self-invalid");
-    require(addressRegistry.lender == IChainLogView(MakerChangeLog).getServiceAddress("MCD_FLASH"), "mpa-FL-invalid");
+    require(addressRegistry.lender == IChainLogView(CHAIN_LOG_VIEW).getServiceAddress("MCD_FLASH"), "mpa-FL-invalid");
     require(addressRegistry.exchange == EXCHANGE, "mpa-exchange-invalid");
     require(exchangeData.exchangeAddress == ONE_INCH, "mpa-exchange-not-one-inch");
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.ilk = ilk;
     require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
-    require(cdpData.gemJoin == IChainLogView(MakerChangeLog).getIlkJoinAddressByHash(cdpData.ilk), "mpa-wrong-gemJoin");
+    require(cdpData.gemJoin == IChainLogView(CHAIN_LOG_VIEW).getIlkJoinAddressByHash(cdpData.ilk), "mpa-wrong-gemJoin");
   }
 
   function takeAFlashLoan(

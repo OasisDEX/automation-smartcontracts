@@ -160,7 +160,7 @@ export async function deploySystem({
 
     const MultiplyProxyActionsInstance: MultiplyProxyActions = await utils.deployContract(
         ethers.getContractFactory('MultiplyProxyActions'),
-        [addresses.WETH, addresses.DAI, addresses.DAI_JOIN, ChinLogViewInstance.address],
+        [ChinLogViewInstance.address],
     )
 
     if (logDebug) {
