@@ -187,7 +187,6 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
    
     cdpData.ilk = IJoin(cdpData.gemJoin).ilk();
     cdpData.cdpId = IManager(addressRegistry.manager).open(cdpData.ilk, address(this));
-    validateAndCorrectInputData(cdpData, addressRegistry);
     increaseMultipleDepositCollateral(exchangeData, cdpData, addressRegistry);
   }
 
@@ -399,6 +398,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     public
     logMethodName("closeVaultExitCollateral", cdpData, addressRegistry.multiplyProxyActions)
   {
+    validateAndCorrectInputData(cdpData, addressRegistry);
     closeVaultExitGeneric(exchangeData, cdpData, addressRegistry, 2);
   }
 
