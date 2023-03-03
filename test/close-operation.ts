@@ -271,7 +271,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        180000,
+                        181000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -282,7 +282,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        180000,
+                        181000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
@@ -488,7 +488,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        180000,
+                        181000,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
@@ -499,7 +499,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        180000,
+                        181000,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
                     const receipt = await (await tx).wait()
