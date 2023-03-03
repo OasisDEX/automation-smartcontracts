@@ -271,9 +271,8 @@ describe('ServiceRegistry', async () => {
         })
     })
 
-    describe('updateNamedService', async () => {
+    describe('addNamedService re-add', async () => {
         const supposedHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6209'
-        const notExistingHash = '0x86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e6208'
 
         beforeEach(async () => {
             trustedRegistryInstance = await hardhatUtils.deployContract(serviceRegistryFactory, [1000])
@@ -281,80 +280,21 @@ describe('ServiceRegistry', async () => {
             await instance.addNamedService(supposedHash, await owner.getAddress())
             await hardhatUtils.timeTravel(3000)
             await instance.addNamedService(supposedHash, await owner.getAddress())
+            await instance.removeNamedService(supposedHash)
         })
 
         it('should fail if called not by owner', async () => {
             const notOwnerTrustedRegistryInstance = trustedRegistryInstance.connect(notOwner)
-            const tx = notOwnerTrustedRegistryInstance.updateNamedService(supposedHash, await notOwner.getAddress())
+            const tx = notOwnerTrustedRegistryInstance.addNamedService(supposedHash, await notOwner.getAddress())
             await expect(tx).to.be.revertedWith('registry/only-owner')
         })
 
-        it('should have no effect if called once', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.updateNamedService(supposedHash, await owner.getAddress())
-            const newOwnerAddress = await instance.getServiceAddress(supposedHash)
-            expect(newOwnerAddress).to.be.equal(await owner.getAddress())
-        })
-
-        it('should emit ChangeScheduled if called once', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            const tx = await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            const txResult = await tx.wait()
-            expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeScheduled')
-        })
-
-        it('should fail if called for a second time immediately', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            const tx = instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await expect(tx).to.be.revertedWith('registry/delay-too-small')
-        })
-
-        it('should fail if called for a second time after too short delay', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await hardhatUtils.timeTravel(900)
-            const tx = instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await expect(tx).to.be.revertedWith('registry/delay-too-small')
-        })
-
-        it('should work if called for a second time after proper delay', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await hardhatUtils.timeTravel(3000)
-            await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            const newOwnerAddress = await instance.getServiceAddress(supposedHash)
-            expect(newOwnerAddress).to.be.equal(await notOwner.getAddress())
-        })
-
-        it('should fail if called for a second time after proper delay, when updated key do not exists', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            await instance.updateNamedService(notExistingHash, await notOwner.getAddress())
-            await hardhatUtils.timeTravel(3000)
-            const tx = instance.updateNamedService(notExistingHash, await notOwner.getAddress())
-            await expect(tx).to.be.revertedWith('registry/service-does-not-exist')
-        })
-
-        it('should emit ChangeApplied if called for a second time after proper delay', async () => {
-            const instance = trustedRegistryInstance.connect(owner)
-            let tx = await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            await hardhatUtils.timeTravel(3000)
-            tx = await instance.updateNamedService(supposedHash, await notOwner.getAddress())
-            const txResult = await tx.wait()
-            expect(txResult.events ? txResult.events[0].event : 'null').to.be.equal('ChangeApplied')
-        })
-
-        it('should fail if there are additional data in msg.data', async () => {
-            const badData =
-                '0xf210585f86f0bcd06cf4f76528c1c306ce9a4dbdae9657972fbb868243c4f564b79e620900000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c800'
-            const ownerInstance = trustedRegistryInstance.connect(owner)
-
-            const tx = owner.sendTransaction({
-                data: badData,
-                from: await owner.getAddress(),
-                to: ownerInstance.address,
-            })
-            await expect(tx).to.be.revertedWith('illegal-padding')
+        it('should have fail if called with old hash', async () => {
+            const instance = trustedRegistryInstance.connect(owner);
+            await instance.addNamedService(supposedHash, await owner.getAddress());
+            await hardhatUtils.timeTravel(3000);
+            const tx = instance.addNamedService(supposedHash, await owner.getAddress());
+            await expect(tx).to.be.revertedWith('registry/service-name-used-before');
         })
     })
 
