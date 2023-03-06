@@ -21,7 +21,6 @@ pragma solidity ^0.8.1;
 import "../interfaces/IERC20.sol";
 import "../utils/SafeMath.sol";
 import "../utils/SafeERC20.sol";
-import "hardhat/console.sol";
 
 contract Exchange {
   using SafeMath for uint256;

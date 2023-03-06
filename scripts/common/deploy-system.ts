@@ -11,6 +11,8 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
+    MultiplyProxyActions,
+    ChainLogView,
 } from '../../typechain'
 import { AddressRegistry } from './addresses'
 import { HardhatUtils } from './hardhat.utils'
@@ -26,6 +28,7 @@ export interface DeployedSystem {
     automationExecutor: AutomationExecutor
     automationSwap: AutomationSwap
     mcdView: McdView
+    multiplyProxyActions: MultiplyProxyActions
     closeCommand?: CloseCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
@@ -151,6 +154,15 @@ export async function deploySystem({
         ])) as BasicSellCommand
     }
 
+    const ChinLogViewInstance: ChainLogView = await utils.deployContract(ethers.getContractFactory('ChainLogView'), [
+        addresses.CHAIN_LOG,
+    ])
+
+    const MultiplyProxyActionsInstance: MultiplyProxyActions = await utils.deployContract(
+        ethers.getContractFactory('MultiplyProxyActions'),
+        [ChinLogViewInstance.address],
+    )
+
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
@@ -179,6 +191,7 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
+        multiplyProxyActions: MultiplyProxyActionsInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -259,7 +272,7 @@ export async function configureRegistryEntries(
     if (logDebug) console.log('Adding MULTIPLY_PROXY_ACTIONS to ServiceRegistry....')
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.MULTIPLY_PROXY_ACTIONS),
-        addresses.MULTIPLY_PROXY_ACTIONS,
+        system.multiplyProxyActions.address,
     )
 
     if (logDebug) console.log('Adding AUTOMATION_EXECUTOR to ServiceRegistry....')

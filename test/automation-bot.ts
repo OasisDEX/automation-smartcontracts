@@ -658,7 +658,7 @@ describe('AutomationBot', async () => {
             console.log('gas used', receipt.gasUsed.toNumber())
         })
 
-        it('should revert with bot/trigger-execution-illegal if initialCheckReturn is false', async () => {
+        it('should revert with executor/illegal-execution if initialCheckReturn is false', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationExecutorInstance.execute(
                 '0x',
@@ -673,7 +673,7 @@ describe('AutomationBot', async () => {
                     gasLimit: 2000_000,
                 },
             )
-            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
+            await expect(result).to.be.revertedWith('executor/illegal-execution')
         })
 
         it('should revert with bot/trigger-execution-wrong if finalCheckReturn is false', async () => {
@@ -694,7 +694,7 @@ describe('AutomationBot', async () => {
             await expect(result).to.be.revertedWith('bot/trigger-execution-wrong')
         })
 
-        it('should revert with bot/trigger-execution-illegal if revertsInExecute is true', async () => {
+        it('should revert with executor/illegal-execution if revertsInExecute is true', async () => {
             await DummyCommandInstance.changeFlags(false, true, false)
             const result = AutomationExecutorInstance.execute(
                 '0x',
@@ -709,7 +709,7 @@ describe('AutomationBot', async () => {
                     gasLimit: 2000_000,
                 },
             )
-            await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
+            await expect(result).to.be.revertedWith('executor/illegal-execution')
         })
     })
 })

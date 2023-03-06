@@ -104,6 +104,12 @@ contract AutomationExecutor {
         int256 gasRefund
     ) external auth(msg.sender) {
         uint256 initialGasAvailable = gasleft();
+        require(
+            ICommand(commandAddress).isExecutionLegal(cdpId, triggerData),
+            "executor/illegal-execution"
+        );
+        require(daiCoverage <= 1500 * 10**18, "executor/coverage-too-high");
+
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 
         if (minerBribe > 0) {
