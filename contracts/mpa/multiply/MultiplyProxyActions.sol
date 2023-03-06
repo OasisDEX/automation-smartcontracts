@@ -66,7 +66,7 @@ struct AddressRegistry {
 contract MultiplyProxyActions is IERC3156FlashBorrower {
   using SafeMath for uint256;
 
-  uint256 constant RAY = 10 ** 27;
+  uint256 constant RAY = 10**27;
 
   address public immutable SELF;
   address public immutable CHAIN_LOG_VIEW;
@@ -112,18 +112,18 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     AddressRegistry calldata addressRegistry,
     ExchangeData calldata exchangeData
   ) public view {
-    require(cdpData.skipFL == false, "mpa-skipFL-not-supported");
-    require(addressRegistry.jug == JUG, "mpa-jug-invalid");
-    require(addressRegistry.manager == CDP_MANAGER, "mpa-manager-invalid");
-    require(addressRegistry.multiplyProxyActions == SELF, "mpa-self-invalid");
+    require(cdpData.skipFL == false, "mpa/skipFL-not-supported");
+    require(addressRegistry.jug == JUG, "mpa/jug-invalid");
+    require(addressRegistry.manager == CDP_MANAGER, "mpa/manager-invalid");
+    require(addressRegistry.multiplyProxyActions == SELF, "mpa/self-invalid");
     require(
       addressRegistry.lender == IChainLogView(CHAIN_LOG_VIEW).getServiceAddress("MCD_FLASH"),
-      "mpa-FL-invalid"
+      "mpa/FL-invalid"
     );
-    require(addressRegistry.exchange == EXCHANGE, "mpa-exchange-invalid");
+    require(addressRegistry.exchange == EXCHANGE, "mpa/exchange-invalid");
     require(
       exchangeData.exchangeAddress == ONE_INCH_V4 || exchangeData.exchangeAddress == ONE_INCH_V5,
-      "mpa-exchange-not-one-inch"
+      "mpa/exchange-not-one-inch"
     );
     address cdpOwner = IProxy(IManager(CDP_MANAGER).owns(cdpData.cdpId)).owner();
     bytes32 ilk = IJoin(cdpData.gemJoin).ilk();
@@ -132,12 +132,12 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     require(
       (exchangeData.fromTokenAddress == gem && exchangeData.toTokenAddress == DAI) ||
         (exchangeData.fromTokenAddress == DAI && exchangeData.toTokenAddress == gem),
-      "mpa-wrong-gem"
+      "mpa/wrong-gem"
     );
-    require(cdpData.fundsReceiver == cdpOwner, "mpa-fundsReceiver-not-owner");
+    require(cdpData.fundsReceiver == cdpOwner, "mpa/fundsReceiver-not-owner");
     require(
       cdpData.gemJoin == IChainLogView(CHAIN_LOG_VIEW).getIlkJoinAddressByHash(cdpData.ilk),
-      "mpa-wrong-gemJoin"
+      "mpa/wrong-gemJoin"
     );
   }
 
@@ -173,7 +173,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   function convertTo18(address gemJoin, uint256 amt) internal view returns (uint256 wad) {
     // For those collaterals that have less than 18 decimals precision we need to do the conversion before passing to frob function
     // Adapters will automatically handle the difference of precision
-    wad = amt.mul(10 ** (18 - IJoin(gemJoin).dec()));
+    wad = amt.mul(10**(18 - IJoin(gemJoin).dec()));
   }
 
   function _getDrawDart(
@@ -242,7 +242,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
   }
 
   function toRad(uint256 wad) internal pure returns (uint256 rad) {
-    rad = wad.mul(10 ** 27);
+    rad = wad.mul(10**27);
   }
 
   function drawDaiDebt(
@@ -480,8 +480,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
     uint256 borrowedDai = cdpData.requiredDebt.add(premium);
     require(
       IERC20(DAI).approve(address(exchange), exchangeData.fromTokenAmount.add(cdpData.depositDai)),
-      "MPA / Could not approve Exchange for DAI"
+      "mpa/could-not-approve-exchange-dai"
     );
+    require(address(this) == SELF, "mpa/this-not-self");
     callable = false;
     exchange.swapDaiForToken(
       exchangeData.toTokenAddress,
@@ -532,8 +533,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
         address(exchange),
         exchangeData.fromTokenAmount
       ),
-      "MPA / Could not approve Exchange for Token"
+      "mpa/could-not-approve-exchange-token"
     );
+    require(address(this) == SELF, "mpa/this-not-self");
     callable = false;
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -584,8 +586,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
     require(
       IERC20(exchangeData.fromTokenAddress).approve(address(exchange), ink),
-      "MPA / Could not approve Exchange for Token"
+      "mpa/could-not-approve-exchange-token"
     );
+    require(address(this) == SELF, "mpa/this-not-self");
     callable = false;
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -637,8 +640,9 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
         address(exchange),
         IERC20(gemAddress).balanceOf(address(this))
       ),
-      "MPA / Could not approve Exchange for Token"
+      "mpa/could-not-approve-exchange-token"
     );
+    require(address(this) == SELF, "mpa/this-not-self");
     callable = false;
     exchange.swapTokenForDai(
       exchangeData.fromTokenAddress,
@@ -684,7 +688,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
     require(
       msg.sender == IChainLogView(CHAIN_LOG_VIEW).getServiceAddress("MCD_FLASH"),
-      "mpa-untrusted-lender"
+      "mpa/untrusted-lender"
     );
 
     uint256 borrowedDaiAmount = amount.add(fee);
@@ -692,7 +696,7 @@ contract MultiplyProxyActions is IERC3156FlashBorrower {
 
     require(
       cdpData.requiredDebt.add(cdpData.depositDai) <= IERC20(DAI).balanceOf(address(this)),
-      "mpa-receive-requested-amount-mismatch"
+      "mpa/receive-requested-amount-mismatch"
     );
 
     if (mode == 0) {
