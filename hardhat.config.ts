@@ -6,10 +6,10 @@ import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
 import '@tenderly/hardhat-tenderly'
+import 'hardhat-tracer'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
-import { Wallet } from 'ethers'
 
 dotenv.config()
 
