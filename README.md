@@ -17,6 +17,19 @@ https://docs.google.com/document/d/1FCrgutHmmaB2pBKnVfpEMuVb7BTdreEYtcghES8wOUQ/
 yarn build
 yarn test
 ```
+to use call traces: 
+
+```
+yarn test --traceError # prints calls for failed txs
+yarn test --fulltraceError # prints calls and storage ops for failed txs
+yarn test --trace # prints calls for all txs
+yarn test --fulltrace # prints calls and storage ops for all txs
+
+yarn test --v    # same as --traceError
+yarn test --vv   # same as --fulltraceError
+yarn test --vvv  # same as --trace
+yarn test --vvvv # same as --fulltrace
+```
 
 ## Deployment
 
