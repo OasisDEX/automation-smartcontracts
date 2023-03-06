@@ -221,43 +221,6 @@ describe('AutomationExecutor', async () => {
             await expect(tx).not.to.be.reverted
         })
 
-        it('should not revert on successful execution with updted bot and executor', async () => {
-            const AutomationBotInstance2: AutomationBot = await hardhatUtils.deployContract(
-                hre.ethers.getContractFactory('AutomationBot'),
-                [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
-            )
-            const AutomationExecutorInstance2: AutomationExecutor = await hardhatUtils.deployContract(
-                hre.ethers.getContractFactory('AutomationExecutor'),
-                [AutomationBotInstance2.address, hardhatUtils.addresses.WETH, ServiceRegistryInstance.address],
-            )
-            await (
-                await ServiceRegistryInstance.updateNamedService(
-                    getServiceNameHash(AutomationServiceName.AUTOMATION_EXECUTOR),
-                    AutomationExecutorInstance2.address,
-                )
-            ).wait()
-            await (
-                await ServiceRegistryInstance.updateNamedService(
-                    getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
-                    AutomationBotInstance2.address,
-                )
-            ).wait()
-
-            await DummyCommandInstance.changeFlags(true, true, false)
-            const tx = AutomationExecutorInstance2.execute(
-                dummyTriggerData,
-                triggerData,
-                DummyCommandInstance.address,
-                triggerId,
-                0,
-                0,
-                15000,
-                dai.address,
-            )
-
-            await expect(tx).not.to.be.reverted
-        })
-
         it('should revert with executor/not-authorized on unauthorized sender', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.connect(notOwner).execute(

@@ -11,7 +11,7 @@ import { HardhatUtils } from '../scripts/common'
 
 // npx hardhat test test\service-registry.js --network local
 
-describe.only('ServiceRegistry', async () => {
+describe('ServiceRegistry', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let serviceRegistryFactory: ServiceRegistryFactory
     let trustedRegistryInstance: ServiceRegistry
