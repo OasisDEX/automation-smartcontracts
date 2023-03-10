@@ -27,7 +27,7 @@ contract AutomationSwap {
 
     address public constant ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    AutomationExecutor public immutable executor;
+    AutomationExecutor public executor;
     IERC20 public immutable dai;
 
     address public owner;
@@ -72,6 +72,10 @@ contract AutomationSwap {
             callers[caller] = false;
             emit CallerRemoved(caller);
         }
+    }
+
+    function updateExecutor(address payable newExecutor) external onlyOwner {
+        executor = AutomationExecutor(newExecutor);
     }
 
     function swap(

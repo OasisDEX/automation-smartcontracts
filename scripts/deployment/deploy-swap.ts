@@ -1,6 +1,5 @@
 import hre, { ethers } from 'hardhat'
-import { constants } from 'ethers'
-import { AutomationServiceName, getServiceNameHash, getStartBlocksFor, HardhatUtils } from '../common'
+import { getStartBlocksFor, HardhatUtils } from '../common'
 import { getExecutorWhitelistedCallers } from './utils'
 
 async function main() {
@@ -23,8 +22,9 @@ async function main() {
     )
     const AutomationSwapInstance = await automationSwapDeployment.deployed()
 
-    await (await system.automationExecutor.addCallers([AutomationSwapInstance.address])).wait()
+    //  await (await system.automationExecutor.addCallers([AutomationSwapInstance.address])).wait()
 
+    /*
     const swapHash = getServiceNameHash(AutomationServiceName.AUTOMATION_SWAP)
     const entry = await system.serviceRegistry.getServiceAddress(swapHash)
 
@@ -35,7 +35,7 @@ async function main() {
         console.log('Adding AUTOMATION_SWAP entry...')
         await (await system.serviceRegistry.addNamedService(swapHash, automationSwapDeployment.address)).wait()
     }
-
+*/
     await (await AutomationSwapInstance.addCallers(callers)).wait()
     console.log(`AutomationSwap Deployed: ${automationSwapDeployment.address}`)
 }

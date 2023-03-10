@@ -15,7 +15,6 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
     if (!process.env.ETHERSCAN_API_KEY) {
         throw new Error(`Etherscan API Key must be set`)
     }
-
     const { data } = await axios.get<EtherscanTransactionListResponse>(etherscanAPIUrl(network), {
         params: {
             module: 'account',
@@ -28,24 +27,27 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
 
     const addCallerSighash = executor.interface.getSighash('addCallers').toLowerCase()
 
-    const addedCallersFiltered = data.result.filter(
-        ({ to, input }) =>
-            to?.toLowerCase() === executor.address.toLowerCase() && input?.toLowerCase()?.startsWith(addCallerSighash),
+    const addedCallersFiltered = data.result
+        .map(({ to, input }) => {
+            return { to, input }
+        })
+        .filter(
+            ({ to, input }) =>
+                to?.toLowerCase() === executor.address.toLowerCase() &&
+                input?.toLowerCase()?.startsWith(addCallerSighash),
+        )
+
+    const addedCallers = uniq(
+        addedCallersFiltered
+            .flatMap(({ input }) => {
+                //try{
+                return executor.interface.decodeFunctionData('addCallers', input!)
+                // }catch(ex){
+                //    return "error";
+                //}
+            })
+            .flatMap(x => x),
     )
 
-    const addedCallers = addedCallersFiltered
-        .flatMap(({ input }) => {
-            //try{
-            return executor.interface.decodeFunctionData('addCallers', input!)
-            // }catch(ex){
-            //    return "error";
-            //}
-        })
-        .flatMap(x => x)
-
-    const whitelistedCallers = (
-        await Promise.all(uniq(addedCallers).map(async caller => ((await executor.callers(caller)) ? caller : null)))
-    ).filter(Boolean)
-
-    return whitelistedCallers
+    return addedCallers
 }
