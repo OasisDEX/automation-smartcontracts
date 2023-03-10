@@ -4,7 +4,9 @@ pragma solidity ^0.8.0;
 interface VatLike {
     function urns(bytes32, address) external view returns (uint256 ink, uint256 art);
 
-    function ilks(bytes32)
+    function ilks(
+        bytes32
+    )
         external
         view
         returns (
@@ -21,28 +23,11 @@ interface VatLike {
 
     function dai(address) external view returns (uint256);
 
-    function frob(
-        bytes32,
-        address,
-        address,
-        address,
-        int256,
-        int256
-    ) external;
+    function frob(bytes32, address, address, address, int256, int256) external;
 
     function hope(address) external;
 
-    function move(
-        address,
-        address,
-        uint256
-    ) external;
+    function move(address, address, uint256) external;
 
-    function fork(
-        bytes32,
-        address,
-        address,
-        int256,
-        int256
-    ) external;
+    function fork(bytes32, address, address, int256, int256) external;
 }

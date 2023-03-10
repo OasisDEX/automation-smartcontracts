@@ -41,12 +41,10 @@ contract CloseCommand is ICommand {
         return !(collateral > 0 || debt > 0);
     }
 
-    function isExecutionLegal(uint256 _cdpId, bytes memory triggerData)
-        external
-        view
-        override
-        returns (bool)
-    {
+    function isExecutionLegal(
+        uint256 _cdpId,
+        bytes memory triggerData
+    ) external view override returns (bool) {
         (, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
 
         address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
@@ -59,7 +57,7 @@ contract CloseCommand is ICommand {
         address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
         uint256 collRatio = McdView(viewAddress).getRatio(_cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-        return vaultNotEmpty && collRatio <= slLevel * 10**16;
+        return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
     }
 
     function execute(
@@ -89,12 +87,10 @@ contract CloseCommand is ICommand {
         require(status, "execution failed");
     }
 
-    function isTriggerDataValid(uint256 _cdpId, bytes memory triggerData)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function isTriggerDataValid(
+        uint256 _cdpId,
+        bytes memory triggerData
+    ) external pure override returns (bool) {
         (uint256 cdpId, uint16 triggerType, uint256 slLevel) = abi.decode(
             triggerData,
             (uint256, uint16, uint256)

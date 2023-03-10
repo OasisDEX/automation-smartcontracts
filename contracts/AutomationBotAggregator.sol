@@ -89,10 +89,10 @@ contract AutomationBotAggregator {
         manager.cdpAllow(cdpId, aggregator, 0);
     }
 
-    function removeTriggers(uint256[] memory triggerIds, bool removeAllowance)
-        external
-        onlyDelegate
-    {
+    function removeTriggers(
+        uint256[] memory triggerIds,
+        bool removeAllowance
+    ) external onlyDelegate {
         AutomationBot bot = AutomationBot(serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY));
 
         for (uint256 i = 0; i < triggerIds.length; i++) {

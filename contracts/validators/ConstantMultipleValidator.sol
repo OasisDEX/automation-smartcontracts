@@ -35,11 +35,9 @@ import { IValidator } from "../interfaces/IValidator.sol";
 contract ConstantMultipleValidator is IValidator {
     using RatioUtils for uint256;
 
-    function decode(bytes[] memory triggerData)
-        public
-        pure
-        returns (uint256[] memory cdpIds, uint256[] memory triggerTypes)
-    {
+    function decode(
+        bytes[] memory triggerData
+    ) public pure returns (uint256[] memory cdpIds, uint256[] memory triggerTypes) {
         cdpIds = new uint256[](triggerData.length);
         triggerTypes = new uint256[](triggerData.length);
         for (uint256 i = 0; i < triggerData.length; i++) {
@@ -47,11 +45,10 @@ contract ConstantMultipleValidator is IValidator {
         }
     }
 
-    function validate(uint256[] memory replacedTriggerId, bytes[] memory triggersData)
-        external
-        pure
-        returns (bool)
-    {
+    function validate(
+        uint256[] memory replacedTriggerId,
+        bytes[] memory triggersData
+    ) external pure returns (bool) {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
         require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");

@@ -27,13 +27,21 @@ export async function getExecutorWhitelistedCallers(executor: Contract, startBlo
     })
 
     const addCallerSighash = executor.interface.getSighash('addCallers').toLowerCase()
-    const addedCallers = data.result
-        .filter(
-            ({ to, input }) =>
-                to?.toLowerCase() === executor.address.toLowerCase() &&
-                input?.toLowerCase()?.startsWith(addCallerSighash),
-        )
-        .flatMap(({ input }) => executor.interface.decodeFunctionData('addCallers', input!)._callers)
+
+    const addedCallersFiltered = data.result.filter(
+        ({ to, input }) =>
+            to?.toLowerCase() === executor.address.toLowerCase() && input?.toLowerCase()?.startsWith(addCallerSighash),
+    )
+
+    const addedCallers = addedCallersFiltered
+        .flatMap(({ input }) => {
+            //try{
+            return executor.interface.decodeFunctionData('addCallers', input!)
+            // }catch(ex){
+            //    return "error";
+            //}
+        })
+        .flatMap(x => x)
 
     const whitelistedCallers = (
         await Promise.all(uniq(addedCallers).map(async caller => ((await executor.callers(caller)) ? caller : null)))

@@ -40,12 +40,7 @@ contract AutomationExecutor {
 
     mapping(address => bool) public callers;
 
-    constructor(
-        BotLike _bot,
-        IERC20 _dai,
-        IWETH _weth,
-        address _exchange
-    ) {
+    constructor(BotLike _bot, IERC20 _dai, IWETH _weth, address _exchange) {
         bot = _bot;
         weth = _weth;
         dai = _dai;
@@ -108,7 +103,7 @@ contract AutomationExecutor {
             ICommand(commandAddress).isExecutionLegal(cdpId, triggerData),
             "executor/illegal-execution"
         );
-        require(daiCoverage <= 1500 * 10**18, "executor/coverage-too-high");
+        require(daiCoverage <= 1500 * 10 ** 18, "executor/coverage-too-high");
 
         bot.execute(executionData, cdpId, triggerData, commandAddress, triggerId, daiCoverage);
 
