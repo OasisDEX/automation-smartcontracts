@@ -9,7 +9,6 @@ import {
     ServiceRegistry,
     TestWETH,
     ERC20,
-    AutomationBotStorage,
 } from '../typechain'
 import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
@@ -27,7 +26,6 @@ describe('AutomationExecutor', async () => {
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let AutomationBotStorageInstance: AutomationBotStorage
     let DummyCommandInstance: DummyCommand
     let TestWETHInstance: TestWETH
     let dai: ERC20
@@ -69,7 +67,6 @@ describe('AutomationExecutor', async () => {
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        AutomationBotStorageInstance = system.automationBotStorage
 
         // Fund executor
         await owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) })
@@ -85,7 +82,7 @@ describe('AutomationExecutor', async () => {
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
 
         let hash = getCommandHash(TriggerType.StopLossToDai)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
