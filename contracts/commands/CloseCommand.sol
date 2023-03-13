@@ -21,7 +21,6 @@ import "../interfaces/ICommand.sol";
 import "../interfaces/MPALike.sol";
 import "../McdView.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { console } from "hardhat/console.sol";
 
 contract CloseCommand is ICommand, ReentrancyGuard {
     McdView public immutable mcdView;
@@ -33,15 +32,11 @@ contract CloseCommand is ICommand, ReentrancyGuard {
     string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
 
     constructor(address _serviceRegistry) {
-        console.log(ServiceRegistry(_serviceRegistry).getRegisteredService(MCD_VIEW_KEY));
         mcdView = McdView(ServiceRegistry(_serviceRegistry).getRegisteredService(MCD_VIEW_KEY));
         manager = ManagerLike(
             ServiceRegistry(_serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
         );
-        console.log(ServiceRegistry(_serviceRegistry).getRegisteredService(MCD_VIEW_KEY));
-        console.log(address(manager));
         mpaAddress = ServiceRegistry(_serviceRegistry).getRegisteredService(MPA_KEY);
-        console.log(mpaAddress);
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {

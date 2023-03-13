@@ -656,7 +656,7 @@ describe('AutomationBot', async () => {
                 //await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
                 const normalAdapterHash = getAdapterNameHash(newClose.address)
                 const executeAdapterHash = getExecuteAdapterNameHash(newClose.address)
-           //     await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
+                //     await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
                 await ServiceRegistryInstance.connect(registrySigner).addNamedService(
                     normalAdapterHash,
                     makerAdapter.address,
