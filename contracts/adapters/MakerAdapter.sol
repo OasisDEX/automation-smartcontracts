@@ -65,10 +65,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
-        require(
-            canCall(address(this), manager, cdpId, cdpOwner),
-            "maker-adapter/not-allowed-to-call"
-        ); //missing check to fail permit if msg.sender has no permissions
+        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         if (allowance && !canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
