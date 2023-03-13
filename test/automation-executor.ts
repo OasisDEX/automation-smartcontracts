@@ -11,15 +11,7 @@ import {
     ERC20,
     AutomationBotStorage,
 } from '../typechain'
-import {
-    getCommandHash,
-    generateRandomAddress,
-    getEvents,
-    HardhatUtils,
-    getAdapterNameHash,
-    AutomationServiceName,
-    getServiceNameHash,
-} from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
@@ -188,7 +180,7 @@ describe('AutomationExecutor', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [1],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
@@ -249,7 +241,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -2800,
+                -4000,
                 dai.address,
             )
 
@@ -260,7 +252,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -2800,
+                -4000,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )
