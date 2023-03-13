@@ -164,7 +164,7 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    // await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
