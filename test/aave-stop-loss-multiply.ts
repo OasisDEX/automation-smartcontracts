@@ -32,7 +32,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
-        console.log("1");
+        console.log('1')
 
         await hre.network.provider.request({
             method: 'hardhat_reset',
@@ -56,7 +56,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
 
         const guard = (await hre.ethers.getContractAt('IAccountGuard', oldGuard)) as IAccountGuard
         const guardDeployerAddress = await guard.owner()
-        
+
         const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
         receiver = await hardhatUtils.impersonate(await guard.owners(testPositionAddress))
 
@@ -79,7 +79,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
         }
         console.table(addresses)
 
-        console.log("5");
+        console.log('5')
         // WHITELISTING
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
@@ -199,14 +199,9 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     fundsReceiver: receiverAddress,
                 }
 
-                const serviceRegistry = {
-                    aaveStopLoss: aaveStopLoss.address,
-                    exchange: hardhatUtils.addresses.SWAP,
-                }
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
-                    serviceRegistry,
                 ])
             })
             describe('when Trigger is above current LTV', async () => {
@@ -360,14 +355,9 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     fundsReceiver: receiverAddress,
                 }
 
-                const serviceRegistry = {
-                    aaveStopLoss: aaveStopLoss.address,
-                    exchange: hardhatUtils.addresses.SWAP,
-                }
                 encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
                     aaveData,
-                    serviceRegistry,
                 ])
             })
             beforeEach(async () => {

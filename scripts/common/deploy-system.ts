@@ -43,7 +43,7 @@ export interface DeployedSystem {
     aaveStoplLossCommand?: AaveStoplLossCommand
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
-    makerAdapter: MakerAdapter
+    makerAdapter?: MakerAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveProxyActions
@@ -151,20 +151,6 @@ export async function deploySystem({
 
     if (logDebug) console.log('Deploying AutomationBot....')
 
-    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
-        ServiceRegistryInstance.address,
-        addresses.DAI,
-    ])
-
-    const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
-        ServiceRegistryInstance.address,
-    ])
-
-    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
-        ServiceRegistryInstance.address,
-        addresses.DPM_GUARD,
-    ])
-
     if (logDebug) console.log('Deploying AutomationExecutor....')
     const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
         ethers.getContractFactory('AutomationExecutor'),
@@ -181,6 +167,37 @@ export async function deploySystem({
               await ethers.provider.getSigner(0).getAddress(),
           ])
         : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, ethers.provider.getSigner(0))
+
+    let system: DeployedSystem = {
+        serviceRegistry: ServiceRegistryInstance,
+        mcdUtils: McdUtilsInstance,
+        automationBot: AutomationBotInstance,
+        constantMultipleValidator: ConstantMultipleValidatorInstance,
+        automationExecutor: AutomationExecutorInstance,
+        mcdView: McdViewInstance,
+        closeCommand: CloseCommandInstance,
+        basicBuy: BasicBuyInstance,
+        basicSell: BasicSellInstance,
+        automationBotStorage: AutomationBotStorageInstance,
+        autoTakeProfitCommand: AutoTakeProfitInstance,
+        aaveStoplLossCommand: AaveStoplLossInstance,
+        aaveProxyActions: AaveProxyActionsInstance,
+    }
+
+    await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
+
+    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
+        ServiceRegistryInstance.address,
+        addresses.DAI,
+    ])
+
+    const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
+        ServiceRegistryInstance.address,
+    ])
+
+    const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
+        addresses.DPM_GUARD,
+    ])
 
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand....')
@@ -206,16 +223,54 @@ export async function deploySystem({
         AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStoplLossCommand'), [
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
+            addresses.SWAP,
         ])) as AaveStoplLossCommand
+        system = {
+            serviceRegistry: ServiceRegistryInstance,
+            mcdUtils: McdUtilsInstance,
+            automationBot: AutomationBotInstance,
+            makerAdapter: MakerAdapterInstance,
+            constantMultipleValidator: ConstantMultipleValidatorInstance,
+            automationExecutor: AutomationExecutorInstance,
+            mcdView: McdViewInstance,
+            closeCommand: CloseCommandInstance,
+            basicBuy: BasicBuyInstance,
+            basicSell: BasicSellInstance,
+            automationBotStorage: AutomationBotStorageInstance,
+            autoTakeProfitCommand: AutoTakeProfitInstance,
+            aaveStoplLossCommand: AaveStoplLossInstance,
+            aaveProxyActions: AaveProxyActionsInstance,
+            aaveAdapter: AAVEAdapterInstance,
+            dpmAdapter: DPMAdapterInstance,
+        }
+        await configureRegistryCommands(utils, system, addresses as AddressRegistry, [], logDebug)
+    } else {
+        system = {
+            serviceRegistry: ServiceRegistryInstance,
+            mcdUtils: McdUtilsInstance,
+            automationBot: AutomationBotInstance,
+            makerAdapter: MakerAdapterInstance,
+            constantMultipleValidator: ConstantMultipleValidatorInstance,
+            automationExecutor: AutomationExecutorInstance,
+            mcdView: McdViewInstance,
+            closeCommand: CloseCommandInstance,
+            basicBuy: BasicBuyInstance,
+            basicSell: BasicSellInstance,
+            automationBotStorage: AutomationBotStorageInstance,
+            autoTakeProfitCommand: AutoTakeProfitInstance,
+            aaveStoplLossCommand: AaveStoplLossInstance,
+            aaveProxyActions: AaveProxyActionsInstance,
+            aaveAdapter: AAVEAdapterInstance,
+            dpmAdapter: DPMAdapterInstance,
+        }
+        await configureRegistryAdapters(utils, system, addresses as AddressRegistry, [], logDebug)
     }
 
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
         console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
-        console.log(`MakerAdapter deployed to: ${MakerAdapterInstance.address}`)
-        console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance.address}`)
-        console.log(`DPMAdapter deployed to: ${DPMAdapterInstance.address}`)
+
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
@@ -227,38 +282,67 @@ export async function deploySystem({
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
             console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
             console.log(`AaveStoplLossCommanddeployed to: ${AaveStoplLossInstance!.address}`)
+            console.log(`MakerAdapter deployed to: ${MakerAdapterInstance!.address}`)
+            console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
+            console.log(`DPMAdapter deployed to: ${DPMAdapterInstance!.address}`)
         }
     }
 
-    const system: DeployedSystem = {
-        serviceRegistry: ServiceRegistryInstance,
-        mcdUtils: McdUtilsInstance,
-        automationBot: AutomationBotInstance,
-        makerAdapter: MakerAdapterInstance,
-        constantMultipleValidator: ConstantMultipleValidatorInstance,
-        automationExecutor: AutomationExecutorInstance,
-        mcdView: McdViewInstance,
-        closeCommand: CloseCommandInstance,
-        basicBuy: BasicBuyInstance,
-        basicSell: BasicSellInstance,
-        automationBotStorage: AutomationBotStorageInstance,
-        autoTakeProfitCommand: AutoTakeProfitInstance,
-        aaveStoplLossCommand: AaveStoplLossInstance,
-        aaveProxyActions: AaveProxyActionsInstance,
-        aaveAdapter: AAVEAdapterInstance,
-        dpmAdapter: DPMAdapterInstance,
-    }
-
-    await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
     return system
 }
 
-export async function configureRegistryEntries(
+export async function configureRegistryAdapters(
     utils: HardhatUtils,
     system: DeployedSystem,
     addresses: AddressRegistry,
     overwrite: string[] = [],
-    logDebug = false,
+    logDebug = true,
+) {
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
+
+    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+        if (!isExecute) {
+            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+        } else {
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+        }
+    }
+
+    if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address, true)
+    }
+    if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address, true)
+    }
+
+    if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address, true)
+    }
+
+    if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
+        if (logDebug) console.log('Ensuring Adapter...')
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address, true)
+    }
+    if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
+    }
+}
+
+export async function configureRegistryCommands(
+    utils: HardhatUtils,
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    overwrite: string[] = [],
+    logDebug = true,
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
 
@@ -276,8 +360,6 @@ export async function configureRegistryEntries(
             await (await system.mcdView.approve(address, true, await utils.getGasSettings())).wait()
         }
     }
-    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
-
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToCollateral), system.closeCommand.address)
@@ -289,8 +371,8 @@ export async function configureRegistryEntries(
         await ensureMcdViewWhitelist(system.closeCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address)
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter.address, true)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -309,8 +391,8 @@ export async function configureRegistryEntries(
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address)
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter.address, true)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -337,8 +419,8 @@ export async function configureRegistryEntries(
         await ensureMcdViewWhitelist(system.basicBuy.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address)
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter.address, true)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address, true)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -349,8 +431,8 @@ export async function configureRegistryEntries(
         await ensureMcdViewWhitelist(system.basicSell.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address)
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter.address, true)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address, true)
     }
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
@@ -363,6 +445,19 @@ export async function configureRegistryEntries(
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
+}
+
+export async function configureRegistryEntries(
+    utils: HardhatUtils,
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    overwrite: string[] = [],
+    logDebug = false,
+) {
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
+
+    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
+
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 

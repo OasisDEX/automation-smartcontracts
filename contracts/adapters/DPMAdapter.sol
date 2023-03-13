@@ -23,9 +23,6 @@ import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 
 contract DPMAdapter is ISecurityAdapter {
-    ServiceRegistry public immutable serviceRegistry;
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MCD_UTILS_KEY = "MCD_UTILS";
     address private immutable self;
     IAccountGuard public immutable accountGuard;
 
@@ -34,9 +31,8 @@ contract DPMAdapter is ISecurityAdapter {
         _;
     }
 
-    constructor(ServiceRegistry _serviceRegistry, IAccountGuard _accountGuard) {
+    constructor(IAccountGuard _accountGuard) {
         self = address(this);
-        serviceRegistry = _serviceRegistry;
         accountGuard = _accountGuard; //hesitating if that should not be taken from serviceRegistry if needed, but this way it is immutable
     }
 

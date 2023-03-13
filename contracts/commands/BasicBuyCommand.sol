@@ -28,6 +28,8 @@ import { McdView } from "../McdView.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicBuyCommand is BaseMPACommand {
+    SpotterLike public immutable spot;
+
     using SafeMath for uint256;
     using RatioUtils for uint256;
 
@@ -41,7 +43,9 @@ contract BasicBuyCommand is BaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
-    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
+        spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+    }
 
     function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
@@ -53,9 +57,7 @@ contract BasicBuyCommand is BaseMPACommand {
     ) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(trigger.cdpId);
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
@@ -79,7 +81,6 @@ contract BasicBuyCommand is BaseMPACommand {
             bytes32 ilk
         ) = getVaultAndMarketInfo(trigger.cdpId);
 
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
 
         return
@@ -102,7 +103,6 @@ contract BasicBuyCommand is BaseMPACommand {
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(

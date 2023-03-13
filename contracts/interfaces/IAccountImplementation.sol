@@ -10,4 +10,6 @@ interface IAccountImplementation {
     function send(address _target, bytes memory _data) external payable;
 
     function guard() external view returns (address);
+
+    function owner() external view returns (address);
 }

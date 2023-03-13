@@ -32,16 +32,17 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
-    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
 
     ServiceRegistry public immutable serviceRegistry;
     AutomationBotStorage public immutable automationBotStorage;
+    AutomationBot public immutable automationBot;
     address public immutable self;
     uint256 private lockCount;
 
     constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {
         serviceRegistry = _serviceRegistry;
+        automationBot = AutomationBot(address(this));
         automationBotStorage = _automationBotStorage;
         self = address(this);
         lockCount = 0;
@@ -211,8 +212,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             "bot/invalid-input-length"
         );
 
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        AutomationBot(automationBot).clearLock();
+        automationBot.clearLock();
 
         if (groupType != SINGLE_TRIGGER_GROUP_TYPE) {
             IValidator validator = getValidatorAddress(groupType);
@@ -243,7 +243,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 emit ApprovalGranted(triggerData[i], address(automationBotStorage));
             }
 
-            AutomationBot(automationBot).addRecord(
+            automationBot.addRecord(
                 triggerTypes[i],
                 continuous[i],
                 replacedTriggerId[i],
@@ -254,7 +254,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             triggerIds[i] = firstTriggerId + i;
         }
 
-        AutomationBot(automationBot).emitGroupDetails(groupType, triggerIds);
+        automationBot.emitGroupDetails(groupType, triggerIds);
     }
 
     function unlock() private {
@@ -294,8 +294,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(triggerData.length > 0, "bot/remove-at-least-one");
         require(triggerData.length == triggerIds.length, "bot/invalid-input-length");
 
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        AutomationBot(automationBot).clearLock();
+        automationBot.clearLock();
         (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
@@ -319,8 +318,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     function removeTrigger(uint256 triggerId, bytes memory triggerData) private {
-        address automationBot = serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        BotLike(automationBot).removeRecord(triggerData, triggerId);
+        automationBot.removeRecord(triggerData, triggerId);
     }
 
     //works correctly in context of automationBot

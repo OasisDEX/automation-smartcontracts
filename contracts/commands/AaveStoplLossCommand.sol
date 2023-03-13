@@ -35,11 +35,6 @@ struct AaveData {
     address payable fundsReceiver;
 }
 
-struct AddressRegistry {
-    address aaveStopLoss;
-    address exchange;
-}
-
 struct StopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
@@ -59,11 +54,7 @@ struct CloseData {
 }
 
 interface AaveStopLoss {
-    function closePosition(
-        SwapData calldata exchangeData,
-        AaveData memory aaveData,
-        AddressRegistry calldata addressRegistry
-    ) external;
+    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external;
 
     function trustedCaller() external returns (address);
 
@@ -71,15 +62,20 @@ interface AaveStopLoss {
 }
 
 contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
-    string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
-    string private constant AAVE_POOL = "AAVE_POOL";
+    address public immutable weth;
+    address public immutable bot;
+
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
     string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool) {}
+        ILendingPool _lendingPool,
+        address exchange_
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
+        weth = serviceRegistry.getRegisteredService(WETH);
+        bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
+    }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -95,7 +91,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-        address weth = address(serviceRegistry.getRegisteredService(WETH));
         require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
@@ -132,10 +127,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        require(
-            serviceRegistry.getRegisteredService(AUTOMATION_BOT) == msg.sender,
-            "aaveSl/caller-not-bot"
-        );
+        require(bot == msg.sender, "aaveSl/caller-not-bot");
 
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
@@ -163,14 +155,11 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             (stopLossTriggerData.triggerType == 10 || stopLossTriggerData.triggerType == 11);
     }
 
-    function closePosition(
-        SwapData calldata exchangeData,
-        AaveData memory aaveData,
-        AddressRegistry calldata addressRegistry
-    ) external {
+    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external {
+        require(AaveStopLoss(self).trustedCaller() == address(this), "aaveSl/caller-not-allowed");
         require(
-            AaveStopLoss(addressRegistry.aaveStopLoss).trustedCaller() == address(this),
-            "aaveSl/caller-not-allowed"
+            IAccountImplementation(address(this)).owner() == aaveData.fundsReceiver,
+            "aaveSl/funds-receiver-not-owner"
         );
         require(self == msg.sender, "aaveSl/msg-sender-is-not-sl");
 
@@ -186,10 +175,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         uint256 totalCollateral = IERC20(collReserveData.aTokenAddress).balanceOf(
             aaveData.borrower
         );
-        IERC20(collReserveData.aTokenAddress).approve(
-            addressRegistry.aaveStopLoss,
-            totalCollateral
-        );
+        IERC20(collReserveData.aTokenAddress).approve(self, totalCollateral);
 
         {
             CloseData memory closeData;
@@ -201,7 +187,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             uint256[] memory modes = new uint256[](1);
             modes[0] = uint256(0);
 
-            closeData.receiverAddress = addressRegistry.aaveStopLoss;
+            closeData.receiverAddress = self;
             closeData.assets = debtTokens;
             closeData.amounts = amounts;
             closeData.modes = modes;
@@ -209,7 +195,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             closeData.params = abi.encode(
                 collReserveData.aTokenAddress,
                 aaveData.collateralTokenAddress,
-                addressRegistry.exchange,
+                exchange,
                 aaveData.borrower,
                 aaveData.fundsReceiver,
                 exchangeData
@@ -262,7 +248,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             flTotal,
             exchangeData
         );
-        address weth = address(serviceRegistry.getRegisteredService(WETH));
         if (address(collateralToken) == weth) {
             expectRecive();
             uint256 balance = IERC20(weth).balanceOf(self);

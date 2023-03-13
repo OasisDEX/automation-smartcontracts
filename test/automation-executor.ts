@@ -9,17 +9,8 @@ import {
     ServiceRegistry,
     TestWETH,
     ERC20,
-    AutomationBotStorage,
 } from '../typechain'
-import {
-    getCommandHash,
-    generateRandomAddress,
-    getEvents,
-    HardhatUtils,
-    getAdapterNameHash,
-    AutomationServiceName,
-    getServiceNameHash,
-} from '../scripts/common'
+import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
@@ -35,7 +26,6 @@ describe('AutomationExecutor', async () => {
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let AutomationBotStorageInstance: AutomationBotStorage
     let DummyCommandInstance: DummyCommand
     let TestWETHInstance: TestWETH
     let dai: ERC20
@@ -77,7 +67,6 @@ describe('AutomationExecutor', async () => {
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        AutomationBotStorageInstance = system.automationBotStorage
 
         // Fund executor
         await owner.sendTransaction({ to: AutomationExecutorInstance.address, value: EthersBN.from(10).pow(18) })
@@ -93,7 +82,7 @@ describe('AutomationExecutor', async () => {
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
 
         let hash = getCommandHash(TriggerType.StopLossToDai)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
@@ -188,7 +177,7 @@ describe('AutomationExecutor', async () => {
                 [false],
                 [0],
                 [triggerData],
-                ["0x"],
+                ['0x'],
                 [1],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
@@ -249,7 +238,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -2800,
+                -4000,
                 dai.address,
             )
 
@@ -260,7 +249,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -2800,
+                -4000,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )

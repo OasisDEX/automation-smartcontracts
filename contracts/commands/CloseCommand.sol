@@ -23,35 +23,36 @@ import "../McdView.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract CloseCommand is ICommand, ReentrancyGuard {
-    address public immutable serviceRegistry;
+    McdView public immutable mcdView;
+    ManagerLike public immutable manager;
+    address public immutable mpaAddress;
+
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_VIEW_KEY = "MCD_VIEW";
     string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
 
     constructor(address _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
+        mcdView = McdView(ServiceRegistry(_serviceRegistry).getRegisteredService(MCD_VIEW_KEY));
+        manager = ManagerLike(
+            ServiceRegistry(_serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
+        );
+        mpaAddress = ServiceRegistry(_serviceRegistry).getRegisteredService(MPA_KEY);
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         (uint256 cdpId, , ) = abi.decode(triggerData, (uint256, uint16, uint256));
-        address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
-        McdView viewerContract = McdView(viewAddress);
-        (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(cdpId);
+        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
         (uint256 cdpId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
 
-        address managerAddress = ServiceRegistry(serviceRegistry).getRegisteredService(
-            CDP_MANAGER_KEY
-        );
-        ManagerLike manager = ManagerLike(managerAddress);
         if (manager.owns(cdpId) == address(0)) {
             return false;
         }
-        address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
-        uint256 collRatio = McdView(viewAddress).getRatio(cdpId, true);
+
+        uint256 collRatio = mcdView.getRatio(cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
     }
@@ -61,8 +62,6 @@ contract CloseCommand is ICommand, ReentrancyGuard {
         bytes memory triggerData
     ) external override nonReentrant {
         (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
-
-        address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
 
         bytes4 prefix = abi.decode(executionData, (bytes4));
         bytes4 expectedSelector;

@@ -24,11 +24,11 @@ import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 
 contract AAVEAdapter is IExecutableAdapter {
-    ServiceRegistry public immutable serviceRegistry;
+    address public immutable aavePA;
     string private constant AAVE_PROXY_ACTIONS = "AAVE_PROXY_ACTIONS";
 
     constructor(ServiceRegistry _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
+        aavePA = _serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
     }
 
     function decode(
@@ -45,7 +45,6 @@ contract AAVEAdapter is IExecutableAdapter {
     ) external {
         (address proxy, ) = decode(triggerData);
 
-        address aavePA = serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
         //reverts if code fails
         IAccountImplementation(proxy).execute(
             aavePA,
