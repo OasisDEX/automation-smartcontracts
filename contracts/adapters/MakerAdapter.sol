@@ -23,7 +23,8 @@ import "../McdView.sol";
 import "../McdUtils.sol";
 
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
-    ServiceRegistry public immutable serviceRegistry;
+    ManagerLike public immutable manager;
+    address public immutable utilsAddress;
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
@@ -36,8 +37,9 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
         self = address(this);
-        serviceRegistry = _serviceRegistry;
         dai = _dai;
+        manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
     }
 
     function decode(
@@ -47,7 +49,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     }
 
     function canCall(bytes memory triggerData, address operator) public view returns (bool) {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
@@ -55,7 +56,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
 
     function canCall(
         address operator,
-        ManagerLike manager,
         uint256 cdpId,
         address cdpOwner
     ) private view returns (bool) {
@@ -63,18 +63,17 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     }
 
     function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         (uint256 cdpId, ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         require(
             canCall(address(this), manager, cdpId, cdpOwner),
             "maker-adapter/not-allowed-to-call"
         ); //missing check to fail permit if msg.sender has no permissions
-        if (allowance && !canCall(target, manager, cdpId, cdpOwner)) {
+        if (allowance && !canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
             // emit ApprovalGranted(cdpId, target);
         }
-        if (!allowance && canCall(target, manager, cdpId, cdpOwner)) {
+        if (!allowance && canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 0);
             // emit ApprovalRevoked(cdpId, target);
         }
@@ -87,9 +86,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         uint256 amount
     ) external {
         require(coverageToken == dai, "maker-adapter/not-dai");
-        address utilsAddress = serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
         McdUtils utils = McdUtils(utilsAddress);
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
 
         (uint256 cdpId, ) = decode(triggerData);
 

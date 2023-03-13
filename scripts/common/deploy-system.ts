@@ -161,7 +161,6 @@ export async function deploySystem({
     ])
 
     const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
-        ServiceRegistryInstance.address,
         addresses.DPM_GUARD,
     ])
 
@@ -182,7 +181,7 @@ export async function deploySystem({
           ])
         : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, ethers.provider.getSigner(0))
 
-    const system: DeployedSystem = {
+    let system: DeployedSystem = {
         serviceRegistry: ServiceRegistryInstance,
         mcdUtils: McdUtilsInstance,
         automationBot: AutomationBotInstance,
@@ -229,6 +228,24 @@ export async function deploySystem({
             addresses.AAVE_POOL,
             addresses.SWAP,
         ])) as AaveStoplLossCommand
+        system = {
+            serviceRegistry: ServiceRegistryInstance,
+            mcdUtils: McdUtilsInstance,
+            automationBot: AutomationBotInstance,
+            makerAdapter: MakerAdapterInstance,
+            constantMultipleValidator: ConstantMultipleValidatorInstance,
+            automationExecutor: AutomationExecutorInstance,
+            mcdView: McdViewInstance,
+            closeCommand: CloseCommandInstance,
+            basicBuy: BasicBuyInstance,
+            basicSell: BasicSellInstance,
+            automationBotStorage: AutomationBotStorageInstance,
+            autoTakeProfitCommand: AutoTakeProfitInstance,
+            aaveStoplLossCommand: AaveStoplLossInstance,
+            aaveProxyActions: AaveProxyActionsInstance,
+            aaveAdapter: AAVEAdapterInstance,
+            dpmAdapter: DPMAdapterInstance,
+        }
         await configureRegistryCommands(utils, system, addresses as AddressRegistry, [], logDebug)
     }
 
@@ -260,7 +277,7 @@ export async function configureRegistryCommands(
     system: DeployedSystem,
     addresses: AddressRegistry,
     overwrite: string[] = [],
-    logDebug = false,
+    logDebug = true,
 ) {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
 
