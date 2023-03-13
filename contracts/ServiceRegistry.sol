@@ -23,6 +23,7 @@ contract ServiceRegistry {
 
     mapping(bytes32 => uint256) public lastExecuted;
     mapping(bytes32 => address) private namedService;
+    mapping(bytes32 => bool) private invalidHashes;
     address public owner;
     uint256 public requiredDelay;
 
@@ -84,21 +85,16 @@ contract ServiceRegistry {
         bytes32 serviceNameHash,
         address serviceAddress
     ) external onlyOwner validateInput(68) delayedExecution {
+        require(invalidHashes[serviceNameHash] == false, "registry/service-name-used-before");
         require(namedService[serviceNameHash] == address(0), "registry/service-override");
         namedService[serviceNameHash] = serviceAddress;
-    }
-
-    function updateNamedService(
-        bytes32 serviceNameHash,
-        address serviceAddress
-    ) external onlyOwner validateInput(68) delayedExecution {
-        require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
-        namedService[serviceNameHash] = serviceAddress;
+        emit NamedServiceAdded(serviceNameHash, serviceAddress);
     }
 
     function removeNamedService(bytes32 serviceNameHash) external onlyOwner validateInput(36) {
         require(namedService[serviceNameHash] != address(0), "registry/service-does-not-exist");
         namedService[serviceNameHash] = address(0);
+        invalidHashes[serviceNameHash] = true;
         emit NamedServiceRemoved(serviceNameHash);
     }
 
@@ -122,4 +118,5 @@ contract ServiceRegistry {
     event ChangeApplied(bytes32 dataHash, uint256 appliedAt, bytes data);
     event ChangeCancelled(bytes32 dataHash);
     event NamedServiceRemoved(bytes32 nameHash);
+    event NamedServiceAdded(bytes32 nameHash, address service);
 }
