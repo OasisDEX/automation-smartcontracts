@@ -4564,7 +4564,7 @@ ethers@^4.0.32, ethers@^4.0.40:
     uuid "2.0.1"
     xmlhttprequest "1.8.0"
 
-ethers@^5.0.1, ethers@^5.0.2, ethers@^5.5.1, ethers@^5.5.2, ethers@^5.5.3, ethers@^5.6.2, ethers@^5.7.0:
+ethers@^5.0.1, ethers@^5.0.2, ethers@^5.5.1, ethers@^5.5.2, ethers@^5.5.3, ethers@^5.6.1, ethers@^5.6.2, ethers@^5.7.0:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
@@ -5492,6 +5492,13 @@ hardhat-tenderly@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/hardhat-tenderly/-/hardhat-tenderly-1.0.1.tgz#3d3cbe7e6845a225cb33a9919c64c802969aa2de"
   integrity sha512-21vFyEhpjbaLjUVp/XV5EsjwaE2IvVTNfWO6o4Xk5BUDkRk6uodt/1U4rJ9wMKH5ryT3J91+qu4ODoj4dVAk2g==
+
+hardhat-tracer@^2.1.2:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/hardhat-tracer/-/hardhat-tracer-2.1.2.tgz#9a1a3896856a59461594e2ee4a54871eafb2ab63"
+  integrity sha512-Uee7EgMGZPmGA1NFu6at8zk3u184irfPQ+AK50a7s2Ep8jbsAc55mSFs844+UhSH/uNNuk7fqAsx/Qa5gHzPpQ==
+  dependencies:
+    ethers "^5.6.1"
 
 hardhat-watcher@^2.1.1:
   version "2.5.0"

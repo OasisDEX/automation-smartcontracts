@@ -25,7 +25,7 @@ import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface IFlashLoanReceiver {
     function executeOperation(

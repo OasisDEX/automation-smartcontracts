@@ -62,16 +62,20 @@ interface AaveStopLoss {
 }
 
 contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
-    string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
-    string private constant AAVE_POOL = "AAVE_POOL";
+    address public immutable weth;
+    address public immutable bot;
+
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
     string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
-        address _exchange
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, _exchange) {}
+        address exchange_
+    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
+        weth = serviceRegistry.getRegisteredService(WETH);
+        bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
+    }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
         require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
@@ -87,7 +91,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-        address weth = address(serviceRegistry.getRegisteredService(WETH));
         require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
@@ -124,10 +127,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        require(
-            serviceRegistry.getRegisteredService(AUTOMATION_BOT) == msg.sender,
-            "aaveSl/caller-not-bot"
-        );
+        require(bot == msg.sender, "aaveSl/caller-not-bot");
 
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
@@ -248,7 +248,6 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             flTotal,
             exchangeData
         );
-        address weth = address(serviceRegistry.getRegisteredService(WETH));
         if (address(collateralToken) == weth) {
             expectRecive();
             uint256 balance = IERC20(weth).balanceOf(self);

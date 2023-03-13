@@ -151,7 +151,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggerData],
-                        ["0x"],
+                        ['0x'],
                         [1],
                     ])
 
@@ -164,7 +164,7 @@ describe('CloseCommand', async () => {
 
                 afterEach(async () => {
                     // revertSnapshot
-                    await hre.ethers.provider.send('evm_revert', [snapshotId])
+                    // await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
@@ -220,7 +220,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
-                        ["0x"],
+                        ['0x'],
                         [1],
                     ])
 
@@ -388,7 +388,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
-                        ["0x"],
+                        ['0x'],
                         [2],
                     ])
 
@@ -451,7 +451,7 @@ describe('CloseCommand', async () => {
                         [false],
                         [0],
                         [triggersData],
-                        ["0x"],
+                        ['0x'],
                         [2],
                     ])
 

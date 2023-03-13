@@ -27,6 +27,9 @@ import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { BaseMPACommand } from "./BaseMPACommand.sol";
 
 contract BasicSellCommand is BaseMPACommand {
+    SpotterLike public immutable spot;
+    VatLike public immutable vat;
+
     using RatioUtils for uint256;
 
     struct BasicSellTriggerData {
@@ -39,7 +42,10 @@ contract BasicSellCommand is BaseMPACommand {
         uint32 maxBaseFeeInGwei;
     }
 
-    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
+        spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
+        vat = VatLike(_serviceRegistry.getRegisteredService(MCD_VAT_KEY));
+    }
 
     function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
         return abi.decode(triggerData, (BasicSellTriggerData));
@@ -70,7 +76,6 @@ contract BasicSellCommand is BaseMPACommand {
         (, uint256 upperTarget) = trigger.targetCollRatio.bounds(trigger.deviation);
         uint256 futureDebt = (debt * nextCollRatio - debt * wad) / (upperTarget.wad() - wad);
 
-        SpotterLike spot = SpotterLike(serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         (, uint256 liquidationRatio) = spot.ilks(ilk);
         bool validBaseFeeOrNearLiquidation = baseFeeIsValid(trigger.maxBaseFeeInGwei) ||
             nextCollRatio <= liquidationRatio.rayToWad();
@@ -94,7 +99,6 @@ contract BasicSellCommand is BaseMPACommand {
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
         (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
@@ -105,7 +109,6 @@ contract BasicSellCommand is BaseMPACommand {
     }
 
     function getDustLimit(bytes32 ilk) internal view returns (uint256) {
-        VatLike vat = VatLike(serviceRegistry.getRegisteredService(MCD_VAT_KEY));
         (, , , , uint256 radDust) = vat.ilks(ilk);
         return radDust.radToWad();
     }

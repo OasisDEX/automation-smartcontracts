@@ -5,6 +5,7 @@ import '@nomiclabs/hardhat-waffle'
 import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
+import 'hardhat-tracer'
 import '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
@@ -88,5 +89,10 @@ const config: HardhatUserConfig = {
         username: process.env.TENDERLY_USERNAME!,
     },
 }
-
+// tenderly fix
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+BigInt.prototype.toJSON = function () {
+    return this.toString()
+}
 export default config

@@ -37,10 +37,14 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
 
     uint256 public constant MIN_ALLOWED_DEVIATION = 50;
 
-    ServiceRegistry public immutable serviceRegistry;
+    McdView public immutable mcdView;
+    ManagerLike public immutable manager;
+    address public immutable mpaAddress;
 
     constructor(ServiceRegistry _serviceRegistry) {
-        serviceRegistry = _serviceRegistry;
+        mcdView = McdView(_serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
+        manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
+        mpaAddress = _serviceRegistry.getRegisteredService(MPA_KEY);
     }
 
     function getVaultAndMarketInfo(
@@ -56,10 +60,8 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
             bytes32 ilk
         )
     {
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         ilk = manager.ilks(cdpId);
 
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         collRatio = mcdView.getRatio(cdpId, false);
         nextCollRatio = mcdView.getRatio(cdpId, true);
         currPrice = mcdView.getPrice(ilk);
@@ -67,7 +69,6 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     }
 
     function getVaultDebt(uint256 cdpId) internal view returns (uint256) {
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         (, uint256 debt) = mcdView.getVaultInfo(cdpId);
         return debt;
     }
@@ -90,9 +91,7 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     }
 
     function executeMPAMethod(bytes memory executionData) internal {
-        (bool status, bytes memory reason) = serviceRegistry
-            .getRegisteredService(MPA_KEY)
-            .delegatecall(executionData);
+        (bool status, bytes memory reason) = mpaAddress.delegatecall(executionData);
         require(status, string(reason));
     }
 }

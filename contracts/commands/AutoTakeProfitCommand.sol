@@ -48,8 +48,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
-        address viewAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MCD_VIEW_KEY);
-        McdView viewerContract = McdView(viewAddress);
+        McdView viewerContract = McdView(mcdView);
         (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(trigger.cdpId);
         return !(collateral > 0 || debt > 0);
     }
@@ -60,15 +59,11 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(trigger.cdpId);
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
         uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
-        bool hasOwner = ManagerLike(
-            ServiceRegistry(serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
-        ).owns(trigger.cdpId) != address(0);
+        bool hasOwner = manager.owns(trigger.cdpId) != address(0);
         bool vaultNotEmpty = nextCollRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
 
         return
@@ -87,9 +82,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     ) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
-        ManagerLike manager = ManagerLike(serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         bytes32 ilk = manager.ilks(trigger.cdpId);
-        McdView mcdView = McdView(serviceRegistry.getRegisteredService(MCD_VIEW_KEY));
         uint256 nextPrice = mcdView.getNextPrice(ilk);
 
         return
@@ -106,8 +99,6 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         bytes memory triggerData
     ) external override nonReentrant {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
-
-        address mpaAddress = ServiceRegistry(serviceRegistry).getRegisteredService(MPA_KEY);
 
         if (trigger.triggerType == 7) {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);

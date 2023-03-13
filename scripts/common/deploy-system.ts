@@ -182,6 +182,27 @@ export async function deploySystem({
           ])
         : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, ethers.provider.getSigner(0))
 
+    const system: DeployedSystem = {
+        serviceRegistry: ServiceRegistryInstance,
+        mcdUtils: McdUtilsInstance,
+        automationBot: AutomationBotInstance,
+        makerAdapter: MakerAdapterInstance,
+        constantMultipleValidator: ConstantMultipleValidatorInstance,
+        automationExecutor: AutomationExecutorInstance,
+        mcdView: McdViewInstance,
+        closeCommand: CloseCommandInstance,
+        basicBuy: BasicBuyInstance,
+        basicSell: BasicSellInstance,
+        automationBotStorage: AutomationBotStorageInstance,
+        autoTakeProfitCommand: AutoTakeProfitInstance,
+        aaveStoplLossCommand: AaveStoplLossInstance,
+        aaveProxyActions: AaveProxyActionsInstance,
+        aaveAdapter: AAVEAdapterInstance,
+        dpmAdapter: DPMAdapterInstance,
+    }
+
+    await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
+
     if (addCommands) {
         if (logDebug) console.log('Deploying CloseCommand....')
         CloseCommandInstance = (await utils.deployContract(ethers.getContractFactory('CloseCommand'), [
@@ -208,6 +229,7 @@ export async function deploySystem({
             addresses.AAVE_POOL,
             addresses.SWAP,
         ])) as AaveStoplLossCommand
+        await configureRegistryCommands(utils, system, addresses as AddressRegistry, [], logDebug)
     }
 
     if (logDebug) {
@@ -231,30 +253,9 @@ export async function deploySystem({
         }
     }
 
-    const system: DeployedSystem = {
-        serviceRegistry: ServiceRegistryInstance,
-        mcdUtils: McdUtilsInstance,
-        automationBot: AutomationBotInstance,
-        makerAdapter: MakerAdapterInstance,
-        constantMultipleValidator: ConstantMultipleValidatorInstance,
-        automationExecutor: AutomationExecutorInstance,
-        mcdView: McdViewInstance,
-        closeCommand: CloseCommandInstance,
-        basicBuy: BasicBuyInstance,
-        basicSell: BasicSellInstance,
-        automationBotStorage: AutomationBotStorageInstance,
-        autoTakeProfitCommand: AutoTakeProfitInstance,
-        aaveStoplLossCommand: AaveStoplLossInstance,
-        aaveProxyActions: AaveProxyActionsInstance,
-        aaveAdapter: AAVEAdapterInstance,
-        dpmAdapter: DPMAdapterInstance,
-    }
-
-    await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
     return system
 }
-
-export async function configureRegistryEntries(
+export async function configureRegistryCommands(
     utils: HardhatUtils,
     system: DeployedSystem,
     addresses: AddressRegistry,
@@ -277,8 +278,6 @@ export async function configureRegistryEntries(
             await (await system.mcdView.approve(address, true, await utils.getGasSettings())).wait()
         }
     }
-    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
-
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToCollateral), system.closeCommand.address)
@@ -364,6 +363,19 @@ export async function configureRegistryEntries(
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
+}
+
+export async function configureRegistryEntries(
+    utils: HardhatUtils,
+    system: DeployedSystem,
+    addresses: AddressRegistry,
+    overwrite: string[] = [],
+    logDebug = false,
+) {
+    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, overwrite)
+
+    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
+
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)
 
