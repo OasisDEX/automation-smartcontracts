@@ -30,13 +30,7 @@ import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { IOperationExecutor } from "../interfaces/Oasis/IOperationExecutor.sol";
-
-struct Call {
-    bytes32 targetHash;
-    bytes callData;
-    bool skipped;
-}
+import { IOperationExecutor, Call } from "../interfaces/Oasis/IOperationExecutor.sol";
 
 struct AaveData {
     address collateralTokenAddress;
@@ -149,15 +143,10 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
             triggerData,
             (StopLossTriggerData)
         );
-        // TODO: validate opname
-        /*         (, string memory operationName) = abi.decode(executionData, (Call[], string));
-                require(
-            stopLossTriggerData.operationName == keccak256(abi.encodePacked(operationName)),
-            "aaveSl/invalid-operation-name"
-        ); */
-        require(
-            stopLossTriggerData.operationName == keccak256(abi.encodePacked("CloseAAVEPosition_3")),
-            "aaveSl/invalid-operation-name"
+
+        AaveStoplLossModularCommand(self).validateOperationName(
+            executionData,
+            stopLossTriggerData.operationName
         );
         trustedCaller = stopLossTriggerData.positionAddress;
         validateSelector(IOperationExecutor.executeOp.selector, executionData);
@@ -184,7 +173,11 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
             (stopLossTriggerData.triggerType == 13 || stopLossTriggerData.triggerType == 12);
     }
 
-    receive() external payable {
-        require(reciveExpected == true, "aaveSl/unexpected-eth-receive");
+    function validateOperationName(bytes calldata _data, bytes32 operationName) public pure {
+        (, string memory decodedOperationName) = abi.decode(_data[4:], (Call[], string));
+        require(
+            keccak256(abi.encodePacked(decodedOperationName)) == operationName,
+            "aaveSl/invalid-operation-name"
+        );
     }
 }
