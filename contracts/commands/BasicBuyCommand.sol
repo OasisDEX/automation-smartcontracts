@@ -47,7 +47,7 @@ contract BasicBuyCommand is BaseMPACommand {
         spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
     }
 
-    function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
+    function decode(bytes memory triggerData) private pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 

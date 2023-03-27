@@ -36,7 +36,7 @@ contract ConstantMultipleValidator is IValidator {
 
     function decode(
         bytes[] memory triggerData
-    ) public pure returns (uint256[] memory cdpIds, uint256[] memory triggerTypes) {
+    ) private pure returns (uint256[] memory cdpIds, uint256[] memory triggerTypes) {
         cdpIds = new uint256[](triggerData.length);
         triggerTypes = new uint256[](triggerData.length);
         for (uint256 i = 0; i < triggerData.length; i++) {

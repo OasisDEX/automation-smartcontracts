@@ -37,7 +37,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     ServiceRegistry public immutable serviceRegistry;
     AutomationBotStorage public immutable automationBotStorage;
     AutomationBot public immutable automationBot;
-    address public immutable self;
+    address private immutable self;
     uint256 private lockCount;
 
     constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {

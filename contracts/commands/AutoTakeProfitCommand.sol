@@ -38,7 +38,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
 
     function decode(
         bytes memory triggerData
-    ) public pure returns (AutoTakeProfitTriggerData memory) {
+    ) private pure returns (AutoTakeProfitTriggerData memory) {
         return abi.decode(triggerData, (AutoTakeProfitTriggerData));
     }
 

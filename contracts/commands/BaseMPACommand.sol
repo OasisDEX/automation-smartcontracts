@@ -50,7 +50,7 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     function getVaultAndMarketInfo(
         uint256 cdpId
     )
-        public
+        internal
         view
         returns (
             uint256 collRatio,
@@ -73,19 +73,19 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
         return debt;
     }
 
-    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
+    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) internal view returns (bool) {
         return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
     }
 
-    function deviationIsValid(uint256 deviation) public pure returns (bool) {
+    function deviationIsValid(uint256 deviation) internal pure returns (bool) {
         return deviation >= MIN_ALLOWED_DEVIATION;
     }
 
-    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
+    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) internal pure {
         require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
     }
 
-    function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
+    function validateSelector(bytes4 expectedSelector, bytes memory executionData) internal pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
         require(selector == expectedSelector, "base-mpa-command/invalid-selector");
     }

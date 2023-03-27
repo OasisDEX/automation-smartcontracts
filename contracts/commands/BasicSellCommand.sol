@@ -47,7 +47,7 @@ contract BasicSellCommand is BaseMPACommand {
         vat = VatLike(_serviceRegistry.getRegisteredService(MCD_VAT_KEY));
     }
 
-    function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
+    function decode(bytes memory triggerData) private pure returns (BasicSellTriggerData memory) {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
