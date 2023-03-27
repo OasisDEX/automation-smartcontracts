@@ -2,7 +2,7 @@
 
 /// BaseMPACommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2021-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,8 +22,7 @@ pragma solidity ^0.8.0;
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
+import { McdView, ServiceRegistry } from "../McdView.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
