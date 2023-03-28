@@ -21,7 +21,8 @@ pragma solidity ^0.8.0;
 import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
-import {console} from "hardhat/console.sol";
+import { console } from "hardhat/console.sol";
+
 /**
  * @title Close - Stop Loss (Maker) Command for the AutomationBot
  */
@@ -39,8 +40,8 @@ contract CloseCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        (uint256 cdpId, , ) = abi.decode(triggerData, (uint256, uint16, uint256));
-        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(cdpId);
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
+        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(trigger.cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
@@ -48,17 +49,17 @@ contract CloseCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        (uint256 cdpId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
 
-        if (manager.owns(cdpId) == address(0)) {
+        if (manager.owns(trigger.cdpId) == address(0)) {
             return false;
         }
 
-        uint256 collRatio = mcdView.getRatio(cdpId, true);
+        uint256 collRatio = mcdView.getRatio(trigger.cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
         console.log("collRatio: %s", collRatio);
-        console.log("slLevel: %s", slLevel);
-        return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
+        console.log("slLevel: %s", trigger.execCollRatio);
+        return vaultNotEmpty && collRatio <= trigger.execCollRatio * 10 ** 16;
     }
 
     /**

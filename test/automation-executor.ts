@@ -181,7 +181,7 @@ describe('AutomationExecutor', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [1],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const result = await tx.wait()

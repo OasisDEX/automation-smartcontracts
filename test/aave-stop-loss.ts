@@ -125,7 +125,7 @@ describe('AaveStoplLossCommand', async () => {
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
-                10,
+                TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -151,7 +151,7 @@ describe('AaveStoplLossCommand', async () => {
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
-                10,
+                TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -255,7 +255,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -334,7 +334,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -452,7 +452,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -516,7 +516,7 @@ describe('AaveStoplLossCommand', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
-                        10,
+                        TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,

@@ -1,5 +1,5 @@
 import hre from 'hardhat'
-import { BytesLike, utils } from 'ethers'
+import { BytesLike, ContractTransaction, utils } from 'ethers'
 import { expect } from 'chai'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import BigNumber from 'bignumber.js'
@@ -18,10 +18,24 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
+let createTriggerForExecution: (
+    executionRatio: BigNumber.Value,
+    targetRatio: BigNumber.Value,
+    continuous: boolean,
+) => Promise<{
+    triggerId: number
+    triggerData: BytesLike
+}>
+
+let executeTrigger: (triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) => Promise<ContractTransaction>
+
 describe('BasicBuyCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
-
+    let executionRatio: number
+    let targetRatio: number
+    let incorrectExecutionRatio: number
+    let incorrectTargetRatio: number
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let system: DeployedSystem
     let MPAInstance: MPALike
@@ -45,138 +59,12 @@ describe('BasicBuyCommand', () => {
     }
 
     before(async () => {
-        executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
-
-        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
-
-        system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-
-        await system.mcdView.approve(executorAddress, true)
-
-        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
-        const proxyAddress = await cdpManager.owns(testCdpId)
-        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
-        proxyOwnerAddress = await usersProxy.owner()
-
-        const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
-        const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
-        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-    })
-
-    beforeEach(async () => {
-        snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-    })
-
-    afterEach(async () => {
-        await hre.ethers.provider.send('evm_revert', [snapshotId])
-    })
-
-    describe('isTriggerDataValid', () => {
-        it('should fail if target coll ratio is higher than execution ratio', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.52)]
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                executionRatio,
-                targetRatio,
-                0,
-                0,
-                maxGweiPrice,
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
-        })
-
-        it('should fail if target target coll ratio is lte liquidation ratio', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.51), toRatio(1.45)]
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                executionRatio,
-                targetRatio,
-                0,
-                0,
-                maxGweiPrice,
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
-        })
-
-        it('should fail if cdp is not encoded correctly', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
-            const triggerData = encodeTriggerData(
-                testCdpId + 1,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                executionRatio,
-                targetRatio,
-                0,
-                0,
-                maxGweiPrice,
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
-        })
-
-        it.skip('should fail if trigger type is not encoded correctly', async () => {
-            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
-            const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool'],
-                [
-                    testCdpId,
-                    TriggerType.MakerStopLossToCollateralV2,
-                    maxCoverageDai,
-                    executionRatio,
-                    targetRatio,
-                    0,
-                    false,
-                ],
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
-        })
-
-        it('should fail if deviation is less the minimum', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                executionRatio,
-                targetRatio,
-                0,
-                0,
-                maxGweiPrice,
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
-        })
-
-        it('should successfully create the trigger', async () => {
-            const [executionRatio, targetRatio] = [toRatio(1.52), toRatio(1.51)]
-            const triggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                executionRatio,
-                targetRatio,
-                0,
-                50,
-                maxGweiPrice,
-            )
-            const tx = createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)
-            await expect(tx).not.to.be.reverted
-            const receipt = await (await tx).wait()
-            const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
-            expect(event.args.triggerData).to.eq(triggerData)
-        })
-    })
-
-    describe('execute', () => {
-        async function createTriggerForExecution(
+        console.log('asdasdasadasdsd')
+        createTriggerForExecution = async (
             executionRatio: BigNumber.Value,
             targetRatio: BigNumber.Value,
             continuous: boolean,
-        ) {
+        ) => {
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.MakerBasicBuyV2,
@@ -194,7 +82,7 @@ describe('BasicBuyCommand', () => {
             return { triggerId: event.args.triggerId.toNumber(), triggerData }
         }
 
-        async function executeTrigger(triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) {
+        executeTrigger = async (triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) => {
             const collRatio = await system.mcdView.getRatio(testCdpId, true)
             const [collateral, debt] = await system.mcdView.getVaultInfo(testCdpId)
             const oraclePrice = await system.mcdView.getNextPrice(ethAIlk)
@@ -272,7 +160,138 @@ describe('BasicBuyCommand', () => {
                 hardhatUtils.addresses.DAI,
             )
         }
+        executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
+        receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
 
+        MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
+
+        system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+
+        await system.mcdView.approve(executorAddress, true)
+
+        const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
+        const proxyAddress = await cdpManager.owns(testCdpId)
+        usersProxy = await hre.ethers.getContractAt('DsProxyLike', proxyAddress)
+        proxyOwnerAddress = await usersProxy.owner()
+
+        const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
+        const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
+        executionRatio = toRatio(1.52)
+        targetRatio = toRatio(1.51)
+        incorrectExecutionRatio = toRatio(1.49)
+        incorrectTargetRatio = toRatio(1.45)
+        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+        console.log('asdasdasddasd end')
+    })
+
+    beforeEach(async () => {
+        snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
+    })
+
+    afterEach(async () => {
+        await hre.ethers.provider.send('evm_revert', [snapshotId])
+    })
+
+    describe('isTriggerDataValid', () => {
+        it('should fail if target coll ratio is higher than execution ratio', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.MakerBasicBuyV2,
+                maxCoverageDai,
+                incorrectExecutionRatio,
+                targetRatio,
+                0,
+                true,
+                0,
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
+        })
+
+        it('should fail if target target coll ratio is lte liquidation ratio', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.MakerBasicBuyV2,
+                maxCoverageDai,
+                executionRatio,
+                incorrectTargetRatio,
+                0,
+                true,
+                0,
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
+        })
+
+        it('should fail if cdp is not encoded correctly', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId + 1,
+                TriggerType.MakerBasicBuyV2,
+                maxCoverageDai,
+                executionRatio,
+                targetRatio,
+                0,
+                true,
+                0,
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
+        })
+
+        it.skip('should fail if trigger type is not encoded correctly', async () => {
+            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
+
+            const triggerData = utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
+                [
+                    testCdpId,
+                    TriggerType.MakerStopLossToCollateralV2,
+                    maxCoverageDai,
+                    executionRatio,
+                    targetRatio,
+                    0,
+                    false,
+                ],
+            )
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
+        })
+
+        it('should fail if deviation is less the minimum', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.MakerBasicBuyV2,
+                maxCoverageDai,
+                executionRatio,
+                targetRatio,
+                0,
+                true,
+                0,
+                maxGweiPrice,
+            )
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
+        })
+
+        it('should successfully create the trigger', async () => {
+            const triggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.MakerBasicBuyV2,
+                maxCoverageDai,
+                executionRatio,
+                targetRatio,
+                0,
+                true,
+                50,
+                maxGweiPrice,
+            )
+            const tx = createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)
+            await expect(tx).not.to.be.reverted
+            const receipt = await (await tx).wait()
+            const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
+            expect(event.args.triggerData).to.eq(triggerData)
+        })
+    })
+
+    describe('execute', () => {
         beforeEach(async () => {
             snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
         })
@@ -281,7 +300,7 @@ describe('BasicBuyCommand', () => {
             await hre.ethers.provider.send('evm_revert', [snapshotId])
         })
 
-        it('executes the trigger [ @skip-on-coverage ]', async () => {
+        it('executes the trigger', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)
@@ -292,7 +311,7 @@ describe('BasicBuyCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('clears the trigger if `continuous` is set to false [ @skip-on-coverage ]', async () => {
+        it('clears the trigger if `continuous` is set to false', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)
@@ -316,7 +335,7 @@ describe('BasicBuyCommand', () => {
             expect(finalTriggerRecord.continuous).to.eq(false)
         })
 
-        it('keeps the trigger if `continuous` is set to true [ @skip-on-coverage ]', async () => {
+        it('keeps the trigger if `continuous` is set to true', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
             console.log('ratioAtNext', ratioAtNext)

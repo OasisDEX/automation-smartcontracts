@@ -20,7 +20,6 @@ describe('BasicSellCommand', () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
-    console.log(maxCoverageDai)
     let system: DeployedSystem
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
@@ -80,9 +79,11 @@ describe('BasicSellCommand', () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
                 TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
@@ -97,6 +98,7 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
@@ -111,6 +113,7 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
@@ -142,6 +145,7 @@ describe('BasicSellCommand', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 50,
                 maxGweiPrice,
             )

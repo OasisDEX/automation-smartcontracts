@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe.only('CloseCommand', async () => {
+describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
 
@@ -78,7 +78,7 @@ describe.only('CloseCommand', async () => {
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
-            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 10000)
+            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -409,7 +409,7 @@ describe.only('CloseCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it.only('should revert trigger execution', async () => {
+                it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
                         triggersData,
