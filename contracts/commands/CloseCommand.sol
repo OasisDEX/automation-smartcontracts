@@ -21,7 +21,6 @@ pragma solidity ^0.8.0;
 import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
-import { console } from "hardhat/console.sol";
 
 /**
  * @title Close - Stop Loss (Maker) Command for the AutomationBot
@@ -57,8 +56,6 @@ contract CloseCommand is BaseMPACommand {
 
         uint256 collRatio = mcdView.getRatio(trigger.cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-        console.log("collRatio: %s", collRatio);
-        console.log("slLevel: %s", trigger.execCollRatio);
         return vaultNotEmpty && collRatio <= trigger.execCollRatio * 10 ** 16;
     }
 

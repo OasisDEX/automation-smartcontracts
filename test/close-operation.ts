@@ -280,7 +280,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -292,7 +292,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
@@ -520,7 +520,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -532,7 +532,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
