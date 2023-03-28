@@ -338,7 +338,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         IExecutableAdapter executableAdapter = IExecutableAdapter(
             getAdapterAddress(commandAddress, true)
         );
-
         automationBotStorage.executeCoverage(
             triggerData,
             msg.sender,
@@ -346,6 +345,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             coverageToken,
             coverageAmount
         );
+        require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {
             automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
         }
