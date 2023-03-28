@@ -97,24 +97,28 @@ export class TriggerExecutor {
         slippage: BigNumber,
     ) {
         switch (triggerType) {
-            case TriggerType.StopLossToCollateral:
-            case TriggerType.StopLossToDai:
-                return this.getStopLossExecutionData(vault, triggerType === TriggerType.StopLossToCollateral, slippage)
-            case TriggerType.AutoTakeProfitToCollateral:
-            case TriggerType.AutoTakeProfitToDai:
+            case TriggerType.MakerStopLossToCollateralV2:
+            case TriggerType.MakerStopLossToDaiV2:
                 return this.getStopLossExecutionData(
                     vault,
-                    triggerType === TriggerType.AutoTakeProfitToCollateral,
+                    triggerType === TriggerType.MakerStopLossToCollateralV2,
                     slippage,
                 )
-            case TriggerType.BasicBuy:
-            case TriggerType.BasicSell: {
+            case TriggerType.MakerAutoTakeProfitToCollateralV2:
+            case TriggerType.MakerAutoTakeProfitToDaiV2:
+                return this.getStopLossExecutionData(
+                    vault,
+                    triggerType === TriggerType.MakerAutoTakeProfitToCollateralV2,
+                    slippage,
+                )
+            case TriggerType.MakerBasicBuyV2:
+            case TriggerType.MakerBasicSellV2: {
                 const [, , , target] = decodeTriggerData(triggerType, triggerData)
                 return await this.getBasicBuySellExecutionData(
                     vault,
                     new BigNumber(target.toString()),
                     slippage,
-                    triggerType === TriggerType.BasicBuy,
+                    triggerType === TriggerType.MakerBasicBuyV2,
                 )
             }
             default:
@@ -124,15 +128,15 @@ export class TriggerExecutor {
 
     private getMPAMethod(triggerType: TriggerType) {
         switch (triggerType) {
-            case TriggerType.StopLossToCollateral:
-            case TriggerType.AutoTakeProfitToCollateral:
+            case TriggerType.MakerStopLossToCollateralV2:
+            case TriggerType.MakerAutoTakeProfitToCollateralV2:
                 return 'closeVaultExitCollateral'
-            case TriggerType.StopLossToDai:
-            case TriggerType.AutoTakeProfitToDai:
+            case TriggerType.MakerStopLossToDaiV2:
+            case TriggerType.MakerAutoTakeProfitToDaiV2:
                 return 'closeVaultExitDai'
-            case TriggerType.BasicBuy:
+            case TriggerType.MakerBasicBuyV2:
                 return 'increaseMultiple'
-            case TriggerType.BasicSell:
+            case TriggerType.MakerBasicSellV2:
                 return 'decreaseMultiple'
 
             default:

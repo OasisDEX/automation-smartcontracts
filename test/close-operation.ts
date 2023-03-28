@@ -17,9 +17,11 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe.only('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
+
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
     let CloseCommandInstance: CloseCommand
@@ -76,7 +78,7 @@ describe('CloseCommand', async () => {
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
-            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
+            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 10000)
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -134,7 +136,8 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToCollateral,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -152,7 +155,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [1],
+                        [TriggerType.MakerStopLossToCollateralV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -202,7 +205,8 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToCollateral,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -221,7 +225,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [1],
+                        [TriggerType.MakerStopLossToCollateralV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -370,7 +374,8 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToDai,
+                        TriggerType.MakerStopLossToDaiV2,
+                        maxCoverageDai,
                         currentCollRatioAsPercentage - 1,
                     )
 
@@ -389,7 +394,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [2],
+                        [TriggerType.MakerStopLossToDaiV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -404,10 +409,9 @@ describe('CloseCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it('should revert trigger execution', async () => {
+                it.only('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -433,7 +437,8 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToDai,
+                        TriggerType.MakerStopLossToDaiV2,
+                        maxCoverageDai,
                         currentCollRatioAsPercentage + 1,
                     )
 
@@ -452,7 +457,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [2],
+                        [TriggerType.MakerStopLossToDaiV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)

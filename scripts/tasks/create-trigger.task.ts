@@ -26,7 +26,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
 
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, params.bignumber, false)
-    .addParam('type', 'The trigger type', TriggerType.StopLossToDai, types.int)
+    .addParam('type', 'The trigger type', TriggerType.MakerStopLossToDaiV2, types.int)
     .addParam(
         'params',
         "The remaining args for the trigger data (i.e. 170). See `encodeTriggerData` for more info.\n                For BasicBuy it's [execCollRatio,targetCollRatio,maxBuyPrice,contnuous,deviation,maxBaseFeeInGwei] eg '[23200,21900,'0',true,100,200]'",
@@ -102,6 +102,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         }
 
         const triggerData = encodeTriggerData(args.vault.toNumber(), args.type, ...args.params)
+        // TODO: there should be 6 arguments and 5th argument should be replacedTriggerData
         const addTriggerData = bot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SingleTrigger,
             [args.continuous],

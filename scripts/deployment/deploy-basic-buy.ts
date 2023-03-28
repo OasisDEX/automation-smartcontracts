@@ -19,7 +19,7 @@ async function main() {
     console.log(`BasicBuy Deployed: ${system.basicBuy.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.BasicBuy),
+        getCommandHash(TriggerType.MakerBasicBuyV2),
     ])
 }
 

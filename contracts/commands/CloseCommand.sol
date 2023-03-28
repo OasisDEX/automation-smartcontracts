@@ -21,7 +21,7 @@ pragma solidity ^0.8.0;
 import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
-
+import {console} from "hardhat/console.sol";
 /**
  * @title Close - Stop Loss (Maker) Command for the AutomationBot
  */
@@ -29,6 +29,7 @@ contract CloseCommand is BaseMPACommand {
     struct CloseCommandTriggerData {
         uint256 cdpId;
         uint16 triggerType;
+        uint256 maxCoverage;
         uint256 execCollRatio;
     }
 
@@ -55,6 +56,8 @@ contract CloseCommand is BaseMPACommand {
 
         uint256 collRatio = mcdView.getRatio(cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
+        console.log("collRatio: %s", collRatio);
+        console.log("slLevel: %s", slLevel);
         return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
     }
 
@@ -67,9 +70,9 @@ contract CloseCommand is BaseMPACommand {
     ) external override nonReentrant {
         CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
 
-        if (trigger.triggerType == 1) {
+        if (trigger.triggerType == 101) {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
-        } else if (trigger.triggerType == 2) {
+        } else if (trigger.triggerType == 102) {
             validateSelector(MPALike.closeVaultExitDai.selector, executionData);
         } else revert("close-command/unsupported-trigger-type");
 
@@ -89,6 +92,6 @@ contract CloseCommand is BaseMPACommand {
             triggerData,
             (uint256, uint16, uint256)
         );
-        return !continuous && slLevel > 100 && (triggerType == 1 || triggerType == 2);
+        return !continuous && slLevel > 100 && (triggerType == 101 || triggerType == 102);
     }
 }

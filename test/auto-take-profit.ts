@@ -19,6 +19,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 describe('AutoTakeProfitCommmand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
     let AutoTakeProfitCommandInstance: AutoTakeProfitCommand
@@ -157,7 +158,8 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AutoTakeProfitToCollateral,
+                        TriggerType.MakerAutoTakeProfitToCollateralV2,
+                        maxCoverageDai,
                         nextPrice.add('1000'),
                         1000,
                     )
@@ -177,7 +179,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AutoTakeProfitToCollateral],
+                        [TriggerType.MakerAutoTakeProfitToCollateralV2],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -230,7 +232,8 @@ describe('AutoTakeProfitCommmand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AutoTakeProfitToCollateral,
+                        TriggerType.MakerAutoTakeProfitToCollateralV2,
+                        maxCoverageDai,
                         nextPrice.sub(1000),
                         1000,
                     )
@@ -250,7 +253,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AutoTakeProfitToCollateral],
+                        [TriggerType.MakerAutoTakeProfitToCollateralV2],
                     ])
 
                     // manipulate the next price to pass the trigger validation
@@ -407,7 +410,8 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AutoTakeProfitToDai,
+                        TriggerType.MakerAutoTakeProfitToDaiV2,
+                        maxCoverageDai,
                         nextPrice.add('1000'),
                         1000,
                     )
@@ -427,7 +431,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AutoTakeProfitToDai],
+                        [TriggerType.MakerAutoTakeProfitToDaiV2],
                     ])
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -470,7 +474,8 @@ describe('AutoTakeProfitCommmand', async () => {
 
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.AutoTakeProfitToDai,
+                        TriggerType.MakerAutoTakeProfitToDaiV2,
+                        maxCoverageDai,
                         nextPrice.sub(1000),
                         1000,
                     )
@@ -490,7 +495,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AutoTakeProfitToDai],
+                        [TriggerType.MakerAutoTakeProfitToDaiV2],
                     ])
 
                     // manipulate the next price to pass the trigger validation

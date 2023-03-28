@@ -32,6 +32,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     struct AutoTakeProfitTriggerData {
         uint256 cdpId;
         uint16 triggerType;
+        uint256 maxCoverage;
         uint256 executionPrice;
         uint32 maxBaseFeeInGwei;
     }
@@ -87,7 +88,7 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         return
             (trigger.executionPrice > nextPrice) &&
             !continuous &&
-            (trigger.triggerType == 7 || trigger.triggerType == 8);
+            (trigger.triggerType == 105 || trigger.triggerType == 106);
     }
 
     /**
@@ -99,9 +100,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
     ) external override nonReentrant {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
-        if (trigger.triggerType == 7) {
+        if (trigger.triggerType == 105) {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
-        } else if (trigger.triggerType == 8) {
+        } else if (trigger.triggerType == 106) {
             validateSelector(MPALike.closeVaultExitDai.selector, executionData);
         } else revert("auto-take-profit/unsupported-trigger-type");
 

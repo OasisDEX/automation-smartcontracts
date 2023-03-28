@@ -362,10 +362,13 @@ export async function configureRegistryCommands(
     }
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding CLOSE_TO_COLLATERAL command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToCollateral), system.closeCommand.address)
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.MakerStopLossToCollateralV2),
+            system.closeCommand.address,
+        )
 
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.StopLossToDai), system.closeCommand.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerStopLossToDaiV2), system.closeCommand.address)
 
         if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
@@ -377,13 +380,13 @@ export async function configureRegistryCommands(
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
+            getCommandHash(TriggerType.MakerAutoTakeProfitToCollateralV2),
             system.autoTakeProfitCommand.address,
         )
 
         if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToDai),
+            getCommandHash(TriggerType.MakerAutoTakeProfitToDaiV2),
             system.autoTakeProfitCommand.address,
         )
 
@@ -397,13 +400,13 @@ export async function configureRegistryCommands(
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToCollateral),
+            getCommandHash(TriggerType.MakerAutoTakeProfitToCollateralV2),
             system.autoTakeProfitCommand.address,
         )
 
         if (logDebug) console.log('Adding AUTO_TP_DAI command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.AutoTakeProfitToDai),
+            getCommandHash(TriggerType.MakerAutoTakeProfitToDaiV2),
             system.autoTakeProfitCommand.address,
         )
 
@@ -413,7 +416,7 @@ export async function configureRegistryCommands(
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BasicBuy), system.basicBuy.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerBasicBuyV2), system.basicBuy.address)
 
         if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicBuy.address)
@@ -425,7 +428,7 @@ export async function configureRegistryCommands(
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
         if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
-        await ensureServiceRegistryEntry(getCommandHash(TriggerType.BasicSell), system.basicSell.address)
+        await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerBasicSellV2), system.basicSell.address)
 
         if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
@@ -437,11 +440,13 @@ export async function configureRegistryCommands(
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
-            // TODO - add to common
-            getCommandHash(10),
+            getCommandHash(TriggerType.AaveStopLossToCollateralV2),
             system.aaveStoplLossCommand.address,
         )
-
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.MakerAutoTakeProfitToDaiV2),
+            system.aaveStoplLossCommand.address,
+        )
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }

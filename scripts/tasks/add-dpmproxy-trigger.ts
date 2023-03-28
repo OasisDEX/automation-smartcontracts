@@ -28,6 +28,7 @@ createTask<CreateDPMArgs>('add-dpm-proxy-trigger', 'Adds DPM proxy trigger')
             'AutomationBot',
             hardhatUtils.addresses.AUTOMATION_BOT_V2,
         )
+        // TODO: there should be 6 arguments and 5th argument should be replacedTriggerData
         const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SingleTrigger,
             [true],

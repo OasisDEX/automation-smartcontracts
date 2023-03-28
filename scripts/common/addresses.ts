@@ -186,15 +186,15 @@ export function getCommandAddress(network: string | Network, type: TriggerType) 
     const addresses = getAddressesFor(network)
 
     switch (type) {
-        case TriggerType.StopLossToCollateral:
-        case TriggerType.StopLossToDai:
+        case TriggerType.MakerStopLossToCollateralV2:
+        case TriggerType.MakerStopLossToDaiV2:
             return addresses.AUTOMATION_CLOSE_COMMAND
-        case TriggerType.AutoTakeProfitToCollateral:
-        case TriggerType.AutoTakeProfitToDai:
+        case TriggerType.MakerAutoTakeProfitToCollateralV2:
+        case TriggerType.MakerAutoTakeProfitToDaiV2:
             return addresses.AUTOMATION_AUTO_TP_COMMAND
-        case TriggerType.BasicBuy:
+        case TriggerType.MakerBasicBuyV2:
             return addresses.AUTOMATION_BASIC_BUY_COMMAND
-        case TriggerType.BasicSell:
+        case TriggerType.MakerBasicSellV2:
             return addresses.AUTOMATION_BASIC_SELL_COMMAND
         default:
             throw new Error(`Cannot get command address. Trigger Type: ${type}`)

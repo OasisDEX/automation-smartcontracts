@@ -38,6 +38,7 @@ struct AaveData {
 struct StopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
+    uint256 maxCoverage;
     address collateralToken;
     address debtToken;
     uint256 slLevel;
@@ -133,6 +134,10 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
+        require(
+            stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108,
+            "aaveSl/invalid-trigger-type"
+        );
         trustedCaller = stopLossTriggerData.positionAddress;
         validateSelector(AaveStopLoss.closePosition.selector, executionData);
         IAccountImplementation(stopLossTriggerData.positionAddress).execute(self, executionData);
@@ -152,7 +157,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 8 &&
-            (stopLossTriggerData.triggerType == 10 || stopLossTriggerData.triggerType == 11);
+            (stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108);
     }
 
     function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external {

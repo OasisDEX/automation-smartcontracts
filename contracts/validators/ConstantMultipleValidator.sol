@@ -21,9 +21,11 @@ pragma solidity ^0.8.0;
 struct GenericTriggerData {
     uint256 cdpId;
     uint16 triggerType;
+    uint256 maxCoverage;
     uint256 execCollRatio;
     uint256 targetCollRatio;
     uint256 bsPrice;
+    bool continuous;
     uint64 deviation;
     uint32 maxBaseFeeInGwei;
 }
@@ -51,7 +53,7 @@ contract ConstantMultipleValidator is IValidator {
     ) external pure returns (bool) {
         require(triggersData.length == 2, "validator/wrong-trigger-count");
         (uint256[] memory cdpIds, uint256[] memory triggerTypes) = decode(triggersData);
-        require(triggerTypes[0] == 3 && triggerTypes[1] == 4, "validator/wrong-trigger-type");
+        require(triggerTypes[0] == 103 && triggerTypes[1] == 104, "validator/wrong-trigger-type");
         require(continuous[0] == true, "validator/buy-trigger-must-be-continuous");
         require(continuous[1] == true, "validator/sell-trigger-must-be-continuous");
         require(cdpIds[0] == cdpIds[1], "validator/different-cdps");

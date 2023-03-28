@@ -38,9 +38,11 @@ contract BasicBuyCommand is BaseMPACommand {
     struct BasicBuyTriggerData {
         uint256 cdpId;
         uint16 triggerType;
+        uint256 maxCoverage;
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 maxBuyPrice;
+        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
@@ -69,7 +71,7 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.deviation
         );
         return
-            trigger.triggerType == 3 &&
+            trigger.triggerType == 103 &&
             trigger.execCollRatio > upperTarget &&
             lowerTarget.ray() > liquidationRatio &&
             deviationIsValid(trigger.deviation);
@@ -105,7 +107,7 @@ contract BasicBuyCommand is BaseMPACommand {
     function execute(bytes calldata executionData, bytes memory triggerData) external nonReentrant {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
-        validateTriggerType(trigger.triggerType, 3);
+        validateTriggerType(trigger.triggerType, 103);
         validateSelector(MPALike.increaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
