@@ -59,7 +59,6 @@ describe('BasicBuyCommand', () => {
     }
 
     before(async () => {
-        console.log('asdasdasadasdsd')
         createTriggerForExecution = async (
             executionRatio: BigNumber.Value,
             targetRatio: BigNumber.Value,
@@ -181,7 +180,6 @@ describe('BasicBuyCommand', () => {
         incorrectExecutionRatio = toRatio(1.49)
         incorrectTargetRatio = toRatio(1.45)
         await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
-        console.log('asdasdasddasd end')
     })
 
     beforeEach(async () => {
