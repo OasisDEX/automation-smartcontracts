@@ -88,7 +88,6 @@ describe('AutomationBot', async () => {
         const otherProxyAddress = await cdpManager.owns(1)
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
-        console.log('BENIZ')
     })
 
     const executeCdpAllow = async (
@@ -111,12 +110,10 @@ describe('AutomationBot', async () => {
             )
 
     beforeEach(async () => {
-        console.log('snapshot')
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        console.log('revert snapshot')
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
