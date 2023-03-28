@@ -318,7 +318,7 @@ describe('AutomationBot', async () => {
     describe('cdpAllowed', async () => {
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            console.log(dummyTriggerDataNoReRegister)
+
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
@@ -855,13 +855,10 @@ describe('AutomationBot', async () => {
                 ['0x'],
                 [TriggerType.MakerStopLossToDaiV2],
             ])
-            console.log('dataToSupply', dataToSupply)
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             ).wait()
-            console.log('receipt', receipt)
             firstTriggerAddedEvent = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerAdded'))[0]
-            console.log('firstTriggerAddedEvent', firstTriggerAddedEvent)
             triggerId = firstTriggerAddedEvent.args.triggerId.toNumber()
         })
 
