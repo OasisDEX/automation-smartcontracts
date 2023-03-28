@@ -113,13 +113,12 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             (StopLossTriggerData)
         );
 
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
+        (, uint256 totalDebtETH, , , uint256 ltv, ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress
         );
 
         if (totalDebtETH == 0) return false;
 
-        uint256 ltv = (10 ** 8 * totalDebtETH) / totalCollateralETH;
         bool vaultHasDebt = totalDebtETH != 0;
         return vaultHasDebt && ltv >= stopLossTriggerData.slLevel;
     }
@@ -156,7 +155,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
 
         return
             !continuous &&
-            stopLossTriggerData.slLevel < 10 ** 8 &&
+            stopLossTriggerData.slLevel < 10 ** 4 &&
             (stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108);
     }
 

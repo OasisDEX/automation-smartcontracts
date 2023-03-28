@@ -56,7 +56,7 @@ contract CloseCommand is BaseMPACommand {
 
         uint256 collRatio = mcdView.getRatio(trigger.cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-        return vaultNotEmpty && collRatio <= trigger.execCollRatio * 10 ** 16;
+        return vaultNotEmpty && collRatio <= trigger.execCollRatio * 10 ** 14;
     }
 
     /**
@@ -86,10 +86,10 @@ contract CloseCommand is BaseMPACommand {
         bool continuous,
         bytes memory triggerData
     ) external pure override returns (bool) {
-        (, uint16 triggerType, uint256 slLevel) = abi.decode(
-            triggerData,
-            (uint256, uint16, uint256)
-        );
-        return !continuous && slLevel > 100 && (triggerType == 101 || triggerType == 102);
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
+        return
+            !continuous &&
+            trigger.execCollRatio > 10000 &&
+            (trigger.triggerType == 101 || trigger.triggerType == 102);
     }
 }

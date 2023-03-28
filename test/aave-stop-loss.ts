@@ -18,7 +18,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe('AaveStoplLossCommand', async () => {
+describe.only('AaveStoplLossCommand', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
@@ -121,7 +121,7 @@ describe('AaveStoplLossCommand', async () => {
     describe('isTriggerDataValid', () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
+            const ltv = userData.ltv
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
@@ -147,7 +147,7 @@ describe('AaveStoplLossCommand', async () => {
         })
         it('should add the trigger with continuous set to false', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
+            const ltv = userData.ltv
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
@@ -191,7 +191,7 @@ describe('AaveStoplLossCommand', async () => {
 
             before(async () => {
                 const userData = await aavePool.getUserAccountData(proxyAddress)
-                ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
+                ltv = userData.ltv
 
                 const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_AWETH_TOKEN)
                 const aTokenBalance = await aToken.balanceOf(proxyAddress)
@@ -405,8 +405,7 @@ describe('AaveStoplLossCommand', async () => {
 
             before(async () => {
                 const userData = await aavePool.getUserAccountData(proxyAddress)
-                ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
-
+                ltv = userData.ltv
                 const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
                 const vTokenBalance = await vToken.balanceOf(proxyAddress)
 
