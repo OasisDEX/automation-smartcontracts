@@ -95,7 +95,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 testPositionAddress,
-                10,
+                TriggerType.AaveStopLossToCollateralV2,
                 maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -121,7 +121,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 testPositionAddress,
-                10,
+                TriggerType.AaveStopLossToCollateralV2,
                 maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
@@ -213,7 +213,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -258,7 +258,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -378,7 +378,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
@@ -424,7 +424,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                     const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
                         maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
