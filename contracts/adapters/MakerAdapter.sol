@@ -85,7 +85,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         require(coverageToken == dai, "maker-adapter/not-dai");
 
         (uint256 cdpId, , uint256 maxCoverage) = decode(triggerData);
-        require(amount <= maxCoverage, "maker-adapter/amount-too-high");
+        require(amount <= maxCoverage, "maker-adapter/coverage-too-high");
 
         McdUtils utils = McdUtils(utilsAddress);
         manager.cdpAllow(cdpId, utilsAddress, 1);

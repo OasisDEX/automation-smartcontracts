@@ -47,7 +47,7 @@ contract AAVEAdapter is IExecutableAdapter {
         uint256 amount
     ) external {
         (address proxy, , uint256 maxCoverage) = decode(triggerData);
-        require(amount <= maxCoverage, "aave-adapter/amount-too-high");
+        require(amount <= maxCoverage, "aave-adapter/coverage-too-high");
         //reverts if code fails
         IAccountImplementation(proxy).execute(
             aavePA,

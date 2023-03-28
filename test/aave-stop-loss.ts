@@ -21,7 +21,7 @@ import { expect } from 'chai'
 describe('AaveStoplLossCommand', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
-    const maxCoverageUsdc = hre.ethers.utils.parseUnits('1500', 6)
+    const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
     let proxyAddress: string
@@ -287,14 +287,14 @@ describe('AaveStoplLossCommand', async () => {
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
-                it('should execute trigger', async () => {
+                it('should execute trigger - with coverage below the limit', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
                         aaveStopLoss.address,
                         triggerId,
-                        '0',
+                        ethers.utils.parseUnits('9', 6),
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
@@ -313,7 +313,20 @@ describe('AaveStoplLossCommand', async () => {
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
-
+                it('should NOT execute trigger - due to coverage too high', async () => {
+                    const tx = automationExecutorInstance.execute(
+                        encodedClosePositionData,
+                        triggerData,
+                        aaveStopLoss.address,
+                        triggerId,
+                        ethers.utils.parseUnits('11', 6),
+                        '0',
+                        178000,
+                        hardhatUtils.addresses.USDC,
+                        { gasLimit: 3000000 },
+                    )
+                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
+                })
                 it('should NOT execute trigger if funds receiver is not the owner', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionNotOwnerData,

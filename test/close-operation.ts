@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe.only('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
 
@@ -240,7 +240,6 @@ describe('CloseCommand', async () => {
 
                     await AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -259,6 +258,20 @@ describe('CloseCommand', async () => {
                     expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(
                         hre.ethers.utils.parseUnits('100', 18).toString(),
                     )
+                })
+
+                it('it should NOT pay instructed amount of DAI to executor to cover gas costs', async () => {
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        hre.ethers.utils.parseUnits('1501', 18).toString(), //pay 100 DAI
+                        0,
+                        178000,
+                        hardhatUtils.addresses.DAI,
+                    )
+                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor ', async () => {
