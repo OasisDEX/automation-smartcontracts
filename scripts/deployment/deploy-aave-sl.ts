@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { AaveStoplLossCommand, IAccountGuard, ServiceRegistry } from '../../typechain'
+import { AaveStopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
@@ -77,11 +77,11 @@ async function main() {
 
     console.log('Deployed AaveProxyActions: ' + apa.address)
 
-    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveStoplLossCommand'), [
+    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveStopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
         utils.addresses.AAVE_POOL,
         apa.address,
-    ])) as AaveStoplLossCommand
+    ])) as AaveStopLossCommandV2
 
     const stopLossCommand = await tx.deployed()
     // TODO change 10 when the command is in common
@@ -101,7 +101,7 @@ async function main() {
         console.log("Guard's whitelist updated")
     }
 
-    console.log(`AaveStoplLossCommand Deployed: ${stopLossCommand!.address}`)
+    console.log(`AaveStopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
     console.log(`AaveProxyActions Deployed: ${apa!.address}`)
 }
 

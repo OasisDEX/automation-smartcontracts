@@ -5,7 +5,7 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    AaveStopLossCommandV2,
     ILendingPool,
     IAccountGuard,
 } from '../typechain'
@@ -18,7 +18,7 @@ import { expect } from 'chai'
 
 const testPositionAddress = process.env.TEST_AAVE_MULTIPLY_POSITION || '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
 
-describe.skip('AaveStoplLossCommand-Multiply', async () => {
+describe.skip('AaveStopLossCommandV2-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('1500', 6)
@@ -27,7 +27,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
     let receiverAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStoplLossCommand
+    let aaveStopLoss: AaveStopLossCommandV2
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
     let receiver: Signer

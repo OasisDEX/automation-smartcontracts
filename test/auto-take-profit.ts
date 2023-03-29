@@ -1,7 +1,14 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, McdView, MPALike, AutomationExecutor, AutoTakeProfitCommand } from '../typechain'
+import {
+    AutomationBot,
+    DsProxyLike,
+    McdView,
+    MPALike,
+    AutomationExecutor,
+    MakerAutoTakeProfitCommandV2,
+} from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -22,7 +29,7 @@ describe('AutoTakeProfitCommmand', async () => {
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let AutoTakeProfitCommandInstance: AutoTakeProfitCommand
+    let AutoTakeProfitCommandInstance: MakerAutoTakeProfitCommandV2
     let McdViewInstance: McdView
     let DAIInstance: Contract
     let MPAInstance: MPALike
@@ -57,7 +64,7 @@ describe('AutoTakeProfitCommmand', async () => {
         const system = await deploySystem({ utils, addCommands: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        AutoTakeProfitCommandInstance = system.autoTakeProfitCommand as AutoTakeProfitCommand
+        AutoTakeProfitCommandInstance = system.autoTakeProfitCommand as MakerAutoTakeProfitCommandV2
         McdViewInstance = system.mcdView
 
         await system.mcdView.approve(executorAddress, true)

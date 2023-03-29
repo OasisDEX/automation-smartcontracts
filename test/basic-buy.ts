@@ -29,7 +29,7 @@ let createTriggerForExecution: (
 
 let executeTrigger: (triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) => Promise<ContractTransaction>
 
-describe('BasicBuyCommand', () => {
+describe('MakerBasicBuyCommandV2', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
     let executionRatio: number

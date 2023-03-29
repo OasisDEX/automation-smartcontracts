@@ -52,13 +52,16 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_EXECUTOR,
             ),
             mcdView: await this.hre.ethers.getContractAt('McdView', this.addresses.AUTOMATION_MCD_VIEW),
-            closeCommand: await this.hre.ethers.getContractAt('CloseCommand', this.addresses.AUTOMATION_CLOSE_COMMAND),
+            closeCommand: await this.hre.ethers.getContractAt(
+                'MakerStopLossCommandV2',
+                this.addresses.AUTOMATION_CLOSE_COMMAND,
+            ),
             basicBuy: await this.hre.ethers.getContractAt(
-                'BasicBuyCommand',
+                'MakerBasicBuyCommandV2',
                 this.addresses.AUTOMATION_BASIC_BUY_COMMAND,
             ),
             basicSell: await this.hre.ethers.getContractAt(
-                'BasicSellCommand',
+                'MakerBasicSellCommandV2',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
             aaveAdapter: await this.hre.ethers.getContractAt(

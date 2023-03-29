@@ -5,7 +5,7 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    AaveStopLossCommandV2,
     ILendingPool,
     IAccountGuard,
     AccountFactoryLike,
@@ -18,7 +18,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe('AaveStoplLossCommand', async () => {
+describe('AaveStopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
@@ -30,7 +30,7 @@ describe('AaveStoplLossCommand', async () => {
     let randomWalletAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStoplLossCommand
+    let aaveStopLoss: AaveStopLossCommandV2
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
 
