@@ -25,10 +25,11 @@ import { MPALike } from "../interfaces/MPALike.sol";
 /**
  * @title Close - Stop Loss (Maker) Command for the AutomationBot
  */
-contract CloseCommand is BaseMPACommand {
+contract MakerStopLossCommandV2 is BaseMPACommand {
     struct CloseCommandTriggerData {
         uint256 cdpId;
         uint16 triggerType;
+        uint256 maxCoverage;
         uint256 execCollRatio;
     }
 
@@ -38,8 +39,8 @@ contract CloseCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        (uint256 cdpId, , ) = abi.decode(triggerData, (uint256, uint16, uint256));
-        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(cdpId);
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
+        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(trigger.cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
@@ -47,15 +48,15 @@ contract CloseCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        (uint256 cdpId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
 
-        if (manager.owns(cdpId) == address(0)) {
+        if (manager.owns(trigger.cdpId) == address(0)) {
             return false;
         }
 
-        uint256 collRatio = mcdView.getRatio(cdpId, true);
+        uint256 collRatio = mcdView.getRatio(trigger.cdpId, true);
         bool vaultNotEmpty = collRatio != 0; // MCD_VIEW contract returns 0 (instead of infinity) as a collateralisation ratio of empty vault
-        return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
+        return vaultNotEmpty && collRatio <= trigger.execCollRatio * 10 ** 14;
     }
 
     /**
@@ -67,9 +68,9 @@ contract CloseCommand is BaseMPACommand {
     ) external override nonReentrant {
         CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
 
-        if (trigger.triggerType == 1) {
+        if (trigger.triggerType == 101) {
             validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
-        } else if (trigger.triggerType == 2) {
+        } else if (trigger.triggerType == 102) {
             validateSelector(MPALike.closeVaultExitDai.selector, executionData);
         } else revert("close-command/unsupported-trigger-type");
 
@@ -85,10 +86,10 @@ contract CloseCommand is BaseMPACommand {
         bool continuous,
         bytes memory triggerData
     ) external pure override returns (bool) {
-        (, uint16 triggerType, uint256 slLevel) = abi.decode(
-            triggerData,
-            (uint256, uint16, uint256)
-        );
-        return !continuous && slLevel > 100 && (triggerType == 1 || triggerType == 2);
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
+        return
+            !continuous &&
+            trigger.execCollRatio > 10000 &&
+            (trigger.triggerType == 101 || trigger.triggerType == 102);
     }
 }

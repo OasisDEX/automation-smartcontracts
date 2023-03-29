@@ -44,12 +44,12 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
 
     function decode(
         bytes memory triggerData
-    ) public pure returns (uint256 cdpId, uint256 triggerType) {
-        (cdpId, triggerType) = abi.decode(triggerData, (uint256, uint16));
+    ) public pure returns (uint256 cdpId, uint256 triggerType, uint256 maxCoverage) {
+        (cdpId, triggerType, maxCoverage) = abi.decode(triggerData, (uint256, uint16, uint256));
     }
 
     function canCall(bytes memory triggerData, address operator) public view returns (bool) {
-        (uint256 cdpId, ) = decode(triggerData);
+        (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
@@ -63,7 +63,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     }
 
     function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
-        (uint256 cdpId, ) = decode(triggerData);
+        (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         if (allowance && !canCall(target, cdpId, cdpOwner)) {
@@ -83,10 +83,11 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         uint256 amount
     ) external {
         require(coverageToken == dai, "maker-adapter/not-dai");
+
+        (uint256 cdpId, , uint256 maxCoverage) = decode(triggerData);
+        require(amount <= maxCoverage, "maker-adapter/coverage-too-high");
+
         McdUtils utils = McdUtils(utilsAddress);
-
-        (uint256 cdpId, ) = decode(triggerData);
-
         manager.cdpAllow(cdpId, utilsAddress, 1);
         utils.drawDebt(amount, cdpId, manager, receiver);
         manager.cdpAllow(cdpId, utilsAddress, 0);

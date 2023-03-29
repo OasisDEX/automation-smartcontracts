@@ -78,7 +78,19 @@ function getTriggerDataTypes(triggerType: TriggerType) {
                 /*  'bool', TODO: Handle past triggers */ 'uint64',
                 `uint32`,
             ]
-
+        case TriggerType.AaveStopLossToCollateralV2:
+        case TriggerType.AaveStopLossToDebtV2:
+            return ['address', 'uint16', 'uint256', 'address', 'address', 'uint256']
+        case TriggerType.MakerStopLossToCollateralV2:
+        case TriggerType.MakerStopLossToDaiV2:
+            return ['uint256', 'uint16', 'uint256', 'uint256']
+        case TriggerType.MakerAutoTakeProfitToDaiV2:
+        case TriggerType.MakerAutoTakeProfitToCollateralV2:
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint32']
+        case TriggerType.MakerBasicBuyV2:
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32']
+        case TriggerType.MakerBasicSellV2:
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32']
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
@@ -106,7 +118,7 @@ export function decodeTriggerData(triggerType: TriggerType, data: string) {
 
 export function decodeStopLossData(data: string) {
     // trigger type does not matter
-    const [vault, type, stopLossLevel] = decodeTriggerData(TriggerType.StopLossToDai, data)
+    const [vault, type, stopLossLevel] = decodeTriggerData(TriggerType.MakerStopLossToDaiV2, data)
     return {
         vaultId: new BigNumber(vault.toString()),
         type: new BigNumber(type.toString()),
@@ -116,7 +128,7 @@ export function decodeStopLossData(data: string) {
 
 export function decodeBasicBuyData(data: string) {
     const [vault, type, exec, target, maxPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
-        TriggerType.BasicBuy,
+        TriggerType.MakerBasicBuyV2,
         data,
     )
     return {
@@ -133,7 +145,7 @@ export function decodeBasicBuyData(data: string) {
 
 export function decodeBasicSellData(data: string) {
     const [vault, type, exec, target, minPrice, cont, deviation, maxBaseFee] = decodeTriggerData(
-        TriggerType.BasicSell,
+        TriggerType.MakerBasicSellV2,
         data,
     )
     return {
@@ -182,12 +194,12 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
         `Command Address: ${commandAddress}`,
     ]
     switch (triggerType) {
-        case TriggerType.StopLossToCollateral:
-        case TriggerType.StopLossToDai: {
+        case TriggerType.MakerStopLossToCollateralV2:
+        case TriggerType.MakerStopLossToDaiV2: {
             const { stopLossLevel } = decodeStopLossData(triggerData)
             return baseInfo.concat([`Stop Loss Level: ${stopLossLevel.toString()}`])
         }
-        case TriggerType.BasicBuy: {
+        case TriggerType.MakerBasicBuyV2: {
             const { executionCollRatio, targetCollRatio, maxBuyPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicBuyData(triggerData)
             return baseInfo.concat([
@@ -199,7 +211,7 @@ export function triggerDataToInfo(triggerData: string, commandAddress: string) {
                 `MaxBaseFee: ${maxBaseFee.toFixed()} GWEI`,
             ])
         }
-        case TriggerType.BasicSell: {
+        case TriggerType.MakerBasicSellV2: {
             const { executionCollRatio, targetCollRatio, minSellPrice, continuous, deviation, maxBaseFee } =
                 decodeBasicSellData(triggerData)
             return baseInfo.concat([

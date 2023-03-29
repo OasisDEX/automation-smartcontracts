@@ -11,7 +11,7 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-describe('BasicSellCommand', () => {
+describe('MakerBasicSellCommandV2', () => {
     let correctExecutionRatio: number
     let correctTargetRatio: number
 
@@ -19,6 +19,7 @@ describe('BasicSellCommand', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
 
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let system: DeployedSystem
     let MPAInstance: MPALike
     let usersProxy: DsProxyLike
@@ -33,7 +34,7 @@ describe('BasicSellCommand', () => {
             [continuous],
             [0],
             [triggerData],
-            ["0x"],
+            ['0x'],
             [triggerType],
         ])
         const signer = await hardhatUtils.impersonate(proxyOwnerAddress)
@@ -77,62 +78,78 @@ describe('BasicSellCommand', () => {
         it('should fail if target coll ratio is lower than execution ratio', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
         })
 
         it('should fail if cdp is not encoded correctly', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
         })
 
         it('should fail if deviation is less the minimum', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 0,
                 maxGweiPrice,
             )
-            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
         })
 
         it.skip('should fail if trigger type is not encoded correctly', async () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
             const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'bool'],
-                [testCdpId, TriggerType.StopLossToCollateral, correctExecutionRatio, correctTargetRatio, 0, false],
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool'],
+                [
+                    testCdpId,
+                    TriggerType.MakerStopLossToCollateralV2,
+                    maxCoverageDai,
+                    correctExecutionRatio,
+                    correctTargetRatio,
+                    0,
+                    false,
+                ],
             )
-            await expect(createTrigger(triggerData, TriggerType.BasicSell, false)).to.be.reverted
+            await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
         })
 
         it('should successfully create the trigger', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
+                true,
                 50,
                 maxGweiPrice,
             )
-            const tx = createTrigger(triggerData, TriggerType.BasicSell, false)
+            const tx = createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
@@ -149,14 +166,16 @@ describe('BasicSellCommand', () => {
         ) {
             const triggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(100).shiftedBy(18).toFixed(),
+                true,
                 50,
                 maxBaseFee,
             )
-            const createTriggerTx = await createTrigger(triggerData, TriggerType.BasicSell, continuous)
+            const createTriggerTx = await createTrigger(triggerData, TriggerType.MakerBasicSellV2, continuous)
             const receipt = await createTriggerTx.wait()
             const [event] = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             return { triggerId: event.args.triggerId.toNumber(), triggerData }

@@ -25,13 +25,10 @@ import { impersonateAccount } from '@nomicfoundation/hardhat-network-helpers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
-const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(
-    ['uint256', 'uint16', 'uint256'],
-    [testCdpId, TriggerType.StopLossToDai, 500],
-)
-
 describe('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
+
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationBotStorageInstance: AutomationBotStorage
@@ -45,13 +42,17 @@ describe('AutomationBot', async () => {
     let notOwnerProxyUserAddress: string
     let snapshotId: string
     let makerAdapter: MakerAdapter
+    let dummyTriggerDataNoReRegister: string
 
     before(async () => {
+        dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256', 'uint256'],
+            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 500],
+        )
+
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
 
         const system = await deploySystem({ utils: hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
-
-        makerAdapter = system.makerAdapter
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
             system.serviceRegistry.address,
@@ -66,17 +67,17 @@ describe('AutomationBot', async () => {
         AutomationBotInstance = system.automationBot
         AutomationBotStorageInstance = system.automationBotStorage
         AutomationExecutorInstance = system.automationExecutor
-        MakerAdapterInstance = system.makerAdapter
+        MakerAdapterInstance = system.makerAdapter!
 
         DssProxyActions = new Contract(hardhatUtils.addresses.DSS_PROXY_ACTIONS, [
             'function cdpAllow(address,uint,address,uint)',
         ])
 
-        const hash = getCommandHash(TriggerType.StopLossToDai)
+        const hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, MakerAdapterInstance.address)
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -109,32 +110,30 @@ describe('AutomationBot', async () => {
             )
 
     beforeEach(async () => {
-        console.log('snapshot')
         snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
     })
 
     afterEach(async () => {
-        console.log('revert snapshot')
         await hre.ethers.provider.send('evm_revert', [snapshotId])
     })
 
     describe('getCommandAddress', async () => {
         it('should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2', async () => {
-            const address = await AutomationBotInstance.getCommandAddress(2)
+            const address = await AutomationBotInstance.getCommandAddress(102)
             expect(address.toLowerCase()).to.equal(DummyCommandInstance.address.toLowerCase())
         })
 
         it('should return 0x0 for triggerType 1', async () => {
-            const address = await AutomationBotInstance.getCommandAddress(1)
+            const address = await AutomationBotInstance.getCommandAddress(101)
             expect(address.toLowerCase()).to.equal('0x0000000000000000000000000000000000000000'.toLowerCase())
         })
     })
 
     describe('addTrigger', async () => {
-        const triggerType = 2
+        const triggerType = TriggerType.MakerStopLossToDaiV2
         const triggerData = utils.defaultAbiCoder.encode(
-            ['uint256', 'uint16', 'uint256'],
-            [testCdpId, triggerType, 101],
+            ['uint256', 'uint16', 'uint256', 'uint256'],
+            [testCdpId, triggerType, maxCoverageDai, 101],
         )
 
         it('should fail if called not through delegatecall', async () => {
@@ -319,13 +318,14 @@ describe('AutomationBot', async () => {
     describe('cdpAllowed', async () => {
         before(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [2],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
         })
@@ -349,7 +349,10 @@ describe('AutomationBot', async () => {
     })
 
     describe('grantApproval', async () => {
-        const triggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256', 'uint256'],
+            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 101],
+        )
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
@@ -414,7 +417,10 @@ describe('AutomationBot', async () => {
     })
 
     describe('removeApproval', async () => {
-        const triggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
+        const triggerData = utils.defaultAbiCoder.encode(
+            ['uint256', 'uint16', 'uint256', 'uint256'],
+            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 101],
+        )
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -423,7 +429,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [2],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
         })
@@ -479,144 +485,6 @@ describe('AutomationBot', async () => {
             expect(filteredEvents[0].args.triggerData).to.equal(triggerData)
         })
     })
-    /*   describe('grantApproval', async () => {
-        beforeEach(async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-        })
-
-        it('allows to add approval to cdp which did not have it', async () => {
-            let status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(false)
-
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-
-            status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(true)
-        })
-
-        it('should revert if called not through delegatecall', async () => {
-            const tx = AutomationBotInstance.grantApproval(ServiceRegistryInstance.address, testCdpId)
-            await expect(tx).to.be.revertedWith('bot/only-delegate')
-        })
-
-        it('should revert if called not by an owner proxy', async () => {
-            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-            const tx = notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
-        })
-
-        it('emits ApprovalGranted', async () => {
-            const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('grantApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const txRes = await tx.wait()
-
-            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalGranted'))
-
-            expect(filteredEvents.length).to.equal(1)
-            expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
-        })
-    })
-
-    describe('removeApproval', async () => {
-        beforeEach(async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                TriggerGroupType.SingleTrigger,
-                [false],
-                [0],
-                [dummyTriggerDataNoReRegister],
-                [2],
-            ])
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-        })
-
-        it('allows to remove approval from cdp for which it was granted', async () => {
-            let status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(true)
-
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-
-            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-
-            status = await AutomationBotInstance.isCdpAllowed(
-                testCdpId,
-                AutomationBotInstance.address,
-                hardhatUtils.addresses.CDP_MANAGER,
-            )
-            expect(status).to.equal(false)
-        })
-
-        it('should revert if called not through delegatecall', async () => {
-            const tx = AutomationBotInstance.removeApproval(ServiceRegistryInstance.address, testCdpId)
-            await expect(tx).to.be.revertedWith('bot/only-delegate')
-        })
-
-        it('should revert if called not by an owner proxy', async () => {
-            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-            const tx = notOwnerProxy.connect(notOwner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
-        })
-
-        it('emits ApprovalRemoved', async () => {
-            const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('removeApproval', [
-                ServiceRegistryInstance.address,
-                testCdpId,
-            ])
-
-            const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const txRes = await tx.wait()
-
-            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalRemoved'))
-
-            expect(filteredEvents.length).to.equal(1)
-            expect(filteredEvents[0].args.cdpId).to.equal(testCdpId)
-        })
-    }) */
 
     describe('removeTrigger', async () => {
         let triggerId = 0
@@ -631,7 +499,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [2],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -649,10 +517,10 @@ describe('AutomationBot', async () => {
                 const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner)
                 await impersonateAccount(registryOwner)
                 const newClose = await hardhatUtils.deployContract(
-                    hardhatUtils.hre.ethers.getContractFactory('CloseCommand'),
+                    hardhatUtils.hre.ethers.getContractFactory('MakerStopLossCommandV2'),
                     [registryAddress],
                 )
-                const hash = getCommandHash(TriggerType.StopLossToDai)
+                const hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
                 //await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
                 const normalAdapterHash = getAdapterNameHash(newClose.address)
                 const executeAdapterHash = getExecuteAdapterNameHash(newClose.address)
@@ -702,7 +570,7 @@ describe('AutomationBot', async () => {
                     [triggerId],
                     [dummyTriggerDataNoReRegister],
                     [dummyTriggerDataNoReRegister],
-                    [TriggerType.StopLossToDai],
+                    [TriggerType.MakerStopLossToDaiV2],
                 ])
 
                 const tx = await ownerProxy
@@ -835,9 +703,10 @@ describe('AutomationBot', async () => {
         let triggerId = 1
         let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
         let removalEventsCount = 0
-        const triggerData = dummyTriggerDataNoReRegister
+        let triggerData: string
 
         before(async () => {
+            triggerData = dummyTriggerDataNoReRegister
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -846,7 +715,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.StopLossToDai],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -897,9 +766,10 @@ describe('AutomationBot', async () => {
         let triggerId = 1
         let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
         let removalEventsCount = 0
-        const triggerData = dummyTriggerDataNoReRegister
+        let triggerData: string
 
         before(async () => {
+            triggerData = dummyTriggerDataNoReRegister
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -908,7 +778,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [2],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -948,19 +818,20 @@ describe('AutomationBot', async () => {
 
     describe('execute', async () => {
         let triggerId = 0
-        const triggerData = dummyTriggerDataNoReRegister
+        let triggerData: string
         const gasRefund = 15000
 
         before(async () => {
+            triggerData = dummyTriggerDataNoReRegister
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
-                [triggerData],
+                [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [2],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
 
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -982,7 +853,7 @@ describe('AutomationBot', async () => {
             await DummyCommandInstance.changeFlags(true, true, false)
             const tx = AutomationExecutorInstance.execute(
                 dummyTriggerDataNoReRegister,
-                triggerData,
+                dummyTriggerDataNoReRegister,
                 DummyCommandInstance.address,
                 triggerId,
                 0,

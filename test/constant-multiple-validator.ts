@@ -16,6 +16,7 @@ function toRatio(units: number) {
 describe('ConstantMultipleValidator', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationBotStorageInstance: AutomationBotStorage
     let ownerProxy: DsProxyLike
@@ -55,26 +56,30 @@ describe('ConstantMultipleValidator', async () => {
         // basic buy
         const bbTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BasicBuy,
+            TriggerType.MakerBasicBuyV2,
+            maxCoverageDai,
             buyExecutionRatio,
             buyTargetRatio,
             0,
+            true,
             50,
             maxGweiPrice,
         )
         // basic sell
         let bsTriggerData = encodeTriggerData(
             testCdpId,
-            TriggerType.BasicSell,
+            TriggerType.MakerBasicSellV2,
+            maxCoverageDai,
             sellExecutionRatio,
             sellTargetRatio,
             0,
+            true,
             50,
             maxGweiPrice,
         )
 
         const replacedTriggerId = [0, 0]
-        const replacedTriggerData = ["0x", "0x"]
+        const replacedTriggerData = ['0x', '0x']
 
         it('should successfully create a trigger group with correct ratios', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -91,7 +96,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const counterAfter = await AutomationBotStorageInstance.triggersGroupCounter()
@@ -104,10 +109,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
+                true,
                 50,
                 maxGweiPrice,
             )
@@ -117,7 +124,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -126,10 +133,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
+                true,
                 50,
                 maxGweiPrice,
             )
@@ -139,7 +148,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -148,10 +157,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
+                true,
                 70,
                 maxGweiPrice,
             )
@@ -161,7 +172,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -170,10 +181,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
+                true,
                 70,
                 maxGweiPrice,
             )
@@ -183,7 +196,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -192,10 +205,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
+                true,
                 50,
                 maxGweiPrice + 1,
             )
@@ -205,7 +220,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')
@@ -214,10 +229,12 @@ describe('ConstantMultipleValidator', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             bsTriggerData = encodeTriggerData(
                 testCdpId + 1,
-                TriggerType.BasicSell,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai,
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
+                true,
                 50,
                 maxGweiPrice,
             )
@@ -227,7 +244,7 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerId,
                 [bbTriggerData, bsTriggerData],
                 replacedTriggerData,
-                [TriggerType.BasicBuy, TriggerType.BasicSell],
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             expect(res).to.be.revertedWith('')

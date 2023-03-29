@@ -1,6 +1,6 @@
 import { TriggerType } from '@oasisdex/automation'
 import hre from 'hardhat'
-import { BasicBuyCommand } from '../../typechain'
+import { MakerBasicBuyCommandV2 } from '../../typechain'
 import { AddressRegistry, getCommandHash, HardhatUtils } from '../common'
 import { configureRegistryEntries } from '../common/deploy-system'
 
@@ -13,13 +13,13 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    system.basicBuy = (await utils.deployContract(hre.ethers.getContractFactory('BasicBuyCommand'), [
+    system.basicBuy = (await utils.deployContract(hre.ethers.getContractFactory('MakerBasicBuyCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-    ])) as BasicBuyCommand
+    ])) as MakerBasicBuyCommandV2
     console.log(`BasicBuy Deployed: ${system.basicBuy.address}`)
 
     await configureRegistryEntries(utils, system, utils.addresses as AddressRegistry, [
-        getCommandHash(TriggerType.BasicBuy),
+        getCommandHash(TriggerType.MakerBasicBuyV2),
     ])
 }
 

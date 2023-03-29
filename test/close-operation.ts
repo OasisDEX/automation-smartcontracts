@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
+import { AutomationBot, DsProxyLike, MakerStopLossCommandV2, McdView, MPALike, AutomationExecutor } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -17,12 +17,14 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe('MakerStopLossCommandV2', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
+
+    const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let CloseCommandInstance: CloseCommand
+    let CloseCommandInstance: MakerStopLossCommandV2
     let McdViewInstance: McdView
     let DAIInstance: Contract
     let MPAInstance: MPALike
@@ -44,7 +46,7 @@ describe('CloseCommand', async () => {
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        CloseCommandInstance = system.closeCommand as CloseCommand
+        CloseCommandInstance = system.closeCommand as MakerStopLossCommandV2
         McdViewInstance = system.mcdView
         await McdViewInstance.approve(executorAddress, true)
 
@@ -64,7 +66,7 @@ describe('CloseCommand', async () => {
 
     describe('execute', async () => {
         const serviceRegistry = hardhatUtils.mpaServiceRegistry()
-        let currentCollRatioAsPercentage: number
+        let currentCollRatioInBaseUnits: number
         let collateralAmount: string
         let debtAmount: string
         let cdpData: any
@@ -76,7 +78,7 @@ describe('CloseCommand', async () => {
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
-            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
+            currentCollRatioInBaseUnits = Math.floor(parseFloat(collRatio18) * 10000)
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -134,8 +136,9 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggerData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToCollateral,
-                        currentCollRatioAsPercentage - 1,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
+                        currentCollRatioInBaseUnits - 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -152,7 +155,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [1],
+                        [TriggerType.MakerStopLossToCollateralV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -202,8 +205,9 @@ describe('CloseCommand', async () => {
                     // addTrigger
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToCollateral,
-                        currentCollRatioAsPercentage + 1,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
+                        currentCollRatioInBaseUnits + 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -221,7 +225,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [1],
+                        [TriggerType.MakerStopLossToCollateralV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -236,7 +240,6 @@ describe('CloseCommand', async () => {
 
                     await AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -255,6 +258,20 @@ describe('CloseCommand', async () => {
                     expect(balanceAfter.sub(balanceBefore).toString()).to.be.equal(
                         hre.ethers.utils.parseUnits('100', 18).toString(),
                     )
+                })
+
+                it('it should NOT pay instructed amount of DAI to executor to cover gas costs', async () => {
+                    const tx = AutomationExecutorInstance.execute(
+                        executionData,
+                        triggersData,
+                        CloseCommandInstance.address,
+                        triggerId,
+                        hre.ethers.utils.parseUnits('1501', 18).toString(), //pay 100 DAI
+                        0,
+                        178000,
+                        hardhatUtils.addresses.DAI,
+                    )
+                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
@@ -276,7 +293,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -288,7 +305,7 @@ describe('CloseCommand', async () => {
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
@@ -343,11 +360,10 @@ describe('CloseCommand', async () => {
         describe('closeToDai operation', async () => {
             before(async () => {
                 const debt = EthersBN.from(debtAmount)
-                const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) // value of collateral
+                const tradeSize = debt.mul(currentCollRatioInBaseUnits).div(10000) // value of collateral
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
-                // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000) /* 2% slippage */.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = ONE_INCH_V4_ROUTER
                 exchangeData._exchangeCalldata = forgeUnoswapCalldata(
@@ -370,8 +386,9 @@ describe('CloseCommand', async () => {
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToDai,
-                        currentCollRatioAsPercentage - 1,
+                        TriggerType.MakerStopLossToDaiV2,
+                        maxCoverageDai,
+                        currentCollRatioInBaseUnits - 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -389,7 +406,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [2],
+                        [TriggerType.MakerStopLossToDaiV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -400,14 +417,12 @@ describe('CloseCommand', async () => {
                 })
 
                 afterEach(async () => {
-                    // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -427,14 +442,13 @@ describe('CloseCommand', async () => {
                 let signer: Signer
 
                 before(async () => {
-                    // makeSnapshot
-                    //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
                     triggersData = encodeTriggerData(
                         testCdpId,
-                        TriggerType.StopLossToDai,
-                        currentCollRatioAsPercentage + 1,
+                        TriggerType.MakerStopLossToDaiV2,
+                        maxCoverageDai,
+                        currentCollRatioInBaseUnits + 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -452,7 +466,7 @@ describe('CloseCommand', async () => {
                         [0],
                         [triggersData],
                         ['0x'],
-                        [2],
+                        [TriggerType.MakerStopLossToDaiV2],
                     ])
 
                     const tx = await usersProxy.connect(signer).execute(AutomationBotInstance.address, dataToSupply)
@@ -467,14 +481,12 @@ describe('CloseCommand', async () => {
                 })
 
                 afterEach(async () => {
-                    // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -509,25 +521,23 @@ describe('CloseCommand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
                         0,
                         0,
-                        178000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
@@ -569,7 +579,7 @@ describe('CloseCommand', async () => {
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
 
                     const debt = EthersBN.from(debtAmount)
-                    const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100)
+                    const tradeSize = debt.mul(currentCollRatioInBaseUnits).div(10000)
                     const valueLocked = tradeSize.sub(debt)
 
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()

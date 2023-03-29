@@ -5,7 +5,7 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    AaveStopLossCommandV2,
     ILendingPool,
     IAccountGuard,
 } from '../typechain'
@@ -13,19 +13,21 @@ import { getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { TriggerGroupType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 const testPositionAddress = process.env.TEST_AAVE_MULTIPLY_POSITION || '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
 
-describe.skip('AaveStoplLossCommand-Multiply', async () => {
+describe.skip('AaveStopLossCommandV2-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
+
+    const maxCoverageUsdc = hre.ethers.utils.parseUnits('1500', 6)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
     let receiverAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStoplLossCommand
+    let aaveStopLoss: AaveStopLossCommandV2
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
     let receiver: Signer
@@ -90,10 +92,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
             const userData = await aavePool.getUserAccountData(testPositionAddress)
             const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
-            const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+            const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 testPositionAddress,
-                10,
+                TriggerType.AaveStopLossToCollateralV2,
+                maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(10),
@@ -107,7 +110,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [10],
+                [TriggerType.AaveStopLossToCollateralV2],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
@@ -115,10 +118,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
         it('should add the trigger with continuous set to false', async () => {
             const userData = await aavePool.getUserAccountData(testPositionAddress)
             const ltv = userData.totalDebtETH.mul(100000000).div(userData.totalCollateralETH)
-            const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+            const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 testPositionAddress,
-                10,
+                TriggerType.AaveStopLossToCollateralV2,
+                maxCoverageUsdc,
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(10),
@@ -132,7 +136,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [10],
+                [TriggerType.AaveStopLossToCollateralV2],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -206,10 +210,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             })
             describe('when Trigger is above current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
+                        maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(10),
@@ -223,7 +228,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [10],
+                        [TriggerType.AaveStopLossToCollateralV2],
                     ])
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -250,10 +255,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             })
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
+                        maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(10),
@@ -267,7 +273,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [10],
+                        [TriggerType.AaveStopLossToCollateralV2],
                     ])
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -369,10 +375,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             })
             describe('when Trigger is above current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
+                        maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(10),
@@ -386,7 +393,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [10],
+                        [TriggerType.AaveStopLossToCollateralV2],
                     ])
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -414,10 +421,11 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
             })
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'address', 'address', 'uint256', 'uint32']
+                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         testPositionAddress,
-                        10,
+                        TriggerType.AaveStopLossToCollateralV2,
+                        maxCoverageUsdc,
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(10),
@@ -431,7 +439,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [10],
+                        [TriggerType.AaveStopLossToCollateralV2],
                     ])
                     // add trigger
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)

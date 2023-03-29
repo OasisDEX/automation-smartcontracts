@@ -38,32 +38,32 @@ task('validate-deployment', 'Validate the current deployment')
             },
             {
                 name: 'TriggerType.CLOSE_TO_COLLATERAL',
-                hash: getCommandHash(TriggerType.StopLossToCollateral),
+                hash: getCommandHash(TriggerType.MakerStopLossToCollateralV2),
                 addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
             },
             {
                 name: 'TriggerType.CLOSE_TO_DAI',
-                hash: getCommandHash(TriggerType.StopLossToDai),
+                hash: getCommandHash(TriggerType.MakerStopLossToDaiV2),
                 addressFromConfig: addresses.AUTOMATION_CLOSE_COMMAND,
             },
             {
                 name: 'TriggerType.AUTO_TP_COLLATERAL',
-                hash: getCommandHash(TriggerType.AutoTakeProfitToCollateral),
+                hash: getCommandHash(TriggerType.MakerAutoTakeProfitToCollateralV2),
                 addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
             },
             {
                 name: 'TriggerType.AUTO_TP_DAI',
-                hash: getCommandHash(TriggerType.AutoTakeProfitToDai),
+                hash: getCommandHash(TriggerType.MakerAutoTakeProfitToDaiV2),
                 addressFromConfig: addresses.AUTOMATION_AUTO_TP_COMMAND,
             },
             {
                 name: 'TriggerType.BASIC_BUY',
-                hash: getCommandHash(TriggerType.BasicBuy),
+                hash: getCommandHash(TriggerType.MakerBasicBuyV2),
                 addressFromConfig: addresses.AUTOMATION_BASIC_BUY_COMMAND,
             },
             {
                 name: 'TriggerType.BASIC_SELL',
-                hash: getCommandHash(TriggerType.BasicSell),
+                hash: getCommandHash(TriggerType.MakerBasicSellV2),
                 addressFromConfig: addresses.AUTOMATION_BASIC_SELL_COMMAND,
             },
             {

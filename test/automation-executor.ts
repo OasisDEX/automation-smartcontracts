@@ -17,7 +17,10 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 const HARDHAT_DEFAULT_COINBASE = '0xc014ba5ec014ba5ec014ba5ec014ba5ec014ba5e'
 
-const dummyTriggerData = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 1, 101])
+const dummyTriggerData = utils.defaultAbiCoder.encode(
+    ['uint256', 'uint16', 'uint256', 'uint256'],
+    [testCdpId, 1, 101, hre.ethers.utils.parseEther('1500')],
+)
 
 describe('AutomationExecutor', async () => {
     const wethAmount = EthersBN.from(10).pow(18).mul(10)
@@ -84,9 +87,9 @@ describe('AutomationExecutor', async () => {
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
         await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
 
-        let hash = getCommandHash(TriggerType.StopLossToDai)
+        let hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
-        hash = getCommandHash(TriggerType.StopLossToCollateral)
+        hash = getCommandHash(TriggerType.MakerStopLossToCollateralV2)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
 
         const cdpManagerInstance = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
@@ -178,7 +181,7 @@ describe('AutomationExecutor', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [1],
+                [TriggerType.MakerStopLossToDaiV2],
             ])
             const tx = await usersProxy.connect(newSigner).execute(AutomationBotInstance.address, dataToSupply)
             const result = await tx.wait()
