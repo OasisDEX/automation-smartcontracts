@@ -17,7 +17,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe.only('CloseCommand', async () => {
+describe('CloseCommand', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
 
@@ -66,7 +66,7 @@ describe.only('CloseCommand', async () => {
 
     describe('execute', async () => {
         const serviceRegistry = hardhatUtils.mpaServiceRegistry()
-        let currentCollRatioAsPercentage: number
+        let currentCollRatioInBaseUnits: number
         let collateralAmount: string
         let debtAmount: string
         let cdpData: any
@@ -78,7 +78,7 @@ describe.only('CloseCommand', async () => {
             const [collateral, debt] = await McdViewInstance.getVaultInfo(testCdpId)
             collateralAmount = collateral.toString()
             debtAmount = debt.toString()
-            currentCollRatioAsPercentage = Math.floor(parseFloat(collRatio18) * 100)
+            currentCollRatioInBaseUnits = Math.floor(parseFloat(collRatio18) * 10000)
 
             cdpData = {
                 gemJoin: hardhatUtils.addresses.MCD_JOIN_ETH_A,
@@ -138,7 +138,7 @@ describe.only('CloseCommand', async () => {
                         testCdpId,
                         TriggerType.MakerStopLossToCollateralV2,
                         maxCoverageDai,
-                        currentCollRatioAsPercentage - 1,
+                        currentCollRatioInBaseUnits - 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -207,7 +207,7 @@ describe.only('CloseCommand', async () => {
                         testCdpId,
                         TriggerType.MakerStopLossToCollateralV2,
                         maxCoverageDai,
-                        currentCollRatioAsPercentage + 1,
+                        currentCollRatioInBaseUnits + 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -360,11 +360,10 @@ describe.only('CloseCommand', async () => {
         describe('closeToDai operation', async () => {
             before(async () => {
                 const debt = EthersBN.from(debtAmount)
-                const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100) // value of collateral
+                const tradeSize = debt.mul(currentCollRatioInBaseUnits).div(10000) // value of collateral
 
                 exchangeData.fromTokenAmount = collateralAmount
                 exchangeData.minToTokenAmount = tradeSize.mul(95).div(100)
-                // (BigNumber.from(collateralAmount)).mul(ethPrice).mul(980).div(1000) /* 2% slippage */.toString()
                 exchangeData.toTokenAmount = EthersBN.from(exchangeData.minToTokenAmount).mul(102).div(100).toString() // slippage 2%
                 exchangeData.exchangeAddress = ONE_INCH_V4_ROUTER
                 exchangeData._exchangeCalldata = forgeUnoswapCalldata(
@@ -389,7 +388,7 @@ describe.only('CloseCommand', async () => {
                         testCdpId,
                         TriggerType.MakerStopLossToDaiV2,
                         maxCoverageDai,
-                        currentCollRatioAsPercentage - 1,
+                        currentCollRatioInBaseUnits - 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -418,7 +417,6 @@ describe.only('CloseCommand', async () => {
                 })
 
                 afterEach(async () => {
-                    // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
@@ -444,15 +442,13 @@ describe.only('CloseCommand', async () => {
                 let signer: Signer
 
                 before(async () => {
-                    // makeSnapshot
-                    //     snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
                     signer = await hardhatUtils.impersonate(proxyOwnerAddress)
 
                     triggersData = encodeTriggerData(
                         testCdpId,
                         TriggerType.MakerStopLossToDaiV2,
                         maxCoverageDai,
-                        currentCollRatioAsPercentage + 1,
+                        currentCollRatioInBaseUnits + 1,
                     )
 
                     executionData = generateTpOrSlExecutionData(
@@ -485,14 +481,12 @@ describe.only('CloseCommand', async () => {
                 })
 
                 afterEach(async () => {
-                    // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
 
                 it('it should wipe all debt and collateral', async () => {
                     const tx = await AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -527,7 +521,6 @@ describe.only('CloseCommand', async () => {
 
                     const estimation = await AutomationExecutorInstance.estimateGas.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -539,7 +532,6 @@ describe.only('CloseCommand', async () => {
 
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
-
                         triggersData,
                         CloseCommandInstance.address,
                         triggerId,
@@ -587,7 +579,7 @@ describe.only('CloseCommand', async () => {
                     const afterBalance = await DAIInstance.balanceOf(receiverAddress)
 
                     const debt = EthersBN.from(debtAmount)
-                    const tradeSize = debt.mul(currentCollRatioAsPercentage).div(100)
+                    const tradeSize = debt.mul(currentCollRatioInBaseUnits).div(10000)
                     const valueLocked = tradeSize.sub(debt)
 
                     const valueRecovered = afterBalance.mul(1000).div(valueLocked).toNumber()
