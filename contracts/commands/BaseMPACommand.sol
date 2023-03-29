@@ -2,7 +2,7 @@
 
 /// BaseMPACommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2021-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,8 +22,7 @@ pragma solidity ^0.8.0;
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
-import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
+import { McdView, ServiceRegistry } from "../McdView.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
@@ -50,7 +49,7 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     function getVaultAndMarketInfo(
         uint256 cdpId
     )
-        public
+        internal
         view
         returns (
             uint256 collRatio,
@@ -73,19 +72,19 @@ abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
         return debt;
     }
 
-    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) public view returns (bool) {
+    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) internal view returns (bool) {
         return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
     }
 
-    function deviationIsValid(uint256 deviation) public pure returns (bool) {
+    function deviationIsValid(uint256 deviation) internal pure returns (bool) {
         return deviation >= MIN_ALLOWED_DEVIATION;
     }
 
-    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
+    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) internal pure {
         require(triggerType == expectedTriggerType, "base-mpa-command/type-not-supported");
     }
 
-    function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
+    function validateSelector(bytes4 expectedSelector, bytes memory executionData) internal pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
         require(selector == expectedSelector, "base-mpa-command/invalid-selector");
     }

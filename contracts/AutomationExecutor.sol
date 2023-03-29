@@ -132,7 +132,7 @@ contract AutomationExecutor {
     function getTick(
         address uniswapV3Pool,
         uint32 twapInterval
-    ) public view returns (uint160 sqrtPriceX96) {
+    ) private view returns (uint160 sqrtPriceX96) {
         if (twapInterval == 0) {
             // return the current price if twapInterval == 0
             (sqrtPriceX96, , , , , , ) = IUniswapV3Pool(uniswapV3Pool).slot0();

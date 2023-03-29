@@ -2,7 +2,7 @@
 
 /// AutoTakeProfitCommand.sol
 
-// Copyright (C) 2022-2022 Oazo Apps Limited
+// Copyright (C) 2022-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -18,14 +18,14 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity ^0.8.0;
-import { ManagerLike } from "../interfaces/ManagerLike.sol";
 
 import { MPALike } from "../interfaces/MPALike.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
-import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 
-/// @title An Auto Take Profit Command for the AutomationBot
+/**
+ * @title Auto Take Profit (Maker) Command for the AutomationBot
+ */
 contract AutoTakeProfitCommand is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
@@ -38,24 +38,23 @@ contract AutoTakeProfitCommand is BaseMPACommand {
 
     function decode(
         bytes memory triggerData
-    ) public pure returns (AutoTakeProfitTriggerData memory) {
+    ) private pure returns (AutoTakeProfitTriggerData memory) {
         return abi.decode(triggerData, (AutoTakeProfitTriggerData));
     }
 
-    /// @notice Returns the correctness of the vault state post execution of the command.
-    /// @param triggerData trigger data - AutoTakeProfitTriggerData
-    /// @return Correctness of the trigger execution
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
-        McdView viewerContract = McdView(mcdView);
-        (uint256 collateral, uint256 debt) = viewerContract.getVaultInfo(trigger.cdpId);
+        (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(trigger.cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
-    /// @notice Checks the validity of the trigger data when the trigger is executed
-    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
-    /// @return Correctness of the trigger data during execution
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
         AutoTakeProfitTriggerData memory trigger = decode(triggerData);
 
@@ -73,9 +72,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             nextPrice >= trigger.executionPrice;
     }
 
-    /// @notice Checks the validity of the trigger data when the trigger is created
-    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
-    /// @return Correctness of the trigger data
+    /**
+     *  @inheritdoc ICommand
+     */
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
@@ -91,9 +90,9 @@ contract AutoTakeProfitCommand is BaseMPACommand {
             (trigger.triggerType == 7 || trigger.triggerType == 8);
     }
 
-    /// @notice Executes the trigger
-    /// @param executionData Execution data from the Automation Worker
-    /// @param triggerData  Encoded AutoTakeProfitTriggerData struct
+    /**
+     *  @inheritdoc ICommand
+     */
     function execute(
         bytes calldata executionData,
         bytes memory triggerData

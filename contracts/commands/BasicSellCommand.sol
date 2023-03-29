@@ -2,7 +2,7 @@
 
 /// BasicSellCommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2021-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -22,10 +22,12 @@ import { MPALike } from "../interfaces/MPALike.sol";
 import { VatLike } from "../interfaces/VatLike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
-import { McdView } from "../McdView.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 
+/**
+ * @title Basic Sell - Auto Sell - (Maker) Command for the AutomationBot
+ */
 contract BasicSellCommand is BaseMPACommand {
     SpotterLike public immutable spot;
     VatLike public immutable vat;
@@ -47,10 +49,13 @@ contract BasicSellCommand is BaseMPACommand {
         vat = VatLike(_serviceRegistry.getRegisteredService(MCD_VAT_KEY));
     }
 
-    function decode(bytes memory triggerData) public pure returns (BasicSellTriggerData memory) {
+    function decode(bytes memory triggerData) private pure returns (BasicSellTriggerData memory) {
         return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
@@ -64,6 +69,9 @@ contract BasicSellCommand is BaseMPACommand {
             deviationIsValid(trigger.deviation);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionLegal(bytes memory triggerData) external view returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
@@ -87,6 +95,9 @@ contract BasicSellCommand is BaseMPACommand {
             validBaseFeeOrNearLiquidation;
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function execute(bytes calldata executionData, bytes memory triggerData) external nonReentrant {
         BasicSellTriggerData memory trigger = decode(triggerData);
 
@@ -96,6 +107,9 @@ contract BasicSellCommand is BaseMPACommand {
         executeMPAMethod(executionData);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicSellTriggerData memory trigger = decode(triggerData);
 

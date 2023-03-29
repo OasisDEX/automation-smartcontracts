@@ -2,7 +2,7 @@
 
 /// CloseCommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2021-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -17,34 +17,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
-import "../interfaces/ICommand.sol";
-import "../interfaces/MPALike.sol";
-import "../McdView.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-contract CloseCommand is ICommand, ReentrancyGuard {
-    McdView public immutable mcdView;
-    ManagerLike public immutable manager;
-    address public immutable mpaAddress;
+import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
+import { ServiceRegistry } from "../ServiceRegistry.sol";
+import { MPALike } from "../interfaces/MPALike.sol";
 
-    string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
-    string private constant MCD_VIEW_KEY = "MCD_VIEW";
-    string private constant MPA_KEY = "MULTIPLY_PROXY_ACTIONS";
-
-    constructor(address _serviceRegistry) {
-        mcdView = McdView(ServiceRegistry(_serviceRegistry).getRegisteredService(MCD_VIEW_KEY));
-        manager = ManagerLike(
-            ServiceRegistry(_serviceRegistry).getRegisteredService(CDP_MANAGER_KEY)
-        );
-        mpaAddress = ServiceRegistry(_serviceRegistry).getRegisteredService(MPA_KEY);
+/**
+ * @title Close - Stop Loss (Maker) Command for the AutomationBot
+ */
+contract CloseCommand is BaseMPACommand {
+    struct CloseCommandTriggerData {
+        uint256 cdpId;
+        uint16 triggerType;
+        uint256 execCollRatio;
     }
 
+    constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
+
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         (uint256 cdpId, , ) = abi.decode(triggerData, (uint256, uint16, uint256));
         (uint256 collateral, uint256 debt) = mcdView.getVaultInfo(cdpId);
         return !(collateral > 0 || debt > 0);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
         (uint256 cdpId, , uint256 slLevel) = abi.decode(triggerData, (uint256, uint16, uint256));
 
@@ -57,30 +58,29 @@ contract CloseCommand is ICommand, ReentrancyGuard {
         return vaultNotEmpty && collRatio <= slLevel * 10 ** 16;
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function execute(
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        (, uint16 triggerType, ) = abi.decode(triggerData, (uint256, uint16, uint256));
+        CloseCommandTriggerData memory trigger = abi.decode(triggerData, (CloseCommandTriggerData));
 
-        bytes4 prefix = abi.decode(executionData, (bytes4));
-        bytes4 expectedSelector;
+        if (trigger.triggerType == 1) {
+            validateSelector(MPALike.closeVaultExitCollateral.selector, executionData);
+        } else if (trigger.triggerType == 2) {
+            validateSelector(MPALike.closeVaultExitDai.selector, executionData);
+        } else revert("close-command/unsupported-trigger-type");
 
-        if (triggerType == 1) {
-            expectedSelector = MPALike.closeVaultExitCollateral.selector;
-        } else if (triggerType == 2) {
-            expectedSelector = MPALike.closeVaultExitDai.selector;
-        } else revert("unsupported-triggerType");
-
-        require(prefix == expectedSelector, "wrong-payload");
-        //since all global values in this contract are either const or immutable, this delegate call do not break any storage
-        //this is simplest approach, most similar to way we currently call dsProxy
-        // solhint-disable-next-line avoid-low-level-calls
         (bool status, ) = mpaAddress.delegatecall(executionData);
 
-        require(status, "execution failed");
+        require(status, "close-command/execution-failed");
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData

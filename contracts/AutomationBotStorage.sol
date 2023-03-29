@@ -38,7 +38,7 @@ contract AutomationBotStorage {
 
     mapping(uint256 => TriggerRecord) public activeTriggers;
 
-    Counters public counter;
+    Counters private counter;
 
     ServiceRegistry public immutable serviceRegistry;
 

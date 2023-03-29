@@ -2,7 +2,7 @@
 
 /// BasicBuyCommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2021-2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -19,14 +19,16 @@
 pragma solidity ^0.8.0;
 
 import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
 import { McdView } from "../McdView.sol";
-import { BaseMPACommand } from "./BaseMPACommand.sol";
+import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 
+/**
+ * @title Basic Buy - Auto Buy - (Maker) Command for the AutomationBot
+ */
 contract BasicBuyCommand is BaseMPACommand {
     SpotterLike public immutable spot;
 
@@ -47,10 +49,13 @@ contract BasicBuyCommand is BaseMPACommand {
         spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
     }
 
-    function decode(bytes memory triggerData) public pure returns (BasicBuyTriggerData memory) {
+    function decode(bytes memory triggerData) private pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
@@ -70,6 +75,9 @@ contract BasicBuyCommand is BaseMPACommand {
             deviationIsValid(trigger.deviation);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionLegal(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
@@ -91,6 +99,9 @@ contract BasicBuyCommand is BaseMPACommand {
             baseFeeIsValid(trigger.maxBaseFeeInGwei);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function execute(bytes calldata executionData, bytes memory triggerData) external nonReentrant {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
@@ -100,6 +111,9 @@ contract BasicBuyCommand is BaseMPACommand {
         executeMPAMethod(executionData);
     }
 
+    /**
+     *  @inheritdoc ICommand
+     */
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
         BasicBuyTriggerData memory trigger = decode(triggerData);
 
