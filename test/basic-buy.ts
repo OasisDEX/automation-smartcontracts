@@ -304,8 +304,8 @@ describe('MakerBasicBuyCommandV2', () => {
         it('executes the trigger', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
@@ -314,8 +314,8 @@ describe('MakerBasicBuyCommandV2', () => {
         it('clears the trigger if `continuous` is set to false', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
@@ -337,8 +337,8 @@ describe('MakerBasicBuyCommandV2', () => {
         it('keeps the trigger if `continuous` is set to true', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
             const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
