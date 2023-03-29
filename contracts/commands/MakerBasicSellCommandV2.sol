@@ -28,7 +28,7 @@ import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 /**
  * @title Basic Sell - Auto Sell - (Maker) Command for the AutomationBot
  */
-contract BasicSellCommand is BaseMPACommand {
+contract MakerBasicSellCommandV2 is BaseMPACommand {
     SpotterLike public immutable spot;
     VatLike public immutable vat;
 

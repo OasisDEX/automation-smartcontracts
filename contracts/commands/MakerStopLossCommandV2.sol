@@ -25,7 +25,7 @@ import { MPALike } from "../interfaces/MPALike.sol";
 /**
  * @title Close - Stop Loss (Maker) Command for the AutomationBot
  */
-contract CloseCommand is BaseMPACommand {
+contract MakerStopLossCommandV2 is BaseMPACommand {
     struct CloseCommandTriggerData {
         uint256 cdpId;
         uint16 triggerType;

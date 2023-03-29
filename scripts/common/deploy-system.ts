@@ -4,17 +4,17 @@ import {
     AutomationBot,
     ConstantMultipleValidator,
     AutomationExecutor,
-    BasicBuyCommand,
-    BasicSellCommand,
-    CloseCommand,
+    MakerBasicBuyCommandV2,
+    MakerBasicSellCommandV2,
+    MakerStopLossCommandV2,
     McdUtils,
     McdView,
     ServiceRegistry,
     MakerAdapter,
     AutomationBotStorage,
-    AutoTakeProfitCommand,
+    MakerAutoTakeProfitCommandV2,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    AaveStopLossCommandV2,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -38,11 +38,11 @@ export interface DeployedSystem {
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     mcdView: McdView
-    closeCommand?: CloseCommand
-    autoTakeProfitCommand?: AutoTakeProfitCommand
-    aaveStoplLossCommand?: AaveStoplLossCommand
-    basicBuy?: BasicBuyCommand
-    basicSell?: BasicSellCommand
+    closeCommand?: MakerStopLossCommandV2
+    autoTakeProfitCommand?: MakerAutoTakeProfitCommandV2
+    aaveStoplLossCommand?: AaveStopLossCommandV2
+    basicBuy?: MakerBasicBuyCommandV2
+    basicSell?: MakerBasicSellCommandV2
     makerAdapter?: MakerAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
@@ -86,11 +86,11 @@ export async function deploySystem({
     logDebug = false,
     addressOverrides = {},
 }: DeploySystemArgs): Promise<DeployedSystem> {
-    let CloseCommandInstance: CloseCommand | undefined
-    let BasicBuyInstance: BasicBuyCommand | undefined
-    let BasicSellInstance: BasicSellCommand | undefined
-    let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
-    let AaveStoplLossInstance: AaveStoplLossCommand | undefined
+    let CloseCommandInstance: MakerStopLossCommandV2 | undefined
+    let BasicBuyInstance: MakerBasicBuyCommandV2 | undefined
+    let BasicSellInstance: MakerBasicSellCommandV2 | undefined
+    let AutoTakeProfitInstance: MakerAutoTakeProfitCommandV2 | undefined
+    let AaveStoplLossInstance: AaveStopLossCommandV2 | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -200,31 +200,32 @@ export async function deploySystem({
     ])
 
     if (addCommands) {
-        if (logDebug) console.log('Deploying CloseCommand....')
-        CloseCommandInstance = (await utils.deployContract(ethers.getContractFactory('CloseCommand'), [
+        if (logDebug) console.log('Deploying MakerStopLossCommandV2....')
+        CloseCommandInstance = (await utils.deployContract(ethers.getContractFactory('MakerStopLossCommandV2'), [
             ServiceRegistryInstance.address,
-        ])) as CloseCommand
+        ])) as MakerStopLossCommandV2
 
         if (logDebug) console.log('Deploying BasicBuy....')
-        BasicBuyInstance = (await utils.deployContract(ethers.getContractFactory('BasicBuyCommand'), [
+        BasicBuyInstance = (await utils.deployContract(ethers.getContractFactory('MakerBasicBuyCommandV2'), [
             ServiceRegistryInstance.address,
-        ])) as BasicBuyCommand
+        ])) as MakerBasicBuyCommandV2
 
         if (logDebug) console.log('Deploying BasicSell....')
-        BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('BasicSellCommand'), [
+        BasicSellInstance = (await utils.deployContract(ethers.getContractFactory('MakerBasicSellCommandV2'), [
             ServiceRegistryInstance.address,
-        ])) as BasicSellCommand
+        ])) as MakerBasicSellCommandV2
 
         if (logDebug) console.log('Deploying AutoTakeProfit....')
-        AutoTakeProfitInstance = (await utils.deployContract(ethers.getContractFactory('AutoTakeProfitCommand'), [
-            ServiceRegistryInstance.address,
-        ])) as AutoTakeProfitCommand
+        AutoTakeProfitInstance = (await utils.deployContract(
+            ethers.getContractFactory('MakerAutoTakeProfitCommandV2'),
+            [ServiceRegistryInstance.address],
+        )) as MakerAutoTakeProfitCommandV2
 
-        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStoplLossCommand'), [
+        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStopLossCommandV2'), [
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
             addresses.SWAP,
-        ])) as AaveStoplLossCommand
+        ])) as AaveStopLossCommandV2
         system = {
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
@@ -277,11 +278,11 @@ export async function deploySystem({
         console.log(`AaveProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
-            console.log(`CloseCommand deployed to: ${CloseCommandInstance!.address}`)
-            console.log(`BasicBuyCommand deployed to: ${BasicBuyInstance!.address}`)
-            console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
-            console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
-            console.log(`AaveStoplLossCommanddeployed to: ${AaveStoplLossInstance!.address}`)
+            console.log(`MakerStopLossCommandV2 deployed to: ${CloseCommandInstance!.address}`)
+            console.log(`MakerBasicBuyCommandV2 deployed to: ${BasicBuyInstance!.address}`)
+            console.log(`MakerBasicSellCommandV2 deployed to: ${BasicSellInstance!.address}`)
+            console.log(`MakerAutoTakeProfitCommandV2 deployed to: ${AutoTakeProfitInstance!.address}`)
+            console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
             console.log(`MakerAdapter deployed to: ${MakerAdapterInstance!.address}`)
             console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
             console.log(`DPMAdapter deployed to: ${DPMAdapterInstance!.address}`)
@@ -370,7 +371,7 @@ export async function configureRegistryCommands(
         if (logDebug) console.log('Adding CLOSE_TO_DAI command to ServiceRegistry....')
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerStopLossToDaiV2), system.closeCommand.address)
 
-        if (logDebug) console.log('Whitelisting CloseCommand on McdView....')
+        if (logDebug) console.log('Whitelisting MakerStopLossCommandV2 on McdView....')
         await ensureMcdViewWhitelist(system.closeCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
@@ -390,7 +391,7 @@ export async function configureRegistryCommands(
             system.autoTakeProfitCommand.address,
         )
 
-        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        if (logDebug) console.log('Whitelisting MakerAutoTakeProfitCommandV2 on McdView....')
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
@@ -410,7 +411,7 @@ export async function configureRegistryCommands(
             system.autoTakeProfitCommand.address,
         )
 
-        if (logDebug) console.log('Whitelisting AutoTakeProfitCommand on McdView....')
+        if (logDebug) console.log('Whitelisting MakerAutoTakeProfitCommandV2 on McdView....')
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
     }
 
@@ -418,7 +419,7 @@ export async function configureRegistryCommands(
         if (logDebug) console.log(`Adding BASIC_BUY command to ServiceRegistry....`)
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerBasicBuyV2), system.basicBuy.address)
 
-        if (logDebug) console.log('Whitelisting BasicBuyCommand on McdView....')
+        if (logDebug) console.log('Whitelisting MakerBasicBuyCommandV2 on McdView....')
         await ensureMcdViewWhitelist(system.basicBuy.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
@@ -430,7 +431,7 @@ export async function configureRegistryCommands(
         if (logDebug) console.log(`Adding BASIC_SELL command to ServiceRegistry....`)
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.MakerBasicSellV2), system.basicSell.address)
 
-        if (logDebug) console.log('Whitelisting BasicSellCommand on McdView....')
+        if (logDebug) console.log('Whitelisting MakerBasicSellCommandV2 on McdView....')
         await ensureMcdViewWhitelist(system.basicSell.address)
 
         if (logDebug) console.log('Ensuring Adapter...')

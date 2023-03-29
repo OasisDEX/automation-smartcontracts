@@ -29,7 +29,7 @@ import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 /**
  * @title Basic Buy - Auto Buy - (Maker) Command for the AutomationBot
  */
-contract BasicBuyCommand is BaseMPACommand {
+contract MakerBasicBuyCommandV2 is BaseMPACommand {
     SpotterLike public immutable spot;
 
     using SafeMath for uint256;
