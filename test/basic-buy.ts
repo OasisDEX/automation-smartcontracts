@@ -175,11 +175,14 @@ describe('MakerBasicBuyCommandV2', () => {
 
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
-        executionRatio = toRatio(1.52)
-        targetRatio = toRatio(1.51)
+
+        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+        const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        executionRatio = toRatio(Math.ceil(ratioAtNext * 100 + 1) / 100)
+        targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
         incorrectExecutionRatio = toRatio(1.49)
         incorrectTargetRatio = toRatio(1.45)
-        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
     })
 
     beforeEach(async () => {
@@ -301,7 +304,6 @@ describe('MakerBasicBuyCommandV2', () => {
         it('executes the trigger', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
             const executionRatio = toRatio(ratioAtNext - 0.01)
             const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
@@ -312,7 +314,6 @@ describe('MakerBasicBuyCommandV2', () => {
         it('clears the trigger if `continuous` is set to false', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
             const executionRatio = toRatio(ratioAtNext - 0.01)
             const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
@@ -336,7 +337,6 @@ describe('MakerBasicBuyCommandV2', () => {
         it('keeps the trigger if `continuous` is set to true', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
             const executionRatio = toRatio(ratioAtNext - 0.01)
             const targetRatio = toRatio(ratioAtNext - 0.03)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
