@@ -18,7 +18,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe.only('AaveStoplLossCommand', async () => {
+describe('AaveStoplLossCommand', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)

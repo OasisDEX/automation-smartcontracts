@@ -202,7 +202,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -283,7 +283,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -307,7 +307,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         hre.ethers.utils.parseUnits('100', 18).toString(), //pay 100 DAI
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -341,7 +341,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
                     const tx = AutomationExecutorInstance.execute(
@@ -352,7 +352,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
@@ -454,7 +454,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -548,7 +548,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
                     const receipt = await tx.wait()
@@ -578,7 +578,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
@@ -590,7 +590,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                         { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
                     )
@@ -627,7 +627,7 @@ describe('AutoTakeProfitCommmand', async () => {
                         triggerId,
                         0,
                         0,
-                        185000,
+                        188000,
                         hardhatUtils.addresses.DAI,
                     )
 
