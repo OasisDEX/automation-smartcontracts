@@ -43,6 +43,17 @@ contract AutoTakeProfitCommand is BaseMPACommand {
         return abi.decode(triggerData, (AutoTakeProfitTriggerData));
     }
 
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        AutoTakeProfitTriggerData memory stopLossTriggerData = abi.decode(
+            triggerData,
+            (AutoTakeProfitTriggerData)
+        );
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return stopLossTriggerData.triggerType;
+    }
+
     /**
      *  @inheritdoc ICommand
      */

@@ -79,35 +79,4 @@ contract AutomationBotStorage {
         counter.triggersCounter++;
         activeTriggers[counter.triggersCounter] = record;
     }
-
-    function executePermit(
-        bytes memory triggerData,
-        address target,
-        address adapter,
-        bool allowance
-    ) external auth(msg.sender) {
-        (bool status, ) = adapter.delegatecall(
-            abi.encodeWithSelector(ISecurityAdapter.permit.selector, triggerData, target, allowance)
-        );
-        require(status, "bot-storage/permit-failed");
-    }
-
-    function executeCoverage(
-        bytes memory triggerData,
-        address receiver,
-        address adapter,
-        address coverageToken,
-        uint256 coverageAmount
-    ) external auth(msg.sender) {
-        (bool status, ) = adapter.delegatecall(
-            abi.encodeWithSelector(
-                IExecutableAdapter.getCoverage.selector,
-                triggerData,
-                receiver,
-                coverageToken,
-                coverageAmount
-            )
-        );
-        require(status, "bot-storage/failed-to-draw-coverage");
-    }
 }

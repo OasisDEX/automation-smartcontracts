@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity 0.8.13;
+pragma solidity ^0.8.0;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
@@ -76,6 +76,17 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
     ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
         weth = serviceRegistry.getRegisteredService(WETH);
         bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
+    }
+
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        StopLossTriggerData memory stopLossTriggerData = abi.decode(
+            triggerData,
+            (StopLossTriggerData)
+        );
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return stopLossTriggerData.triggerType;
     }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {

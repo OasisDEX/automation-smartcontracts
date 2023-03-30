@@ -21,6 +21,7 @@ pragma solidity ^0.8.0;
 import "./interfaces/ICommand.sol";
 import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
+import "./commands/BaseMPACommand.sol";
 import "./AutomationBotStorage.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -235,11 +236,20 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     abi.encodeWithSelector(
                         adapter.permit.selector,
                         triggerData[i],
-                        address(automationBotStorage),
+                        address(adapter),
                         true
                     )
                 );
                 require(status, "bot/permit-failed-add");
+                (status, ) = address(adapter).delegatecall(
+                    abi.encodeWithSelector(
+                        adapter.permit.selector,
+                        triggerData[i],
+                        address(getAdapterAddress(getCommandAddress(triggerTypes[i]), true)),
+                        true
+                    )
+                );
+                require(status, "bot/permit-failed-add-executable");
                 emit ApprovalGranted(triggerData[i], address(automationBotStorage));
             }
 
@@ -307,7 +317,17 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(automationBotStorage),
+                    address(adapter),
+                    false
+                )
+            );
+
+            address executeAdaapter = getAdapterAddress(commandAddress, true);
+            (status, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(
+                    adapter.permit.selector,
+                    triggerData[0],
+                    address(executeAdaapter),
                     false
                 )
             );
@@ -338,16 +358,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         IExecutableAdapter executableAdapter = IExecutableAdapter(
             getAdapterAddress(commandAddress, true)
         );
-        automationBotStorage.executeCoverage(
-            triggerData,
-            msg.sender,
-            address(executableAdapter),
-            coverageToken,
-            coverageAmount
-        );
+        executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {
-            automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
+            adapter.permit(triggerData, commandAddress, true);
         }
         {
             command.execute(executionData, triggerData); //command must be whitelisted
@@ -358,12 +372,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             }
         }
         {
-            automationBotStorage.executePermit(
-                triggerData,
-                commandAddress,
-                address(adapter),
-                false
-            );
+            adapter.permit(triggerData, commandAddress, false);
             require(command.isExecutionCorrect(triggerData), "bot/trigger-execution-wrong");
         }
 

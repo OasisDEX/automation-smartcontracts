@@ -325,7 +325,7 @@ describe('AaveStoplLossCommand', async () => {
                         hardhatUtils.addresses.USDC,
                         { gasLimit: 3000000 },
                     )
-                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
+                    await expect(tx).to.be.revertedWith('aave-adapter/coverage-too-high')
                 })
                 it('should NOT execute trigger if funds receiver is not the owner', async () => {
                     const tx = automationExecutorInstance.execute(

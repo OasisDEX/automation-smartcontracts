@@ -15,6 +15,8 @@ interface ICommand {
         bytes memory triggerData
     ) external view returns (bool);
 
+    function getTriggerType(bytes calldata triggerData) external view returns (uint16);
+
     /**
      * @notice Returns the correctness of the vault state post execution of the command.
      * @param triggerData Encoded trigger data struct

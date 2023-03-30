@@ -30,11 +30,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
     address private immutable self;
 
-    modifier onlyDelegate() {
-        require(address(this) != self, "maker-adapter/only-delegate");
-        _;
-    }
-
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
         self = address(this);
         dai = _dai;
@@ -62,7 +57,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
+    function permit(bytes memory triggerData, address target, bool allowance) public {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions

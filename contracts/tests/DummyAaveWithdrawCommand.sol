@@ -39,6 +39,13 @@ contract DummyAaveWithdrawCommand is ICommand {
         token = _token;
     }
 
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return 999;
+    }
+
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         (address proxy, , uint256 amount, uint256 interval) = abi.decode(
             triggerData,

@@ -55,6 +55,14 @@ contract BasicBuyCommand is BaseMPACommand {
         return abi.decode(triggerData, (BasicBuyTriggerData));
     }
 
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        BasicBuyTriggerData memory bbTriggerData = abi.decode(triggerData, (BasicBuyTriggerData));
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return bbTriggerData.triggerType;
+    }
+
     /**
      *  @inheritdoc ICommand
      */
