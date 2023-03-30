@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// BasicBuyCommand.sol
+/// BasicSellCommand.sol
 
 // Copyright (C) 2021-2023 Oazo Apps Limited
 
@@ -18,30 +18,29 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import { SafeMath } from "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import { MPALike } from "../interfaces/MPALike.sol";
+import { VatLike } from "../interfaces/VatLike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
 import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 
 /**
- * @title Basic Buy - Auto Buy - (Maker) Command for the AutomationBot
+ * @title Basic Sell - Auto Sell - (Maker) Command for the AutomationBot
  */
-contract BasicBuyCommand is BaseMPACommand {
+contract MakerBasicSellCommandV2 is BaseMPACommand {
     SpotterLike public immutable spot;
+    VatLike public immutable vat;
 
-    using SafeMath for uint256;
     using RatioUtils for uint256;
 
-    struct BasicBuyTriggerData {
+    struct BasicSellTriggerData {
         uint256 cdpId;
         uint16 triggerType;
         uint256 maxCoverage;
         uint256 execCollRatio;
         uint256 targetCollRatio;
-        uint256 maxBuyPrice;
+        uint256 minSellPrice;
         bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
@@ -49,18 +48,19 @@ contract BasicBuyCommand is BaseMPACommand {
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
         spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
-    }
-
-    function decode(bytes memory triggerData) private pure returns (BasicBuyTriggerData memory) {
-        return abi.decode(triggerData, (BasicBuyTriggerData));
+        vat = VatLike(_serviceRegistry.getRegisteredService(MCD_VAT_KEY));
     }
 
     function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
-        BasicBuyTriggerData memory bbTriggerData = abi.decode(triggerData, (BasicBuyTriggerData));
+        BasicSellTriggerData memory bsTriggerData = abi.decode(triggerData, (BasicSellTriggerData));
         if (!this.isTriggerDataValid(false, triggerData)) {
             return 0;
         }
-        return bbTriggerData.triggerType;
+        return bsTriggerData.triggerType;
+    }
+
+    function decode(bytes memory triggerData) private pure returns (BasicSellTriggerData memory) {
+        return abi.decode(triggerData, (BasicSellTriggerData));
     }
 
     /**
@@ -69,19 +69,13 @@ contract BasicBuyCommand is BaseMPACommand {
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external view returns (bool) {
-        BasicBuyTriggerData memory trigger = decode(triggerData);
+    ) external pure returns (bool) {
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        bytes32 ilk = manager.ilks(trigger.cdpId);
-        (, uint256 liquidationRatio) = spot.ilks(ilk);
-
-        (uint256 lowerTarget, uint256 upperTarget) = trigger.targetCollRatio.bounds(
-            trigger.deviation
-        );
+        (uint256 lowerTarget, ) = trigger.targetCollRatio.bounds(trigger.deviation);
         return
-            trigger.triggerType == 103 &&
-            trigger.execCollRatio > upperTarget &&
-            lowerTarget.ray() > liquidationRatio &&
+            trigger.triggerType == 104 &&
+            trigger.execCollRatio <= lowerTarget &&
             deviationIsValid(trigger.deviation);
     }
 
@@ -89,34 +83,36 @@ contract BasicBuyCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionLegal(bytes memory triggerData) external view returns (bool) {
-        BasicBuyTriggerData memory trigger = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        (
-            ,
-            uint256 nextCollRatio,
-            uint256 currPrice,
-            uint256 nextPrice,
-            bytes32 ilk
-        ) = getVaultAndMarketInfo(trigger.cdpId);
+        (, uint256 nextCollRatio, , uint256 nextPrice, bytes32 ilk) = getVaultAndMarketInfo(
+            trigger.cdpId
+        );
+        uint256 dustLimit = getDustLimit(ilk);
+        uint256 debt = getVaultDebt(trigger.cdpId);
+        uint256 wad = RatioUtils.WAD;
+        (, uint256 upperTarget) = trigger.targetCollRatio.bounds(trigger.deviation);
+        uint256 futureDebt = (debt * nextCollRatio - debt * wad) / (upperTarget.wad() - wad);
 
         (, uint256 liquidationRatio) = spot.ilks(ilk);
+        bool validBaseFeeOrNearLiquidation = baseFeeIsValid(trigger.maxBaseFeeInGwei) ||
+            nextCollRatio <= liquidationRatio.rayToWad();
 
         return
-            nextCollRatio >= trigger.execCollRatio.wad() &&
-            nextPrice <= trigger.maxBuyPrice &&
-            trigger.targetCollRatio.wad().mul(currPrice).div(nextPrice) >
-            liquidationRatio.rayToWad() &&
-            baseFeeIsValid(trigger.maxBaseFeeInGwei);
+            trigger.execCollRatio.wad() > nextCollRatio &&
+            trigger.minSellPrice < nextPrice &&
+            futureDebt > dustLimit &&
+            validBaseFeeOrNearLiquidation;
     }
 
     /**
      *  @inheritdoc ICommand
      */
     function execute(bytes calldata executionData, bytes memory triggerData) external nonReentrant {
-        BasicBuyTriggerData memory trigger = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
-        validateTriggerType(trigger.triggerType, 103);
-        validateSelector(MPALike.increaseMultiple.selector, executionData);
+        validateTriggerType(trigger.triggerType, 104);
+        validateSelector(MPALike.decreaseMultiple.selector, executionData);
 
         executeMPAMethod(executionData);
     }
@@ -125,7 +121,7 @@ contract BasicBuyCommand is BaseMPACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool) {
-        BasicBuyTriggerData memory trigger = decode(triggerData);
+        BasicSellTriggerData memory trigger = decode(triggerData);
 
         uint256 nextCollRatio = mcdView.getRatio(trigger.cdpId, true);
 
@@ -133,6 +129,11 @@ contract BasicBuyCommand is BaseMPACommand {
             trigger.deviation
         );
 
-        return nextCollRatio <= upperTarget.wad() && nextCollRatio >= lowerTarget.wad();
+        return nextCollRatio >= lowerTarget.wad() && nextCollRatio <= upperTarget.wad();
+    }
+
+    function getDustLimit(bytes32 ilk) internal view returns (uint256) {
+        (, , , , uint256 radDust) = vat.ilks(ilk);
+        return radDust.radToWad();
     }
 }

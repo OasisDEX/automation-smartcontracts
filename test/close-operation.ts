@@ -1,7 +1,7 @@
 import hre from 'hardhat'
 import { BigNumber as EthersBN, BytesLike, Contract, Signer, utils } from 'ethers'
 import { expect } from 'chai'
-import { AutomationBot, DsProxyLike, CloseCommand, McdView, MPALike, AutomationExecutor } from '../typechain'
+import { AutomationBot, DsProxyLike, MakerStopLossCommandV2, McdView, MPALike, AutomationExecutor } from '../typechain'
 import {
     getEvents,
     HardhatUtils,
@@ -17,14 +17,14 @@ const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
 // Block dependent test, works for 13998517
 
-describe('CloseCommand', async () => {
+describe('MakerStopLossCommandV2', async () => {
     /* this can be anabled only after whitelisting us on OSM */
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
-    let CloseCommandInstance: CloseCommand
+    let CloseCommandInstance: MakerStopLossCommandV2
     let McdViewInstance: McdView
     let DAIInstance: Contract
     let MPAInstance: MPALike
@@ -46,7 +46,7 @@ describe('CloseCommand', async () => {
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
-        CloseCommandInstance = system.closeCommand as CloseCommand
+        CloseCommandInstance = system.closeCommand as MakerStopLossCommandV2
         McdViewInstance = system.mcdView
         await McdViewInstance.approve(executorAddress, true)
 
@@ -274,7 +274,7 @@ describe('CloseCommand', async () => {
                     await expect(tx).to.be.revertedWith('maker-adapter/coverage-too-high')
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor ', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),
@@ -509,7 +509,7 @@ describe('CloseCommand', async () => {
                     expect(collateral.toNumber()).to.be.equal(0)
                 })
 
-                it('should refund transaction costs if sufficient balance available on AutomationExecutor ', async () => {
+                it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {
                     await hre.ethers.provider.getSigner(2).sendTransaction({
                         to: AutomationExecutorInstance.address,
                         value: EthersBN.from(10).pow(18),

@@ -479,7 +479,7 @@ describe('AutomationBot', async () => {
                 const registrySigner = await hardhatUtils.hre.ethers.getSigner(registryOwner)
                 await impersonateAccount(registryOwner)
                 const newClose = await hardhatUtils.deployContract(
-                    hardhatUtils.hre.ethers.getContractFactory('CloseCommand'),
+                    hardhatUtils.hre.ethers.getContractFactory('MakerStopLossCommandV2'),
                     [registryAddress],
                 )
                 const hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)

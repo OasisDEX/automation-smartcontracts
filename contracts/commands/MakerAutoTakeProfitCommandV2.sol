@@ -26,7 +26,7 @@ import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 /**
  * @title Auto Take Profit (Maker) Command for the AutomationBot
  */
-contract AutoTakeProfitCommand is BaseMPACommand {
+contract MakerAutoTakeProfitCommandV2 is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
     struct AutoTakeProfitTriggerData {

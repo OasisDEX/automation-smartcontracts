@@ -290,11 +290,11 @@ describe('ServiceRegistry', async () => {
         })
 
         it('should have fail if called with old hash', async () => {
-            const instance = trustedRegistryInstance.connect(owner);
-            await instance.addNamedService(supposedHash, await owner.getAddress());
-            await hardhatUtils.timeTravel(3000);
-            const tx = instance.addNamedService(supposedHash, await owner.getAddress());
-            await expect(tx).to.be.revertedWith('registry/service-name-used-before');
+            const instance = trustedRegistryInstance.connect(owner)
+            await instance.addNamedService(supposedHash, await owner.getAddress())
+            await hardhatUtils.timeTravel(3000)
+            const tx = instance.addNamedService(supposedHash, await owner.getAddress())
+            await expect(tx).to.be.revertedWith('registry/service-name-used-before')
         })
     })
 

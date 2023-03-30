@@ -29,7 +29,7 @@ let createTriggerForExecution: (
 
 let executeTrigger: (triggerId: number, targetRatio: BigNumber, triggerData: BytesLike) => Promise<ContractTransaction>
 
-describe('BasicBuyCommand', () => {
+describe('MakerBasicBuyCommandV2', () => {
     const ethAIlk = utils.formatBytes32String('ETH-A')
     const hardhatUtils = new HardhatUtils(hre)
     let executionRatio: number
@@ -175,11 +175,14 @@ describe('BasicBuyCommand', () => {
 
         const osmMom = await hre.ethers.getContractAt('OsmMomLike', hardhatUtils.addresses.OSM_MOM)
         const osm = await hre.ethers.getContractAt('OsmLike', await osmMom.osms(ethAIlk))
-        executionRatio = toRatio(1.52)
-        targetRatio = toRatio(1.51)
+
+        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
+        const rawRatio = await system.mcdView.connect(executorAddress).getRatio(testCdpId, true)
+        const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
+        executionRatio = toRatio(Math.ceil(ratioAtNext * 100 + 1) / 100)
+        targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
         incorrectExecutionRatio = toRatio(1.49)
         incorrectTargetRatio = toRatio(1.45)
-        await hardhatUtils.setBudInOSM(osm.address, system.mcdView.address)
     })
 
     beforeEach(async () => {
@@ -240,7 +243,7 @@ describe('BasicBuyCommand', () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
 
             const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool'],
                 [
                     testCdpId,
                     TriggerType.MakerStopLossToCollateralV2,
@@ -249,6 +252,7 @@ describe('BasicBuyCommand', () => {
                     targetRatio,
                     0,
                     false,
+
                 ],
             )
             await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
@@ -301,9 +305,8 @@ describe('BasicBuyCommand', () => {
         it('executes the trigger', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             await expect(executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)).not.to.be.reverted
@@ -312,9 +315,8 @@ describe('BasicBuyCommand', () => {
         it('clears the trigger if `continuous` is set to false', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, false)
 
             const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
@@ -336,9 +338,8 @@ describe('BasicBuyCommand', () => {
         it('keeps the trigger if `continuous` is set to true', async () => {
             const rawRatio = await system.mcdView.getRatio(testCdpId, true)
             const ratioAtNext = rawRatio.div('10000000000000000').toNumber() / 100
-            console.log('ratioAtNext', ratioAtNext)
-            const executionRatio = toRatio(ratioAtNext - 0.01)
-            const targetRatio = toRatio(ratioAtNext - 0.03)
+            executionRatio = toRatio(Math.ceil(ratioAtNext * 100 - 1) / 100)
+            targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
             const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)

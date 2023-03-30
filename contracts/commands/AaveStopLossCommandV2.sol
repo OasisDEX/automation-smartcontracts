@@ -62,7 +62,7 @@ interface AaveStopLoss {
     function self() external returns (address);
 }
 
-contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
+contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
     address public immutable weth;
     address public immutable bot;
 

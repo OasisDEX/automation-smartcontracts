@@ -11,7 +11,7 @@ import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const maxGweiPrice = 1000
 
-describe('BasicSellCommand', () => {
+describe('MakerBasicSellCommandV2', () => {
     let correctExecutionRatio: number
     let correctTargetRatio: number
 
@@ -263,7 +263,7 @@ describe('BasicSellCommand', () => {
             await expect(executeTrigger(triggerId, new BigNumber(correctTargetRatio), triggerData)).not.to.be.reverted
         })
 
-        it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price ', async () => {
+        it('executes the trigger if base fee is not valid but the vault will be liquidated on the next price [ @skip-on-coverage ]', async () => {
             const ratio = await system.mcdView.getRatio(testCdpId, false)
             let nextRatio = await system.mcdView.getRatio(testCdpId, true)
             const oraclePrice = await system.mcdView.getPrice(ethAIlk)
