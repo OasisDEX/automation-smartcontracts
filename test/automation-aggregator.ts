@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
 import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, ONE_INCH_V4_ROUTER } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, AutomationBotStorage, DsProxyLike, ERC20, MakerAdapter, MPALike } from '../typechain'
+import { AutomationBot, AutomationBotStorage, DPMAdapter, DsProxyLike, ERC20, MakerAdapter, MPALike } from '../typechain'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
@@ -33,6 +33,7 @@ describe('AutomationAggregatorBot', async () => {
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
     let MakerAdapterInstance: MakerAdapter
+    let DPMAdapterInstance: DPMAdapter
     let dai: ERC20
 
     let system: DeployedSystem
@@ -760,7 +761,7 @@ describe('AutomationAggregatorBot', async () => {
                 false,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
+            const status = await MakerAdapterInstance.canCall(bbTriggerData, DPMAdapterInstance.address)
             expect(status).to.equal(true)
         })
         it('should only remove approval if last param set to true - test TRUE', async () => {
@@ -773,7 +774,7 @@ describe('AutomationAggregatorBot', async () => {
                 true,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
+            const status = await MakerAdapterInstance.canCall(bbTriggerData, DPMAdapterInstance.address)
             expect(status).to.equal(false)
         })
         it('should revert if called not through delegatecall', async () => {
@@ -885,7 +886,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should return true for correct operator address', async () => {
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
 
             expect(status).to.equal(true, 'approval does exist for AutomationBotStorageInstance')
@@ -900,7 +901,7 @@ describe('AutomationAggregatorBot', async () => {
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
 
             expect(status).to.equal(false, 'approval does not exist for AutomationBotStorageInstance')

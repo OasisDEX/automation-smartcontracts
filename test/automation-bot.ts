@@ -18,6 +18,7 @@ import {
     AutomationExecutor,
     AutomationBotStorage,
     MakerAdapter,
+    DPMAdapter,
 } from '../typechain'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { TriggerType } from '@oasisdex/automation'
@@ -34,6 +35,7 @@ describe('AutomationBot', async () => {
     let AutomationBotStorageInstance: AutomationBotStorage
     let AutomationExecutorInstance: AutomationExecutor
     let MakerAdapterInstance: MakerAdapter
+    let DPMAdapterInstance: DPMAdapter
     let DummyCommandInstance: DummyCommand
     let DssProxyActions: Contract
     let ownerProxy: DsProxyLike
@@ -342,7 +344,7 @@ describe('AutomationBot', async () => {
         it('should return true for correct operator address', async () => {
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(true, 'approval do not exist for AutomationBot')
         })
@@ -358,7 +360,7 @@ describe('AutomationBot', async () => {
 
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
                 triggerData,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
                 false,
             ])
 
@@ -366,35 +368,30 @@ describe('AutomationBot', async () => {
         })
 
         it('allows to add approval to cdp which did not have it', async () => {
-            let status = await MakerAdapterInstance.canCall(triggerData, AutomationBotStorageInstance.address)
+            let status = await MakerAdapterInstance.canCall(triggerData, DPMAdapterInstance.address)
             expect(status).to.equal(false)
 
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
                 triggerData,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
                 true,
             ])
 
             await ownerProxy.connect(owner).execute(MakerAdapterInstance.address, dataToSupply)
 
-            status = await MakerAdapterInstance.canCall(triggerData, AutomationBotStorageInstance.address)
+            status = await MakerAdapterInstance.canCall(triggerData, DPMAdapterInstance.address)
             expect(status).to.equal(true)
-        })
-
-        it('should revert if called not through delegatecall', async () => {
-            const tx = MakerAdapterInstance.permit(triggerData, AutomationBotStorageInstance.address, true)
-            await expect(tx).to.be.revertedWith('maker-adapter/only-delegate')
         })
 
         it('should revert if called not by an owner proxy', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
                 triggerData,
-                AutomationBotInstance.address,
+                DPMAdapterInstance.address,
                 true,
             ])
-            const tx = notOwnerProxy.connect(notOwner).execute(MakerAdapterInstance.address, dataToSupply)
+            const tx = notOwnerProxy.connect(notOwner).execute(DPMAdapterInstance.address, dataToSupply)
             await expect(tx).to.be.reverted
         })
         // no events from the bot - catch them from adapter or separate contract ?
@@ -435,33 +432,28 @@ describe('AutomationBot', async () => {
         })
 
         it('allows to remove approval from cdp for which it was granted', async () => {
-            let status = await MakerAdapterInstance.canCall(triggerData, AutomationBotStorageInstance.address)
+            let status = await MakerAdapterInstance.canCall(triggerData, DPMAdapterInstance.address)
             expect(status).to.equal(true)
 
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
                 triggerData,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
                 false,
             ])
 
             await ownerProxy.connect(owner).execute(MakerAdapterInstance.address, dataToSupply)
 
-            status = await MakerAdapterInstance.canCall(triggerData, AutomationBotStorageInstance.address)
+            status = await MakerAdapterInstance.canCall(triggerData, DPMAdapterInstance.address)
             expect(status).to.equal(false)
-        })
-
-        it('should revert if called not through delegatecall', async () => {
-            const tx = MakerAdapterInstance.permit(triggerData, AutomationBotStorageInstance.address, false)
-            await expect(tx).to.be.reverted
         })
 
         it('should revert if called not by an owner proxy', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
                 triggerData,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
                 false,
             ])
             const tx = notOwnerProxy.connect(notOwner).execute(MakerAdapterInstance.address, dataToSupply)
@@ -597,7 +589,7 @@ describe('AutomationBot', async () => {
 
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(true)
         })
@@ -612,7 +604,7 @@ describe('AutomationBot', async () => {
 
             let status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(true)
 
@@ -620,7 +612,7 @@ describe('AutomationBot', async () => {
 
             status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(true)
         })
@@ -635,7 +627,7 @@ describe('AutomationBot', async () => {
 
             let status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(true)
 
@@ -643,7 +635,7 @@ describe('AutomationBot', async () => {
 
             status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                DPMAdapterInstance.address,
             )
             expect(status).to.equal(false)
         })
