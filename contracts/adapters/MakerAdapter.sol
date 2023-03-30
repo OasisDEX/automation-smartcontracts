@@ -21,6 +21,7 @@ pragma solidity ^0.8.0;
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
+import "hardhat/console.sol";
 
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ManagerLike public immutable manager;
@@ -43,10 +44,15 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         (cdpId, triggerType, maxCoverage) = abi.decode(triggerData, (uint256, uint16, uint256));
     }
 
-    function canCall(bytes memory triggerData, address operator) public view returns (bool) {
+    function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
         (uint256 cdpId, , ) = decode(triggerData);
+        console.log("canCall", address(this));
+        console.log("operator", operator);
+        console.log("cdpId", cdpId);
         address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
+        result = (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
+        console.log("canCall result", result);
+        return result;
     }
 
     function canCall(
@@ -60,6 +66,10 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     function permit(bytes memory triggerData, address target, bool allowance) public {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
+
+        console.log("permit from", address(this));
+        console.log("permit target", address(target));
+        console.log("permit from - allowance", allowance);
         require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         if (allowance && !canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);

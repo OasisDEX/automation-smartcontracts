@@ -23,6 +23,7 @@ import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
 import "./commands/BaseMPACommand.sol";
 import "./AutomationBotStorage.sol";
+import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
@@ -231,25 +232,36 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
+            address executaableAdapter = getAdapterAddress(
+                getCommandAddress(triggerTypes[i]),
+                true
+            );
+
             if (i == 0) {
-                (bool status, ) = address(adapter).delegatecall(
-                    abi.encodeWithSelector(
-                        adapter.permit.selector,
-                        triggerData[i],
-                        address(adapter),
-                        true
-                    )
-                );
-                require(status, "bot/permit-failed-add");
-                (status, ) = address(adapter).delegatecall(
-                    abi.encodeWithSelector(
-                        adapter.permit.selector,
-                        triggerData[i],
-                        address(getAdapterAddress(getCommandAddress(triggerTypes[i]), true)),
-                        true
-                    )
-                );
-                require(status, "bot/permit-failed-add-executable");
+                if (!adapter.canCall(triggerData[i], address(adapter))) {
+                    (bool status, ) = address(adapter).delegatecall(
+                        abi.encodeWithSelector(
+                            adapter.permit.selector,
+                            triggerData[i],
+                            address(adapter),
+                            true
+                        )
+                    );
+                    console.log("Add permit", address(adapter));
+                    require(status, "bot/permit-failed-add");
+                }
+                if (!adapter.canCall(triggerData[i], address(executaableAdapter))) {
+                    (bool status, ) = address(adapter).delegatecall(
+                        abi.encodeWithSelector(
+                            adapter.permit.selector,
+                            triggerData[i],
+                            executaableAdapter,
+                            true
+                        )
+                    );
+                    console.log("Add permit", executaableAdapter);
+                    require(status, "bot/permit-failed-add-executable");
+                }
                 emit ApprovalGranted(triggerData[i], address(automationBotStorage));
             }
 
@@ -358,6 +370,9 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         IExecutableAdapter executableAdapter = IExecutableAdapter(
             getAdapterAddress(commandAddress, true)
         );
+
+        console.log("executableAdapter", address(executableAdapter));
+        console.log("adapter", address(adapter));
         executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {

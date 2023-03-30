@@ -271,7 +271,7 @@ describe('CloseCommand', async () => {
                         178000,
                         hardhatUtils.addresses.DAI,
                     )
-                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
+                    await expect(tx).to.be.revertedWith('maker-adapter/coverage-too-high')
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor ', async () => {
