@@ -385,48 +385,6 @@ describe('AutomationAggregatorBot', async () => {
             expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
         })
 
-        it.skip('should not create a trigger group, remove old bs and add bb in its place', async () => {
-            //TODO: why await expect(tx).to.be.reverted, looks like something that should work
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            // basic sell
-            const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                buyExecutionRatio,
-                buyTargetRatio,
-                ethers.constants.MaxUint256,
-                true,
-                50,
-                maxGweiPrice,
-            )
-            const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicSellV2,
-                maxCoverageDai,
-                sellExecutionRatio,
-                sellTargetRatio,
-                5000,
-                true,
-                50,
-                maxGweiPrice,
-            )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.MakerBasicBuyV2, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.MakerBasicSellV2, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
-                [bbTriggerData, bsTriggerData],
-                [oldBbTriggerData, oldBsTriggerData],
-                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
-            ])
-            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
-        })
         it('should successfully create a trigger group, remove old bb and old bs - add new bb and bs in their place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
@@ -616,40 +574,6 @@ describe('AutomationAggregatorBot', async () => {
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotInstance.address).to.eql(events[0].address)
-        })
-        it.skip('should successfully execute a trigger from the group', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                replacedTriggerData,
-                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
-            ])
-            const tx = await ownerProxy
-                .connect(owner)
-                .execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 2000000 })
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
-            const triggerIds = [Number(counterAfter) - 1, Number(counterAfter)]
-            skipRevert = true
-            const txExecute = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
-
-            const receiptExecute = await (await txExecute).wait()
-
-            const eventTriggerExecuted = getEvents(
-                receiptExecute,
-                AutomationBotInstance.interface.getEvent('TriggerExecuted'),
-            )
-
-            expect(eventTriggerExecuted.length).to.eq(1)
         })
     })
     describe('removeTriggers', async () => {

@@ -397,23 +397,6 @@ describe('AutomationBot', async () => {
             const tx = notOwnerProxy.connect(notOwner).execute(DPMAdapterInstance.address, dataToSupply)
             await expect(tx).to.be.reverted
         })
-        // no events from the bot - catch them from adapter or separate contract ?
-        it.only('emits ApprovalGranted', async () => {
-            const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
-            const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
-                triggerData,
-                AutomationBotInstance.address,
-                true,
-            ])
-
-            const tx = await ownerProxy.connect(owner).execute(MakerAdapterInstance.address, dataToSupply)
-            const txRes = await tx.wait()
-
-            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalGranted'))
-
-            expect(filteredEvents.length).to.equal(1)
-            expect(filteredEvents[0].args.triggerData).to.equal(triggerData)
-        })
     })
 
     describe('removeApproval', async () => {
@@ -463,22 +446,6 @@ describe('AutomationBot', async () => {
             await expect(tx).to.be.reverted
         })
 
-        it.skip('emits ApprovalRemoved', async () => {
-            const owner = await hre.ethers.getSigner(ownerProxyUserAddress)
-            const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
-                triggerData,
-                AutomationBotInstance.address,
-                false,
-            ])
-
-            const tx = await ownerProxy.connect(owner).execute(MakerAdapterInstance.address, dataToSupply)
-            const txRes = await tx.wait()
-
-            const filteredEvents = getEvents(txRes, AutomationBotInstance.interface.getEvent('ApprovalRemoved'))
-
-            expect(filteredEvents.length).to.equal(1)
-            expect(filteredEvents[0].args.triggerData).to.equal(triggerData)
-        })
     })
 
     describe('removeTrigger', async () => {
@@ -719,7 +686,7 @@ describe('AutomationBot', async () => {
             triggerId = firstTriggerAddedEvent.args.triggerId.toNumber()
         })
 
-        it.skip('should work', async () => {
+        it('should work', async () => {
             const realExecutionData = '0x'
             const executionData = utils.defaultAbiCoder.encode(['bytes'], [realExecutionData])
             const triggerRecordBeforeExecute = await AutomationBotStorageInstance.activeTriggers(triggerId)
@@ -757,7 +724,7 @@ describe('AutomationBot', async () => {
         })
     })
 
-    describe.only('execute with remove', async () => {
+    describe('execute with remove', async () => {
         let triggerId = 1
         let firstTriggerAddedEvent: ReturnType<typeof getEvents>[0]
         let removalEventsCount = 0

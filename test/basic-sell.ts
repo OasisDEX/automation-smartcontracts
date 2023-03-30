@@ -120,23 +120,6 @@ describe('BasicSellCommand', () => {
             await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
         })
 
-        it.skip('should fail if trigger type is not encoded correctly', async () => {
-            //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
-            const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool'],
-                [
-                    testCdpId,
-                    TriggerType.MakerStopLossToCollateralV2,
-                    maxCoverageDai,
-                    correctExecutionRatio,
-                    correctTargetRatio,
-                    0,
-                    false,
-                ],
-            )
-            await expect(createTrigger(triggerData, TriggerType.MakerBasicSellV2, false)).to.be.reverted
-        })
-
         it('should successfully create the trigger', async () => {
             const triggerData = encodeTriggerData(
                 testCdpId,

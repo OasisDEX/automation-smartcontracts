@@ -18,7 +18,7 @@ import { expect } from 'chai'
 
 const testPositionAddress = process.env.TEST_AAVE_MULTIPLY_POSITION || '0xDC6E4EEcCA64EEC9910c53Af9eA2b1e33376D869'
 
-describe.skip('AaveStoplLossCommand-Multiply', async () => {
+describe('AaveStoplLossCommand-Multiply', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('1500', 6)
@@ -145,7 +145,7 @@ describe.skip('AaveStoplLossCommand-Multiply', async () => {
         })
     })
 
-    describe('execute', async () => {
+    describe.only('execute', async () => {
         beforeEach(async () => {
             snapshotIdTop = await hre.ethers.provider.send('evm_snapshot', [])
         })

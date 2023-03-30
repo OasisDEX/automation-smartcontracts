@@ -247,7 +247,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                             true
                         )
                     );
-                    console.log("Add permit", address(adapter));
+                    //   console.log("Add permit", address(adapter));
                     require(status, "bot/permit-failed-add");
                 }
                 if (!adapter.canCall(triggerData[i], address(executaableAdapter))) {
@@ -259,7 +259,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                             true
                         )
                     );
-                    console.log("Add permit", executaableAdapter);
+                    //     console.log("Add permit", executaableAdapter);
                     require(status, "bot/permit-failed-add-executable");
                 }
                 emit ApprovalGranted(triggerData[i], address(automationBotStorage));
@@ -371,8 +371,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             getAdapterAddress(commandAddress, true)
         );
 
-        console.log("executableAdapter", address(executableAdapter));
-        console.log("adapter", address(adapter));
+        //   console.log("executableAdapter", address(executableAdapter));
+        //   console.log("adapter", address(adapter));
         executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {
