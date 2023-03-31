@@ -11,7 +11,6 @@ import {
     McdView,
     ServiceRegistry,
     MakerAdapter,
-    AutomationBotStorage,
     MakerAutoTakeProfitCommandV2,
     AaveProxyActions,
     AaveStopLossCommandV2,
@@ -34,7 +33,6 @@ export interface DeployedSystem {
     serviceRegistry: ServiceRegistry
     mcdUtils: McdUtils
     automationBot: AutomationBot
-    automationBotStorage: AutomationBotStorage
     constantMultipleValidator: ConstantMultipleValidator
     automationExecutor: AutomationExecutor
     mcdView: McdView
@@ -134,14 +132,9 @@ export async function deploySystem({
         addresses.MCD_JUG,
     ])
 
-    if (logDebug) console.log('Deploying AutomationBot....')
-    const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
-        ethers.getContractFactory('AutomationBotStorage'),
-        [ServiceRegistryInstance.address],
-    )
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [ServiceRegistryInstance.address, AutomationBotStorageInstance.address],
+        [ServiceRegistryInstance.address],
     )
 
     const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
@@ -178,7 +171,6 @@ export async function deploySystem({
         closeCommand: CloseCommandInstance,
         basicBuy: BasicBuyInstance,
         basicSell: BasicSellInstance,
-        automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveProxyActions: AaveProxyActionsInstance,
@@ -237,7 +229,6 @@ export async function deploySystem({
             closeCommand: CloseCommandInstance,
             basicBuy: BasicBuyInstance,
             basicSell: BasicSellInstance,
-            automationBotStorage: AutomationBotStorageInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
             aaveProxyActions: AaveProxyActionsInstance,
@@ -257,7 +248,6 @@ export async function deploySystem({
             closeCommand: CloseCommandInstance,
             basicBuy: BasicBuyInstance,
             basicSell: BasicSellInstance,
-            automationBotStorage: AutomationBotStorageInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
             aaveProxyActions: AaveProxyActionsInstance,
@@ -270,7 +260,6 @@ export async function deploySystem({
     if (logDebug) {
         console.log(`ServiceRegistry deployed to: ${ServiceRegistryInstance.address}`)
         console.log(`AutomationBot deployed to: ${AutomationBotInstance.address}`)
-        console.log(`AutomationBotStorage deployed to: ${AutomationBotStorageInstance.address}`)
 
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
@@ -477,12 +466,6 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(
         getServiceNameHash(AutomationServiceName.AUTOMATION_BOT),
         system.automationBot.address,
-    )
-
-    if (logDebug) console.log('Adding AUTOMATION_BOT_STORAGE to ServiceRegistry....')
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
-        system.automationBotStorage.address,
     )
 
     if (logDebug) console.log('Adding CONSTANT_MULTIPLE_VALIDATOR to ServiceRegistry....')

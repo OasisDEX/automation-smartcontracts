@@ -35,11 +35,6 @@ task<TriggerInfoArgs>('trigger-info')
         console.log(`after getStartBlocksFor`)
 
         const bot = await hre.ethers.getContractAt('AutomationBot', addresses.AUTOMATION_BOT)
-        const storage = await hre.ethers.getContractAt(
-            'AutomationBotStorage',
-            hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
-        )
-
         console.log(`before getLogs`)
         const events = await hre.ethers.provider.getLogs({
             address: addresses.AUTOMATION_BOT,
@@ -59,7 +54,7 @@ task<TriggerInfoArgs>('trigger-info')
 
         const info = triggerDataToInfo(triggerData, commandAddress)
         console.log(`Found Trigger:\n\t${info.join('\n\t')}`)
-        const trigger = await storage.activeTriggers(args.trigger.toString())
+        const trigger = await bot.activeTriggers(args.trigger.toString())
         console.log(`Active: ${trigger.commandAddress}`)
 
         const command = await hre.ethers.getContractAt('ICommand', commandAddress)
