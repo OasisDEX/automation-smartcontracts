@@ -232,7 +232,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
-            address executaableAdapter = getAdapterAddress(
+            address executableAdapter = getAdapterAddress(
                 getCommandAddress(triggerTypes[i]),
                 true
             );
