@@ -250,7 +250,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     //   console.log("Add permit", address(adapter));
                     require(status, "bot/permit-failed-add");
                 }
-                if (!adapter.canCall(triggerData[i], address(executaableAdapter))) {
+                if (!adapter.canCall(triggerData[i], executableAdapter)) {
                     (bool status, ) = address(adapter).delegatecall(
                         abi.encodeWithSelector(
                             adapter.permit.selector,
