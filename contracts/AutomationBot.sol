@@ -255,7 +255,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                         abi.encodeWithSelector(
                             adapter.permit.selector,
                             triggerData[i],
-                            executaableAdapter,
+                            executableAdapter,
                             true
                         )
                     );
