@@ -21,7 +21,8 @@ pragma solidity ^0.8.0;
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
-import "hardhat/console.sol";
+
+//import "hardhat/console.sol";
 
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ManagerLike public immutable manager;

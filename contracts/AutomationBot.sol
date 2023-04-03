@@ -23,7 +23,7 @@ import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
 import "./commands/BaseMPACommand.sol";
 import "./AutomationBotStorage.sol";
-import "hardhat/console.sol";
+//import "hardhat/console.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
