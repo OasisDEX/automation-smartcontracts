@@ -334,7 +334,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 )
             );
 
-            address executeAdaapter = getAdapterAddress(commandAddress, true);
+            address executableAdapter = getAdapterAddress(commandAddress, true);
             (status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
