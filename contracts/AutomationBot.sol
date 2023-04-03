@@ -339,7 +339,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(executeAdaapter),
+                    address(executableAdapter),
                     false
                 )
             );
