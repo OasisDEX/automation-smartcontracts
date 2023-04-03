@@ -232,10 +232,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
             );
 
-            address executableAdapter = getAdapterAddress(
-                getCommandAddress(triggerTypes[i]),
-                true
-            );
+            address executableAdapter = getAdapterAddress(getCommandAddress(triggerTypes[i]), true);
 
             if (i == 0) {
                 if (!adapter.canCall(triggerData[i], address(adapter))) {
@@ -333,6 +330,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                     false
                 )
             );
+            require(status, "bot/permit-removal-failed");
 
             address executableAdapter = getAdapterAddress(commandAddress, true);
             (status, ) = address(adapter).delegatecall(
@@ -344,7 +342,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 )
             );
 
-            require(status, "bot/permit-removal-failed");
+            require(status, "bot/permit-removal-failed-executable");
             emit ApprovalRemoved(triggerData[0], address(automationBotStorage));
         }
     }
