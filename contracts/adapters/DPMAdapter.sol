@@ -22,12 +22,20 @@ import "../interfaces/IAccountGuard.sol";
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 
+//import "hardhat/console.sol";
+
 contract DPMAdapter is ISecurityAdapter {
     address private immutable self;
     IAccountGuard public immutable accountGuard;
+    address public immutable botAddress;
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
-    constructor(IAccountGuard _accountGuard) {
+    constructor(ServiceRegistry _serviceRegistry, IAccountGuard _accountGuard) {
         self = address(this);
+        botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        //    console.log("DPMAdapter _serviceRegistry", address(_serviceRegistry));
+        //    console.log("DPMAdapter AUTOMATION_BOT_V2", botAddress);
+        //    console.log("DPMAdapter AUTOMATION_BOT",  _serviceRegistry.getRegisteredService("AUTOMATION_BOT"));
         accountGuard = _accountGuard; //hesitating if that should not be taken from serviceRegistry if needed, but this way it is immutable
     }
 
@@ -44,9 +52,16 @@ contract DPMAdapter is ISecurityAdapter {
     }
 
     function permit(bytes memory triggerData, address target, bool allowance) public {
+        //    console.log("msg.sender", msg.sender);
+        //    console.log("this", address(this));
+        //    console.log("self", address(self));
+
         require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
 
         (address proxyAddress, ) = decode(triggerData);
+        if (self == address(this)) {
+            require(msg.sender == botAddress, "dpm-adapter/only-bot");
+        }
 
         if (allowance != accountGuard.canCall(proxyAddress, target)) {
             accountGuard.permit(target, proxyAddress, allowance);

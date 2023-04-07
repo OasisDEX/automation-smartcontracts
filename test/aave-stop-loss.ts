@@ -86,6 +86,7 @@ describe('AaveStopLossCommandV2', async () => {
             bot: automationBotInstance.address,
             automationExecutor: automationExecutorInstance.address,
             userAccount: account.address,
+            serviceRegistry:system.serviceRegistry.address
         }
         console.table(addresses)
 
