@@ -188,6 +188,7 @@ export async function deploySystem({
     ])
 
     const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
+        ServiceRegistryInstance.address,
         addresses.DPM_GUARD,
     ])
 

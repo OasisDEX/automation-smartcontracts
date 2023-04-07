@@ -384,6 +384,15 @@ describe('AutomationBot', async () => {
             expect(status).to.equal(true)
         })
 
+        it('should revert if called not by an owner - directly', async () => {
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const tx = MakerAdapterInstance.connect(notOwner).permit(triggerData, DPMAdapterInstance.address, true)
+            //await expect(tx).to.be.reverted
+            await expect(tx).to.be.reverted
+            const res = await MakerAdapterInstance.connect(notOwner).canCall(triggerData, DPMAdapterInstance.address)
+            expect(res).to.be.equal(false)
+        })
+
         it('should revert if called not by an owner proxy', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const dataToSupply = MakerAdapterInstance.interface.encodeFunctionData('permit', [
@@ -430,6 +439,15 @@ describe('AutomationBot', async () => {
 
             status = await MakerAdapterInstance.canCall(triggerData, MakerAdapterInstance.address)
             expect(status).to.equal(false)
+        })
+
+        it('should revert if called not by an owner - directly', async () => {
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const tx = MakerAdapterInstance.connect(notOwner).permit(triggerData, DPMAdapterInstance.address, true)
+            //await expect(tx).to.be.reverted
+            await expect(tx).to.be.reverted
+            const res = await MakerAdapterInstance.connect(notOwner).canCall(triggerData, DPMAdapterInstance.address)
+            expect(res).to.be.equal(false)
         })
 
         it('should revert if called not by an owner proxy', async () => {
@@ -610,6 +628,15 @@ describe('AutomationBot', async () => {
         it('should revert if called not through delegatecall', async () => {
             const tx = AutomationBotInstance.removeTriggers([0], [dummyTriggerDataNoReRegister], false)
             await expect(tx).to.be.revertedWith('bot/only-delegate')
+        })
+
+        it('should revert if called not by an owner - directly', async () => {
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const tx = MakerAdapterInstance.connect(notOwner).permit(dummyTriggerDataNoReRegister, DPMAdapterInstance.address, true)
+            //await expect(tx).to.be.reverted
+            await expect(tx).to.be.reverted
+            const res = await MakerAdapterInstance.connect(notOwner).canCall(dummyTriggerDataNoReRegister, DPMAdapterInstance.address)
+            expect(res).to.be.equal(false)
         })
 
         it('should revert if called not by an owner proxy', async () => {

@@ -21,14 +21,17 @@ pragma solidity ^0.8.0;
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
-import "hardhat/console.sol";
+
+//import "hardhat/console.sol";
 
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ManagerLike public immutable manager;
     address public immutable utilsAddress;
+    address public immutable botAddress;
     address private immutable dai;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
     address private immutable self;
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
@@ -36,6 +39,10 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         dai = _dai;
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
+        botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        //    console.log("MakerAdapter _serviceRegistry", address(_serviceRegistry));
+        //    console.log("MakerAdapter AUTOMATION_BOT_V2", botAddress);
+        //    console.log("MakerAdapter AUTOMATION_BOT",  _serviceRegistry.getRegisteredService("AUTOMATION_BOT"));
     }
 
     function decode(
@@ -71,6 +78,9 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         // console.log("permit target", address(target));
         // console.log("permit from - allowance", allowance);
         require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+        if (self == address(this)) {
+            require(msg.sender == botAddress, "dpm-adapter/only-bot");
+        }
         if (allowance && !canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
         }
