@@ -10,7 +10,14 @@ import {
     TestWETH,
     ERC20,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash, getExecuteAdapterNameHash } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    HardhatUtils,
+    getAdapterNameHash,
+    getExecuteAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 

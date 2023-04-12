@@ -50,7 +50,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
         result = (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-        return result;
     }
 
     function canCall(
@@ -83,6 +82,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         address coverageToken,
         uint256 amount
     ) external {
+        require(msg.sender == botAddress, "dpm-adapter/only-bot");
         require(coverageToken == dai, "maker-adapter/not-dai");
 
         (uint256 cdpId, , uint256 maxCoverage) = decode(triggerData);

@@ -65,6 +65,10 @@ contract ConstantMultipleValidator is IValidator {
             (GenericTriggerData)
         );
         require(
+            buyTriggerData.maxCoverage == sellTriggerData.maxCoverage,
+            "validator/max-coverage-not-equal"
+        );
+        require(
             buyTriggerData.maxBaseFeeInGwei == sellTriggerData.maxBaseFeeInGwei,
             "validator/max-fee-not-equal"
         );

@@ -387,10 +387,33 @@ describe('AutomationBot', async () => {
         it('should revert if called not by an owner - directly', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const tx = MakerAdapterInstance.connect(notOwner).permit(triggerData, DPMAdapterInstance.address, true)
-            //await expect(tx).to.be.reverted
             await expect(tx).to.be.reverted
             const res = await MakerAdapterInstance.connect(notOwner).canCall(triggerData, DPMAdapterInstance.address)
             expect(res).to.be.equal(false)
+        })
+        it('should revert while calling MakerAdapter getCoverage not by bot', async () => {
+            // add legit trigger
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [triggerData],
+                ['0x'],
+                [TriggerType.MakerStopLossToDaiV2],
+            ])
+            await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+
+            // hack the user
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+
+            const tx = MakerAdapterInstance.connect(notOwner).getCoverage(
+                triggerData,
+                notOwnerProxyUserAddress,
+                hardhatUtils.addresses.DAI,
+                hardhatUtils.hre.ethers.utils.parseEther('1000'),
+            )
+            await expect(tx).to.be.revertedWith('dpm-adapter/only-bot')
         })
 
         it('should revert if called not by an owner proxy', async () => {
@@ -444,7 +467,6 @@ describe('AutomationBot', async () => {
         it('should revert if called not by an owner - directly', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const tx = MakerAdapterInstance.connect(notOwner).permit(triggerData, DPMAdapterInstance.address, true)
-            //await expect(tx).to.be.reverted
             await expect(tx).to.be.reverted
             const res = await MakerAdapterInstance.connect(notOwner).canCall(triggerData, DPMAdapterInstance.address)
             expect(res).to.be.equal(false)
@@ -460,7 +482,6 @@ describe('AutomationBot', async () => {
             const tx = notOwnerProxy.connect(notOwner).execute(MakerAdapterInstance.address, dataToSupply)
             await expect(tx).to.be.reverted
         })
-
     })
 
     describe('removeTrigger', async () => {
@@ -497,11 +518,8 @@ describe('AutomationBot', async () => {
                     hardhatUtils.hre.ethers.getContractFactory('MakerStopLossCommandV2'),
                     [registryAddress],
                 )
-                const hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
-                //await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
                 const normalAdapterHash = getAdapterNameHash(newClose.address)
                 const executeAdapterHash = getExecuteAdapterNameHash(newClose.address)
-                //     await ServiceRegistryInstance.connect(registrySigner).updateNamedService(hash, newClose.address)
                 await ServiceRegistryInstance.connect(registrySigner).addNamedService(
                     normalAdapterHash,
                     MakerAdapterInstance.address,
@@ -587,18 +605,12 @@ describe('AutomationBot', async () => {
                 false,
             ])
 
-            let status = await MakerAdapterInstance.canCall(
-                dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
-            )
+            let status = await MakerAdapterInstance.canCall(dummyTriggerDataNoReRegister, MakerAdapterInstance.address)
             expect(status).to.equal(true)
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await MakerAdapterInstance.canCall(
-                dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
-            )
+            status = await MakerAdapterInstance.canCall(dummyTriggerDataNoReRegister, MakerAdapterInstance.address)
             expect(status).to.equal(true)
         })
 
@@ -610,18 +622,12 @@ describe('AutomationBot', async () => {
                 true,
             ])
 
-            let status = await MakerAdapterInstance.canCall(
-                dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
-            )
+            let status = await MakerAdapterInstance.canCall(dummyTriggerDataNoReRegister, MakerAdapterInstance.address)
             expect(status).to.equal(true)
 
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
-            status = await MakerAdapterInstance.canCall(
-                dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
-            )
+            status = await MakerAdapterInstance.canCall(dummyTriggerDataNoReRegister, MakerAdapterInstance.address)
             expect(status).to.equal(false)
         })
 
@@ -632,10 +638,16 @@ describe('AutomationBot', async () => {
 
         it('should revert if called not by an owner - directly', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const tx = MakerAdapterInstance.connect(notOwner).permit(dummyTriggerDataNoReRegister, DPMAdapterInstance.address, true)
-            //await expect(tx).to.be.reverted
+            const tx = MakerAdapterInstance.connect(notOwner).permit(
+                dummyTriggerDataNoReRegister,
+                DPMAdapterInstance.address,
+                true,
+            )
             await expect(tx).to.be.reverted
-            const res = await MakerAdapterInstance.connect(notOwner).canCall(dummyTriggerDataNoReRegister, DPMAdapterInstance.address)
+            const res = await MakerAdapterInstance.connect(notOwner).canCall(
+                dummyTriggerDataNoReRegister,
+                DPMAdapterInstance.address,
+            )
             expect(res).to.be.equal(false)
         })
 

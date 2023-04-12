@@ -96,7 +96,7 @@ function getTriggerDataTypes(triggerType: TriggerType) {
     }
 }
 
-export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
+export function encodeTriggerData(vaultId: number | string, triggerType: TriggerType, ...rest: any[]): BytesLike {
     const args = [vaultId, triggerType, ...rest]
     const types = getTriggerDataTypes(triggerType)
     return utils.defaultAbiCoder.encode(types, args)

@@ -40,10 +40,10 @@ contract DPMAdapter is ISecurityAdapter {
         (proxyAddress, triggerType) = abi.decode(triggerData, (address, uint16));
     }
 
-    function canCall(bytes memory triggerData, address operator) public view returns (bool) {
+    function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
         (address proxyAddress, ) = decode(triggerData);
         address positionOwner = accountGuard.owners(proxyAddress);
-        return accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
+        result = accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
     }
 
     function permit(bytes memory triggerData, address target, bool allowance) public {
