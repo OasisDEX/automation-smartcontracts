@@ -1,8 +1,8 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { AaveStopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
-import { AaveProxyActions } from '../../typechain/AaveProxyActions'
+import { AaveV3StopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
+import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
     getAdapterNameHash,
@@ -54,12 +54,12 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    console.log('Deploying AaveProxyActions')
+    console.log('Deploying AaveV3ProxyActions')
 
-    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveProxyActions'), [
+    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3ProxyActions'), [
         utils.addresses.WETH_AAVE,
-        utils.addresses.AAVE_POOL,
-    ])) as AaveProxyActions
+        utils.addresses.AAVE_POOL_V3,
+    ])) as AaveV3ProxyActions
 
     const apa = await system.aaveProxyActions.deployed()
 
@@ -75,13 +75,13 @@ async function main() {
         }
     }
 
-    console.log('Deployed AaveProxyActions: ' + apa.address)
+    console.log('Deployed AaveV3ProxyActions: ' + apa.address)
 
-    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveStopLossCommandV2'), [
+    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3StopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        utils.addresses.AAVE_POOL,
+        utils.addresses.AAVE_POOL_V3,
         apa.address,
-    ])) as AaveStopLossCommandV2
+    ])) as AaveV3StopLossCommandV2
 
     const stopLossCommand = await tx.deployed()
     // TODO change 10 when the command is in common
@@ -101,8 +101,8 @@ async function main() {
         console.log("Guard's whitelist updated")
     }
 
-    console.log(`AaveStopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
-    console.log(`AaveProxyActions Deployed: ${apa!.address}`)
+    console.log(`AaveV3StopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
+    console.log(`AaveV3ProxyActions Deployed: ${apa!.address}`)
 }
 
 main().catch(error => {

@@ -12,8 +12,8 @@ import {
     ServiceRegistry,
     MakerAdapter,
     MakerAutoTakeProfitCommandV2,
-    AaveProxyActions,
-    AaveStopLossCommandV2,
+    AaveV3ProxyActions,
+    AaveV3StopLossCommandV2,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -38,13 +38,13 @@ export interface DeployedSystem {
     mcdView: McdView
     closeCommand?: MakerStopLossCommandV2
     autoTakeProfitCommand?: MakerAutoTakeProfitCommandV2
-    aaveStoplLossCommand?: AaveStopLossCommandV2
+    aaveStoplLossCommand?: AaveV3StopLossCommandV2
     basicBuy?: MakerBasicBuyCommandV2
     basicSell?: MakerBasicSellCommandV2
     makerAdapter?: MakerAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
-    aaveProxyActions?: AaveProxyActions
+    aaveProxyActions?: AaveV3ProxyActions
 }
 
 export interface DeploySystemArgs {
@@ -88,7 +88,7 @@ export async function deploySystem({
     let BasicBuyInstance: MakerBasicBuyCommandV2 | undefined
     let BasicSellInstance: MakerBasicSellCommandV2 | undefined
     let AutoTakeProfitInstance: MakerAutoTakeProfitCommandV2 | undefined
-    let AaveStoplLossInstance: AaveStopLossCommandV2 | undefined
+    let AaveStoplLossInstance: AaveV3StopLossCommandV2 | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -113,9 +113,9 @@ export async function deploySystem({
         addresses.UNISWAP_FACTORY,
     )
 
-    const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
-        ethers.getContractFactory('AaveProxyActions'),
-        [addresses.WETH_AAVE, addresses.AAVE_POOL],
+    const AaveProxyActionsInstance: AaveV3ProxyActions = await utils.deployContract(
+        ethers.getContractFactory('AaveV3ProxyActions'),
+        [addresses.WETH_AAVE, addresses.AAVE_POOL_V3],
     )
 
     if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
@@ -214,11 +214,11 @@ export async function deploySystem({
             [ServiceRegistryInstance.address],
         )) as MakerAutoTakeProfitCommandV2
 
-        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveStopLossCommandV2'), [
+        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveV3StopLossCommandV2'), [
             ServiceRegistryInstance.address,
-            addresses.AAVE_POOL,
+            addresses.AAVE_POOL_V3,
             addresses.SWAP,
-        ])) as AaveStopLossCommandV2
+        ])) as AaveV3StopLossCommandV2
         system = {
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
@@ -265,7 +265,7 @@ export async function deploySystem({
         console.log(`ConstantMultipleValidator deployed to: ${ConstantMultipleValidatorInstance.address}`)
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
-        console.log(`AaveProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
+        console.log(`AaveV3ProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
         if (addCommands) {
             console.log(`MakerStopLossCommandV2 deployed to: ${CloseCommandInstance!.address}`)

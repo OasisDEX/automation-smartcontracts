@@ -21,7 +21,7 @@ pragma solidity ^0.8.0;
 
 import { ICommand } from "../interfaces/ICommand.sol";
 
-import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
+import { IPool } from "../interfaces/AAVE/IPool.sol";
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
@@ -39,7 +39,7 @@ interface IFlashLoanReceiver {
 
 abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, ReentrancyGuard {
     IServiceRegistry public immutable serviceRegistry;
-    ILendingPool public immutable lendingPool;
+    IPool public immutable lendingPool;
 
     address public trustedCaller;
     address public immutable self;
@@ -57,7 +57,7 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
         bytes params;
     }
 
-    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool, address _exchange) {
+    constructor(IServiceRegistry _serviceRegistry, IPool _lendingPool, address _exchange) {
         serviceRegistry = _serviceRegistry;
         lendingPool = _lendingPool;
         exchange = _exchange;

@@ -19,10 +19,10 @@
 pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
-import "../helpers/AaveProxyActions.sol";
+import "../helpers/AaveV3ProxyActions.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
-    address public immutable aaveProxyActions;
+    address public immutable aaveV3ProxyActions;
     address public immutable token;
     mapping(address => uint256) public lastCall;
 
@@ -34,8 +34,8 @@ contract DummyAaveWithdrawCommand is ICommand {
         address recipient;
     }
 
-    constructor(address _aaveProxyActions, address _token) {
-        aaveProxyActions = _aaveProxyActions;
+    constructor(address _AaveV3ProxyActions, address _token) {
+        aaveV3ProxyActions = _AaveV3ProxyActions;
         token = _token;
     }
 
@@ -68,8 +68,8 @@ contract DummyAaveWithdrawCommand is ICommand {
             (address, uint16, uint256, uint256, address)
         );
         IAccountImplementation(proxy).execute(
-            aaveProxyActions,
-            abi.encodeWithSelector(AaveProxyActions.drawDebt.selector, token, recipient, amount)
+            aaveV3ProxyActions,
+            abi.encodeWithSelector(AaveV3ProxyActions.drawDebt.selector, token, recipient, amount)
         );
         lastCall[proxy] = block.timestamp;
     }

@@ -54,5 +54,6 @@ export async function getSwap(
         tx: data.tx,
         fromToken: data.fromToken,
         toToken: data.toToken,
+        toTokenDecimals: data.toToken.decimals,
     }
 }

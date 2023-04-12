@@ -19,7 +19,7 @@
 
 pragma solidity ^0.8.0;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
-import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
+import { IPool } from "../interfaces/AAVE/IPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
@@ -62,7 +62,7 @@ interface AaveStopLoss {
     function self() external returns (address);
 }
 
-contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
+contract AaveV3StopLossCommandV2 is BaseAAveFlashLoanCommand {
     address public immutable weth;
     address public immutable bot;
 
@@ -71,7 +71,7 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
 
     constructor(
         IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool,
+        IPool _lendingPool,
         address exchange_
     ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
         weth = serviceRegistry.getRegisteredService(WETH);

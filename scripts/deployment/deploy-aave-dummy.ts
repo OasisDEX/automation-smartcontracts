@@ -2,7 +2,7 @@ import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
 import { AAVEAdapter, DPMAdapter, MakerAdapter, ServiceRegistry } from '../../typechain'
-import { AaveProxyActions } from '../../typechain/AaveProxyActions'
+import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
     AutomationServiceName,
@@ -52,12 +52,12 @@ async function main() {
         }
     }
 
-    console.log('Deploying AaveProxyActions')
+    console.log('Deploying AaveV3ProxyActions')
 
-    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveProxyActions'), [
+    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3ProxyActions'), [
         utils.addresses.WETH_AAVE,
-        utils.addresses.AAVE_POOL,
-    ])) as AaveProxyActions
+        utils.addresses.AAVE_POOL_V3,
+    ])) as AaveV3ProxyActions
 
     console.log('Deploying MakerAdapter')
 
@@ -81,26 +81,26 @@ async function main() {
 
     const apa = await system.aaveProxyActions.deployed()
 
-    console.log('Deployed AaveProxyActions: ' + apa.address)
+    console.log('Deployed AaveV3ProxyActions: ' + apa.address)
 
     if (
         (await system.serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS)) !==
         constants.AddressZero
     ) {
-        console.log('Removing AaveProxyActions from registry: ')
+        console.log('Removing AaveV3ProxyActions from registry: ')
         await system.serviceRegistry.removeNamedService(
             await system.serviceRegistry.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
         )
     }
 
-    console.log('Adding AaveProxyActions to registry: ')
+    console.log('Adding AaveV3ProxyActions to registry: ')
 
     await system.serviceRegistry.addNamedService(
         await system.serviceRegistry.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
         apa.address,
     )
 
-    console.log('AaveProxyActions: ' + apa.address, ' added to service registry')
+    console.log('AaveV3ProxyActions: ' + apa.address, ' added to service registry')
 
     console.log('Deploying DummyAaveWithdrawCommand')
 
@@ -124,7 +124,7 @@ async function main() {
     await ensureCorrectAdapter(dummyAaveWithdrawCommand.address, system.aaveAdapter.address, true)
 
     console.log(`DummyAaveWithdrawCommand Deployed: ${command!.address}`)
-    console.log(`AaveProxyActions Deployed: ${apa!.address}`)
+    console.log(`AaveV3ProxyActions Deployed: ${apa!.address}`)
 }
 
 main().catch(error => {

@@ -69,7 +69,7 @@ export class HardhatUtils {
                 await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
             ),
             aaveProxyActions: await this.hre.ethers.getContractAt(
-                'AaveProxyActions',
+                'AaveV3ProxyActions',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
             ),
         }
