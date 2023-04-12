@@ -233,13 +233,16 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            ISecurityAdapter adapter = ISecurityAdapter(
-                getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
-            );
-
-            address executableAdapter = getAdapterAddress(getCommandAddress(triggerTypes[i]), true);
-
             if (i == 0) {
+                ISecurityAdapter adapter = ISecurityAdapter(
+                    getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
+                );
+
+                address executableAdapter = getAdapterAddress(
+                    getCommandAddress(triggerTypes[i]),
+                    true
+                );
+
                 if (!adapter.canCall(triggerData[i], address(adapter))) {
                     (bool status, ) = address(adapter).delegatecall(
                         abi.encodeWithSelector(
@@ -249,7 +252,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                             true
                         )
                     );
-                    //   console.log("Add permit", address(adapter));
                     require(status, "bot/permit-failed-add");
                 }
                 if (!adapter.canCall(triggerData[i], executableAdapter)) {
@@ -261,7 +263,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                             true
                         )
                     );
-                    //     console.log("Add permit", executaableAdapter);
                     require(status, "bot/permit-failed-add-executable");
                 }
                 emit ApprovalGranted(triggerData[i], self);
@@ -339,7 +340,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(executableAdapter),
+                    executableAdapter,
                     false
                 )
             );
@@ -371,8 +372,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             getAdapterAddress(commandAddress, true)
         );
 
-        //   console.log("executableAdapter", address(executableAdapter));
-        //   console.log("adapter", address(adapter));
         executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {

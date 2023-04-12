@@ -22,17 +22,15 @@ import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-//import "hardhat/console.sol";
-
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ManagerLike public immutable manager;
     address public immutable utilsAddress;
     address public immutable botAddress;
     address private immutable dai;
+    address private immutable self;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
-    address private immutable self;
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
         self = address(this);
@@ -40,9 +38,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
-        //    console.log("MakerAdapter _serviceRegistry", address(_serviceRegistry));
-        //    console.log("MakerAdapter AUTOMATION_BOT_V2", botAddress);
-        //    console.log("MakerAdapter AUTOMATION_BOT",  _serviceRegistry.getRegisteredService("AUTOMATION_BOT"));
     }
 
     function decode(
@@ -53,12 +48,8 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
 
     function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
         (uint256 cdpId, , ) = decode(triggerData);
-        // console.log("canCall", address(this));
-        // console.log("operator", operator);
-        // console.log("cdpId", cdpId);
         address cdpOwner = manager.owns(cdpId);
         result = (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-        // console.log("canCall result", result);
         return result;
     }
 
@@ -74,9 +65,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
 
-        // console.log("permit from", address(this));
-        // console.log("permit target", address(target));
-        // console.log("permit from - allowance", allowance);
         require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
         if (self == address(this)) {
             require(msg.sender == botAddress, "dpm-adapter/only-bot");

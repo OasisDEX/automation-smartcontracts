@@ -440,7 +440,6 @@ export class TriggerExecutor {
             to: automationExecutor.address,
             data: automationExecutor.interface.encodeFunctionData('execute', [
                 executionData,
-                vaultId.toString(),
                 triggerData,
                 commandAddress,
                 args.trigger.toString(),
