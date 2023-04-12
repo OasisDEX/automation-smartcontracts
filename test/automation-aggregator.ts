@@ -12,7 +12,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '8027')
 const maxGweiPrice = 1000
 
-let skipRevert = false
+const skipRevert = false
 
 const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
 
@@ -145,7 +145,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -157,7 +156,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 ethers.constants.Zero,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -173,7 +171,6 @@ describe('AutomationAggregatorBot', async () => {
                 beforeBuyExecutionRatio,
                 beforeBuyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -185,7 +182,6 @@ describe('AutomationAggregatorBot', async () => {
                 beforeSellExecutionRatio,
                 beforeSellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -354,7 +350,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -392,7 +387,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -403,7 +397,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -440,7 +433,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -451,7 +443,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -493,7 +484,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -504,7 +494,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -591,7 +580,6 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -603,7 +591,6 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -617,7 +604,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -629,7 +615,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -679,7 +664,7 @@ describe('AutomationAggregatorBot', async () => {
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             let status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
-            expect(status).to.equal(true, "canCall result initially incorrect")
+            expect(status).to.equal(true, 'canCall result initially incorrect')
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
                 triggerIds,
                 [bbTriggerData, bsTriggerData],
@@ -687,7 +672,7 @@ describe('AutomationAggregatorBot', async () => {
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
             status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
-            expect(status).to.equal(true, "canCall result should not change")
+            expect(status).to.equal(true, 'canCall result should not change')
         })
         it('should only remove approval if last param set to true - test TRUE', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -767,7 +752,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -779,7 +763,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )

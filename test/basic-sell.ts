@@ -83,7 +83,6 @@ describe('MakerBasicSellCommandV2', () => {
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -98,7 +97,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -113,7 +111,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -128,7 +125,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -154,7 +150,6 @@ describe('MakerBasicSellCommandV2', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(100).shiftedBy(18).toFixed(),
-                true,
                 50,
                 maxBaseFee,
             )

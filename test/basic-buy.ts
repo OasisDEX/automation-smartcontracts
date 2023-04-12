@@ -71,7 +71,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -202,7 +201,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 incorrectExecutionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -217,7 +215,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 incorrectTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -232,7 +229,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -243,17 +239,8 @@ describe('MakerBasicBuyCommandV2', () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
 
             const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool'],
-                [
-                    testCdpId,
-                    TriggerType.MakerStopLossToCollateralV2,
-                    maxCoverageDai,
-                    executionRatio,
-                    targetRatio,
-                    0,
-                    false,
-
-                ],
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256'],
+                [testCdpId, TriggerType.MakerStopLossToCollateralV2, maxCoverageDai, executionRatio, targetRatio, 0],
             )
             await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
         })
@@ -266,7 +253,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -281,7 +267,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )

@@ -59,7 +59,6 @@ describe('ConstantMultipleValidator', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -71,7 +70,6 @@ describe('ConstantMultipleValidator', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -112,7 +110,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -136,7 +133,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -160,7 +156,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 70,
                 maxGweiPrice,
             )
@@ -184,7 +179,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 70,
                 maxGweiPrice,
             )
@@ -208,7 +202,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice + 1,
             )
@@ -232,7 +225,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )

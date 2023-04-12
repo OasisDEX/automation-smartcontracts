@@ -41,7 +41,6 @@ contract MakerBasicSellCommandV2 is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 minSellPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }

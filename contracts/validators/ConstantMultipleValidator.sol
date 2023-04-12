@@ -25,7 +25,6 @@ struct GenericTriggerData {
     uint256 execCollRatio;
     uint256 targetCollRatio;
     uint256 bsPrice;
-    bool continuous;
     uint64 deviation;
     uint32 maxBaseFeeInGwei;
 }
