@@ -346,7 +346,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             );
 
             require(status, "bot/permit-removal-failed-executable");
-            emit ApprovalRemoved(triggerData[0], address(self));
+            emit ApprovalRemoved(triggerData[0], self);
         }
     }
 
