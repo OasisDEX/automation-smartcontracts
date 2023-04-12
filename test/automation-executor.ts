@@ -10,7 +10,14 @@ import {
     TestWETH,
     ERC20,
 } from '../typechain'
-import { getCommandHash, generateRandomAddress, getEvents, HardhatUtils, getAdapterNameHash } from '../scripts/common'
+import {
+    getCommandHash,
+    generateRandomAddress,
+    getEvents,
+    HardhatUtils,
+    getAdapterNameHash,
+    getExecuteAdapterNameHash,
+} from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
@@ -84,7 +91,10 @@ describe('AutomationExecutor', async () => {
         )
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
-        const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        let adapterHash = getAdapterNameHash(DummyCommandInstance.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
+
+        adapterHash = getExecuteAdapterNameHash(DummyCommandInstance.address)
         await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
 
         let hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
@@ -241,7 +251,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -4000,
+                15000,
                 dai.address,
             )
 
@@ -252,7 +262,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                -4000,
+                15000,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )

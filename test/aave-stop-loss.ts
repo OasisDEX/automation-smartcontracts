@@ -9,13 +9,15 @@ import {
     ILendingPool,
     IAccountGuard,
     AccountFactoryLike,
+    AAVEAdapter,
+    DPMAdapter,
 } from '../typechain'
 import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
+import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 describe('AaveStopLossCommandV2', async () => {
@@ -26,6 +28,7 @@ describe('AaveStopLossCommandV2', async () => {
     let automationExecutorInstance: AutomationExecutor
     let proxyAddress: string
     let receiver: Signer
+    let notOwner: Signer
     let receiverAddress: string
     let randomWalletAddress: string
     let snapshotId: string
@@ -33,6 +36,8 @@ describe('AaveStopLossCommandV2', async () => {
     let aaveStopLoss: AaveStopLossCommandV2
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
+    let aaveAdapter: AAVEAdapter
+    let dpmAdapter: DPMAdapter
 
     let account: IAccountImplementation
     let ltv: EthersBN
@@ -50,6 +55,7 @@ describe('AaveStopLossCommandV2', async () => {
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
 
         receiver = hre.ethers.provider.getSigner(1)
+        notOwner = hre.ethers.provider.getSigner(5)
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
 
@@ -79,6 +85,8 @@ describe('AaveStopLossCommandV2', async () => {
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         proxyAddress = AccountCreatedEvent.args.proxy.toString()
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
+        aaveAdapter = system.aaveAdapter!
+        dpmAdapter = system.dpmAdapter!
         const addresses = {
             aaveStopLoss: aaveStopLoss.address,
             receiverAddress,
@@ -86,6 +94,9 @@ describe('AaveStopLossCommandV2', async () => {
             bot: automationBotInstance.address,
             automationExecutor: automationExecutorInstance.address,
             userAccount: account.address,
+            serviceRegistry: system.serviceRegistry.address,
+            aave_pa: aave_pa.address,
+            aaveAdapter: aaveAdapter.address,
         }
         console.table(addresses)
 
@@ -122,7 +133,7 @@ describe('AaveStopLossCommandV2', async () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
             const ltv = userData.ltv
-            const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
+
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
@@ -130,9 +141,8 @@ describe('AaveStopLossCommandV2', async () => {
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(2),
-                300,
             ]
-            const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -148,7 +158,6 @@ describe('AaveStopLossCommandV2', async () => {
         it('should add the trigger with continuous set to false', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
             const ltv = userData.ltv
-            const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
@@ -156,9 +165,8 @@ describe('AaveStopLossCommandV2', async () => {
                 hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
                 ltv.sub(2),
-                300,
             ]
-            const triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -174,7 +182,72 @@ describe('AaveStopLossCommandV2', async () => {
             expect(events.length).to.be.equal(1)
         })
     })
+    describe('protocol specific adapters', async () => {
+        it('should add the trigger - disallow calling getCoverage in AAVEAdapter', async () => {
+            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const ltv = userData.ltv
+            const trigerDecodedData = [
+                proxyAddress,
+                TriggerType.AaveStopLossToDebtV2,
+                maxCoverageUsdc,
+                hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.USDC,
+                ltv.sub(2),
+            ]
+            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
+            const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [triggerData],
+                ['0x'],
+                [TriggerType.AaveStopLossToCollateralV2],
+            ])
+            const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+            const txRes = await tx.wait()
+            const events = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
+            expect(events.length).to.be.equal(1)
+
+            const tx2 = aaveAdapter
+                .connect(notOwner)
+                .getCoverage(
+                    triggerData,
+                    await notOwner.getAddress(),
+                    hardhatUtils.addresses.USDC,
+                    hardhatUtils.hre.ethers.utils.parseUnits('9', 6),
+                )
+            await expect(tx2).to.be.revertedWith('aave-adapter/only-bot')
+        })
+        it('should add the trigger - disallow calling permit in DPMAdapter', async () => {
+            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const ltv = userData.ltv
+            const trigerDecodedData = [
+                proxyAddress,
+                TriggerType.AaveStopLossToDebtV2,
+                maxCoverageUsdc,
+                hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.USDC,
+                ltv.sub(2),
+            ]
+            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+            const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [triggerData],
+                ['0x'],
+                [TriggerType.AaveStopLossToCollateralV2],
+            ])
+            const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
+            const txRes = await tx.wait()
+            const events = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
+            expect(events.length).to.be.equal(1)
+
+            const tx2 = dpmAdapter.connect(notOwner).permit(triggerData, await notOwner.getAddress(), true)
+            await expect(tx2).to.be.revertedWith('dpm-adapter/only-bot')
+        })
+    })
     describe('execute', async () => {
         beforeEach(async () => {
             snapshotIdTop = await hre.ethers.provider.send('evm_snapshot', [])
@@ -252,7 +325,6 @@ describe('AaveStopLossCommandV2', async () => {
 
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
@@ -260,9 +332,8 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(2),
-                        300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -325,7 +396,7 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.USDC,
                         { gasLimit: 3000000 },
                     )
-                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
+                    await expect(tx).to.be.revertedWith('aave-adapter/coverage-too-high')
                 })
                 it('should NOT execute trigger if funds receiver is not the owner', async () => {
                     const tx = automationExecutorInstance.execute(
@@ -344,7 +415,6 @@ describe('AaveStopLossCommandV2', async () => {
             })
             describe('when Trigger is above current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
@@ -352,9 +422,8 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(10),
-                        300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -461,7 +530,6 @@ describe('AaveStopLossCommandV2', async () => {
 
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
@@ -469,9 +537,8 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.sub(2),
-                        300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -525,7 +592,6 @@ describe('AaveStopLossCommandV2', async () => {
             })
             describe('when Trigger is above current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'uint256', 'address', 'address', 'uint256', 'uint32']
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
@@ -533,9 +599,8 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
                         ltv.add(2),
-                        300,
                     ]
-                    triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,

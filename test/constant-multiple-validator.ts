@@ -2,7 +2,7 @@ import hre from 'hardhat'
 import { expect } from 'chai'
 import { encodeTriggerData, getEvents, HardhatUtils } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, AutomationBotStorage, DsProxyLike } from '../typechain'
+import { AutomationBot, DsProxyLike } from '../typechain'
 import BigNumber from 'bignumber.js'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 
@@ -18,7 +18,6 @@ describe('ConstantMultipleValidator', async () => {
 
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
-    let AutomationBotStorageInstance: AutomationBotStorage
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
     let snapshotId: string
@@ -29,7 +28,6 @@ describe('ConstantMultipleValidator', async () => {
         const system = await deploySystem({ utils, addCommands: true })
 
         AutomationBotInstance = system.automationBot
-        AutomationBotStorageInstance = system.automationBotStorage
 
         const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
 
@@ -61,7 +59,6 @@ describe('ConstantMultipleValidator', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -73,7 +70,6 @@ describe('ConstantMultipleValidator', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -89,7 +85,7 @@ describe('ConstantMultipleValidator', async () => {
             console.log(`ag bot address ${AutomationBotInstance.address}`)
             console.log(`bot address ${AutomationBotInstance.address}`)
             console.log('-------')
-            const counterBefore = await AutomationBotStorageInstance.triggersGroupCounter()
+            const counterBefore = await AutomationBotInstance.triggersGroupCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -99,7 +95,7 @@ describe('ConstantMultipleValidator', async () => {
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersGroupCounter()
+            const counterAfter = await AutomationBotInstance.triggersGroupCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
@@ -114,7 +110,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio + 1,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -126,8 +121,8 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should not add trigger group with continuous not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -138,7 +133,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -150,8 +144,8 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should not add trigger group with deviation not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -162,7 +156,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 70,
                 maxGweiPrice,
             )
@@ -174,8 +167,8 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should not add trigger group with deviation not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -186,7 +179,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 70,
                 maxGweiPrice,
             )
@@ -198,8 +190,31 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
+        })
+        it('should not add trigger group with maxCoverage not equal', async () => {
+            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
+            bsTriggerData = encodeTriggerData(
+                testCdpId,
+                TriggerType.MakerBasicSellV2,
+                maxCoverageDai.add(1),
+                sellExecutionRatio,
+                sellTargetRatio,
+                0,
+                50,
+                maxGweiPrice,
+            )
+            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                groupTypeId,
+                [true, true],
+                replacedTriggerId,
+                [bbTriggerData, bsTriggerData],
+                replacedTriggerData,
+                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
+            ])
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should not add trigger group with max gas fee not equal', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -210,7 +225,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice + 1,
             )
@@ -222,8 +236,8 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
         it('should not add trigger group with different cdp', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -234,7 +248,6 @@ describe('ConstantMultipleValidator', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -246,8 +259,8 @@ describe('ConstantMultipleValidator', async () => {
                 replacedTriggerData,
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const res = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            expect(res).to.be.revertedWith('')
+            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
+            await expect(tx).to.be.reverted
         })
     })
 })

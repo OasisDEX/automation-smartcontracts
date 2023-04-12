@@ -123,6 +123,34 @@ describe('MakerStopLossCommandV2', async () => {
                 )
             })
 
+            describe('getTriggerType', async () => {
+                let triggerData: BytesLike
+                let incorrectTriggerData: BytesLike
+
+                before(async () => {
+                    triggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
+                        currentCollRatioInBaseUnits - 1,
+                    )
+                    incorrectTriggerData = encodeTriggerData(
+                        testCdpId,
+                        TriggerType.MakerStopLossToCollateralV2,
+                        maxCoverageDai,
+                        '100',
+                    )
+                })
+                it('should get correct triggerType', async () => {
+                    const tx = await CloseCommandInstance.getTriggerType(triggerData)
+                    expect(tx).to.be.equal(101)
+                })
+                it('should get incorrect triggerType', async () => {
+                    console.log(incorrectTriggerData)
+                    const tx = await CloseCommandInstance.getTriggerType(incorrectTriggerData)
+                    expect(tx).to.be.equal(0)
+                })
+            })
             describe('when Trigger is below current col ratio', async () => {
                 let triggerId: number
                 let triggerData: BytesLike
@@ -169,7 +197,6 @@ describe('MakerStopLossCommandV2', async () => {
                     // revertSnapshot
                     await hre.ethers.provider.send('evm_revert', [snapshotId])
                 })
-
                 it('should revert trigger execution', async () => {
                     const tx = AutomationExecutorInstance.execute(
                         executionData,
@@ -271,7 +298,7 @@ describe('MakerStopLossCommandV2', async () => {
                         178000,
                         hardhatUtils.addresses.DAI,
                     )
-                    await expect(tx).to.be.revertedWith('bot-storage/failed-to-draw-coverage')
+                    await expect(tx).to.be.revertedWith('maker-adapter/coverage-too-high')
                 })
 
                 it('should refund transaction costs if sufficient balance available on AutomationExecutor [ @skip-on-coverage ]', async () => {

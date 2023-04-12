@@ -25,21 +25,19 @@ import "../McdUtils.sol";
 contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
     ManagerLike public immutable manager;
     address public immutable utilsAddress;
+    address public immutable botAddress;
     address private immutable dai;
+    address private immutable self;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
-    address private immutable self;
-
-    modifier onlyDelegate() {
-        require(address(this) != self, "maker-adapter/only-delegate");
-        _;
-    }
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
         self = address(this);
         dai = _dai;
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
+        botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
     }
 
     function decode(
@@ -48,10 +46,10 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         (cdpId, triggerType, maxCoverage) = abi.decode(triggerData, (uint256, uint16, uint256));
     }
 
-    function canCall(bytes memory triggerData, address operator) public view returns (bool) {
+    function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
+        result = (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
     function canCall(
@@ -62,17 +60,19 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
+    function permit(bytes memory triggerData, address target, bool allowance) public {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
-        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+
+        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call");
+        if (self == address(this)) {
+            require(msg.sender == botAddress, "dpm-adapter/only-bot");
+        }
         if (allowance && !canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 1);
-            // emit ApprovalGranted(cdpId, target);
         }
         if (!allowance && canCall(target, cdpId, cdpOwner)) {
             manager.cdpAllow(cdpId, target, 0);
-            // emit ApprovalRevoked(cdpId, target);
         }
     }
 
@@ -82,6 +82,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         address coverageToken,
         uint256 amount
     ) external {
+        require(msg.sender == botAddress, "dpm-adapter/only-bot");
         require(coverageToken == dai, "maker-adapter/not-dai");
 
         (uint256 cdpId, , uint256 maxCoverage) = decode(triggerData);

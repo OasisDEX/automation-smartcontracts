@@ -21,7 +21,8 @@ pragma solidity ^0.8.0;
 import "./interfaces/ICommand.sol";
 import "./interfaces/IValidator.sol";
 import "./interfaces/BotLike.sol";
-import "./AutomationBotStorage.sol";
+import "./interfaces/IAdapter.sol";
+import "./commands/BaseMPACommand.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract AutomationBot is BotLike, ReentrancyGuard {
@@ -31,21 +32,30 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         bool continuous;
     }
 
+    struct Counters {
+        uint64 triggersCounter;
+        uint64 triggersGroupCounter;
+    }
+
+    uint64 private constant COUNTER_OFFSET = 10 ** 10;
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
 
     ServiceRegistry public immutable serviceRegistry;
-    AutomationBotStorage public immutable automationBotStorage;
     AutomationBot public immutable automationBot;
     address private immutable self;
-    uint256 private lockCount;
 
-    constructor(ServiceRegistry _serviceRegistry, AutomationBotStorage _automationBotStorage) {
+    Counters private counter;
+    uint256 private lockCount;
+    mapping(uint256 => AutomationBot.TriggerRecord) public activeTriggers;
+
+    constructor(ServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
         automationBot = AutomationBot(address(this));
-        automationBotStorage = _automationBotStorage;
         self = address(this);
         lockCount = 0;
+        counter.triggersCounter = COUNTER_OFFSET;
+        counter.triggersGroupCounter = COUNTER_OFFSET + 1;
     }
 
     modifier auth(address caller) {
@@ -104,10 +114,10 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         address commandAddress,
         bytes memory triggerData
     ) private view {
-        (bytes32 triggersHash, , ) = automationBotStorage.activeTriggers(triggerId);
+        bytes32 triggerHash = activeTriggers[triggerId].triggerHash;
         require(
-            triggersHash != bytes32(0) &&
-                triggersHash == getTriggersHash(triggerData, commandAddress),
+            triggerHash != bytes32(0) &&
+                triggerHash == getTriggersHash(triggerData, commandAddress),
             "bot/invalid-trigger"
         );
     }
@@ -126,8 +136,9 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         address commandAddress = getCommandAddress(triggerType);
         if (replacedTriggerId != 0) {
-            (bytes32 replacedTriggersHash, address originalCommandAddress, ) = automationBotStorage
-                .activeTriggers(replacedTriggerId);
+            TriggerRecord memory replaced = activeTriggers[replacedTriggerId];
+            bytes32 replacedTriggersHash = replaced.triggerHash;
+            address originalCommandAddress = replaced.commandAddress;
             ISecurityAdapter originalAdapter = ISecurityAdapter(
                 getAdapterAddress(originalCommandAddress, false)
             );
@@ -150,12 +161,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "bot/no-permissions");
 
-        automationBotStorage.appendTriggerRecord(
-            AutomationBotStorage.TriggerRecord(
-                getTriggersHash(triggerData, commandAddress),
-                commandAddress,
-                continuous
-            )
+        appendTriggerRecord(
+            TriggerRecord(getTriggersHash(triggerData, commandAddress), commandAddress, continuous)
         );
 
         if (replacedTriggerId != 0) {
@@ -164,7 +171,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         }
 
         emit TriggerAdded(
-            automationBotStorage.triggersCounter(),
+            automationBot.triggersCounter(),
             commandAddress,
             continuous,
             triggerType,
@@ -179,7 +186,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         bytes memory triggerData,
         uint256 triggerId
     ) external {
-        (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerId);
+        address commandAddress = activeTriggers[triggerId].commandAddress;
         ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
         require(adapter.canCall(triggerData, msg.sender), "no-permit");
         checkTriggersExistenceAndCorrectness(triggerId, commandAddress, triggerData);
@@ -189,9 +196,9 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     }
 
     function clearTrigger(uint256 triggerId) private {
-        automationBotStorage.updateTriggerRecord(
+        updateTriggerRecord(
             triggerId,
-            AutomationBotStorage.TriggerRecord(0, 0x0000000000000000000000000000000000000000, false)
+            TriggerRecord(0, 0x0000000000000000000000000000000000000000, false)
         );
     }
 
@@ -222,25 +229,43 @@ contract AutomationBot is BotLike, ReentrancyGuard {
             );
         }
 
-        uint256 firstTriggerId = automationBotStorage.triggersCounter() + 1;
+        uint256 firstTriggerId = automationBot.triggersCounter() + 1;
         uint256[] memory triggerIds = new uint256[](triggerData.length);
 
         for (uint256 i = 0; i < triggerData.length; i++) {
-            ISecurityAdapter adapter = ISecurityAdapter(
-                getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
-            );
-
             if (i == 0) {
-                (bool status, ) = address(adapter).delegatecall(
-                    abi.encodeWithSelector(
-                        adapter.permit.selector,
-                        triggerData[i],
-                        address(automationBotStorage),
-                        true
-                    )
+                ISecurityAdapter adapter = ISecurityAdapter(
+                    getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
                 );
-                require(status, "bot/permit-failed-add");
-                emit ApprovalGranted(triggerData[i], address(automationBotStorage));
+
+                address executableAdapter = getAdapterAddress(
+                    getCommandAddress(triggerTypes[i]),
+                    true
+                );
+
+                if (!adapter.canCall(triggerData[i], address(adapter))) {
+                    (bool status, ) = address(adapter).delegatecall(
+                        abi.encodeWithSelector(
+                            adapter.permit.selector,
+                            triggerData[i],
+                            address(adapter),
+                            true
+                        )
+                    );
+                    require(status, "bot/permit-failed-add");
+                }
+                if (!adapter.canCall(triggerData[i], executableAdapter)) {
+                    (bool status, ) = address(adapter).delegatecall(
+                        abi.encodeWithSelector(
+                            adapter.permit.selector,
+                            triggerData[i],
+                            executableAdapter,
+                            true
+                        )
+                    );
+                    require(status, "bot/permit-failed-add-executable");
+                }
+                emit ApprovalGranted(triggerData[i], self);
             }
 
             automationBot.addRecord(
@@ -272,12 +297,8 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(lockCount == triggerIds.length, "bot/group-inconsistent");
         unlock();
 
-        emit TriggerGroupAdded(
-            automationBotStorage.triggersGroupCounter(),
-            triggerGroupType,
-            triggerIds
-        );
-        automationBotStorage.increaseGroupCounter();
+        emit TriggerGroupAdded(automationBot.triggersGroupCounter(), triggerGroupType, triggerIds);
+        increaseGroupCounter();
     }
 
     function getValidatorAddress(uint16 groupType) public view returns (IValidator) {
@@ -295,7 +316,7 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         require(triggerData.length == triggerIds.length, "bot/invalid-input-length");
 
         automationBot.clearLock();
-        (, address commandAddress, ) = automationBotStorage.activeTriggers(triggerIds[0]);
+        address commandAddress = automationBot.getTriggerRecord(triggerIds[0]).commandAddress;
 
         for (uint256 i = 0; i < triggerIds.length; i++) {
             removeTrigger(triggerIds[i], triggerData[i]);
@@ -303,17 +324,29 @@ contract AutomationBot is BotLike, ReentrancyGuard {
 
         if (removeAllowance) {
             ISecurityAdapter adapter = ISecurityAdapter(getAdapterAddress(commandAddress, false));
+
             (bool status, ) = address(adapter).delegatecall(
                 abi.encodeWithSelector(
                     adapter.permit.selector,
                     triggerData[0],
-                    address(automationBotStorage),
+                    address(adapter),
+                    false
+                )
+            );
+            require(status, "bot/permit-removal-failed");
+
+            address executableAdapter = getAdapterAddress(commandAddress, true);
+            (status, ) = address(adapter).delegatecall(
+                abi.encodeWithSelector(
+                    adapter.permit.selector,
+                    triggerData[0],
+                    executableAdapter,
                     false
                 )
             );
 
-            require(status, "bot/permit-removal-failed");
-            emit ApprovalRemoved(triggerData[0], address(automationBotStorage));
+            require(status, "bot/permit-removal-failed-executable");
+            emit ApprovalRemoved(triggerData[0], self);
         }
     }
 
@@ -338,36 +371,53 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         IExecutableAdapter executableAdapter = IExecutableAdapter(
             getAdapterAddress(commandAddress, true)
         );
-        automationBotStorage.executeCoverage(
-            triggerData,
-            msg.sender,
-            address(executableAdapter),
-            coverageToken,
-            coverageAmount
-        );
+
+        executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
         {
-            automationBotStorage.executePermit(triggerData, commandAddress, address(adapter), true);
+            adapter.permit(triggerData, commandAddress, true);
         }
         {
             command.execute(executionData, triggerData); //command must be whitelisted
-            (, , bool continuous) = automationBotStorage.activeTriggers(triggerId);
+            bool continuous = activeTriggers[triggerId].continuous;
             if (!continuous) {
                 clearTrigger(triggerId);
                 emit TriggerRemoved(triggerId);
             }
         }
         {
-            automationBotStorage.executePermit(
-                triggerData,
-                commandAddress,
-                address(adapter),
-                false
-            );
+            adapter.permit(triggerData, commandAddress, false);
             require(command.isExecutionCorrect(triggerData), "bot/trigger-execution-wrong");
         }
 
         emit TriggerExecuted(triggerId, executionData);
+    }
+
+    function increaseGroupCounter() private {
+        counter.triggersGroupCounter++;
+    }
+
+    function triggersCounter() external view returns (uint256) {
+        return uint256(counter.triggersCounter);
+    }
+
+    function triggersGroupCounter() external view returns (uint256) {
+        return uint256(counter.triggersGroupCounter);
+    }
+
+    function getTriggerRecord(
+        uint256 id
+    ) external view returns (AutomationBot.TriggerRecord memory rec) {
+        rec = activeTriggers[id];
+    }
+
+    function updateTriggerRecord(uint256 id, TriggerRecord memory record) private {
+        activeTriggers[id] = record;
+    }
+
+    function appendTriggerRecord(TriggerRecord memory record) private {
+        counter.triggersCounter++;
+        activeTriggers[counter.triggersCounter] = record;
     }
 
     event ApprovalRemoved(bytes indexed triggerData, address approvedEntity);

@@ -25,15 +25,13 @@ import "../McdView.sol";
 contract DPMAdapter is ISecurityAdapter {
     address private immutable self;
     IAccountGuard public immutable accountGuard;
+    address public immutable botAddress;
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
-    modifier onlyDelegate() {
-        require(address(this) != self, "dpm-adapter/only-delegate");
-        _;
-    }
-
-    constructor(IAccountGuard _accountGuard) {
+    constructor(ServiceRegistry _serviceRegistry, IAccountGuard _accountGuard) {
         self = address(this);
-        accountGuard = _accountGuard; //hesitating if that should not be taken from serviceRegistry if needed, but this way it is immutable
+        botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        accountGuard = _accountGuard;
     }
 
     function decode(
@@ -42,16 +40,19 @@ contract DPMAdapter is ISecurityAdapter {
         (proxyAddress, triggerType) = abi.decode(triggerData, (address, uint16));
     }
 
-    function canCall(bytes memory triggerData, address operator) public view returns (bool) {
+    function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
         (address proxyAddress, ) = decode(triggerData);
         address positionOwner = accountGuard.owners(proxyAddress);
-        return accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
+        result = accountGuard.canCall(proxyAddress, operator) || (operator == positionOwner);
     }
 
-    function permit(bytes memory triggerData, address target, bool allowance) public onlyDelegate {
-        require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+    function permit(bytes memory triggerData, address target, bool allowance) public {
+        require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call");
 
         (address proxyAddress, ) = decode(triggerData);
+        if (self == address(this)) {
+            require(msg.sender == botAddress, "dpm-adapter/only-bot");
+        }
 
         if (allowance != accountGuard.canCall(proxyAddress, target)) {
             accountGuard.permit(target, proxyAddress, allowance);

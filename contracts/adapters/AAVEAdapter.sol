@@ -25,10 +25,13 @@ import "../McdView.sol";
 
 contract AAVEAdapter is IExecutableAdapter {
     address public immutable aavePA;
+    address public immutable botAddress;
     string private constant AAVE_PROXY_ACTIONS = "AAVE_PROXY_ACTIONS";
+    string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     constructor(ServiceRegistry _serviceRegistry) {
         aavePA = _serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
+        botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
     }
 
     function decode(
@@ -46,6 +49,7 @@ contract AAVEAdapter is IExecutableAdapter {
         address coverageToken,
         uint256 amount
     ) external {
+        require(msg.sender == botAddress, "aave-adapter/only-bot");
         (address proxy, , uint256 maxCoverage) = decode(triggerData);
         require(amount <= maxCoverage, "aave-adapter/coverage-too-high");
         //reverts if code fails

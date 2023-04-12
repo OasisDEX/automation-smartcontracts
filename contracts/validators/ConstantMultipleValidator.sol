@@ -25,7 +25,6 @@ struct GenericTriggerData {
     uint256 execCollRatio;
     uint256 targetCollRatio;
     uint256 bsPrice;
-    bool continuous;
     uint64 deviation;
     uint32 maxBaseFeeInGwei;
 }
@@ -64,6 +63,10 @@ contract ConstantMultipleValidator is IValidator {
         GenericTriggerData memory sellTriggerData = abi.decode(
             triggersData[1],
             (GenericTriggerData)
+        );
+        require(
+            buyTriggerData.maxCoverage == sellTriggerData.maxCoverage,
+            "validator/max-coverage-not-equal"
         );
         require(
             buyTriggerData.maxBaseFeeInGwei == sellTriggerData.maxBaseFeeInGwei,

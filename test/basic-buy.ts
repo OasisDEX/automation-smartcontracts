@@ -71,7 +71,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(5000).shiftedBy(18).toFixed(),
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -202,7 +201,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 incorrectExecutionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -217,7 +215,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 incorrectTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -232,27 +229,18 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
             await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
         })
 
-        it.skip('should fail if trigger type is not encoded correctly', async () => {
+        it('should fail if trigger type is not encoded correctly', async () => {
             //NOT relevant anymore as theres is no triggerType to compare to, command is chosen based on triggerType in triggerData
 
             const triggerData = utils.defaultAbiCoder.encode(
-                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32'],
-                [
-                    testCdpId,
-                    TriggerType.MakerStopLossToCollateralV2,
-                    maxCoverageDai,
-                    executionRatio,
-                    targetRatio,
-                    0,
-                    false,
-                ],
+                ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256'],
+                [testCdpId, TriggerType.MakerStopLossToCollateralV2, maxCoverageDai, executionRatio, targetRatio, 0],
             )
             await expect(createTrigger(triggerData, TriggerType.MakerBasicBuyV2, false)).to.be.reverted
         })
@@ -265,7 +253,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -280,7 +267,6 @@ describe('MakerBasicBuyCommandV2', () => {
                 executionRatio,
                 targetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -321,7 +307,7 @@ describe('MakerBasicBuyCommandV2', () => {
             const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
@@ -341,7 +327,7 @@ describe('MakerBasicBuyCommandV2', () => {
             targetRatio = toRatio(Math.ceil(ratioAtNext * 100 - 3) / 100)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, new BigNumber(targetRatio), triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -352,7 +338,7 @@ describe('MakerBasicBuyCommandV2', () => {
             )
             const events = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(events.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             expect(finalTriggerRecord.triggerHash).to.eq(triggerHash)
             expect(finalTriggerRecord.continuous).to.eq(true)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)

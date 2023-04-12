@@ -41,7 +41,6 @@ contract MakerBasicSellCommandV2 is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 minSellPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
@@ -49,6 +48,14 @@ contract MakerBasicSellCommandV2 is BaseMPACommand {
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {
         spot = SpotterLike(_serviceRegistry.getRegisteredService(MCD_SPOT_KEY));
         vat = VatLike(_serviceRegistry.getRegisteredService(MCD_VAT_KEY));
+    }
+
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        BasicSellTriggerData memory bsTriggerData = abi.decode(triggerData, (BasicSellTriggerData));
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return bsTriggerData.triggerType;
     }
 
     function decode(bytes memory triggerData) private pure returns (BasicSellTriggerData memory) {

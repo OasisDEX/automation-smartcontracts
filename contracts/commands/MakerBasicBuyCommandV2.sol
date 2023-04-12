@@ -42,7 +42,6 @@ contract MakerBasicBuyCommandV2 is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 maxBuyPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
@@ -53,6 +52,14 @@ contract MakerBasicBuyCommandV2 is BaseMPACommand {
 
     function decode(bytes memory triggerData) private pure returns (BasicBuyTriggerData memory) {
         return abi.decode(triggerData, (BasicBuyTriggerData));
+    }
+
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        BasicBuyTriggerData memory bbTriggerData = abi.decode(triggerData, (BasicBuyTriggerData));
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return bbTriggerData.triggerType;
     }
 
     /**

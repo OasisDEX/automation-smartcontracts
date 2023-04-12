@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
 import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, ONE_INCH_V4_ROUTER } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, AutomationBotStorage, DsProxyLike, ERC20, MakerAdapter, MPALike } from '../typechain'
+import { AutomationBot, DPMAdapter, DsProxyLike, ERC20, MakerAdapter, MPALike } from '../typechain'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
@@ -12,7 +12,7 @@ const testCdpId = parseInt(process.env.CDP_ID || '13288')
 const beforeTestCdpId = parseInt(process.env.CDP_ID_2 || '8027')
 const maxGweiPrice = 1000
 
-let skipRevert = false
+const skipRevert = false
 
 const dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(['uint256', 'uint16', 'uint256'], [testCdpId, 2, 101])
 
@@ -25,7 +25,6 @@ describe('AutomationAggregatorBot', async () => {
 
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let AutomationBotInstance: AutomationBot
-    let AutomationBotStorageInstance: AutomationBotStorage
     let ownerProxy: DsProxyLike
     let ownerProxyUserAddress: string
     let beforeOwnerProxy: DsProxyLike
@@ -33,6 +32,7 @@ describe('AutomationAggregatorBot', async () => {
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
     let MakerAdapterInstance: MakerAdapter
+    let DPMAdapterInstance: DPMAdapter
     let dai: ERC20
 
     let system: DeployedSystem
@@ -61,8 +61,8 @@ describe('AutomationAggregatorBot', async () => {
         dai = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.DAI)
 
         AutomationBotInstance = system.automationBot
-        AutomationBotStorageInstance = system.automationBotStorage
         MakerAdapterInstance = system.makerAdapter!
+        DPMAdapterInstance = system.dpmAdapter!
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
@@ -145,7 +145,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -157,7 +156,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 ethers.constants.Zero,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -173,7 +171,6 @@ describe('AutomationAggregatorBot', async () => {
                 beforeBuyExecutionRatio,
                 beforeBuyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -185,7 +182,6 @@ describe('AutomationAggregatorBot', async () => {
                 beforeSellExecutionRatio,
                 beforeSellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -294,7 +290,7 @@ describe('AutomationAggregatorBot', async () => {
             console.log(`automation bot address ${AutomationBotInstance.address}`)
             console.log(`bot address ${AutomationBotInstance.address}`)
             console.log('-------')
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -304,7 +300,7 @@ describe('AutomationAggregatorBot', async () => {
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
@@ -312,7 +308,7 @@ describe('AutomationAggregatorBot', async () => {
         })
         it('should successfully create a trigger group - and then replace it with new one', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -322,12 +318,12 @@ describe('AutomationAggregatorBot', async () => {
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotInstance.address).to.eql(events[0].address)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
             const dataToSupply2 = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -338,7 +334,7 @@ describe('AutomationAggregatorBot', async () => {
             ])
             const tx2 = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply2)
 
-            const counterAfter2 = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter2 = await AutomationBotInstance.triggersCounter()
 
             expect(counterAfter2.toNumber()).to.be.equal(counterAfter.toNumber() + 2)
             const receipt2 = await tx2.wait()
@@ -354,7 +350,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 ethers.constants.MaxUint256,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -362,7 +357,7 @@ describe('AutomationAggregatorBot', async () => {
             const createTx = await createTrigger(oldBbTriggerData, TriggerType.MakerBasicBuyV2, true)
 
             await createTx.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -371,9 +366,9 @@ describe('AutomationAggregatorBot', async () => {
                 [oldBbTriggerData, '0x'],
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
 
@@ -383,48 +378,6 @@ describe('AutomationAggregatorBot', async () => {
             expect(AutomationBotInstance.address).to.eql(aggregatorEvents[0].address)
         })
 
-        it.skip('should not create a trigger group, remove old bs and add bb in its place', async () => {
-            //TODO: why await expect(tx).to.be.reverted, looks like something that should work
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            // basic sell
-            const oldBbTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicBuyV2,
-                maxCoverageDai,
-                buyExecutionRatio,
-                buyTargetRatio,
-                ethers.constants.MaxUint256,
-                true,
-                50,
-                maxGweiPrice,
-            )
-            const oldBsTriggerData = encodeTriggerData(
-                testCdpId,
-                TriggerType.MakerBasicSellV2,
-                maxCoverageDai,
-                sellExecutionRatio,
-                sellTargetRatio,
-                5000,
-                true,
-                50,
-                maxGweiPrice,
-            )
-            const createTx = await createTrigger(oldBbTriggerData, TriggerType.MakerBasicBuyV2, true)
-            const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.MakerBasicSellV2, true)
-            await createTx.wait()
-            await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                [triggersCounterBefore.toNumber() - 1, triggersCounterBefore.toNumber()],
-                [bbTriggerData, bsTriggerData],
-                [oldBbTriggerData, oldBsTriggerData],
-                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
-            ])
-            const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.reverted
-        })
         it('should successfully create a trigger group, remove old bb and old bs - add new bb and bs in their place', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const oldBbTriggerData = encodeTriggerData(
@@ -434,7 +387,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -445,7 +397,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -453,7 +404,7 @@ describe('AutomationAggregatorBot', async () => {
             const createTx2 = await createTrigger(oldBsTriggerData, TriggerType.MakerBasicSellV2, true)
             await createTx.wait()
             await createTx2.wait()
-            const triggersCounterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const triggersCounterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 groupTypeId,
                 [true, true],
@@ -462,9 +413,9 @@ describe('AutomationAggregatorBot', async () => {
                 [oldBbTriggerData, oldBsTriggerData],
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
 
@@ -482,7 +433,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -493,7 +443,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -513,11 +462,11 @@ describe('AutomationAggregatorBot', async () => {
                 [oldBbTriggerData, oldBbTriggerData],
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const tx = await ownerProxy
                 .connect(owner)
                 .execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 10000000 })
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
 
@@ -535,7 +484,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -546,7 +494,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 5000,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -565,9 +512,9 @@ describe('AutomationAggregatorBot', async () => {
                 [oldBsTriggerData, oldBbTriggerData],
                 [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
             ])
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
             const receipt = await tx.wait()
             const botEvents = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerRemoved'))
@@ -615,40 +562,6 @@ describe('AutomationAggregatorBot', async () => {
             const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
             expect(AutomationBotInstance.address).to.eql(events[0].address)
         })
-        it.skip('should successfully execute a trigger from the group', async () => {
-            const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
-            const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
-                groupTypeId,
-                [true, true],
-                replacedTriggerId,
-                [bbTriggerData, bsTriggerData],
-                replacedTriggerData,
-                [TriggerType.MakerBasicBuyV2, TriggerType.MakerBasicSellV2],
-            ])
-            const tx = await ownerProxy
-                .connect(owner)
-                .execute(AutomationBotInstance.address, dataToSupply, { gasLimit: 2000000 })
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
-            expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
-            const receipt = await tx.wait()
-            const events = getEvents(receipt, AutomationBotInstance.interface.getEvent('TriggerGroupAdded'))
-            expect(AutomationBotInstance.address).to.eql(events[0].address)
-
-            const targetRatio = new BigNumber(2.53).shiftedBy(4)
-            const triggerIds = [Number(counterAfter) - 1, Number(counterAfter)]
-            skipRevert = true
-            const txExecute = executeTrigger(triggerIds[0], targetRatio, bbTriggerData)
-
-            const receiptExecute = await (await txExecute).wait()
-
-            const eventTriggerExecuted = getEvents(
-                receiptExecute,
-                AutomationBotInstance.interface.getEvent('TriggerExecuted'),
-            )
-
-            expect(eventTriggerExecuted.length).to.eq(1)
-        })
     })
     describe('removeTriggers', async () => {
         const groupTypeId = TriggerGroupType.ConstantMultiple
@@ -667,7 +580,6 @@ describe('AutomationAggregatorBot', async () => {
             buyExecutionRatio,
             buyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -679,7 +591,6 @@ describe('AutomationAggregatorBot', async () => {
             sellExecutionRatio,
             sellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -693,7 +604,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeBuyExecutionRatio,
             beforeBuyTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -705,7 +615,6 @@ describe('AutomationAggregatorBot', async () => {
             beforeSellExecutionRatio,
             beforeSellTargetRatio,
             0,
-            true,
             50,
             maxGweiPrice,
         )
@@ -738,7 +647,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should successfully remove a trigger group through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
 
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
@@ -752,20 +661,22 @@ describe('AutomationAggregatorBot', async () => {
 
         it('should only remove approval if last param set to true - test FALSE', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
+            let status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
+            expect(status).to.equal(true, 'canCall result initially incorrect')
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
                 triggerIds,
                 [bbTriggerData, bsTriggerData],
                 false,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
-            expect(status).to.equal(true)
+            status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
+            expect(status).to.equal(true, 'canCall result should not change')
         })
         it('should only remove approval if last param set to true - test TRUE', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
                 triggerIds,
@@ -773,11 +684,11 @@ describe('AutomationAggregatorBot', async () => {
                 true,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, AutomationBotStorageInstance.address)
+            const status = await MakerAdapterInstance.canCall(bbTriggerData, DPMAdapterInstance.address)
             expect(status).to.equal(false)
         })
         it('should revert if called not through delegatecall', async () => {
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
 
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const tx = AutomationBotInstance.removeTriggers(triggerIds, [bbTriggerData, bsTriggerData], true)
@@ -786,7 +697,7 @@ describe('AutomationAggregatorBot', async () => {
 
         it('should not remove a trigger group by non owner DSProxy', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
 
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
@@ -800,7 +711,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should not remove a trigger group not owned by owner', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
 
-            const triggerCounter = await AutomationBotStorageInstance.triggersCounter()
+            const triggerCounter = await AutomationBotInstance.triggersCounter()
 
             const beforeTriggerIds = [Number(triggerCounter) - 3, Number(triggerCounter) - 2]
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
@@ -841,7 +752,6 @@ describe('AutomationAggregatorBot', async () => {
                 buyExecutionRatio,
                 buyTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -853,7 +763,6 @@ describe('AutomationAggregatorBot', async () => {
                 sellExecutionRatio,
                 sellTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -885,7 +794,7 @@ describe('AutomationAggregatorBot', async () => {
         it('should return true for correct operator address', async () => {
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                MakerAdapterInstance.address,
             )
 
             expect(status).to.equal(true, 'approval does exist for AutomationBotStorageInstance')
@@ -900,7 +809,7 @@ describe('AutomationAggregatorBot', async () => {
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
             const status = await MakerAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                AutomationBotStorageInstance.address,
+                MakerAdapterInstance.address,
             )
 
             expect(status).to.equal(false, 'approval does not exist for AutomationBotStorageInstance')

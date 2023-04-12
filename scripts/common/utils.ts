@@ -88,15 +88,15 @@ function getTriggerDataTypes(triggerType: TriggerType) {
         case TriggerType.MakerAutoTakeProfitToCollateralV2:
             return ['uint256', 'uint16', 'uint256', 'uint256', 'uint32']
         case TriggerType.MakerBasicBuyV2:
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32']
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'uint64', 'uint32']
         case TriggerType.MakerBasicSellV2:
-            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'bool', 'uint64', 'uint32']
+            return ['uint256', 'uint16', 'uint256', 'uint256', 'uint256', 'uint256', 'uint64', 'uint32']
         default:
             throw new Error(`Error determining trigger data types. Unsupported trigger type: ${triggerType}`)
     }
 }
 
-export function encodeTriggerData(vaultId: number, triggerType: TriggerType, ...rest: any[]): BytesLike {
+export function encodeTriggerData(vaultId: number | string, triggerType: TriggerType, ...rest: any[]): BytesLike {
     const args = [vaultId, triggerType, ...rest]
     const types = getTriggerDataTypes(triggerType)
     return utils.defaultAbiCoder.encode(types, args)

@@ -35,6 +35,17 @@ contract MakerStopLossCommandV2 is BaseMPACommand {
 
     constructor(ServiceRegistry _serviceRegistry) BaseMPACommand(_serviceRegistry) {}
 
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        CloseCommandTriggerData memory closeCommandTriggerData = abi.decode(
+            triggerData,
+            (CloseCommandTriggerData)
+        );
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return closeCommandTriggerData.triggerType;
+    }
+
     /**
      *  @inheritdoc ICommand
      */

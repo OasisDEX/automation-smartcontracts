@@ -42,6 +42,13 @@ contract DummyCommand is ICommand {
         return validTriggerData;
     }
 
+    function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
+        if (!this.isTriggerDataValid(false, triggerData)) {
+            return 0;
+        }
+        return 998;
+    }
+
     function isExecutionCorrect(
         bytes memory // triggerData
     ) external view override returns (bool) {
