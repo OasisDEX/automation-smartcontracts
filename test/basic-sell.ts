@@ -83,7 +83,6 @@ describe('MakerBasicSellCommandV2', () => {
                 incorrectExecutionRatio,
                 incorrectTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -98,7 +97,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -113,7 +111,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 0,
                 maxGweiPrice,
             )
@@ -128,7 +125,6 @@ describe('MakerBasicSellCommandV2', () => {
                 correctExecutionRatio,
                 correctTargetRatio,
                 0,
-                true,
                 50,
                 maxGweiPrice,
             )
@@ -154,7 +150,6 @@ describe('MakerBasicSellCommandV2', () => {
                 new BigNumber(executionRatio).toFixed(),
                 new BigNumber(targetRatio).toFixed(),
                 new BigNumber(100).shiftedBy(18).toFixed(),
-                true,
                 50,
                 maxBaseFee,
             )
@@ -312,7 +307,7 @@ describe('MakerBasicSellCommandV2', () => {
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
-            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const addEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerAdded'))
             expect(addEvents.length).to.eq(0)
             const removeEvents = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
@@ -330,7 +325,7 @@ describe('MakerBasicSellCommandV2', () => {
             const targetRatio = new BigNumber(correctTargetRatio)
             const { triggerId, triggerData } = await createTriggerForExecution(executionRatio, targetRatio, true)
 
-            const startingTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const startingTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             const tx = executeTrigger(triggerId, targetRatio, triggerData)
             await expect(tx).not.to.be.reverted
             const receipt = await (await tx).wait()
@@ -338,7 +333,7 @@ describe('MakerBasicSellCommandV2', () => {
             expect(events.length).to.eq(0)
             const removeEvent = getEvents(receipt, system.automationBot.interface.getEvent('TriggerRemoved'))
             expect(removeEvent.length).to.eq(0)
-            const finalTriggerRecord = await system.automationBotStorage.activeTriggers(triggerId)
+            const finalTriggerRecord = await system.automationBot.activeTriggers(triggerId)
             expect(finalTriggerRecord).to.deep.eq(startingTriggerRecord)
         })
     })

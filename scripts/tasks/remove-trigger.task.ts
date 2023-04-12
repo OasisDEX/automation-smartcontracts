@@ -20,12 +20,6 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
-        const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
-        const storage = await hre.ethers.getContractAt(
-            'AutomationBotStorage',
-            hardhatUtils.addresses.AUTOMATION_BOT_STORAGE,
-        )
-
         /*         const triggerInfo = await storage.activeTriggers(args.trigger.toString())
         if (triggerInfo.commandAddress.eq('0x0000000000000000000000000000000000000000')) {
             throw new Error(`Trigger with id ${args.trigger.toString()} is not active`)

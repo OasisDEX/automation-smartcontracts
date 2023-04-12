@@ -809,10 +809,10 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@oasisdex/automation@1.5.0-alpha.2":
-  version "1.5.0-alpha.2"
-  resolved "https://registry.yarnpkg.com/@oasisdex/automation/-/automation-1.5.0-alpha.2.tgz#6f0876ae3b5c3742d48a94dce0a3132f247e69d5"
-  integrity sha512-gnRZIynIgqVck0/X4pcsX6JyPCjVQM0PymuBQ7iA0HBpf2hSJ4B2U635YunaP0bsA1cy223s9fuczefHg/WC/Q==
+"@oasisdex/automation@1.5.0-alpha.3":
+  version "1.5.0-alpha.3"
+  resolved "https://registry.yarnpkg.com/@oasisdex/automation/-/automation-1.5.0-alpha.3.tgz#ab6c39bfcf5a69cdedae2cc4390fcfdbf0bdac1d"
+  integrity sha512-OBuc9PBteSkPZ6mv7qi+onan1Bgnn0NxzzZR04P18+oiqppcedYy9QlGaRQKLnwNwnWmAqQOxMs2sHOYDGRqkQ==
   dependencies:
     ethers "^5.6.2"
 

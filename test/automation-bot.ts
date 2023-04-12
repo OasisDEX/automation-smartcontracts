@@ -16,7 +16,6 @@ import {
     DsProxyLike,
     DummyCommand,
     AutomationExecutor,
-    AutomationBotStorage,
     MakerAdapter,
     DPMAdapter,
 } from '../typechain'
@@ -32,7 +31,6 @@ describe('AutomationBot', async () => {
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
-    let AutomationBotStorageInstance: AutomationBotStorage
     let AutomationExecutorInstance: AutomationExecutor
     let MakerAdapterInstance: MakerAdapter
     let DPMAdapterInstance: DPMAdapter
@@ -66,7 +64,6 @@ describe('AutomationBot', async () => {
 
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot
-        AutomationBotStorageInstance = system.automationBotStorage
         AutomationExecutorInstance = system.automationExecutor
         MakerAdapterInstance = system.makerAdapter!
         DPMAdapterInstance = system.dpmAdapter!
@@ -169,7 +166,7 @@ describe('AutomationBot', async () => {
 
         it('should successfully create a trigger through DSProxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
@@ -179,13 +176,13 @@ describe('AutomationBot', async () => {
                 [triggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 1)
         })
 
         it('should successfully create a trigger through DSProxy and then replace it', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
@@ -210,14 +207,14 @@ describe('AutomationBot', async () => {
                 [triggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyWithReplace)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
 
             expect(counterAfter.toNumber()).to.be.equal(counterBefore.toNumber() + 2)
         })
 
         it('should successfully create a trigger through DSProxy and then NOT replace it', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            const counterBefore = await AutomationBotStorageInstance.triggersCounter()
+            const counterBefore = await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
@@ -227,7 +224,7 @@ describe('AutomationBot', async () => {
                 [triggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            const counterAfter = await AutomationBotStorageInstance.triggersCounter()
+            const counterAfter = await AutomationBotInstance.triggersCounter()
 
             const dataToSupplyWithReplace = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -306,7 +303,7 @@ describe('AutomationBot', async () => {
 
         it('should revert if removedTriggerId is incorrect if called by user being an owner of proxy', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
-            await AutomationBotStorageInstance.triggersCounter()
+            await AutomationBotInstance.triggersCounter()
             const dataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
@@ -716,7 +713,7 @@ describe('AutomationBot', async () => {
         it('should work', async () => {
             const realExecutionData = '0x'
             const executionData = utils.defaultAbiCoder.encode(['bytes'], [realExecutionData])
-            const triggerRecordBeforeExecute = await AutomationBotStorageInstance.activeTriggers(triggerId)
+            const triggerRecordBeforeExecute = await AutomationBotInstance.activeTriggers(triggerId)
             const executionReceipt = await (
                 await AutomationExecutorInstance.execute(
                     executionData,
@@ -743,7 +740,7 @@ describe('AutomationBot', async () => {
                 [triggerData, ServiceRegistryInstance.address, DummyCommandInstance.address],
             )
 
-            const executedTriggerRecord = await AutomationBotStorageInstance.activeTriggers(triggerId)
+            const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.triggerHash).to.eq(triggerHash)
             expect(executedTriggerRecord.continuous).to.eq(true)
             expect(executedTriggerRecord.triggerHash).to.eq(triggerRecordBeforeExecute.triggerHash)
@@ -797,7 +794,7 @@ describe('AutomationBot', async () => {
                 AutomationBotInstance.interface.getEvent('TriggerRemoved'),
             ).length
 
-            const executedTriggerRecord = await AutomationBotStorageInstance.activeTriggers(triggerId)
+            const executedTriggerRecord = await AutomationBotInstance.activeTriggers(triggerId)
             expect(executedTriggerRecord.triggerHash).to.eq(
                 '0x0000000000000000000000000000000000000000000000000000000000000000',
             )

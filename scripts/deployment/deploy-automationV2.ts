@@ -3,7 +3,6 @@ import { constants } from 'ethers'
 import {
     AAVEAdapter,
     AutomationBot,
-    AutomationBotStorage,
     AutomationExecutor,
     DPMAdapter,
     IAccountGuard,
@@ -64,22 +63,11 @@ async function main() {
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
     console.log('Deploying AutomationStorage')
-    const AutomationBotStorageInstance: AutomationBotStorage = await utils.deployContract(
-        ethers.getContractFactory('AutomationBotStorage'),
-        [system.serviceRegistry.address],
-    )
-    const automationStorage = await AutomationBotStorageInstance.deployed()
-    console.log(`AutomationStorage Deployed: ${automationStorage.address}`)
-    await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AUTOMATION_BOT_STORAGE),
-        automationStorage.address,
-    )
-    console.log(`AutomationStorage Added to ServiceRegistry`)
 
     console.log('Deploying AutomationV2')
     const AutomationBotInstance: AutomationBot = await utils.deployContract(
         ethers.getContractFactory('AutomationBot'),
-        [system.serviceRegistry.address, automationStorage.address],
+        [system.serviceRegistry.address],
     )
     console.log(`AutomationBot Deployed: ${AutomationBotInstance.address}`)
     await ensureServiceRegistryEntry(

@@ -42,7 +42,6 @@ contract MakerBasicBuyCommandV2 is BaseMPACommand {
         uint256 execCollRatio;
         uint256 targetCollRatio;
         uint256 maxBuyPrice;
-        bool continuous;
         uint64 deviation;
         uint32 maxBaseFeeInGwei;
     }
