@@ -64,7 +64,7 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         (uint256 cdpId, , ) = decode(triggerData);
         address cdpOwner = manager.owns(cdpId);
 
-        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call");
         if (self == address(this)) {
             require(msg.sender == botAddress, "dpm-adapter/only-bot");
         }

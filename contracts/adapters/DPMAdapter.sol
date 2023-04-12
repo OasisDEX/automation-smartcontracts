@@ -47,7 +47,7 @@ contract DPMAdapter is ISecurityAdapter {
     }
 
     function permit(bytes memory triggerData, address target, bool allowance) public {
-        require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call"); //missing check to fail permit if msg.sender has no permissions
+        require(canCall(triggerData, address(this)), "dpm-adapter/not-allowed-to-call");
 
         (address proxyAddress, ) = decode(triggerData);
         if (self == address(this)) {
