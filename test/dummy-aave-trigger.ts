@@ -41,7 +41,7 @@ describe('AAVE integration', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16368930,
+                        blockNumber: 17000000,
                     },
                 },
             ],
