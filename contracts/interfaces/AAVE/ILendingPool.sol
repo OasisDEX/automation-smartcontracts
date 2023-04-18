@@ -306,15 +306,6 @@ interface ILendingPool {
      * @param referralCode Code used to register the integrator originating the operation, for potential rewards.
      *   0 if the action is executed directly by the user, without any middle-man
      **/
-    function flashLoan(
-        address receiverAddress,
-        address[] calldata assets,
-        uint256[] calldata amounts,
-        uint256[] calldata modes,
-        address onBehalfOf,
-        bytes calldata params,
-        uint16 referralCode
-    ) external;
 
     /**
      * @dev Returns the user account data across all the reserves

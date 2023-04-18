@@ -20,12 +20,14 @@
 pragma solidity 0.8.13;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
+import { IFlashLoanRecipient } from "../interfaces/Balancer/IFlashLoanRecipient.sol";
+import { IVault } from "../interfaces/Balancer/IVault.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
-import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
+import { BaseBalancerFlashLoanCommand } from "./BaseBalancerFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 
 struct AaveData {
@@ -45,7 +47,7 @@ struct StopLossTriggerData {
 
 struct CloseData {
     address receiverAddress;
-    address[] assets;
+    IERC20[] assets;
     uint256[] amounts;
     uint256[] modes;
     address onBehalfOf;
@@ -61,18 +63,19 @@ interface AaveStopLoss {
     function self() external returns (address);
 }
 
-contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
+contract AaveStoplLossCommand is BaseBalancerFlashLoanCommand {
     address public immutable weth;
     address public immutable bot;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
     string private constant WETH = "WETH";
+    IVault public constant balancer = IVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     constructor(
         IServiceRegistry _serviceRegistry,
         ILendingPool _lendingPool,
         address exchange_
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
+    ) BaseBalancerFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
         weth = serviceRegistry.getRegisteredService(WETH);
         bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
     }
@@ -180,8 +183,8 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
         {
             CloseData memory closeData;
 
-            address[] memory debtTokens = new address[](1);
-            debtTokens[0] = address(aaveData.debtTokenAddress);
+            IERC20[] memory debtTokens = new IERC20[](1);
+            debtTokens[0] = IERC20(aaveData.debtTokenAddress);
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = totalToRepay;
             uint256[] memory modes = new uint256[](1);
@@ -201,14 +204,11 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
                 exchangeData
             );
             closeData.referralCode = 0;
-            lendingPool.flashLoan(
-                closeData.receiverAddress,
+            balancer.flashLoan(
+                IFlashLoanRecipient(closeData.receiverAddress),
                 closeData.assets,
                 closeData.amounts,
-                closeData.modes,
-                closeData.onBehalfOf,
-                closeData.params,
-                closeData.referralCode
+                closeData.params
             );
         }
         IERC20(aaveData.debtTokenAddress).transfer(
@@ -230,7 +230,7 @@ contract AaveStoplLossCommand is BaseAAveFlashLoanCommand {
             SwapData memory exchangeData
         ) = abi.decode(flData.params, (address, address, address, address, address, SwapData));
 
-        require(flData.initiator == borrower, "aaveSl/initiator-not-borrower");
+        // require(flData.initiator == borrower, "aaveSl/initiator-not-borrower");
 
         IERC20 collateralToken = IERC20(collateralTokenAddress);
         IERC20 debtToken = IERC20(flData.assets[0]);
