@@ -115,7 +115,7 @@ export async function deploySystem({
 
     const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
         ethers.getContractFactory('AaveProxyActions'),
-        [addresses.WETH_AAVE, addresses.AAVE_POOL],
+        [addresses.WETH, addresses.AAVE_POOL],
     )
 
     if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')

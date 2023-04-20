@@ -18,6 +18,7 @@ import {
     AutomationExecutor,
     MakerAdapter,
     DPMAdapter,
+    McdView,
 } from '../typechain'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { TriggerType } from '@oasisdex/automation'
@@ -25,10 +26,11 @@ import { impersonateAccount } from '@nomicfoundation/hardhat-network-helpers'
 
 const testCdpId = parseInt(process.env.CDP_ID || '8027')
 
-describe('AutomationBot', async () => {
+describe.only('AutomationBot', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageDai = hre.ethers.utils.parseEther('1500')
+    let McdViewInstance: McdView
     let ServiceRegistryInstance: ServiceRegistry
     let AutomationBotInstance: AutomationBot
     let AutomationExecutorInstance: AutomationExecutor
@@ -42,11 +44,11 @@ describe('AutomationBot', async () => {
     let notOwnerProxyUserAddress: string
     let snapshotId: string
     let dummyTriggerDataNoReRegister: string
-
+    const dummyTriggerType = 777
     before(async () => {
         dummyTriggerDataNoReRegister = utils.defaultAbiCoder.encode(
             ['uint256', 'uint16', 'uint256', 'uint256'],
-            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 500],
+            [testCdpId, dummyTriggerType, maxCoverageDai, 500],
         )
 
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
@@ -72,7 +74,7 @@ describe('AutomationBot', async () => {
             'function cdpAllow(address,uint,address,uint)',
         ])
 
-        const hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
+        const hash = getCommandHash(dummyTriggerType as TriggerType)
         await system.serviceRegistry.addNamedService(hash, DummyCommandInstance.address)
 
         const adapterHash = getAdapterNameHash(DummyCommandInstance.address)
@@ -90,6 +92,8 @@ describe('AutomationBot', async () => {
         const otherProxyAddress = await cdpManager.owns(1)
         notOwnerProxy = await hre.ethers.getContractAt('DsProxyLike', otherProxyAddress)
         notOwnerProxyUserAddress = await notOwnerProxy.owner()
+
+        McdViewInstance = system.mcdView
     })
 
     const executeCdpAllow = async (
@@ -120,8 +124,8 @@ describe('AutomationBot', async () => {
     })
 
     describe('getCommandAddress', async () => {
-        it('should return SOME_FAKE_COMMAND_ADDRESS for triggerType 2', async () => {
-            const address = await AutomationBotInstance.getCommandAddress(102)
+        it('should return SOME_FAKE_COMMAND_ADDRESS for triggerType 777', async () => {
+            const address = await AutomationBotInstance.getCommandAddress(dummyTriggerType)
             expect(address.toLowerCase()).to.equal(DummyCommandInstance.address.toLowerCase())
         })
 
@@ -132,7 +136,7 @@ describe('AutomationBot', async () => {
     })
 
     describe('addTrigger', async () => {
-        const triggerType = TriggerType.MakerStopLossToDaiV2
+        const triggerType = dummyTriggerType
         const triggerData = utils.defaultAbiCoder.encode(
             ['uint256', 'uint16', 'uint256', 'uint256'],
             [testCdpId, triggerType, maxCoverageDai, 101],
@@ -327,7 +331,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
         })
@@ -353,7 +357,7 @@ describe('AutomationBot', async () => {
     describe('grantApproval', async () => {
         const triggerData = utils.defaultAbiCoder.encode(
             ['uint256', 'uint16', 'uint256', 'uint256'],
-            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 101],
+            [testCdpId, dummyTriggerType, maxCoverageDai, 101],
         )
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -400,7 +404,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
 
@@ -431,7 +435,7 @@ describe('AutomationBot', async () => {
     describe('removeApproval', async () => {
         const triggerData = utils.defaultAbiCoder.encode(
             ['uint256', 'uint16', 'uint256', 'uint256'],
-            [testCdpId, TriggerType.MakerStopLossToDaiV2, maxCoverageDai, 101],
+            [testCdpId, dummyTriggerType, maxCoverageDai, 101],
         )
         beforeEach(async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
@@ -441,7 +445,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
         })
@@ -497,7 +501,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -565,7 +569,7 @@ describe('AutomationBot', async () => {
                     [triggerId],
                     [dummyTriggerDataNoReRegister],
                     [dummyTriggerDataNoReRegister],
-                    [TriggerType.MakerStopLossToDaiV2],
+                    [dummyTriggerType],
                 ])
 
                 const tx = await ownerProxy
@@ -713,7 +717,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -776,7 +780,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
             const receipt = await (
                 await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -829,7 +833,7 @@ describe('AutomationBot', async () => {
                 [0],
                 [dummyTriggerDataNoReRegister],
                 ['0x'],
-                [TriggerType.MakerStopLossToDaiV2],
+                [dummyTriggerType],
             ])
 
             const tx = await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
@@ -963,6 +967,87 @@ describe('AutomationBot', async () => {
                 },
             )
             await expect(result).to.be.revertedWith('bot/trigger-execution-illegal')
+        })
+
+        it.only('Malicious security adapter test', async () => {
+            const maliciousMaxCoverage = maxCoverageDai.mul(100)
+            const maliciousTriggerType = 778
+            const maliciousTriggerData = utils.defaultAbiCoder.encode(
+                ['uint256', 'uint16', 'uint256', 'uint256'],
+                [testCdpId, maliciousTriggerType, maliciousMaxCoverage, 500],
+            )
+            const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
+            const maliciousSecurityAdapter = await hardhatUtils.deployContract(
+                hre.ethers.getContractFactory('MaliciousSecurityAdapter'),
+                [hardhatUtils.addresses.AUTOMATION_SERVICE_REGISTRY],
+            )
+            const maliciousCommand = await hardhatUtils.deployContract(hre.ethers.getContractFactory('DummyCommand'), [
+                hardhatUtils.addresses.AUTOMATION_SERVICE_REGISTRY,
+                true,
+                true,
+                false,
+                true,
+            ])
+            const maliciousCommandHash = getCommandHash(maliciousTriggerType as TriggerType)
+            await ServiceRegistryInstance.addNamedService(maliciousCommandHash, maliciousCommand.address)
+
+            const maliciousSecurityAdapterHash = getAdapterNameHash(maliciousCommand.address)
+            await ServiceRegistryInstance.addNamedService(
+                maliciousSecurityAdapterHash,
+                maliciousSecurityAdapter.address,
+            )
+
+            const executableAdapterHash = getExecuteAdapterNameHash(maliciousCommand.address)
+            await ServiceRegistryInstance.addNamedService(executableAdapterHash, MakerAdapterInstance.address)
+
+            const maliciousDataToSupply = AutomationBotInstance.interface.encodeFunctionData('addTriggers', [
+                TriggerGroupType.SingleTrigger,
+                [false],
+                [0],
+                [maliciousTriggerData],
+                ['0x'],
+                [maliciousTriggerType],
+            ])
+
+            const maliciousAddTriggerTx = await notOwnerProxy
+                .connect(notOwner)
+                .execute(AutomationBotInstance.address, maliciousDataToSupply)
+            const addTriggerTxRes = await maliciousAddTriggerTx.wait()
+
+            const [event] = getEvents(addTriggerTxRes, AutomationBotInstance.interface.getEvent('TriggerAdded'))
+            const maliciousTriggerId = event.args.triggerId.toNumber()
+            const maliciousTxCoverage = hre.ethers.utils.parseEther('3000')
+            const daiBalanceBefore = await hardhatUtils.balanceOf(
+                hardhatUtils.addresses.DAI,
+                AutomationExecutorInstance.address,
+            )
+            const debtBefore = (await McdViewInstance.getVaultInfo(testCdpId))[1]
+
+            const tx = AutomationExecutorInstance.execute(
+                maliciousTriggerData,
+                maliciousTriggerData,
+                maliciousCommand.address,
+                maliciousTriggerId,
+                maliciousTxCoverage,
+                0,
+                gasRefund,
+                hardhatUtils.addresses.DAI,
+                {
+                    gasLimit: 2000_000,
+                },
+            )
+            await expect(tx).not.to.be.reverted
+
+            const daiBalanceAfter = await hardhatUtils.balanceOf(
+                hardhatUtils.addresses.DAI,
+                AutomationExecutorInstance.address,
+            )
+            console.log(daiBalanceAfter.sub(daiBalanceBefore))
+            
+            const debtAfter = (await McdViewInstance.getVaultInfo(testCdpId))[1]
+            expect(debtAfter.sub(debtBefore)).to.be.gt(daiBalanceAfter.sub(daiBalanceBefore))
+            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.eq(maliciousTxCoverage)
+            expect(daiBalanceAfter.sub(daiBalanceBefore)).to.be.gt(maxCoverageDai)
         })
     })
 })

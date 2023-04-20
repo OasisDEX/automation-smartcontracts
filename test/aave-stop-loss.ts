@@ -138,8 +138,8 @@ describe('AaveStopLossCommandV2', async () => {
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
-                hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
+                hardhatUtils.addresses.WETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -162,8 +162,8 @@ describe('AaveStopLossCommandV2', async () => {
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
-                hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
+                hardhatUtils.addresses.WETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -190,8 +190,8 @@ describe('AaveStopLossCommandV2', async () => {
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
-                hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
+                hardhatUtils.addresses.WETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -226,8 +226,8 @@ describe('AaveStopLossCommandV2', async () => {
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
-                hardhatUtils.addresses.WETH,
                 hardhatUtils.addresses.USDC,
+                hardhatUtils.addresses.WETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -292,7 +292,7 @@ describe('AaveStopLossCommandV2', async () => {
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH_AAVE,
+                    fromAsset: hardhatUtils.addresses.WETH,
                     toAsset: hardhatUtils.addresses.USDC,
                     amount: amountInWei /* TODO: on multiply add fee  .add(amountInWei.mul(fee).div(feeBase)) */,
                     receiveAtLeast: vTokenBalance.add(vTokenBalance.mul(flFee).div(feeBase)),
@@ -302,13 +302,13 @@ describe('AaveStopLossCommandV2', async () => {
                 }
                 const aaveData = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
+                    collateralTokenAddress: hardhatUtils.addresses.WETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
                 const aaveDataNotOwner = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
+                    collateralTokenAddress: hardhatUtils.addresses.WETH,
                     borrower: proxyAddress,
                     fundsReceiver: randomWalletAddress,
                 }
@@ -329,8 +329,8 @@ describe('AaveStopLossCommandV2', async () => {
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
-                        hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         ltv.sub(2),
                     ]
                     triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -384,6 +384,20 @@ describe('AaveStopLossCommandV2', async () => {
                     expect(userData.totalCollateralETH).to.be.eq(0)
                     expect(userData.totalDebtETH).to.be.eq(0)
                 })
+                it('shouldn`t execute trigger - with coverage below the limit, but coverage token different than debt token', async () => {
+                    const tx = automationExecutorInstance.execute(
+                        encodedClosePositionData,
+                        triggerData,
+                        aaveStopLoss.address,
+                        triggerId,
+                        ethers.utils.parseUnits('9', 6),
+                        '0',
+                        178000,
+                        hardhatUtils.addresses.DAI,
+                        { gasLimit: 3000000 },
+                    )
+                    await expect(tx).to.be.revertedWith('aave-adapter/invalid-coverage-token')
+                })
                 it('should NOT execute trigger - due to coverage too high', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
@@ -419,8 +433,8 @@ describe('AaveStopLossCommandV2', async () => {
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
-                        hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         ltv.add(10),
                     ]
                     triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -505,7 +519,7 @@ describe('AaveStopLossCommandV2', async () => {
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH_AAVE,
+                    fromAsset: hardhatUtils.addresses.WETH,
                     toAsset: hardhatUtils.addresses.USDC,
                     amount: amountToSwap.mul(101).div(100),
                     receiveAtLeast: vTokenBalance
@@ -517,7 +531,7 @@ describe('AaveStopLossCommandV2', async () => {
                 }
                 const aaveData = {
                     debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH_AAVE,
+                    collateralTokenAddress: hardhatUtils.addresses.WETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
@@ -534,8 +548,8 @@ describe('AaveStopLossCommandV2', async () => {
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
-                        hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         ltv.sub(2),
                     ]
                     triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
@@ -596,8 +610,8 @@ describe('AaveStopLossCommandV2', async () => {
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
                         maxCoverageUsdc,
-                        hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         ltv.add(2),
                     ]
                     triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
