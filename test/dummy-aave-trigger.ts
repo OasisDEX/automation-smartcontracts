@@ -16,8 +16,7 @@ import {
     IAccountGuard,
     IAccountImplementation,
 } from '../typechain'
-import { CommandContractType, TriggerGroupType, TriggerType } from '@oasisdex/automation'
-import { getDefinitionForCommandType } from '@oasisdex/automation/lib/src/mapping'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 describe('AAVE integration', async () => {

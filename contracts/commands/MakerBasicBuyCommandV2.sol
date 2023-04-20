@@ -23,7 +23,7 @@ import { MPALike } from "../interfaces/MPALike.sol";
 import { SpotterLike } from "../interfaces/SpotterLike.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ServiceRegistry } from "../ServiceRegistry.sol";
-import { McdView } from "../McdView.sol";
+
 import { BaseMPACommand, ICommand } from "./BaseMPACommand.sol";
 
 /**

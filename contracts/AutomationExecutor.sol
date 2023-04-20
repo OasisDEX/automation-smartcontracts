@@ -22,8 +22,8 @@ pragma solidity ^0.8.0;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IWETH } from "./interfaces/IWETH.sol";
-import { BotLike } from "./interfaces/BotLike.sol";
-import "./ServiceRegistry.sol";
+import { IAutomationBot } from "./interfaces/IAutomationBot.sol";
+import { IServiceRegistry } from "./interfaces/IServiceRegistry.sol";
 
 import { TickMath } from "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
@@ -42,13 +42,13 @@ contract AutomationExecutor {
 
     IV3SwapRouter public immutable uniswapRouter;
     IUniswapV3Factory public immutable uniswapFactory;
-    BotLike public immutable bot;
+    IAutomationBot public immutable bot;
     IWETH public immutable weth;
     address public owner;
 
     mapping(address => bool) public callers;
 
-    constructor(BotLike _bot, IWETH _weth, ServiceRegistry _serviceRegistry) {
+    constructor(IAutomationBot _bot, IWETH _weth, IServiceRegistry _serviceRegistry) {
         bot = _bot;
         weth = _weth;
         owner = msg.sender;

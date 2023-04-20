@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { AAVEAdapter, DPMAdapter, MakerAdapter, ServiceRegistry } from '../../typechain'
+import { AAVEAdapter, DPMAdapter, MakerSecurityAdapter, ServiceRegistry } from '../../typechain'
 import { AaveProxyActions } from '../../typechain/AaveProxyActions'
 import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
@@ -59,12 +59,12 @@ async function main() {
         utils.addresses.AAVE_POOL,
     ])) as AaveProxyActions
 
-    console.log('Deploying MakerAdapter')
+    console.log('Deploying MakerSecurityAdapter')
 
-    system.makerAdapter = (await utils.deployContract(hre.ethers.getContractFactory('MakerAdapter'), [
+    system.makerSecurityAdapter = (await utils.deployContract(hre.ethers.getContractFactory('MakerSecurityAdapter'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
         utils.addresses.DAI,
-    ])) as MakerAdapter
+    ])) as MakerSecurityAdapter
 
     console.log('Deploying AAVEAdapter')
 

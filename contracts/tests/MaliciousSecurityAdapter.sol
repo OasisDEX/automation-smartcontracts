@@ -18,7 +18,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "../interfaces/IAccountGuard.sol";
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 

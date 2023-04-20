@@ -38,7 +38,14 @@ export class HardhatUtils {
             ),
             mcdUtils: await this.hre.ethers.getContractAt('McdUtils', this.addresses.AUTOMATION_MCD_UTILS),
             automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
-            makerAdapter: await this.hre.ethers.getContractAt('MakerAdapter', this.addresses.MAKER_ADAPTER),
+            makerSecurityAdapter: await this.hre.ethers.getContractAt(
+                'MakerSecurityAdapter',
+                this.addresses.MAKER_SECURITY_ADAPTER,
+            ),
+            makerExecutableAdapter: await this.hre.ethers.getContractAt(
+                'MakerExecutableAdapter',
+                this.addresses.MAKER_EXECUTABLE_ADAPTER,
+            ),
             constantMultipleValidator: await this.hre.ethers.getContractAt(
                 'ConstantMultipleValidator',
                 this.addresses.CONSTANT_MULTIPLE_VALIDATOR,

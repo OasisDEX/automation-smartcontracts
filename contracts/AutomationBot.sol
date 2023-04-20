@@ -18,15 +18,15 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "./interfaces/ICommand.sol";
-import "./interfaces/IValidator.sol";
-import "./interfaces/BotLike.sol";
-import "./interfaces/IAdapter.sol";
-import "./commands/BaseMPACommand.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { console } from "hardhat/console.sol";
+import { IValidator } from "./interfaces/IValidator.sol";
+import { IAutomationBot } from "./interfaces/IAutomationBot.sol";
+import { ISecurityAdapter, IExecutableAdapter } from "./interfaces/IAdapter.sol";
+import { ICommand } from "./interfaces/ICommand.sol";
+import { IServiceRegistry } from "./interfaces/IServiceRegistry.sol";
 
-contract AutomationBot is BotLike, ReentrancyGuard {
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+contract AutomationBot is IAutomationBot, ReentrancyGuard {
     struct TriggerRecord {
         bytes32 triggerHash;
         address commandAddress;
@@ -43,13 +43,13 @@ contract AutomationBot is BotLike, ReentrancyGuard {
     uint16 private constant SINGLE_TRIGGER_GROUP_TYPE = 2 ** 16 - 1;
     string private constant AUTOMATION_EXECUTOR_KEY = "AUTOMATION_EXECUTOR_V2";
 
-    ServiceRegistry public immutable serviceRegistry;
+    IServiceRegistry public immutable serviceRegistry;
     AutomationBot public immutable automationBot;
 
     Counters private counter;
     mapping(uint256 => AutomationBot.TriggerRecord) public activeTriggers;
 
-    constructor(ServiceRegistry _serviceRegistry) {
+    constructor(IServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
         automationBot = AutomationBot(address(this));
         counter.lockCount = 0;
@@ -236,7 +236,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
                 ISecurityAdapter adapter = ISecurityAdapter(
                     getAdapterAddress(getCommandAddress(triggerTypes[i]), false)
                 );
-                console.log("addTrigger - adapter", address(adapter));
                 if (!adapter.canCall(triggerData[i], address(adapter))) {
                     (bool status, ) = address(adapter).delegatecall(
                         abi.encodeWithSelector(
@@ -344,8 +343,6 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         IExecutableAdapter executableAdapter = IExecutableAdapter(
             getAdapterAddress(commandAddress, true)
         );
-        console.log("execute - adapter", address(adapter));
-        console.log("execute - executableAdapter", address(executableAdapter));
         getCoverage(triggerData, adapter, executableAdapter, coverageAmount, coverageToken);
 
         require(command.isExecutionLegal(triggerData), "bot/trigger-execution-illegal");
@@ -375,19 +372,9 @@ contract AutomationBot is BotLike, ReentrancyGuard {
         uint256 coverageAmount,
         address coverageToken
     ) private {
-        bool hasOneAdapter = address(securityAdapter) == address(executableAdapter);
-        if (hasOneAdapter) {
-            IExecutableAdapter(address(securityAdapter)).getCoverage(
-                triggerData,
-                msg.sender,
-                coverageToken,
-                coverageAmount
-            );
-        } else {
-            securityAdapter.permit(triggerData, address(executableAdapter), true);
-            executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
-            securityAdapter.permit(triggerData, address(executableAdapter), false);
-        }
+        securityAdapter.permit(triggerData, address(executableAdapter), true);
+        executableAdapter.getCoverage(triggerData, msg.sender, coverageToken, coverageAmount);
+        securityAdapter.permit(triggerData, address(executableAdapter), false);
     }
 
     function increaseGroupCounter() private {
