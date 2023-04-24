@@ -18,7 +18,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "../helpers/AaveProxyActions.sol";
+import "../helpers/AaveV3ProxyActions.sol";
 import "../interfaces/IAccountImplementation.sol";
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
@@ -61,7 +61,7 @@ contract AAVEAdapter is IExecutableAdapter {
         IAccountImplementation(proxy).execute(
             aavePA,
             abi.encodeWithSelector(
-                AaveProxyActions.drawDebt.selector,
+                AaveV3ProxyActions.drawDebt.selector,
                 coverageToken,
                 receiver,
                 amount

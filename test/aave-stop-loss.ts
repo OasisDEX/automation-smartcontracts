@@ -4,9 +4,9 @@ import {
     AutomationBot,
     AutomationExecutor,
     IAccountImplementation,
-    AaveProxyActions,
-    AaveStopLossCommandV2,
-    ILendingPool,
+    AaveV3ProxyActions,
+    AaveV3StopLossCommandV2,
+    IPool,
     IAccountGuard,
     AccountFactoryLike,
     AAVEAdapter,
@@ -20,7 +20,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe('AaveStopLossCommandV2', async () => {
+describe.only('AaveV3StopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
@@ -33,9 +33,9 @@ describe('AaveStopLossCommandV2', async () => {
     let randomWalletAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStopLossCommandV2
-    let aavePool: ILendingPool
-    let aave_pa: AaveProxyActions
+    let aaveStopLoss: AaveV3StopLossCommandV2
+    let aavePool: IPool
+    let aave_pa: AaveV3ProxyActions
     let aaveAdapter: AAVEAdapter
     let dpmAdapter: DPMAdapter
 
@@ -61,11 +61,11 @@ describe('AaveStopLossCommandV2', async () => {
 
         randomWalletAddress = ethers.Wallet.createRandom().address
 
-        aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
+        aavePool = await hre.ethers.getContractAt('IPool', hardhatUtils.addresses.AAVE_V3_POOL)
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
         aaveStopLoss = system.aaveStoplLossCommand!
-        aave_pa = system.aaveProxyActions as AaveProxyActions
+        aave_pa = system.aaveProxyActions as AaveV3ProxyActions
         const factory = (await hre.ethers.getContractAt(
             'AccountFactoryLike',
             hardhatUtils.addresses.DPM_FACTORY,
@@ -266,23 +266,20 @@ describe('AaveStopLossCommandV2', async () => {
                 const userData = await aavePool.getUserAccountData(proxyAddress)
                 ltv = userData.ltv
 
-                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_AWETH_TOKEN)
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
                 const aTokenBalance = await aToken.balanceOf(proxyAddress)
-
-                const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
-                const vTokenBalance = await vToken.balanceOf(proxyAddress)
 
                 const amountInWei = aTokenBalance
                 const fee = EthersBN.from(20)
                 const feeBase = EthersBN.from(10000)
-                const flFee = EthersBN.from(9)
+                const slippage = EthersBN.from(100)
 
                 const data = await getSwap(
                     hardhatUtils.addresses.WETH,
                     hardhatUtils.addresses.USDC,
                     receiverAddress,
                     new BigNumber(aTokenBalance.toString()),
-                    new BigNumber('10'),
+                    new BigNumber(slippage.mul(100).div(feeBase).toString()),
                 )
 
                 await hardhatUtils.setTokenBalance(
@@ -294,8 +291,14 @@ describe('AaveStopLossCommandV2', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountInWei /* TODO: on multiply add fee  .add(amountInWei.mul(fee).div(feeBase)) */,
-                    receiveAtLeast: vTokenBalance.add(vTokenBalance.mul(flFee).div(feeBase)),
+                    amount: amountInWei,
+                    receiveAtLeast: EthersBN.from(
+                        data.toTokenAmount
+                            .shiftedBy(data.toToken.decimals)
+                            .times(0.999)
+                            .integerValue(BigNumber.ROUND_DOWN)
+                            .toString(),
+                    ),
                     fee: fee,
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
@@ -381,8 +384,8 @@ describe('AaveStopLossCommandV2', async () => {
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
                     expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
-                    expect(userData.totalCollateralETH).to.be.eq(0)
-                    expect(userData.totalDebtETH).to.be.eq(0)
+                    expect(userData.totalCollateralBase).to.be.eq(0)
+                    expect(userData.totalDebtBase).to.be.eq(0)
                 })
                 it('shouldn`t execute trigger - with coverage below the limit, but coverage token different than debt token', async () => {
                     const tx = automationExecutorInstance.execute(
@@ -424,7 +427,7 @@ describe('AaveStopLossCommandV2', async () => {
                         hardhatUtils.addresses.USDC,
                         { gasLimit: 3000000 },
                     )
-                    await expect(tx).to.be.revertedWith('aaveSl/funds-receiver-not-owner')
+                    await expect(tx).to.be.revertedWith('aave-v3-sl/funds-receiver-not-owner')
                 })
             })
             describe('when Trigger is above current LTV', async () => {
@@ -487,29 +490,37 @@ describe('AaveStopLossCommandV2', async () => {
             let triggerId: number
 
             before(async () => {
+                const addressProvider = await ethers.getContractAt(
+                    'IPoolAddressesProvider',
+                    hardhatUtils.addresses.AAVE_V3_ADDRESSES_PROVIDER,
+                )
+                const oracle = await ethers.getContractAt('IPriceOracleGetter', await addressProvider.getPriceOracle())
+                // price 8 decimals - base unit - USD
+                const price = await oracle.getAssetPrice(hardhatUtils.addresses.WETH)
                 const userData = await aavePool.getUserAccountData(proxyAddress)
                 ltv = userData.ltv
-                const vToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_VUSDC_TOKEN)
-                const vTokenBalance = await vToken.balanceOf(proxyAddress)
 
-                // TODO @halaprix generalize it
-                /*
-                    const collTokenWorthInDebtToken = userData.totalCollateralETH
-                    .mul(vTokenBalance)
-                    .div(userData.totalDebtETH) 
-                */
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
+                const aDecimals = await aToken.decimals()
 
-                const amountToSwap = userData.totalDebtETH
+                const scale = EthersBN.from(10).pow(aDecimals)
+                const debtInCollateralToken = userData.totalDebtBase.mul(scale).div(price)
 
                 const fee = EthersBN.from(20)
-                const flFee = EthersBN.from(9)
+
                 const feeBase = EthersBN.from(10000)
+                const slippage = EthersBN.from(100)
+
+                const collTokenInclFee = debtInCollateralToken.add(debtInCollateralToken.mul(fee).div(feeBase))
+                const collTokenInclFeeAndSlippage = collTokenInclFee.add(collTokenInclFee.mul(slippage).div(feeBase))
+                const amountToSwap = collTokenInclFeeAndSlippage
+
                 const data = await getSwap(
                     hardhatUtils.addresses.WETH,
                     hardhatUtils.addresses.USDC,
                     receiverAddress,
-                    new BigNumber(amountToSwap.mul(101).div(100).toString()),
-                    new BigNumber('10'),
+                    new BigNumber(amountToSwap.toString()),
+                    new BigNumber(slippage.mul(100).div(feeBase).toString()),
                 )
 
                 await hardhatUtils.setTokenBalance(
@@ -521,10 +532,14 @@ describe('AaveStopLossCommandV2', async () => {
                 const exchangeData = {
                     fromAsset: hardhatUtils.addresses.WETH,
                     toAsset: hardhatUtils.addresses.USDC,
-                    amount: amountToSwap.mul(101).div(100),
-                    receiveAtLeast: vTokenBalance
-                        .add(vTokenBalance.mul(flFee).div(feeBase))
-                        .add(vTokenBalance.mul(fee).div(feeBase)),
+                    amount: amountToSwap,
+                    receiveAtLeast: EthersBN.from(
+                        data.toTokenAmount
+                            .shiftedBy(data.toToken.decimals)
+                            .times(0.999)
+                            .integerValue(BigNumber.ROUND_DOWN)
+                            .toString(),
+                    ),
                     fee: fee,
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
@@ -600,8 +615,8 @@ describe('AaveStopLossCommandV2', async () => {
                     const userData = await aavePool.getUserAccountData(proxyAddress)
                     // TODO check a token
                     expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
-                    expect(userData.totalCollateralETH).to.be.eq(0)
-                    expect(userData.totalDebtETH).to.be.eq(0)
+                    expect(userData.totalCollateralBase).to.be.eq(0)
+                    expect(userData.totalDebtBase).to.be.eq(0)
                 })
             })
             describe('when Trigger is above current LTV', async () => {

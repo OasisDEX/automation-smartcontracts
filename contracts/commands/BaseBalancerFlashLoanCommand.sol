@@ -21,46 +21,35 @@ pragma solidity ^0.8.0;
 
 import { ICommand } from "../interfaces/ICommand.sol";
 
-import { IPool } from "../interfaces/AAVE/IPool.sol";
-
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IVault } from "../interfaces/Balancer/IVault.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
+import { IFlashLoanRecipient } from "../interfaces/Balancer/IFlashLoanRecipient.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IFlashLoanReceiver {
-    function executeOperation(
-        address[] calldata assets,
-        uint256[] calldata amounts,
-        uint256[] calldata premiums,
-        address initiator,
-        bytes calldata params
-    ) external returns (bool);
-}
-
-abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, ReentrancyGuard {
+abstract contract BaseBalancerFlashLoanCommand is ICommand, IFlashLoanRecipient, ReentrancyGuard {
     IServiceRegistry public immutable serviceRegistry;
-    IPool public immutable lendingPool;
+    IVault public immutable balancerVault;
 
     address public trustedCaller;
     address public immutable self;
-    address public immutable exchange;
+    address public immutable swap;
 
     bool public reciveExpected;
 
-    struct FlData {
-        address initiator;
-        address[] assets;
+    string private constant BALANCER_VAULT = "BALANCER_VAULT";
+
+    struct FlActionData {
+        IERC20[] assets;
         uint256[] amounts;
-        uint256[] modes;
         uint256[] premiums;
-        address onBehalfOf;
-        bytes params;
+        bytes userData;
     }
 
-    constructor(IServiceRegistry _serviceRegistry, IPool _lendingPool, address _exchange) {
+    constructor(IServiceRegistry _serviceRegistry, address _swap) {
         serviceRegistry = _serviceRegistry;
-        lendingPool = _lendingPool;
-        exchange = _exchange;
+        balancerVault = IVault(serviceRegistry.getRegisteredService(BALANCER_VAULT));
+        swap = _swap;
         self = address(this);
     }
 
@@ -72,24 +61,22 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
         reciveExpected = false;
     }
 
-    function executeOperation(
-        address[] calldata assets,
-        uint256[] calldata amounts,
-        uint256[] calldata premiums,
-        address initiator,
-        bytes calldata params
-    ) external returns (bool) {
-        require(msg.sender == address(lendingPool), "aave-v3-sl/caller-must-be-lending-pool");
+    function receiveFlashLoan(
+        IERC20[] memory tokens,
+        uint256[] memory amounts,
+        uint256[] memory feeAmounts,
+        bytes memory userData
+    ) external {
+        require(msg.sender == address(balancerVault), "aave-v3-sl/caller-must-be-lending-pool");
 
-        bytes memory data = abi.encode(assets, amounts, premiums, initiator, params);
+        bytes memory flActionData = abi.encode(FlActionData(tokens, amounts, feeAmounts, userData));
 
-        flashloanAction(data);
+        flashloanAction(flActionData);
 
-        for (uint256 i = 0; i < assets.length; i++) {
-            IERC20(assets[i]).approve(address(lendingPool), amounts[i] + premiums[i]);
+        for (uint256 i = 0; i < tokens.length; i++) {
+            IERC20(tokens[i]).approve(address(balancerVault), amounts[i] + feeAmounts[i]);
+            IERC20(tokens[i]).transfer(address(balancerVault), amounts[i] + feeAmounts[i]);
         }
-
-        return true;
     }
 
     function flashloanAction(bytes memory _data) internal virtual;
