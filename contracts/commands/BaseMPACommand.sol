@@ -23,7 +23,7 @@ import { RatioUtils } from "../libs/RatioUtils.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { ManagerLike } from "../interfaces/ManagerLike.sol";
 import { McdView, ServiceRegistry } from "../McdView.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 abstract contract BaseMPACommand is ICommand, ReentrancyGuard {
     using RatioUtils for uint256;

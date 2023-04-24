@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// MakerAdapter.sol
+/// MakerExecutableAdapter.sol
 
 // Copyright (C) 2023 Oazo Apps Limited
 
@@ -22,18 +22,16 @@ import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 import "../McdUtils.sol";
 
-contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
+contract MakerExecutableAdapter is IExecutableAdapter {
     ManagerLike public immutable manager;
     address public immutable utilsAddress;
     address public immutable botAddress;
     address private immutable dai;
-    address private immutable self;
     string private constant CDP_MANAGER_KEY = "CDP_MANAGER";
     string private constant MCD_UTILS_KEY = "MCD_UTILS";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     constructor(ServiceRegistry _serviceRegistry, address _dai) {
-        self = address(this);
         dai = _dai;
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
@@ -44,36 +42,6 @@ contract MakerAdapter is ISecurityAdapter, IExecutableAdapter {
         bytes memory triggerData
     ) public pure returns (uint256 cdpId, uint256 triggerType, uint256 maxCoverage) {
         (cdpId, triggerType, maxCoverage) = abi.decode(triggerData, (uint256, uint16, uint256));
-    }
-
-    function canCall(bytes memory triggerData, address operator) public view returns (bool result) {
-        (uint256 cdpId, , ) = decode(triggerData);
-        address cdpOwner = manager.owns(cdpId);
-        result = (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-    }
-
-    function canCall(
-        address operator,
-        uint256 cdpId,
-        address cdpOwner
-    ) private view returns (bool) {
-        return (manager.cdpCan(cdpOwner, cdpId, operator) == 1) || (operator == cdpOwner);
-    }
-
-    function permit(bytes memory triggerData, address target, bool allowance) public {
-        (uint256 cdpId, , ) = decode(triggerData);
-        address cdpOwner = manager.owns(cdpId);
-
-        require(canCall(address(this), cdpId, cdpOwner), "maker-adapter/not-allowed-to-call");
-        if (self == address(this)) {
-            require(msg.sender == botAddress, "dpm-adapter/only-bot");
-        }
-        if (allowance && !canCall(target, cdpId, cdpOwner)) {
-            manager.cdpAllow(cdpId, target, 1);
-        }
-        if (!allowance && canCall(target, cdpId, cdpOwner)) {
-            manager.cdpAllow(cdpId, target, 0);
-        }
     }
 
     function getCoverage(

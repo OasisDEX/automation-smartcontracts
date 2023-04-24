@@ -10,7 +10,8 @@ import {
     McdUtils,
     McdView,
     ServiceRegistry,
-    MakerAdapter,
+    MakerSecurityAdapter,
+    MakerExecutableAdapter,
     MakerAutoTakeProfitCommandV2,
     AaveProxyActions,
     AaveStopLossCommandV2,
@@ -41,7 +42,8 @@ export interface DeployedSystem {
     aaveStoplLossCommand?: AaveStopLossCommandV2
     basicBuy?: MakerBasicBuyCommandV2
     basicSell?: MakerBasicSellCommandV2
-    makerAdapter?: MakerAdapter
+    makerSecurityAdapter?: MakerSecurityAdapter
+    makerExecutableAdapter?: MakerExecutableAdapter
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveProxyActions
@@ -115,7 +117,7 @@ export async function deploySystem({
 
     const AaveProxyActionsInstance: AaveProxyActions = await utils.deployContract(
         ethers.getContractFactory('AaveProxyActions'),
-        [addresses.WETH_AAVE, addresses.AAVE_POOL],
+        [addresses.WETH, addresses.AAVE_POOL],
     )
 
     if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
@@ -178,11 +180,14 @@ export async function deploySystem({
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
 
-    const MakerAdapterInstance: MakerAdapter = await utils.deployContract(ethers.getContractFactory('MakerAdapter'), [
-        ServiceRegistryInstance.address,
-        addresses.DAI,
-    ])
-
+    const MakerSecurityAdapterInstance: MakerSecurityAdapter = await utils.deployContract(
+        ethers.getContractFactory('MakerSecurityAdapter'),
+        [ServiceRegistryInstance.address],
+    )
+    const MakerExecutableAdapterInstance: MakerExecutableAdapter = await utils.deployContract(
+        ethers.getContractFactory('MakerExecutableAdapter'),
+        [ServiceRegistryInstance.address, addresses.DAI],
+    )
     const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         ServiceRegistryInstance.address,
     ])
@@ -223,7 +228,8 @@ export async function deploySystem({
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
             automationBot: AutomationBotInstance,
-            makerAdapter: MakerAdapterInstance,
+            makerSecurityAdapter: MakerSecurityAdapterInstance,
+            makerExecutableAdapter: MakerExecutableAdapterInstance,
             constantMultipleValidator: ConstantMultipleValidatorInstance,
             automationExecutor: AutomationExecutorInstance,
             mcdView: McdViewInstance,
@@ -242,7 +248,8 @@ export async function deploySystem({
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
             automationBot: AutomationBotInstance,
-            makerAdapter: MakerAdapterInstance,
+            makerSecurityAdapter: MakerSecurityAdapterInstance,
+            makerExecutableAdapter: MakerExecutableAdapterInstance,
             constantMultipleValidator: ConstantMultipleValidatorInstance,
             automationExecutor: AutomationExecutorInstance,
             mcdView: McdViewInstance,
@@ -273,7 +280,8 @@ export async function deploySystem({
             console.log(`MakerBasicSellCommandV2 deployed to: ${BasicSellInstance!.address}`)
             console.log(`MakerAutoTakeProfitCommandV2 deployed to: ${AutoTakeProfitInstance!.address}`)
             console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
-            console.log(`MakerAdapter deployed to: ${MakerAdapterInstance!.address}`)
+            console.log(`MakerSecurityAdapter deployed to: ${MakerSecurityAdapterInstance!.address}`)
+            console.log(`MakerExecutableAdapter deployed to: ${MakerExecutableAdapterInstance!.address}`)
             console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
             console.log(`DPMAdapter deployed to: ${DPMAdapterInstance!.address}`)
         }
@@ -301,25 +309,25 @@ export async function configureRegistryAdapters(
 
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerSecurityAdapter!.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerSecurityAdapter!.address, true)
     }
 
     if (system.basicBuy && system.basicBuy.address !== constants.AddressZero) {
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerSecurityAdapter!.address, true)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerSecurityAdapter!.address, true)
     }
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
@@ -365,8 +373,8 @@ export async function configureRegistryCommands(
         await ensureMcdViewWhitelist(system.closeCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.closeCommand.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.closeCommand.address, system.makerExecutableAdapter!.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -385,8 +393,8 @@ export async function configureRegistryCommands(
         await ensureMcdViewWhitelist(system.autoTakeProfitCommand.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.autoTakeProfitCommand.address, system.makerExecutableAdapter!.address, true)
     }
     if (system.autoTakeProfitCommand && system.autoTakeProfitCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AUTO_TP_COLLATERAL command to ServiceRegistry....')
@@ -413,8 +421,8 @@ export async function configureRegistryCommands(
         await ensureMcdViewWhitelist(system.basicBuy.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.basicBuy.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.basicBuy.address, system.makerExecutableAdapter!.address, true)
     }
 
     if (system.basicSell && system.basicSell.address !== constants.AddressZero) {
@@ -425,8 +433,8 @@ export async function configureRegistryCommands(
         await ensureMcdViewWhitelist(system.basicSell.address)
 
         if (logDebug) console.log('Ensuring Adapter...')
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address)
-        await ensureCorrectAdapter(system.basicSell.address, system.makerAdapter!.address, true)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerSecurityAdapter!.address)
+        await ensureCorrectAdapter(system.basicSell.address, system.makerExecutableAdapter!.address, true)
     }
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')

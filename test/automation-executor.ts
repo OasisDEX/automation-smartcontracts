@@ -92,10 +92,10 @@ describe('AutomationExecutor', async () => {
         DummyCommandInstance = await DummyCommandInstance.deployed()
 
         let adapterHash = getAdapterNameHash(DummyCommandInstance.address)
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerSecurityAdapter!.address)
 
         adapterHash = getExecuteAdapterNameHash(DummyCommandInstance.address)
-        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerAdapter!.address)
+        await ServiceRegistryInstance.addNamedService(adapterHash, system.makerExecutableAdapter!.address)
 
         let hash = getCommandHash(TriggerType.MakerStopLossToDaiV2)
         await ServiceRegistryInstance.addNamedService(hash, DummyCommandInstance.address)
@@ -251,7 +251,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                15000,
+                35000,
                 dai.address,
             )
 
@@ -262,7 +262,7 @@ describe('AutomationExecutor', async () => {
                 triggerId,
                 0,
                 0,
-                15000,
+                35000,
                 dai.address,
                 { gasLimit: estimation.toNumber() + 50000, gasPrice: '100000000000' },
             )

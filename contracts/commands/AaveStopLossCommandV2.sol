@@ -39,8 +39,8 @@ struct StopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
     uint256 maxCoverage;
-    address collateralToken;
     address debtToken;
+    address collateralToken;
     uint256 slLevel;
 }
 

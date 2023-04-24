@@ -3,4 +3,6 @@ pragma solidity 0.8.13;
 
 interface IServiceRegistry {
     function getRegisteredService(string memory) external view returns (address);
+
+    function getServiceAddress(bytes32 serviceNameHash) external view returns (address);
 }

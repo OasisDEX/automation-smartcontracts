@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import { BytesLike, ContractTransaction, utils } from 'ethers'
 import { encodeTriggerData, forgeUnoswapCalldata, getEvents, HardhatUtils, ONE_INCH_V4_ROUTER } from '../scripts/common'
 import { DeployedSystem, deploySystem } from '../scripts/common/deploy-system'
-import { AutomationBot, DPMAdapter, DsProxyLike, ERC20, MakerAdapter, MPALike } from '../typechain'
+import { AutomationBot, DPMAdapter, DsProxyLike, ERC20, MakerSecurityAdapter, MPALike } from '../typechain'
 import BigNumber from 'bignumber.js'
 import { getMultiplyParams } from '@oasisdex/multiply'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
@@ -31,7 +31,7 @@ describe('AutomationAggregatorBot', async () => {
     let beforeOwnerProxyUserAddress: string
     let notOwnerProxy: DsProxyLike
     let notOwnerProxyUserAddress: string
-    let MakerAdapterInstance: MakerAdapter
+    let MakerSecurityAdapterInstance: MakerSecurityAdapter
     let DPMAdapterInstance: DPMAdapter
     let dai: ERC20
 
@@ -61,7 +61,7 @@ describe('AutomationAggregatorBot', async () => {
         dai = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.DAI)
 
         AutomationBotInstance = system.automationBot
-        MakerAdapterInstance = system.makerAdapter!
+        MakerSecurityAdapterInstance = system.makerSecurityAdapter!
         DPMAdapterInstance = system.dpmAdapter!
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
@@ -663,7 +663,7 @@ describe('AutomationAggregatorBot', async () => {
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             const triggerCounter = await AutomationBotInstance.triggersCounter()
             const triggerIds = [Number(triggerCounter) - 1, Number(triggerCounter)]
-            let status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
+            let status = await MakerSecurityAdapterInstance.canCall(bbTriggerData, MakerSecurityAdapterInstance.address)
             expect(status).to.equal(true, 'canCall result initially incorrect')
             const dataToSupplyRemove = AutomationBotInstance.interface.encodeFunctionData('removeTriggers', [
                 triggerIds,
@@ -671,7 +671,7 @@ describe('AutomationAggregatorBot', async () => {
                 false,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            status = await MakerAdapterInstance.canCall(bbTriggerData, MakerAdapterInstance.address)
+            status = await MakerSecurityAdapterInstance.canCall(bbTriggerData, MakerSecurityAdapterInstance.address)
             expect(status).to.equal(true, 'canCall result should not change')
         })
         it('should only remove approval if last param set to true - test TRUE', async () => {
@@ -684,7 +684,7 @@ describe('AutomationAggregatorBot', async () => {
                 true,
             ])
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(bbTriggerData, DPMAdapterInstance.address)
+            const status = await MakerSecurityAdapterInstance.canCall(bbTriggerData, DPMAdapterInstance.address)
             expect(status).to.equal(false)
         })
         it('should revert if called not through delegatecall', async () => {
@@ -783,7 +783,7 @@ describe('AutomationAggregatorBot', async () => {
         })
 
         it('should return false for bad operator address', async () => {
-            const status = await MakerAdapterInstance.canCall(
+            const status = await MakerSecurityAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
                 '0x1234123412341234123412341234123412341234',
             )
@@ -792,9 +792,9 @@ describe('AutomationAggregatorBot', async () => {
         })
 
         it('should return true for correct operator address', async () => {
-            const status = await MakerAdapterInstance.canCall(
+            const status = await MakerSecurityAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
+                MakerSecurityAdapterInstance.address,
             )
 
             expect(status).to.equal(true, 'approval does exist for AutomationBotStorageInstance')
@@ -807,9 +807,9 @@ describe('AutomationAggregatorBot', async () => {
             ])
             const owner = await hardhatUtils.impersonate(ownerProxyUserAddress)
             await ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupplyRemove)
-            const status = await MakerAdapterInstance.canCall(
+            const status = await MakerSecurityAdapterInstance.canCall(
                 dummyTriggerDataNoReRegister,
-                MakerAdapterInstance.address,
+                MakerSecurityAdapterInstance.address,
             )
 
             expect(status).to.equal(false, 'approval does not exist for AutomationBotStorageInstance')

@@ -36,7 +36,7 @@ createTask<CreateDPMArgs>('open-aave-position', 'Opens AAve position')
         const encodedData = aave_pa.interface.encodeFunctionData('openPosition')
 
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
-            hardhatUtils.addresses.USDC_AAVE,
+            hardhatUtils.addresses.USDC,
             '0x12348c699adc022be55602ef389De5D8A3B25e3d',
             '10000000',
         ])

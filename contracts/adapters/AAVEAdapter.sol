@@ -36,10 +36,14 @@ contract AAVEAdapter is IExecutableAdapter {
 
     function decode(
         bytes memory triggerData
-    ) public pure returns (address proxyAddress, uint256 triggerType, uint256 maxCoverage) {
-        (proxyAddress, triggerType, maxCoverage) = abi.decode(
+    )
+        public
+        pure
+        returns (address proxyAddress, uint256 triggerType, uint256 maxCoverage, address debtToken)
+    {
+        (proxyAddress, triggerType, maxCoverage, debtToken) = abi.decode(
             triggerData,
-            (address, uint16, uint256)
+            (address, uint16, uint256, address)
         );
     }
 
@@ -50,7 +54,8 @@ contract AAVEAdapter is IExecutableAdapter {
         uint256 amount
     ) external {
         require(msg.sender == botAddress, "aave-adapter/only-bot");
-        (address proxy, , uint256 maxCoverage) = decode(triggerData);
+        (address proxy, , uint256 maxCoverage, address debtToken) = decode(triggerData);
+        require(debtToken == coverageToken, "aave-adapter/invalid-coverage-token");
         require(amount <= maxCoverage, "aave-adapter/coverage-too-high");
         //reverts if code fails
         IAccountImplementation(proxy).execute(

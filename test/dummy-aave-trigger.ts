@@ -16,8 +16,7 @@ import {
     IAccountGuard,
     IAccountImplementation,
 } from '../typechain'
-import { CommandContractType, TriggerGroupType, TriggerType } from '@oasisdex/automation'
-import { getDefinitionForCommandType } from '@oasisdex/automation/lib/src/mapping'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
 describe('AAVE integration', async () => {
@@ -65,7 +64,7 @@ describe('AAVE integration', async () => {
 
         AaveCommandInstance = (await utils.deployContract(hre.ethers.getContractFactory('DummyAaveWithdrawCommand'), [
             system.aaveProxyActions!.address,
-            utils.addresses.USDC_AAVE,
+            utils.addresses.USDC,
         ])) as DummyAaveWithdrawCommand
 
         await system.serviceRegistry.addNamedService(
@@ -98,8 +97,16 @@ describe('AAVE integration', async () => {
             )
         ).wait()
 
-        const args = [DPMAccount.address, TriggerType.SimpleAAVESell, '1000000', 1800, DPMAccount.address]
-        const types = getDefinitionForCommandType(CommandContractType.SimpleAAVESellCommand)
+        const args = [
+            DPMAccount.address,
+            TriggerType.SimpleAAVESell,
+            '1000000000',
+            utils.addresses.USDC,
+            '1000000',
+            1800,
+            DPMAccount.address,
+        ]
+        const types = ['address', 'uint16', 'uint256', 'address', 'uint256', 'uint256', 'address']
         triggerData = EthUtils.defaultAbiCoder.encode(types, args)
     })
 
@@ -154,7 +161,7 @@ describe('AAVE integration', async () => {
             expect(status).to.be.true
         })
         it('trigger execution should not fail', async () => {
-            const tx0 = AutomationExecutorInstance.execute(
+            const tx = AutomationExecutorInstance.execute(
                 '0x',
                 triggerData,
                 AaveCommandInstance.address,
@@ -162,11 +169,11 @@ describe('AAVE integration', async () => {
                 '0',
                 '0',
                 178000,
-                utils.addresses.USDC_AAVE,
+                utils.addresses.USDC,
                 { gasLimit: 3000000 },
             )
 
-            await expect(tx0).to.not.be.reverted
+            await expect(tx).to.not.be.reverted
         })
     })
 })
