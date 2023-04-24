@@ -20,7 +20,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe.only('AaveV3StopLossCommandV2', async () => {
+describe('AaveV3StopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
