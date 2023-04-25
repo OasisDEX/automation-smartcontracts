@@ -20,15 +20,18 @@ pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
 import "../helpers/AaveV3ProxyActions.sol";
+import { console } from "hardhat/console.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
     address public immutable aaveV3ProxyActions;
     address public immutable token;
     mapping(address => uint256) public lastCall;
 
-    struct BasicBuyTriggerData {
-        address proxy;
+    struct DummyAaveData {
+        address positionAddress;
         uint16 triggerType;
+        uint256 maxCoverage;
+        address debtToken;
         uint256 amount;
         uint256 interval;
         address recipient;
@@ -47,41 +50,34 @@ contract DummyAaveWithdrawCommand is ICommand {
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        (address proxy, , uint256 amount, uint256 interval) = abi.decode(
-            triggerData,
-            (address, uint16, uint256, uint256)
-        );
-        return lastCall[proxy] == block.timestamp;
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        return lastCall[trigger.positionAddress] == block.timestamp;
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        (address proxy, , uint256 amount, uint256 interval) = abi.decode(
-            triggerData,
-            (address, uint16, uint256, uint256)
-        );
-        return block.timestamp - lastCall[proxy] >= interval;
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        return block.timestamp - lastCall[trigger.positionAddress] >= trigger.interval;
     }
 
     function execute(bytes calldata, bytes memory triggerData) external override {
-        (address proxy, , uint256 amount, , address recipient) = abi.decode(
-            triggerData,
-            (address, uint16, uint256, uint256, address)
-        );
-        IAccountImplementation(proxy).execute(
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        IAccountImplementation(trigger.positionAddress).execute(
             aaveV3ProxyActions,
-            abi.encodeWithSelector(AaveV3ProxyActions.drawDebt.selector, token, recipient, amount)
+            abi.encodeWithSelector(
+                AaveV3ProxyActions.drawDebt.selector,
+                token,
+                trigger.recipient,
+                trigger.amount
+            )
         );
-        lastCall[proxy] = block.timestamp;
+        lastCall[trigger.positionAddress] = block.timestamp;
     }
 
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
     ) external pure override returns (bool) {
-        (, uint16 triggerType, , , ) = abi.decode(
-            triggerData,
-            (address, uint16, uint256, uint256, address)
-        );
-        return triggerType == 9 && continuous == true;
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        return trigger.triggerType == 9 && continuous == true;
     }
 }

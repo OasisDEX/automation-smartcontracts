@@ -40,7 +40,7 @@ describe('AAVE integration', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16368930,
+                        blockNumber: 17000000,
                     },
                 },
             ],
@@ -106,6 +106,11 @@ describe('AAVE integration', async () => {
             1800,
             DPMAccount.address,
         ]
+        /*         address proxy;
+        uint16 triggerType;
+        uint256 amount;
+        uint256 interval;
+        address recipient; */
         const types = ['address', 'uint16', 'uint256', 'address', 'uint256', 'uint256', 'address']
         triggerData = EthUtils.defaultAbiCoder.encode(types, args)
     })
