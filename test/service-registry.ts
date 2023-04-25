@@ -45,7 +45,7 @@ describe('ServiceRegistry', async () => {
         it('should fail if called not by owner', async () => {
             const notOwnerTrustedRegistryInstance = trustedRegistryInstance.connect(notOwner)
             const tx = notOwnerTrustedRegistryInstance.transferOwnership(await notOwner.getAddress())
-            await expect(tx).to.be.revertedWith('only-owner')
+            await expect(tx).to.be.revertedWith('registry/only-owner')
         })
         it('should have no effect if called once', async () => {
             const instance = trustedRegistryInstance.connect(owner)
@@ -58,7 +58,7 @@ describe('ServiceRegistry', async () => {
             const notOwnerTrustedRegistryInstance = trustedRegistryInstance.connect(owner)
             await notOwnerTrustedRegistryInstance.transferOwnership(await notOwner.getAddress())
             const tx2 = notOwnerTrustedRegistryInstance.transferOwnership(await notOwner.getAddress())
-            await expect(tx2).to.be.revertedWith('delay-too-small')
+            await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
 
         it('should emit ChangeScheduled if called once', async () => {
@@ -72,7 +72,7 @@ describe('ServiceRegistry', async () => {
             const instance = trustedRegistryInstance.connect(owner)
             await instance.transferOwnership(await notOwner.getAddress())
             const tx2 = instance.transferOwnership(await notOwner.getAddress())
-            await expect(tx2).to.be.revertedWith('delay-too-small')
+            await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
 
         it('should fail if called for a second time after too short delay', async () => {
@@ -80,7 +80,7 @@ describe('ServiceRegistry', async () => {
             await instance.transferOwnership(await notOwner.getAddress())
             await hardhatUtils.timeTravel(900)
             const tx2 = instance.transferOwnership(await notOwner.getAddress())
-            await expect(tx2).to.be.revertedWith('delay-too-small')
+            await expect(tx2).to.be.revertedWith('registry/delay-too-small')
         })
 
         it('should update if called for a second time after proper delay', async () => {

@@ -20,7 +20,6 @@ pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
 import "../helpers/AaveV3ProxyActions.sol";
-import { console } from "hardhat/console.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
     address public immutable aaveV3ProxyActions;
