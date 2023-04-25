@@ -148,7 +148,7 @@ const addresses = {
     },
 }
 
-export type AddressRegistry = (typeof addresses)['mainnet']
+export type AddressRegistry = typeof addresses['mainnet']
 
 export function coalesceNetwork(network: Network) {
     switch (network) {
