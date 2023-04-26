@@ -40,7 +40,7 @@ describe('AAVE integration', async () => {
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
-                        blockNumber: 16368930,
+                        blockNumber: 17000000,
                     },
                 },
             ],
@@ -85,7 +85,10 @@ describe('AAVE integration', async () => {
         await DPMGuard.connect(signer).setWhitelist(system.aaveProxyActions!.address, true)
         await DPMGuard.connect(signer).setWhitelist(system.automationBot.address, true)
         console.log('APA whitelisted', await system.aaveProxyActions?.aave())
-        const encodedData = system.aaveProxyActions!.interface.encodeFunctionData('openPosition')
+        const encodedData = system.aaveProxyActions!.interface.encodeFunctionData('openPosition', [
+            utils.addresses.WETH,
+            hre.ethers.BigNumber.from(10).mul(hre.ethers.BigNumber.from(10).pow(18)),
+        ])
         await (
             await DPMAccount.connect(hre.ethers.provider.getSigner(0)).execute(
                 system.aaveProxyActions!.address!,
@@ -106,6 +109,11 @@ describe('AAVE integration', async () => {
             1800,
             DPMAccount.address,
         ]
+        /*         address proxy;
+        uint16 triggerType;
+        uint256 amount;
+        uint256 interval;
+        address recipient; */
         const types = ['address', 'uint16', 'uint256', 'address', 'uint256', 'uint256', 'address']
         triggerData = EthUtils.defaultAbiCoder.encode(types, args)
     })

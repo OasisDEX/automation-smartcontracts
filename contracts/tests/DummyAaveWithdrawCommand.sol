@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// CloseCommand.sol
+/// DummyAaveWithdrawCommand.sol
 
-// Copyright (C) 2021-2021 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -19,15 +19,15 @@
 pragma solidity ^0.8.0;
 import "../interfaces/ICommand.sol";
 import "../interfaces/IAccountImplementation.sol";
-import "../helpers/AaveProxyActions.sol";
+import "../helpers/AaveV3ProxyActions.sol";
 
 contract DummyAaveWithdrawCommand is ICommand {
-    address public immutable aaveProxyActions;
+    address public immutable aaveV3ProxyActions;
     address public immutable token;
     mapping(address => uint256) public lastCall;
 
-    struct DummyAAVEData {
-        address proxy;
+    struct DummyAaveData {
+        address positionAddress;
         uint16 triggerType;
         uint256 maxCoverage;
         address debtToken;
@@ -36,8 +36,8 @@ contract DummyAaveWithdrawCommand is ICommand {
         address recipient;
     }
 
-    constructor(address _aaveProxyActions, address _token) {
-        aaveProxyActions = _aaveProxyActions;
+    constructor(address _AaveV3ProxyActions, address _token) {
+        aaveV3ProxyActions = _AaveV3ProxyActions;
         token = _token;
     }
 
@@ -49,34 +49,34 @@ contract DummyAaveWithdrawCommand is ICommand {
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        DummyAAVEData memory trigger = abi.decode(triggerData, (DummyAAVEData));
-        return lastCall[trigger.proxy] == block.timestamp;
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        return lastCall[trigger.positionAddress] == block.timestamp;
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        DummyAAVEData memory trigger = abi.decode(triggerData, (DummyAAVEData));
-        return block.timestamp - lastCall[trigger.proxy] >= trigger.interval;
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        return block.timestamp - lastCall[trigger.positionAddress] >= trigger.interval;
     }
 
     function execute(bytes calldata, bytes memory triggerData) external override {
-        DummyAAVEData memory trigger = abi.decode(triggerData, (DummyAAVEData));
-        IAccountImplementation(trigger.proxy).execute(
-            aaveProxyActions,
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
+        IAccountImplementation(trigger.positionAddress).execute(
+            aaveV3ProxyActions,
             abi.encodeWithSelector(
-                AaveProxyActions.drawDebt.selector,
+                AaveV3ProxyActions.drawDebt.selector,
                 token,
                 trigger.recipient,
                 trigger.amount
             )
         );
-        lastCall[trigger.proxy] = block.timestamp;
+        lastCall[trigger.positionAddress] = block.timestamp;
     }
 
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
     ) external pure override returns (bool) {
-        DummyAAVEData memory trigger = abi.decode(triggerData, (DummyAAVEData));
+        DummyAaveData memory trigger = abi.decode(triggerData, (DummyAaveData));
         return trigger.triggerType == 9 && continuous == true;
     }
 }
