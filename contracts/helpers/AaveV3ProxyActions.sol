@@ -74,7 +74,10 @@ contract AaveV3ProxyActions {
             require(msg.value == amount, "aave-proxy-action/insufficient-eth-amount");
             IWETH(weth).deposit{ value: amount }();
         } else {
-            require(IERC20(token).allowance(msg.sender, address(this)) == amount, "aave-proxy-action/insufficient-allowance");
+            require(
+                IERC20(token).allowance(msg.sender, address(this)) == amount,
+                "aave-proxy-action/insufficient-allowance"
+            );
             IERC20(token).transferFrom(msg.sender, address(this), amount);
         }
     }
