@@ -5,10 +5,25 @@
   "main": "index.js",
   "scripts": {
     "test": "npx hardhat test",
-    "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/**/*.sol",
-    "lint": "./node_modules/.bin/solhint -f table contracts/**/*.sol",
-    "format:fix":"./node_modules/.bin/prettier --write contracts/**/*.sol test/**/*.ts",
-    "format":"./node_modules/.bin/prettier --check contracts/**/*.sol test/**/*.ts"
+    "test:aggregator": "npx hardhat test test/automation-aggregator.ts",
+    "test:cmv": "npx hardhat test test/constant-multiple-validator.ts",
+    "test:atp": "npx hardhat test test/auto-take-profit.ts",
+    "test:sr": "npx hardhat test test/service-registry.ts",
+    "build": "npx hardhat compile",
+    "clean": "rm -rf artifacts cache typechain",
+    "lint:fix": "./node_modules/.bin/solhint --fix -f table contracts/*.sol contracts/**/*.sol && ./node_modules/.bin/eslint --fix test/**/*.ts scripts/**/*.ts",
+    "lint:contracts": "./node_modules/.bin/solhint -f table contracts/*.sol contracts/**/*.sol",
+    "lint:typescript": "./node_modules/.bin/eslint test/**/*.ts scripts/**/*.ts",
+    "lint": "yarn lint:contracts && yarn lint:typescript",
+    "format:fix": "./node_modules/.bin/prettier --write contracts/*.sol contracts/**/*.sol test/**/*.ts scripts/**/*.ts",
+    "format": "./node_modules/.bin/prettier --check contracts/*.sol contracts/**/*.sol test/**/*.ts"
+  },
+  "pre-commit": [
+    "lint",
+    "format"
+  ],
+  "engines": {
+    "node": ">=12"
   },
   "repository": {
     "type": "git",
@@ -21,16 +36,23 @@
   },
   "homepage": "https://github.com/OasisDEX/automation-smartcontracts#readme",
   "devDependencies": {
+    "@ethersproject/abstract-signer": "^5.5.0",
+    "@ethersproject/contracts": "^5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "@oasisdex/multiply": "^0.2.10",
+    "@tenderly/hardhat-tenderly": "^1.1.6",
     "@typechain/ethers-v5": "^7.2.0",
     "@typechain/hardhat": "^2.3.1",
     "@types/chai": "^4.2.22",
+    "@types/lodash": "^4.14.182",
     "@types/mocha": "^9.0.0",
     "@types/node": "^16.11.6",
+    "@types/ramda": "^0.27.64",
     "@typescript-eslint/eslint-plugin": "^4.33.0",
     "@typescript-eslint/parser": "^4.33.0",
+    "axios": "^0.26.1",
     "bignumber.js": "^9.0.1",
     "chai": "^4.3.4",
     "chalk": "^4.1.2",
@@ -45,15 +67,29 @@
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.1",
     "fs": "0.0.1-security",
-    "hardhat": "^2.6.7",
+    "hardhat": "^2.13.0",
     "hardhat-gas-reporter": "^1.0.4",
+    "hardhat-tenderly": "^1.0.1",
+    "hardhat-tracer": "^2.1.2",
+    "pre-commit": "^1.2.2",
     "prettier": "^2.4.1",
     "prettier-plugin-solidity": "^1.0.0-beta.18",
     "ramda": "^0.27.1",
     "solhint": "^3.3.6",
     "solidity-coverage": "^0.7.17",
     "ts-node": "^10.4.0",
+    "ts-try": "^0.2.0",
     "typechain": "^5.2.0",
     "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
+    "@oasisdex/automation": "1.5.0-alpha.3",
+    "@openzeppelin/contracts": "^4.5.0",
+    "@uniswap/swap-router-contracts": "1.3.0",
+    "@uniswap/v3-core": "1.0.2-solc-0.8-simulate",
+    "hardhat-tracer": "^2.1.2",
+    "lodash": "^4.17.21",
+    "node-cache": "^5.1.2"
   }
 }
