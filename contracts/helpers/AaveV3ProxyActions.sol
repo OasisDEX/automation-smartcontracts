@@ -18,21 +18,22 @@ contract AaveV3ProxyActions {
         aave = IPool(_aave);
     }
 
-    function openPosition() external payable {
-        IWETH(weth).deposit{ value: msg.value }();
-        IERC20(weth).approve(address(aave), msg.value);
-        aave.deposit(weth, msg.value, address(this), 0);
+    function openPosition(address token, uint256 amount) external payable {
+        _pull(token, amount);
+        IERC20(token).approve(address(aave), amount);
+        aave.deposit(token, amount, address(this), 0);
+        emit Deposit(address(this), token, amount);
     }
 
-    function drawDebt(address token, address recipient, uint256 amount) external {
+    function drawDebt(address token, address recipient, uint256 amount) external payable {
         if (amount > 0) {
             aave.borrow(token, amount, 2, 0, address(this));
-            IERC20(token).transfer(recipient, amount);
+            _send(token, recipient, amount);
             emit Borrow(address(this), token, amount);
         }
     }
 
-    function repayDebt(address token, uint256 amount, address user) public {
+    function repayDebt(address token, uint256 amount, address user) public payable {
         require(
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-repay-balance"
@@ -43,7 +44,7 @@ contract AaveV3ProxyActions {
         emit Repay(address(this), token, amount);
     }
 
-    function depositCollateral(address token, uint256 amount) external {
+    function depositCollateral(address token, uint256 amount) external payable {
         require(
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-deposit-balance"
@@ -55,8 +56,26 @@ contract AaveV3ProxyActions {
 
     function withdrawCollateral(address token, address recipient, uint256 amount) external {
         aave.withdraw(token, amount, address(this));
-        IERC20(token).transfer(recipient, amount);
+        _send(token, recipient, amount);
         emit Withdraw(address(this), token, amount);
+    }
+
+    function _send(address token, address recipient, uint256 amount) internal {
+        if (token == weth) {
+            IWETH(weth).withdraw(amount);
+            payable(recipient).transfer(amount);
+        } else {
+            IERC20(token).transfer(recipient, amount);
+        }
+    }
+
+    function _pull(address token, uint256 amount) internal {
+        if (token == weth) {
+            require(msg.value == amount, "aave-proxy-action/insufficient-eth-amount");
+            IWETH(weth).deposit{ value: amount }();
+        } else {
+            IERC20(token).transferFrom(msg.sender, address(this), amount);
+        }
     }
 
     event Deposit(address indexed depositor, address indexed token, uint256 amount);

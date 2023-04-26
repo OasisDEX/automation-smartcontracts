@@ -33,7 +33,10 @@ createTask<CreateDPMArgs>('open-aave-position', 'Opens AAve position')
             hardhatUtils.addresses.AUTOMATION_AAVE_PROXY_ACTIONS,
         )) as AaveV3ProxyActions
 
-        const encodedData = aave_pa.interface.encodeFunctionData('openPosition')
+        const encodedData = aave_pa.interface.encodeFunctionData('openPosition', [
+            hardhatUtils.addresses.WETH,
+            EthersBN.from(args.eth.toString()).mul(EthersBN.from(10).pow(18)),
+        ])
 
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
             hardhatUtils.addresses.USDC,

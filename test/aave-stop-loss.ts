@@ -20,7 +20,7 @@ import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
 import { expect } from 'chai'
 
-describe('AaveV3StopLossCommandV2', async () => {
+describe.only('AaveV3StopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
@@ -107,7 +107,10 @@ describe('AaveV3StopLossCommandV2', async () => {
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
         // TODO: take multiply poistion from mainnet
         // 1. deposit 1 eth of collateral
-        const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition')
+        const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition', [
+            hardhatUtils.addresses.WETH,
+            EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+        ])
         await (
             await account.connect(receiver).execute(aave_pa.address, encodedOpenData, {
                 value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
