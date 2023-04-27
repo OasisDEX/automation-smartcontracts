@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWETH } from "./../interfaces/IWETH.sol";
-import { ILendingPool } from "./../interfaces/AAVE/ILendingPool.sol";
+import { IPool } from "./../interfaces/AAVE/IPool.sol";
 
 struct AaveData {
     address collateralTokenAddress;
@@ -9,39 +9,31 @@ struct AaveData {
     address payable fundsReceiver;
 }
 
-contract AaveProxyActions {
+contract AaveV3ProxyActions {
     address public immutable weth;
-    ILendingPool public immutable aave;
+    IPool public immutable aave;
 
     constructor(address _weth, address _aave) {
         weth = _weth;
-        aave = ILendingPool(_aave);
+        aave = IPool(_aave);
     }
 
-    function openPosition() external payable {
-        IWETH(weth).deposit{ value: msg.value }();
-        IERC20(weth).approve(address(aave), msg.value);
-        aave.deposit(weth, msg.value, address(this), 0);
-
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
-            address(this)
-        );
+    function openPosition(address token, uint256 amount) external payable {
+        _pull(token, amount);
+        IERC20(token).approve(address(aave), amount);
+        aave.deposit(token, amount, address(this), 0);
+        emit Deposit(address(this), token, amount);
     }
 
-    function drawDebt(address token, address recipient, uint256 amount) external {
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = aave.getUserAccountData(
-            address(this)
-        );
-
+    function drawDebt(address token, address recipient, uint256 amount) external payable {
         if (amount > 0) {
             aave.borrow(token, amount, 2, 0, address(this));
-            IERC20(token).transfer(recipient, amount);
+            _send(token, recipient, amount);
+            emit Borrow(address(this), token, amount);
         }
-
-        emit Borrow(address(this), token, amount);
     }
 
-    function repayDebt(address token, uint256 amount, address user) public {
+    function repayDebt(address token, uint256 amount, address user) public payable {
         require(
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-repay-balance"
@@ -52,7 +44,7 @@ contract AaveProxyActions {
         emit Repay(address(this), token, amount);
     }
 
-    function depositCollateral(address token, uint256 amount) external {
+    function depositCollateral(address token, uint256 amount) external payable {
         require(
             IERC20(token).balanceOf(address(this)) >= amount,
             "aave-proxy-action/insufficient-deposit-balance"
@@ -64,8 +56,30 @@ contract AaveProxyActions {
 
     function withdrawCollateral(address token, address recipient, uint256 amount) external {
         aave.withdraw(token, amount, address(this));
-        IERC20(token).transfer(recipient, amount);
+        _send(token, recipient, amount);
         emit Withdraw(address(this), token, amount);
+    }
+
+    function _send(address token, address recipient, uint256 amount) internal {
+        if (token == weth) {
+            IWETH(weth).withdraw(amount);
+            payable(recipient).transfer(amount);
+        } else {
+            IERC20(token).transfer(recipient, amount);
+        }
+    }
+
+    function _pull(address token, uint256 amount) internal {
+        if (token == weth) {
+            require(msg.value == amount, "aave-proxy-action/insufficient-eth-amount");
+            IWETH(weth).deposit{ value: amount }();
+        } else {
+            require(
+                IERC20(token).allowance(msg.sender, address(this)) == amount,
+                "aave-proxy-action/insufficient-allowance"
+            );
+            IERC20(token).transferFrom(msg.sender, address(this), amount);
+        }
     }
 
     event Deposit(address indexed depositor, address indexed token, uint256 amount);

@@ -6,13 +6,13 @@ import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
 import 'hardhat-tracer'
-import '@tenderly/hardhat-tenderly'
-import 'hardhat-tracer'
+import * as tdly from '@tenderly/hardhat-tenderly'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
 
 dotenv.config()
+tdly.setup()
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more

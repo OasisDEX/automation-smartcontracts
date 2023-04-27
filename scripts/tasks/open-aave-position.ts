@@ -1,6 +1,6 @@
 import BigNumber from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
-import { AaveProxyActions } from '../../typechain/AaveProxyActions'
+import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
 import { IAccountImplementation } from '../../typechain/IAccountImplementation'
 import { coalesceNetwork, getEvents, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
@@ -29,11 +29,14 @@ createTask<CreateDPMArgs>('open-aave-position', 'Opens AAve position')
         const account = (await hre.ethers.getContractAt('IAccountImplementation', args.proxy)) as IAccountImplementation
 
         const aave_pa = (await hre.ethers.getContractAt(
-            'AaveProxyActions',
+            'AaveV3ProxyActions',
             hardhatUtils.addresses.AUTOMATION_AAVE_PROXY_ACTIONS,
-        )) as AaveProxyActions
+        )) as AaveV3ProxyActions
 
-        const encodedData = aave_pa.interface.encodeFunctionData('openPosition')
+        const encodedData = aave_pa.interface.encodeFunctionData('openPosition', [
+            hardhatUtils.addresses.WETH,
+            EthersBN.from(args.eth.toString()).mul(EthersBN.from(10).pow(18)),
+        ])
 
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
             hardhatUtils.addresses.USDC,

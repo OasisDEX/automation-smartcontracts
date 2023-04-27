@@ -19,13 +19,14 @@
 
 pragma solidity ^0.8.0;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
-import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
+import { IFlashLoanRecipient } from "../interfaces/Balancer/IFlashLoanRecipient.sol";
+import { IPool } from "../interfaces/AAVE/IPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
-import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
+import { BaseBalancerFlashLoanCommand } from "./BaseBalancerFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 
 struct AaveData {
@@ -44,36 +45,35 @@ struct StopLossTriggerData {
     uint256 slLevel;
 }
 
-struct CloseData {
-    address receiverAddress;
-    address[] assets;
+struct FlCalldata {
+    IFlashLoanRecipient receiverAddress;
+    IERC20[] assets;
     uint256[] amounts;
-    uint256[] modes;
-    address onBehalfOf;
-    bytes params;
-    uint16 referralCode;
+    bytes userData;
 }
 
 interface AaveStopLoss {
-    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external;
+    function closePosition(SwapData calldata swapData, AaveData memory aaveData) external;
 
     function trustedCaller() external returns (address);
 
     function self() external returns (address);
 }
 
-contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
+contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
     address public immutable weth;
     address public immutable bot;
+    IPool public immutable lendingPool;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
+    string private constant AAVE_V3_LENDING_POOL = "AAVE_V3_LENDING_POOL";
     string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
-        ILendingPool _lendingPool,
         address exchange_
-    ) BaseAAveFlashLoanCommand(_serviceRegistry, _lendingPool, exchange_) {
+    ) BaseBalancerFlashLoanCommand(_serviceRegistry, exchange_) {
+        lendingPool = IPool(serviceRegistry.getRegisteredService(AAVE_V3_LENDING_POOL));
         weth = serviceRegistry.getRegisteredService(WETH);
         bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
     }
@@ -124,13 +124,13 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
             (StopLossTriggerData)
         );
 
-        (, uint256 totalDebtETH, , , uint256 ltv, ) = lendingPool.getUserAccountData(
+        (, uint256 totalDebtBase, , , uint256 ltv, ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress
         );
 
-        if (totalDebtETH == 0) return false;
+        if (totalDebtBase == 0) return false;
 
-        bool vaultHasDebt = totalDebtETH != 0;
+        bool vaultHasDebt = totalDebtBase != 0;
         return vaultHasDebt && ltv >= stopLossTriggerData.slLevel;
     }
 
@@ -138,7 +138,7 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        require(bot == msg.sender, "aaveSl/caller-not-bot");
+        require(bot == msg.sender, "aave-v3-sl/caller-not-bot");
 
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
@@ -146,7 +146,7 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
         );
         require(
             stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108,
-            "aaveSl/invalid-trigger-type"
+            "aave-v3-sl/invalid-trigger-type"
         );
         trustedCaller = stopLossTriggerData.positionAddress;
         validateSelector(AaveStopLoss.closePosition.selector, executionData);
@@ -170,13 +170,16 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
             (stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108);
     }
 
-    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external {
-        require(AaveStopLoss(self).trustedCaller() == address(this), "aaveSl/caller-not-allowed");
+    function closePosition(SwapData calldata swapData, AaveData memory aaveData) external {
+        require(
+            AaveStopLoss(self).trustedCaller() == address(this),
+            "aave-v3-sl/caller-not-allowed"
+        );
         require(
             IAccountImplementation(address(this)).owner() == aaveData.fundsReceiver,
-            "aaveSl/funds-receiver-not-owner"
+            "aave-v3-sl/funds-receiver-not-owner"
         );
-        require(self == msg.sender, "aaveSl/msg-sender-is-not-sl");
+        require(self == msg.sender, "aave-v3-sl/msg-sender-is-not-sl");
 
         DataTypes.ReserveData memory collReserveData = lendingPool.getReserveData(
             aaveData.collateralTokenAddress
@@ -193,37 +196,29 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
         IERC20(collReserveData.aTokenAddress).approve(self, totalCollateral);
 
         {
-            CloseData memory closeData;
+            FlCalldata memory flCalldata;
 
-            address[] memory debtTokens = new address[](1);
-            debtTokens[0] = address(aaveData.debtTokenAddress);
+            IERC20[] memory debtTokens = new IERC20[](1);
+            debtTokens[0] = IERC20(aaveData.debtTokenAddress);
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = totalToRepay;
-            uint256[] memory modes = new uint256[](1);
-            modes[0] = uint256(0);
 
-            closeData.receiverAddress = self;
-            closeData.assets = debtTokens;
-            closeData.amounts = amounts;
-            closeData.modes = modes;
-            closeData.onBehalfOf = address(this);
-            closeData.params = abi.encode(
+            flCalldata.receiverAddress = IFlashLoanRecipient(self);
+            flCalldata.assets = debtTokens;
+            flCalldata.amounts = amounts;
+            flCalldata.userData = abi.encode(
                 collReserveData.aTokenAddress,
                 aaveData.collateralTokenAddress,
-                exchange,
+                swap,
                 aaveData.borrower,
                 aaveData.fundsReceiver,
-                exchangeData
+                swapData
             );
-            closeData.referralCode = 0;
-            lendingPool.flashLoan(
-                closeData.receiverAddress,
-                closeData.assets,
-                closeData.amounts,
-                closeData.modes,
-                closeData.onBehalfOf,
-                closeData.params,
-                closeData.referralCode
+            balancerVault.flashLoan(
+                flCalldata.receiverAddress,
+                flCalldata.assets,
+                flCalldata.amounts,
+                flCalldata.userData
             );
         }
         IERC20(aaveData.debtTokenAddress).transfer(
@@ -233,36 +228,28 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
     }
 
     function flashloanAction(bytes memory data) internal override {
-        FlData memory flData;
-        (flData.assets, flData.amounts, flData.premiums, flData.initiator, flData.params) = abi
-            .decode(data, (address[], uint256[], uint256[], address, bytes));
+        FlActionData memory flActionData = abi.decode(data, (FlActionData));
         (
             address aTokenAddress,
             address collateralTokenAddress,
             address exchangeAddress,
             address borrower,
             address fundsReceiver,
-            SwapData memory exchangeData
-        ) = abi.decode(flData.params, (address, address, address, address, address, SwapData));
-
-        require(flData.initiator == borrower, "aaveSl/initiator-not-borrower");
+            SwapData memory swapData
+        ) = abi.decode(
+                flActionData.userData,
+                (address, address, address, address, address, SwapData)
+            );
 
         IERC20 collateralToken = IERC20(collateralTokenAddress);
-        IERC20 debtToken = IERC20(flData.assets[0]);
+        IERC20 debtToken = IERC20(flActionData.assets[0]);
         IERC20 aToken = IERC20(aTokenAddress);
-        uint256 flTotal = (flData.amounts[0] + flData.premiums[0]);
+        uint256 flTotal = (flActionData.amounts[0] + flActionData.premiums[0]);
         uint256 aTokenBalance = aToken.balanceOf(borrower);
 
-        _repay(address(debtToken), borrower, flData.amounts[0]);
+        _repay(address(debtToken), borrower, flActionData.amounts[0]);
         _pullTokenAndWithdraw(aToken, collateralTokenAddress, borrower, aTokenBalance);
-        _exchange(
-            collateralToken,
-            debtToken,
-            exchangeAddress,
-            aTokenBalance,
-            flTotal,
-            exchangeData
-        );
+        _exchange(collateralToken, debtToken, exchangeAddress, aTokenBalance, flTotal, swapData);
         if (address(collateralToken) == weth) {
             expectRecive();
             uint256 balance = IERC20(weth).balanceOf(self);
@@ -294,15 +281,15 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
         address exchangeAddress,
         uint256 balance,
         uint256 flTotal,
-        SwapData memory exchangeData
+        SwapData memory swapData
     ) internal {
         collateralToken.approve(exchangeAddress, balance);
 
         uint256 debtTokenBalanceBefore = debtToken.balanceOf(self);
-        ISwap(exchangeAddress).swapTokens(exchangeData);
+        ISwap(exchangeAddress).swapTokens(swapData);
         require(
             (debtToken.balanceOf(self) - debtTokenBalanceBefore) > (flTotal),
-            "aaveSl/recieved-too-little-from-swap"
+            "aave-v3-sl/recieved-too-little-from-swap"
         );
     }
 
@@ -317,6 +304,6 @@ contract AaveStopLossCommandV2 is BaseAAveFlashLoanCommand {
     }
 
     receive() external payable {
-        require(reciveExpected == true, "aaveSl/unexpected-eth-receive");
+        require(reciveExpected == true, "aave-v3-sl/unexpected-eth-receive");
     }
 }
