@@ -56,7 +56,7 @@ describe('AutomationAggregatorBot', async () => {
         receiverAddress = await hre.ethers.provider.getSigner(1).getAddress()
         const hardhatUtils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
 
-        const system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
+        system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
 
         dai = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.DAI)
 

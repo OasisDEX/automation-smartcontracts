@@ -1,5 +1,5 @@
 import hre, { ethers } from 'hardhat'
-import { BigNumber as EthersBN, Signer, utils } from 'ethers'
+import { BigNumber as EthersBN, Signer } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
@@ -56,7 +56,7 @@ describe('AaveV3StopLossCommandV2', async () => {
         const system = await deploySystem({
             utils: hardhatUtils,
             addCommandsAAVE: true,
-            addCommandsMaker: true
+            addCommandsMaker: true,
         })
         console.log('Deploy system end')
 
