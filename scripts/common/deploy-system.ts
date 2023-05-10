@@ -51,7 +51,8 @@ export interface DeployedSystem {
 
 export interface DeploySystemArgs {
     utils: HardhatUtils
-    addCommands: boolean
+    addCommandsMaker: boolean
+    addCommandsAAVE: boolean
     deployMcdView?: boolean
     logDebug?: boolean
     addressOverrides?: Partial<AddressRegistry>
@@ -67,6 +68,9 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
         const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
+            //    console.log(
+            //        `seting service registry entry. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
+            //    )
             await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
         } else if (overwrite.includes(hash)) {
             throw new Error('Not implemented')
@@ -79,9 +83,29 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
     }
 }
 
+const deployOrFetchFromServiceRegistry = async <T>(
+    serviceName: string,
+    serviceRegistry: ServiceRegistry,
+    contractName: string,
+    params: string[],
+    utils: HardhatUtils,
+): Promise<T> => {
+    const { ethers } = utils.hre
+
+    const address = await serviceRegistry.getRegisteredService(serviceName)
+
+    if (address === constants.AddressZero) {
+        console.log('address 0x0 deploying ', serviceName)
+        return (await utils.deployContract(ethers.getContractFactory(contractName), params)) as T
+    } else {
+        console.log('"address not 0x0 fetching instead ', serviceName)
+        return (await ethers.getContractAt(contractName, address, ethers.provider.getSigner(0))) as T
+    }
+}
 export async function deploySystem({
     utils,
-    addCommands,
+    addCommandsMaker,
+    addCommandsAAVE,
     deployMcdView = true,
     logDebug = false,
     addressOverrides = {},
@@ -92,76 +116,103 @@ export async function deploySystem({
     let AutoTakeProfitInstance: MakerAutoTakeProfitCommandV2 | undefined
     let AaveStoplLossInstance: AaveV3StopLossCommandV2 | undefined
 
-    const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
-
     const { ethers } = utils.hre
     const addresses = { ...utils.addresses, ...addressOverrides }
 
-    if (logDebug) console.log('Deploying ServiceRegistry....')
-    const ServiceRegistryInstance: ServiceRegistry = await utils.deployContract(
-        ethers.getContractFactory('ServiceRegistry'),
-        [delay],
-    )
+    const signer =
+        utils.hre.network.name === Network.LOCAL
+            ? await ethers.getImpersonatedSigner('0x0B5a3C04D1199283938fbe887A2C82C808aa89Fb')
+            : ethers.provider.getSigner(0)
 
+    const ServiceRegistryInstance =
+        utils.hre.network.name === Network.HARDHAT
+            ? ((await utils.deployContract(ethers.getContractFactory('ServiceRegistry'), [0])) as ServiceRegistry)
+            : await ethers.getContractAt('ServiceRegistry', '0x5e81a7515f956ab642eb698821a449fe8fe7498e', signer)
+
+    const addToServiceRegistryIfMissing = createServiceRegistry(utils, ServiceRegistryInstance, [])
     if (logDebug) console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
-    await ServiceRegistryInstance.addNamedService(
+    await addToServiceRegistryIfMissing(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_ROUTER),
         addresses.UNISWAP_V3_ROUTER,
     )
 
     if (logDebug) console.log('Adding UNISWAP_FACTORY tp ServiceRegistry....')
-    await ServiceRegistryInstance.addNamedService(
+    await addToServiceRegistryIfMissing(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.UNISWAP_FACTORY),
         addresses.UNISWAP_FACTORY,
     )
 
-    const AaveProxyActionsInstance: AaveV3ProxyActions = await utils.deployContract(
-        ethers.getContractFactory('AaveV3ProxyActions'),
+    const AaveProxyActionsInstance: AaveV3ProxyActions = await deployOrFetchFromServiceRegistry<AaveV3ProxyActions>(
+        AutomationServiceName.AAVE_PROXY_ACTIONS,
+        ServiceRegistryInstance,
+        'AaveV3ProxyActions',
         [addresses.WETH, addresses.AAVE_V3_POOL],
+        utils,
     )
 
     if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
-    await ServiceRegistryInstance.addNamedService(
+    await addToServiceRegistryIfMissing(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
         AaveProxyActionsInstance.address,
     )
 
     if (logDebug) console.log('Deploying McdUtils....')
-    const McdUtilsInstance: McdUtils = await utils.deployContract(ethers.getContractFactory('McdUtils'), [
-        ServiceRegistryInstance.address,
-        addresses.DAI,
-        addresses.DAI_JOIN,
-        addresses.MCD_JUG,
-    ])
-
-    const AutomationBotInstance: AutomationBot = await utils.deployContract(
-        ethers.getContractFactory('AutomationBot'),
-        [ServiceRegistryInstance.address],
-    )
-
-    const ConstantMultipleValidatorInstance: ConstantMultipleValidator = await utils.deployContract(
-        ethers.getContractFactory('ConstantMultipleValidator'),
-        [],
+    const McdUtilsInstance: McdUtils = await deployOrFetchFromServiceRegistry<McdUtils>(
+        AutomationServiceName.MCD_UTILS,
+        ServiceRegistryInstance,
+        'McdUtils',
+        [ServiceRegistryInstance.address, addresses.DAI, addresses.DAI_JOIN, addresses.MCD_JUG],
+        utils,
     )
 
     if (logDebug) console.log('Deploying AutomationBot....')
+    const AutomationBotInstance: AutomationBot = await deployOrFetchFromServiceRegistry<AutomationBot>(
+        AutomationServiceName.AUTOMATION_BOT,
+        ServiceRegistryInstance,
+        'AutomationBot',
+        [ServiceRegistryInstance.address],
+        utils,
+    )
 
-    if (logDebug) console.log('Deploying AutomationExecutor....')
-    const AutomationExecutorInstance: AutomationExecutor = await utils.deployContract(
-        ethers.getContractFactory('AutomationExecutor'),
+    const ConstantMultipleValidatorInstance: ConstantMultipleValidator =
+        await deployOrFetchFromServiceRegistry<ConstantMultipleValidator>(
+            AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR,
+            ServiceRegistryInstance,
+            'ConstantMultipleValidator',
+            [],
+            utils,
+        )
+
+    if (logDebug)
+        console.log('Deploying AutomationExecutor....', [
+            AutomationBotInstance.address,
+            addresses.WETH,
+            ServiceRegistryInstance.address,
+        ])
+    const AutomationExecutorInstance: AutomationExecutor = await deployOrFetchFromServiceRegistry<AutomationExecutor>(
+        AutomationServiceName.AUTOMATION_EXECUTOR,
+        ServiceRegistryInstance,
+        'AutomationExecutor',
         [AutomationBotInstance.address, addresses.WETH, ServiceRegistryInstance.address],
+        utils,
     )
 
     if (deployMcdView && logDebug) console.log('Deploying McdView....')
     const McdViewInstance: McdView = deployMcdView
-        ? await utils.deployContract(ethers.getContractFactory('McdView'), [
-              addresses.MCD_VAT,
-              addresses.CDP_MANAGER,
-              addresses.MCD_SPOT,
-              addresses.OSM_MOM,
-              await ethers.provider.getSigner(0).getAddress(),
-          ])
-        : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, ethers.provider.getSigner(0))
+        ? await deployOrFetchFromServiceRegistry<McdView>(
+              AutomationServiceName.MCD_VIEW,
+              ServiceRegistryInstance,
+              'McdView',
+              [
+                  addresses.MCD_VAT,
+                  addresses.CDP_MANAGER,
+                  addresses.MCD_SPOT,
+                  addresses.OSM_MOM,
+                  await signer.getAddress(),
+              ],
+              utils,
+          )
+        : await ethers.getContractAt('McdView', addresses.AUTOMATION_MCD_VIEW, signer)
 
     let system: DeployedSystem = {
         serviceRegistry: ServiceRegistryInstance,
@@ -197,7 +248,14 @@ export async function deploySystem({
         addresses.DPM_GUARD,
     ])
 
-    if (addCommands) {
+    if (addCommandsAAVE) {
+        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveV3StopLossCommandV2'), [
+            ServiceRegistryInstance.address,
+            addresses.SWAP,
+        ])) as AaveV3StopLossCommandV2
+    }
+
+    if (addCommandsMaker) {
         if (logDebug) console.log('Deploying MakerStopLossCommandV2....')
         CloseCommandInstance = (await utils.deployContract(ethers.getContractFactory('MakerStopLossCommandV2'), [
             ServiceRegistryInstance.address,
@@ -219,10 +277,6 @@ export async function deploySystem({
             [ServiceRegistryInstance.address],
         )) as MakerAutoTakeProfitCommandV2
 
-        AaveStoplLossInstance = (await utils.deployContract(ethers.getContractFactory('AaveV3StopLossCommandV2'), [
-            ServiceRegistryInstance.address,
-            addresses.SWAP,
-        ])) as AaveV3StopLossCommandV2
         system = {
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
@@ -273,12 +327,14 @@ export async function deploySystem({
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`AaveV3ProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
-        if (addCommands) {
+        if (addCommandsAAVE) {
+            console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
+        }
+        if (addCommandsMaker) {
             console.log(`MakerStopLossCommandV2 deployed to: ${CloseCommandInstance!.address}`)
             console.log(`MakerBasicBuyCommandV2 deployed to: ${BasicBuyInstance!.address}`)
             console.log(`MakerBasicSellCommandV2 deployed to: ${BasicSellInstance!.address}`)
             console.log(`MakerAutoTakeProfitCommandV2 deployed to: ${AutoTakeProfitInstance!.address}`)
-            console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
             console.log(`MakerSecurityAdapter deployed to: ${MakerSecurityAdapterInstance!.address}`)
             console.log(`MakerExecutableAdapter deployed to: ${MakerExecutableAdapterInstance!.address}`)
             console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
@@ -300,12 +356,14 @@ export async function configureRegistryAdapters(
 
     const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
         if (!isExecute) {
+            console.log(`Ensuring security adapter for: ${address}`)
             await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
         } else {
+            console.log(`Ensuring execute adapter for: ${address}`)
             await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
         }
     }
-
+    /*
     if (system.closeCommand && system.closeCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Ensuring Adapter...')
         await ensureCorrectAdapter(system.closeCommand.address, system.makerSecurityAdapter!.address)
@@ -328,6 +386,7 @@ export async function configureRegistryAdapters(
         await ensureCorrectAdapter(system.basicSell.address, system.makerSecurityAdapter!.address)
         await ensureCorrectAdapter(system.basicSell.address, system.makerSecurityAdapter!.address, true)
     }
+    */
     if (system.aaveStoplLossCommand && system.aaveStoplLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)

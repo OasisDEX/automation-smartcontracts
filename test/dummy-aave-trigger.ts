@@ -47,7 +47,7 @@ describe('AAVE integration', async () => {
         })
 
         executorAddress = await hre.ethers.provider.getSigner(0).getAddress()
-        system = await deploySystem({ utils, addCommands: true, logDebug: false })
+        system = await deploySystem({ utils, addCommandsAAVE: true, addCommandsMaker: true, logDebug: true })
         AutomationExecutorInstance = system.automationExecutor
         console.log('System deployed')
         DPMFactory = await hre.ethers.getContractAt('AccountFactoryLike', utils.addresses.DPM_FACTORY) //utils.addresses.DPM_FACTORY);

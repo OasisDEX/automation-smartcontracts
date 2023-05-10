@@ -69,10 +69,7 @@ describe('AutomationExecutor', async () => {
 
         dai = await hre.ethers.getContractAt('ERC20', hardhatUtils.addresses.DAI)
 
-        const system = await deploySystem({
-            utils: hardhatUtils,
-            addCommands: false,
-        })
+        const system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: false, addCommandsMaker: false })
 
         ServiceRegistryInstance = system.serviceRegistry
         AutomationBotInstance = system.automationBot

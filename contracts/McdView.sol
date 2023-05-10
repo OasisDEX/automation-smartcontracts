@@ -43,6 +43,11 @@ contract McdView is DSMath {
         owner = _owner;
     }
 
+    function transferOwnership(address _newOwner) external {
+        require(msg.sender == owner, "mcd-view/not-authorised");
+        owner = _newOwner;
+    }
+
     function approve(address _allowedReader, bool isApproved) external {
         require(msg.sender == owner, "mcd-view/not-authorised");
         whitelisted[_allowedReader] = isApproved;

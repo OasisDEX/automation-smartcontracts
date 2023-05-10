@@ -23,9 +23,7 @@ describe('ConstantMultipleValidator', async () => {
     let snapshotId: string
 
     before(async () => {
-        const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
-
-        const system = await deploySystem({ utils, addCommands: true })
+        const system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
 
         AutomationBotInstance = system.automationBot
 

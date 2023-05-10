@@ -32,6 +32,8 @@ contract AAVEAdapter is IExecutableAdapter {
     constructor(ServiceRegistry _serviceRegistry) {
         aavePA = _serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        require(aavePA != address(0), "aave-adapter/invalid-initialisation");
+        require(botAddress != address(0), "aave-adapter/invalid-initialisation");
     }
 
     function decode(

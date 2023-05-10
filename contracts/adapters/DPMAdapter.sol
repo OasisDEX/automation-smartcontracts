@@ -32,6 +32,8 @@ contract DPMAdapter is ISecurityAdapter {
         self = address(this);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
         accountGuard = _accountGuard;
+        require(botAddress != address(0), "dpm-adapter/invalid-initialisation");
+        require(address(_accountGuard) != address(0), "dpm-adapter/invalid-initialisation");
     }
 
     function decode(

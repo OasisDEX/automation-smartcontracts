@@ -163,7 +163,7 @@ describe('MakerBasicBuyCommandV2', () => {
 
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
 
         await system.mcdView.approve(executorAddress, true)
 

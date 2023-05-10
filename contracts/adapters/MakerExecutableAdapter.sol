@@ -36,6 +36,9 @@ contract MakerExecutableAdapter is IExecutableAdapter {
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         utilsAddress = _serviceRegistry.getRegisteredService(MCD_UTILS_KEY);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        require(address(manager) != address(0), "maker-executable-adapter/invalid-initialisation");
+        require(utilsAddress != address(0), "maker-executable-adapter/invalid-initialisation");
+        require(botAddress != address(0), "maker-executable-adapter/invalid-initialisation");
     }
 
     function decode(
