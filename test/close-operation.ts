@@ -43,7 +43,7 @@ describe('MakerStopLossCommandV2', async () => {
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
 
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        const system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
         CloseCommandInstance = system.closeCommand as MakerStopLossCommandV2

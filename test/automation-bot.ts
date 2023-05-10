@@ -55,7 +55,7 @@ describe('AutomationBot', async () => {
 
         const dummyCommandFactory = await hre.ethers.getContractFactory('DummyCommand')
 
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: false }) //we need them as we validate the commands mp
+        const system = await deploySystem({ utils: hardhatUtils, addCommandsAAVE: true, addCommandsMaker: true })
 
         DummyCommandInstance = (await dummyCommandFactory.deploy(
             system.serviceRegistry.address,

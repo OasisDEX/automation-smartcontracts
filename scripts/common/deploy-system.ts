@@ -68,9 +68,9 @@ const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegi
         const existingAddress = await serviceRegistry.getServiceAddress(hash)
         const gasSettings = await utils.getGasSettings()
         if (existingAddress === constants.AddressZero) {
-            console.log(
-                `changing service registry entry. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
-            )
+            //    console.log(
+            //        `seting service registry entry. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
+            //    )
             await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
         } else if (overwrite.includes(hash)) {
             throw new Error('Not implemented')
@@ -95,6 +95,7 @@ const deployOrFetchFromServiceRegistry = async <T>(
     const address = await serviceRegistry.getRegisteredService(serviceName)
 
     if (address === constants.AddressZero) {
+        console.log('"address 0x0 deploying ', serviceName)
         return (await utils.deployContract(ethers.getContractFactory(contractName), params)) as T
     } else {
         console.log('"address not 0x0 fetching instead ', serviceName)
@@ -124,11 +125,10 @@ export async function deploySystem({
             ? await ethers.getImpersonatedSigner('0x0B5a3C04D1199283938fbe887A2C82C808aa89Fb')
             : ethers.provider.getSigner(0)
 
-    const ServiceRegistryInstance = await ethers.getContractAt(
-        'ServiceRegistry',
-        '0x5e81a7515f956ab642eb698821a449fe8fe7498e',
-        signer,
-    )
+    const ServiceRegistryInstance =
+        utils.hre.network.name === Network.HARDHAT
+            ? ((await utils.deployContract(ethers.getContractFactory('ServiceRegistry'), [0])) as ServiceRegistry)
+            : await ethers.getContractAt('ServiceRegistry', '0x5e81a7515f956ab642eb698821a449fe8fe7498e', signer)
 
     const addToServiceRegistryIfMissing = createServiceRegistry(utils, ServiceRegistryInstance, [])
     if (logDebug) console.log('Adding UNISWAP_ROUTER tp ServiceRegistry....')
@@ -184,9 +184,14 @@ export async function deploySystem({
             utils,
         )
 
-    if (logDebug) console.log('Deploying AutomationExecutor....')
+    if (logDebug)
+        console.log('Deploying AutomationExecutor....', [
+            AutomationBotInstance.address,
+            addresses.WETH,
+            ServiceRegistryInstance.address,
+        ])
     const AutomationExecutorInstance: AutomationExecutor = await deployOrFetchFromServiceRegistry<AutomationExecutor>(
-        AutomationServiceName.CONSTANT_MULTIPLE_VALIDATOR,
+        AutomationServiceName.AUTOMATION_EXECUTOR,
         ServiceRegistryInstance,
         'AutomationExecutor',
         [AutomationBotInstance.address, addresses.WETH, ServiceRegistryInstance.address],

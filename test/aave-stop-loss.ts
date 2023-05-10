@@ -52,7 +52,13 @@ describe('AaveV3StopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        console.log('Deploy system')
+        const system = await deploySystem({
+            utils: hardhatUtils,
+            addCommandsAAVE: true,
+            addCommandsMaker: true
+        })
+        console.log('Deploy system end')
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
