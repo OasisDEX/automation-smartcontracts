@@ -95,14 +95,13 @@ const deployOrFetchFromServiceRegistry = async <T>(
     const address = await serviceRegistry.getRegisteredService(serviceName)
 
     if (address === constants.AddressZero) {
-        console.log('"address 0x0 deploying ', serviceName)
+        console.log('address 0x0 deploying ', serviceName)
         return (await utils.deployContract(ethers.getContractFactory(contractName), params)) as T
     } else {
         console.log('"address not 0x0 fetching instead ', serviceName)
         return (await ethers.getContractAt(contractName, address, ethers.provider.getSigner(0))) as T
     }
 }
-
 export async function deploySystem({
     utils,
     addCommandsMaker,
