@@ -303,7 +303,11 @@ export class HardhatUtils {
 
         const { suggestBaseFee } = await this.getGasPrice()
         const maxPriorityFeePerGas = new BigNumber(2).shiftedBy(9).toFixed(0)
-        const maxFeePerGas = new BigNumber(suggestBaseFee).shiftedBy(9).plus(maxPriorityFeePerGas).toFixed(0)
+        const maxFeePerGas = new BigNumber(suggestBaseFee)
+            .shiftedBy(9)
+            .multipliedBy(1.5)
+            .plus(maxPriorityFeePerGas)
+            .toFixed(0)
         return {
             maxFeePerGas: EthersBN.from(maxFeePerGas),
             maxPriorityFeePerGas: EthersBN.from(maxPriorityFeePerGas),

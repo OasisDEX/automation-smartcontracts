@@ -15,12 +15,19 @@ async function main() {
     console.log(`Deployer address: ${await signer.getAddress()}`)
     console.log(`Network: ${network}`)
 
-    await deploySystem({ utils, addCommands: false, deployMcdView: false, logDebug: true })
+    await deploySystem({ utils, addCommandsMaker: false, addCommandsAAVE: true, deployMcdView: true, logDebug: true })
+
+    console.log('All deployed')
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
-main().catch(error => {
-    console.error(error)
-    process.exitCode = 1
-})
+main()
+    .catch(error => {
+        console.error(error)
+        process.exitCode = 1
+    })
+    .then(() => {
+        // eslint-disable-next-line no-process-exit
+        process.exit(0)
+    })

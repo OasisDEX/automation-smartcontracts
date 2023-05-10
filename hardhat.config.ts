@@ -71,7 +71,7 @@ const config: HardhatUserConfig = {
         },
         ...Object.fromEntries(
             [
-                createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIVATE_KEY!, 35000000000),
+                createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIVATE_KEY!, 90000000000),
                 createHardhatNetwork(
                     'goerli',
                     process.env.ALCHEMY_NODE_GOERLI,

@@ -57,6 +57,13 @@ contract AutomationExecutor {
         uniswapFactory = IUniswapV3Factory(
             _serviceRegistry.getRegisteredService(UNISWAP_FACTORY_KEY)
         );
+        require(address(_bot) != address(0), "automation-executor/invalid-initialisation");
+        require(address(_weth) != address(0), "automation-executor/invalid-initialisation");
+        require(address(uniswapRouter) != address(0), "automation-executor/invalid-initialisation");
+        require(
+            address(uniswapFactory) != address(0),
+            "automation-executor/invalid-initialisation"
+        );
     }
 
     modifier onlyOwner() {

@@ -33,6 +33,8 @@ contract MakerSecurityAdapter is ISecurityAdapter {
         self = address(this);
         manager = ManagerLike(_serviceRegistry.getRegisteredService(CDP_MANAGER_KEY));
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
+        require(address(manager) != address(0), "maker-security-adapter/invalid-initialisation");
+        require(botAddress != address(0), "maker-security-adapter/invalid-initialisation");
     }
 
     function decode(

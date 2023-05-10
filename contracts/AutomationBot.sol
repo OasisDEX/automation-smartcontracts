@@ -51,6 +51,7 @@ contract AutomationBot is IAutomationBot, ReentrancyGuard {
 
     constructor(IServiceRegistry _serviceRegistry) {
         serviceRegistry = _serviceRegistry;
+        require(address(_serviceRegistry) != address(0), "automation-bot/invalid-initialisation");
         automationBot = AutomationBot(address(this));
         counter.lockCount = 0;
         counter.triggersCounter = COUNTER_OFFSET;
