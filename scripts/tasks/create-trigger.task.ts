@@ -15,6 +15,7 @@ interface CreateTriggerArgs extends BaseTaskArgs {
     type: number
     replace: number
     params: any[]
+    useDsProxy?: boolean
 }
 
 createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger for a user')
@@ -29,6 +30,7 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
         false,
     )
     .addParam('replace', 'Trigger to replace', 0, types.int)
+    .addFlag('useDsProxy', 'Use DSProxy')
     .setAction(async (args: CreateTriggerArgs, hre) => {
         const { name: network } = hre.network
         console.log(
@@ -47,7 +49,12 @@ createTask<CreateTriggerArgs>('create-trigger', 'Creates an automation trigger f
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
-        const { currentProxyOwner, proxyAddress, proxy } = await getProxy(hre, hardhatUtils, args.vault)
+        const { currentProxyOwner, proxyAddress, proxy } = await getProxy(
+            hre,
+            hardhatUtils,
+            args.vault,
+            args.useDsProxy,
+        )
 
         if (
             currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase() &&

@@ -3,7 +3,6 @@ import { types } from 'hardhat/config'
 import {
     bignumberToTopic,
     coalesceNetwork,
-    getCommandAddress,
     getEvents,
     getStartBlocksFor,
     HardhatUtils,
@@ -23,6 +22,7 @@ interface RemoveTriggerArgs extends BaseTaskArgs {
     vault: string
     trigger: BigNumber
     allowance: boolean
+    useDsProxy?: boolean
     forked?: Network
 }
 
@@ -30,6 +30,7 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
     .addParam('vault', 'The vault (cdp) ID', undefined, undefined, false)
     .addParam('trigger', 'The trigger ID', '', params.bignumber)
     .addParam('allowance', 'The flag whether to remove allowance', false, types.boolean)
+    .addFlag('useDsProxy', 'Use DSProxy')
     .setAction(async (args: RemoveTriggerArgs, hre) => {
         const { name: network } = hre.network
         console.log(
@@ -47,7 +48,12 @@ createTask<RemoveTriggerArgs>('remove-trigger', 'Removes a trigger for a user')
         let signer: Signer = hre.ethers.provider.getSigner(0)
         console.log(`Address: ${chalk.bold.blue(await signer.getAddress())}`)
 
-        const { currentProxyOwner, proxyAddress, proxy } = await getProxy(hre, hardhatUtils, args.vault)
+        const { currentProxyOwner, proxyAddress, proxy } = await getProxy(
+            hre,
+            hardhatUtils,
+            args.vault,
+            args.useDsProxy,
+        )
 
         if (
             currentProxyOwner.toLowerCase() !== (await signer.getAddress()).toLowerCase() &&

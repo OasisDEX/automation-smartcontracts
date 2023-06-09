@@ -6,17 +6,16 @@ import { getStartBlocksFor } from './addresses'
 import { bignumberToTopic } from './utils'
 import { Network } from './types'
 
-export async function getProxy(hre: HardhatRuntimeEnvironment, hardhatUtils: HardhatUtils, vault: string) {
-    let isMaker = false
-    try {
-        hre.ethers.utils.getAddress(vault)
-    } catch (e) {
-        isMaker = true
-    }
+export async function getProxy(
+    hre: HardhatRuntimeEnvironment,
+    hardhatUtils: HardhatUtils,
+    vault: string,
+    useDsProxy = false,
+) {
     const cdpManager = await hre.ethers.getContractAt('ManagerLike', hardhatUtils.addresses.CDP_MANAGER)
-    const proxyAddress = isMaker ? await cdpManager.owns(vault) : vault
+    const proxyAddress = useDsProxy ? await cdpManager.owns(vault) : vault
     const proxy = await hre.ethers.getContractAt(
-        isMaker ? 'DsProxyLike' : 'IAccountImplementation',
+        useDsProxy ? 'DsProxyLike' : 'IAccountImplementation',
         proxyAddress as string,
     )
     const currentProxyOwner = await proxy.owner()
