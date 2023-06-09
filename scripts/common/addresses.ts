@@ -44,10 +44,10 @@ const addresses = {
         SWAP: '0x826E9f2E79cEEA850dF4d4757e0D12115A720D74',
         AUTOMATION_SERVICE_REGISTRY: '0x9b4Ae7b164d195df9C4Da5d08Be88b2848b2EaDA',
         AUTOMATION_BOT: '0x6E87a7A0A03E51A741075fDf4D1FCce39a4Df01b',
-        AUTOMATION_BOT_V2: '',
+        AUTOMATION_BOT_V2: '0x5743b5606E94Fb534a31e1ceFB3242C8A9422e5E',
         AUTOMATION_BOT_STORAGE: '',
         AUTOMATION_EXECUTOR: '0x87607992FDd5eAe12201bFBE83432D469944EE1C',
-        AUTOMATION_EXECUTOR_V2: '',
+        AUTOMATION_EXECUTOR_V2: '0xe145976Cba0383A44D8B46caEb36ab28fe0A9cC2',
         AUTOMATION_MCD_VIEW: '0x55Dc2Be8020bCa72E58e665dC931E03B749ea5E0',
         AUTOMATION_MCD_UTILS: '0x68Ff2d96EDD4aFfcE9CBE82BF55F0B70acb483Ea',
         AUTOMATION_CLOSE_COMMAND: '0xa553c3f4e65A1FC951B236142C1f69c1BcA5bF2b',
@@ -55,7 +55,7 @@ const addresses = {
         AUTOMATION_BASIC_SELL_COMMAND: '0x7c0d6d8d6eae8bcb106afdb3a21df5c254c6c0b2',
         AUTOMATION_AAVE_ADAPTER: '', //TODO: add address after deployment
         AUTOMATION_DPM_ADAPTER: '', //TODO: add address after deployment
-        AUTOMATION_AAVE_STOPLOSS_COMMAND: '0x0000000000000000000000000000000000000000',
+        AUTOMATION_AAVE_STOPLOSS_COMMAND: '0x65127d52aaeb356b45c6dcb3da36f4fc6ff738ef',
         AUTOMATION_DUMMY_AAVE: '0x0000000000000000000000000000000000000000',
         AUTOMATION_AAVE_PROXY_ACTIONS: '0x0000000000000000000000000000000000000000',
         AUTOMATION_BOT_AGGREGATOR: '0x5f1d184204775fBB351C4b2C61a2fD4aAbd3fB76',
@@ -154,6 +154,7 @@ export function coalesceNetwork(network: Network) {
     switch (network) {
         case Network.LOCAL:
         case Network.HARDHAT:
+        case Network.TENDERLY:
             return Network.MAINNET
         default:
             return network
@@ -198,6 +199,9 @@ export function getCommandAddress(network: string | Network, type: TriggerType) 
             return addresses.AUTOMATION_BASIC_BUY_COMMAND
         case TriggerType.MakerBasicSellV2:
             return addresses.AUTOMATION_BASIC_SELL_COMMAND
+        case TriggerType.AaveStopLossToCollateralV2:
+        case TriggerType.AaveStopLossToDebtV2:
+            return addresses.AUTOMATION_AAVE_STOPLOSS_COMMAND
         default:
             throw new Error(`Cannot get command address. Trigger Type: ${type}`)
     }
