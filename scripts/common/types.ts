@@ -5,6 +5,7 @@ export enum Network {
     GOERLI = 'goerli',
     HARDHAT = 'hardhat',
     LOCAL = 'local',
+    TENDERLY = 'tenderly',
 }
 
 export function isSupportedNetwork(network: string): network is Network {
