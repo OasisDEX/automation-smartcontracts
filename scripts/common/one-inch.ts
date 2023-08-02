@@ -10,6 +10,11 @@ if (!ONE_INCH_API_ENDPOINT) {
     throw new Error('ONE_INCH_API_ENDPOINT environment variable is not set')
 }
 
+const ONE_INCH_API_KEY = process.env.ONE_INCH_API_KEY
+if (!ONE_INCH_API_KEY) {
+    throw new Error('ONE_INCH_API_KEY environment variable is not set')
+}
+
 const ONE_INCH_PROTOCOLS = ['UNISWAP_V3', 'PMM4', 'UNISWAP_V2', 'SUSHI', 'CURVE', 'PSM']
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
@@ -20,7 +25,7 @@ export async function getQuote(daiAddress: string, collateralAddress: string, am
             amount: amount.toFixed(0),
         },
         headers: {
-            'auth-key': process.env.ONE_INCH_API_KEY || '',
+            'auth-key': ONE_INCH_API_KEY || '',
         },
     })
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
@@ -52,7 +57,7 @@ export async function getSwap(
     const { data } = await axios.get<OneInchSwapResponse>(`${ONE_INCH_API_ENDPOINT}/swap`, {
         params,
         headers: {
-            'auth-key': process.env.ONE_INCH_API_KEY || '',
+            'auth-key': ONE_INCH_API_KEY || '',
         },
     })
 
