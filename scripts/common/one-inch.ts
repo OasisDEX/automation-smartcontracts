@@ -10,7 +10,7 @@ if (!ONE_INCH_API_ENDPOINT) {
     throw new Error('ONE_INCH_API_ENDPOINT environment variable is not set')
 }
 
-const ONE_INCH_API_KEY = process.env.ONE_INCH_API_ENDPOINT
+const ONE_INCH_API_KEY = process.env.ONE_INCH_API_KEY
 if (!ONE_INCH_API_KEY) {
     throw new Error('ONE_INCH_API_KEY environment variable is not set')
 }
