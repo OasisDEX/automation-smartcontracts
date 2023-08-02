@@ -148,7 +148,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             (StopLossTriggerData)
         );
         require(
-            stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108,
+            stopLossTriggerData.triggerType == 111 || stopLossTriggerData.triggerType == 112,
             "aave-v3-sl/invalid-trigger-type"
         );
         trustedCaller = stopLossTriggerData.positionAddress;
@@ -170,7 +170,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 4 &&
-            (stopLossTriggerData.triggerType == 107 || stopLossTriggerData.triggerType == 108);
+            (stopLossTriggerData.triggerType == 111 || stopLossTriggerData.triggerType == 112);
     }
 
     function closePosition(SwapData calldata swapData, AaveData memory aaveData) external {
