@@ -2,7 +2,7 @@ import axios from 'axios'
 import BigNumber from 'bignumber.js'
 import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
 
-const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
+const API_ENDPOINT = process.env.ONE_INCH_API_ENDPOINT || `https://api-oasis.1inch.io/v4.0/1`
 const ONE_INCH_PROTOCOLS = ['UNISWAP_V3', 'PMM4', 'UNISWAP_V2', 'SUSHI', 'CURVE', 'PSM']
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
@@ -41,6 +41,9 @@ export async function getSwap(
 
     const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
         params,
+        headers: {
+            'auth-key': process.env.ONE_INCH_API_KEY || '',
+        },
     })
 
     if (debug) console.log('One inch payload', data)
