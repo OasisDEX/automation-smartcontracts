@@ -122,7 +122,7 @@ describe('AaveV3StopLossCommandV2', async () => {
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
             hardhatUtils.addresses.USDC,
             proxyAddress,
-            EthersBN.from(500).mul(EthersBN.from(10).pow(6)),
+            EthersBN.from(4000).mul(EthersBN.from(10).pow(6)),
         ])
 
         await (
@@ -135,7 +135,11 @@ describe('AaveV3StopLossCommandV2', async () => {
     describe('isTriggerDataValid', () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.ltv
+            // Calculate the loan-to-value (LTV) ratio for Aave V3
+            // LTV is the ratio of the total debt to the total collateral, expressed as a percentage
+            // The result is multiplied by 10000 to preserve precision
+            // eg 0.67 (67%) LTV is stored as 6700
+            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
             const trigerDecodedData = [
                 proxyAddress,
@@ -160,7 +164,7 @@ describe('AaveV3StopLossCommandV2', async () => {
         })
         it('should add the trigger with continuous set to false', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.ltv
+            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
@@ -188,7 +192,7 @@ describe('AaveV3StopLossCommandV2', async () => {
     describe('protocol specific adapters', async () => {
         it('should add the trigger - disallow calling getCoverage in AAVEAdapter', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.ltv
+            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
@@ -224,7 +228,7 @@ describe('AaveV3StopLossCommandV2', async () => {
         })
         it('should add the trigger - disallow calling permit in DPMAdapter', async () => {
             const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.ltv
+            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
@@ -267,7 +271,7 @@ describe('AaveV3StopLossCommandV2', async () => {
 
             before(async () => {
                 const userData = await aavePool.getUserAccountData(proxyAddress)
-                ltv = userData.ltv
+                ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
                 const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
                 const aTokenBalance = await aToken.balanceOf(proxyAddress)
@@ -339,8 +343,11 @@ describe('AaveV3StopLossCommandV2', async () => {
                         hardhatUtils.addresses.WETH,
                         ltv.sub(2),
                     ]
-                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
-
+                    const triggerEncodedData = encodeTriggerDataByType(
+                        CommandContractType.AaveStopLossCommandV2,
+                        trigerDecodedData,
+                    )
+                    triggerData = triggerEncodedData
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
                         [false],
@@ -349,7 +356,6 @@ describe('AaveV3StopLossCommandV2', async () => {
                         ['0x'],
                         [TriggerType.AaveStopLossToCollateralV2],
                     ])
-
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
@@ -501,7 +507,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 // price 8 decimals - base unit - USD
                 const price = await oracle.getAssetPrice(hardhatUtils.addresses.WETH)
                 const userData = await aavePool.getUserAccountData(proxyAddress)
-                ltv = userData.ltv
+                ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
                 const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
                 const aDecimals = await aToken.decimals()

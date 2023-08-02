@@ -111,11 +111,10 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
                     (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
             "base-aave-fl-command/contract-not-empty"
         );
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
-            stopLossTriggerData.positionAddress
-        );
+        (uint256 totalCollateralBase, uint256 totalDebtBase, , , , ) = lendingPool
+            .getUserAccountData(stopLossTriggerData.positionAddress);
 
-        return !(totalCollateralETH > 0 && totalDebtETH > 0);
+        return !(totalCollateralBase > 0 && totalDebtBase > 0);
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
@@ -124,10 +123,14 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             (StopLossTriggerData)
         );
 
-        (, uint256 totalDebtBase, , , uint256 ltv, ) = lendingPool.getUserAccountData(
-            stopLossTriggerData.positionAddress
-        );
+        (uint256 totalCollateralBase, uint256 totalDebtBase, , , , ) = lendingPool
+            .getUserAccountData(stopLossTriggerData.positionAddress);
 
+        // Calculate the loan-to-value (LTV) ratio for Aave V3
+        // LTV is the ratio of the total debt to the total collateral, expressed as a percentage
+        // The result is multiplied by 10000 to preserve precision
+        // eg 0.67 (67%) LTV is stored as 6700
+        uint256 ltv = (totalDebtBase * 10000) / totalCollateralBase;
         if (totalDebtBase == 0) return false;
 
         bool vaultHasDebt = totalDebtBase != 0;
