@@ -1,16 +1,26 @@
 import axios from 'axios'
 import BigNumber from 'bignumber.js'
 import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
+// TODO: create config.ts with all env variables and import it where needed
+import * as dotenv from 'dotenv'
+dotenv.config()
 
-const API_ENDPOINT = process.env.ONE_INCH_API_ENDPOINT || `https://api-oasis.1inch.io/v4.0/1`
+const ONE_INCH_API_ENDPOINT = process.env.ONE_INCH_API_ENDPOINT
+if (!ONE_INCH_API_ENDPOINT) {
+    throw new Error('ONE_INCH_API_ENDPOINT environment variable is not set')
+}
+
 const ONE_INCH_PROTOCOLS = ['UNISWAP_V3', 'PMM4', 'UNISWAP_V2', 'SUSHI', 'CURVE', 'PSM']
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
-    const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
+    const { data } = await axios.get<OneInchQuoteResponse>(`${ONE_INCH_API_ENDPOINT}/quote`, {
         params: {
             fromTokenAddress: collateralAddress,
             toTokenAddress: daiAddress,
             amount: amount.toFixed(0),
+        },
+        headers: {
+            'auth-key': process.env.ONE_INCH_API_KEY || '',
         },
     })
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
@@ -39,7 +49,7 @@ export async function getSwap(
 
     if (debug) console.log('One inch params', params)
 
-    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
+    const { data } = await axios.get<OneInchSwapResponse>(`${ONE_INCH_API_ENDPOINT}/swap`, {
         params,
         headers: {
             'auth-key': process.env.ONE_INCH_API_KEY || '',
