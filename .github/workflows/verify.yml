@@ -51,6 +51,8 @@ jobs:
                   ALCHEMY_NODE: ${{ secrets.ALCHEMY_NODE }}
                   ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
                   ALCHEMY_NODE_GOERLI: ${{ secrets.ALCHEMY_NODE_GOERLI }}
+                  ONE_INCH_API_ENDPOINT: ${{ secrets.ONE_INCH_API_ENDPOINT }}
+                  ONE_INCH_API_KEY: ${{ secrets.ONE_INCH_API_KEY }}
               run: npx hardhat compile
 
             - name: test
