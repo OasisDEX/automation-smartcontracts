@@ -1008,10 +1008,10 @@ describe('AutomationBot', async () => {
             const notOwner = await hardhatUtils.impersonate(notOwnerProxyUserAddress)
             const maliciousSecurityAdapter = await hardhatUtils.deployContract(
                 hre.ethers.getContractFactory('MaliciousSecurityAdapter'),
-                [hardhatUtils.addresses.AUTOMATION_SERVICE_REGISTRY],
+                [ServiceRegistryInstance.address],
             )
             const maliciousCommand = await hardhatUtils.deployContract(hre.ethers.getContractFactory('DummyCommand'), [
-                hardhatUtils.addresses.AUTOMATION_SERVICE_REGISTRY,
+                ServiceRegistryInstance.address,
                 true,
                 true,
                 false,
