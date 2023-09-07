@@ -35,7 +35,7 @@ abstract contract BaseBalancerFlashLoanCommand is ICommand, IFlashLoanRecipient,
     address public immutable self;
     address public immutable swap;
 
-    bool public reciveExpected;
+    bool public receiveExpected;
 
     string private constant BALANCER_VAULT = "BALANCER_VAULT";
 
@@ -53,12 +53,12 @@ abstract contract BaseBalancerFlashLoanCommand is ICommand, IFlashLoanRecipient,
         self = address(this);
     }
 
-    function expectRecive() internal {
-        reciveExpected = true;
+    function expectReceive() internal {
+        receiveExpected = true;
     }
 
     function ethReceived() internal {
-        reciveExpected = false;
+        receiveExpected = false;
     }
 
     function receiveFlashLoan(
@@ -67,7 +67,10 @@ abstract contract BaseBalancerFlashLoanCommand is ICommand, IFlashLoanRecipient,
         uint256[] memory feeAmounts,
         bytes memory userData
     ) external {
-        require(msg.sender == address(balancerVault), "aave-v3-sl/caller-must-be-lending-pool");
+        require(
+            msg.sender == address(balancerVault),
+            "(spark|aave-v3)-sl/caller-must-be-lending-pool"
+        );
 
         bytes memory flActionData = abi.encode(FlActionData(tokens, amounts, feeAmounts, userData));
 
