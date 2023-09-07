@@ -18,19 +18,19 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 pragma solidity ^0.8.0;
 
-import "../helpers/AaveV3ProxyActions.sol";
+import "../helpers/SparkProxyActions.sol";
 import "../interfaces/IAccountImplementation.sol";
 import "../interfaces/IAdapter.sol";
 import "../McdView.sol";
 
-contract AAVEAdapter is IExecutableAdapter {
-    address public immutable aavePA;
+contract SparkAdapter is IExecutableAdapter {
+    address public immutable sparkPA;
     address public immutable botAddress;
-    string private constant AAVE_PROXY_ACTIONS = "AAVE_PROXY_ACTIONS";
+    string private constant SPARK_PROXY_ACTIONS = "SPARK_PROXY_ACTIONS";
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     constructor(ServiceRegistry _serviceRegistry) {
-        aavePA = _serviceRegistry.getRegisteredService(AAVE_PROXY_ACTIONS);
+        aavePA = _serviceRegistry.getRegisteredService(SPARK_PROXY_ACTIONS);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
     }
 
@@ -53,15 +53,15 @@ contract AAVEAdapter is IExecutableAdapter {
         address coverageToken,
         uint256 amount
     ) external {
-        require(msg.sender == botAddress, "aave-adapter/only-bot");
+        require(msg.sender == botAddress, "spark-adapter/only-bot");
         (address proxy, , uint256 maxCoverage, address debtToken) = decode(triggerData);
-        require(debtToken == coverageToken, "aave-adapter/invalid-coverage-token");
-        require(amount <= maxCoverage, "aave-adapter/coverage-too-high");
+        require(debtToken == coverageToken, "spark-adapter/invalid-coverage-token");
+        require(amount <= maxCoverage, "spark-adapter/coverage-too-high");
         //reverts if code fails
         IAccountImplementation(proxy).execute(
-            aavePA,
+            sparkPA,
             abi.encodeWithSelector(
-                AaveV3ProxyActions.drawDebt.selector,
+                SparkProxyActions.drawDebt.selector,
                 coverageToken,
                 receiver,
                 amount
