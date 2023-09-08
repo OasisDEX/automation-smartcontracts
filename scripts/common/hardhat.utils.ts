@@ -67,6 +67,10 @@ export class HardhatUtils {
                 'MakerBasicSellCommandV2',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
+            sparkAdapter: await this.hre.ethers.getContractAt(
+                'SparkAdapter',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.SPARK_ADAPTER),
+            ),
             aaveAdapter: await this.hre.ethers.getContractAt(
                 'AAVEAdapter',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
@@ -78,6 +82,10 @@ export class HardhatUtils {
             aaveProxyActions: await this.hre.ethers.getContractAt(
                 'AaveV3ProxyActions',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
+            ),
+            sparkProxyActions: await this.hre.ethers.getContractAt(
+                'SparkProxyActions',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.SPARK_PROXY_ACTIONS),
             ),
         }
     }

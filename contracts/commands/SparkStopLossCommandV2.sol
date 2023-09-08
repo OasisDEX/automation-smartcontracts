@@ -26,7 +26,7 @@ import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
 // Spark and Aave DataTypes are the same
-import { DataTypes } from "../libs/sparkDataTypes.sol";
+import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseBalancerFlashLoanCommand } from "./BaseBalancerFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 

@@ -15,6 +15,9 @@ import {
     MakerAutoTakeProfitCommandV2,
     AaveV3ProxyActions,
     AaveV3StopLossCommandV2,
+    SparkProxyActions,
+    SparkStopLossCommandV2,
+    SparkAdapter,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -40,13 +43,16 @@ export interface DeployedSystem {
     closeCommand?: MakerStopLossCommandV2
     autoTakeProfitCommand?: MakerAutoTakeProfitCommandV2
     aaveStoplLossCommand?: AaveV3StopLossCommandV2
+    sparkStopLossCommand?: SparkStopLossCommandV2
     basicBuy?: MakerBasicBuyCommandV2
     basicSell?: MakerBasicSellCommandV2
     makerSecurityAdapter?: MakerSecurityAdapter
     makerExecutableAdapter?: MakerExecutableAdapter
     aaveAdapter?: AAVEAdapter
+    sparkAdapter?: SparkAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveV3ProxyActions
+    sparkProxyActions?: SparkProxyActions
 }
 
 export interface DeploySystemArgs {
@@ -91,6 +97,7 @@ export async function deploySystem({
     let BasicSellInstance: MakerBasicSellCommandV2 | undefined
     let AutoTakeProfitInstance: MakerAutoTakeProfitCommandV2 | undefined
     let AaveStoplLossInstance: AaveV3StopLossCommandV2 | undefined
+    let SparkStopLossInstance: SparkStopLossCommandV2 | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -176,6 +183,7 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveProxyActions: AaveProxyActionsInstance,
+        sparkStopLossCommand: SparkStopLossInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)

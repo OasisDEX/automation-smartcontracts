@@ -103,7 +103,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-        require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
+        require(receiveExpected == false, "base-aave-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
                 IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
@@ -307,6 +307,6 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
     }
 
     receive() external payable {
-        require(reciveExpected == true, "aave-v3-sl/unexpected-eth-receive");
+        require(receiveExpected == true, "aave-v3-sl/unexpected-eth-receive");
     }
 }

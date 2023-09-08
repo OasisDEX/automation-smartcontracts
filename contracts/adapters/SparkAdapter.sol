@@ -30,7 +30,7 @@ contract SparkAdapter is IExecutableAdapter {
     string private constant AUTOMATION_BOT_KEY = "AUTOMATION_BOT_V2";
 
     constructor(ServiceRegistry _serviceRegistry) {
-        aavePA = _serviceRegistry.getRegisteredService(SPARK_PROXY_ACTIONS);
+        sparkPA = _serviceRegistry.getRegisteredService(SPARK_PROXY_ACTIONS);
         botAddress = _serviceRegistry.getRegisteredService(AUTOMATION_BOT_KEY);
     }
 
