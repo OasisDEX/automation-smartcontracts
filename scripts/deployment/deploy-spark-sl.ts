@@ -52,7 +52,7 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    console.log('Deploying SparkProxyActions')
+    // throw new Error("stop here")
 
     system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
         utils.addresses.WETH,
@@ -83,10 +83,11 @@ async function main() {
 
     const stopLossCommand = await tx.deployed()
     // TODO change 10 when the command is in common
-    // TriggerType.SparkStopLossToDebtV2
-    const commandHash = getCommandHash(10)
+    const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
+    const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
 
-    ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
+    ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
+    ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
 
     await ensureCorrectAdapter(stopLossCommand.address, system.sparkAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
