@@ -28,7 +28,7 @@ import { ISwap } from "./../interfaces/ISwap.sol";
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseBalancerFlashLoanCommand } from "./BaseBalancerFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
-import "hardhat/console.sol";
+
 struct AaveData {
     address collateralTokenAddress;
     address debtTokenAddress;
@@ -162,7 +162,6 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
         bool continuous,
         bytes memory triggerData
     ) external view override returns (bool) {
-        console.log("IS TRIGGER VALID [AAVE]");
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)

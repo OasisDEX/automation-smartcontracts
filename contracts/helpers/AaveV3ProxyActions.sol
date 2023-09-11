@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IWETH } from "./../interfaces/IWETH.sol";
 import { IPool } from "./../interfaces/AAVE/IPool.sol";
-import "hardhat/console.sol";
+
 struct AaveData {
     address collateralTokenAddress;
     address debtTokenAddress;
@@ -26,10 +26,6 @@ contract AaveV3ProxyActions {
     }
 
     function drawDebt(address token, address recipient, uint256 amount) external payable {
-        console.log("drawDebt", amount);
-        console.log("token", token);
-        console.log("spark", address(aave));
-        console.log("amount", amount);
         if (amount > 0) {
             aave.borrow(token, amount, 2, 0, address(this));
             _send(token, recipient, amount);
