@@ -67,7 +67,7 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
     IPool public immutable lendingPool;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
-    string private constant SPARK_LENDING_POOL = "SparkLendingPool";
+    string private constant SPARK_LENDING_POOL = "SPARK_LENDING_POOL";
     string private constant WETH = "WETH";
 
     constructor(
@@ -162,7 +162,7 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external pure override returns (bool) {
+    ) external view override returns (bool) {
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)
@@ -171,7 +171,7 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 4 &&
-            (stopLossTriggerData.triggerType == 111 || stopLossTriggerData.triggerType == 112);
+            (stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 114);
     }
 
     function closePosition(SwapData calldata swapData, SparkData memory sparkData) external {

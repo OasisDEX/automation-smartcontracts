@@ -1,5 +1,5 @@
-import hre, { ethers } from 'hardhat'
-import { BigNumber as EthersBN, Signer, utils } from 'ethers'
+import hre, {ethers} from 'hardhat'
+import {BigNumber as EthersBN, Signer, utils} from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
@@ -10,15 +10,15 @@ import {
     IAccountGuard,
     AccountFactoryLike,
     AAVEAdapter,
-    DPMAdapter,
+    DPMAdapter, IPoolAddressesProvider, IPriceOracleGetter,
 } from '../typechain'
-import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
-import { deploySystem } from '../scripts/common/deploy-system'
+import {getEvents, HardhatUtils, getSwap} from '../scripts/common'
+import {deploySystem} from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
-import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
-import { expect } from 'chai'
+import {setBalance} from '@nomicfoundation/hardhat-network-helpers'
+import {CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType} from '@oasisdex/automation'
+import {expect} from 'chai'
 
 describe('AaveV3StopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
@@ -52,7 +52,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        const system = await deploySystem({utils: hardhatUtils, addCommands: true})
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
@@ -61,7 +61,10 @@ describe('AaveV3StopLossCommandV2', async () => {
 
         randomWalletAddress = ethers.Wallet.createRandom().address
 
-        aavePool = await hre.ethers.getContractAt('IPool', hardhatUtils.addresses.AAVE_V3_POOL)
+        aavePool = (await hre.ethers.getContractAt(
+            'contracts/interfaces/AAVE/IPool.sol:IPool',
+            hardhatUtils.addresses.AAVE_V3_POOL,
+        )) as IPool
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
         aaveStopLoss = system.aaveStoplLossCommand!
@@ -118,11 +121,10 @@ describe('AaveV3StopLossCommandV2', async () => {
             })
         ).wait()
 
-        // 2. draw 500 USDC debt
         const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
             hardhatUtils.addresses.USDC,
             proxyAddress,
-            EthersBN.from(4000).mul(EthersBN.from(10).pow(6)),
+            EthersBN.from(500).mul(EthersBN.from(10).pow(6)),
         ])
 
         await (
@@ -141,7 +143,7 @@ describe('AaveV3StopLossCommandV2', async () => {
             // eg 0.67 (67%) LTV is stored as 6700
             const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
-            const trigerDecodedData = [
+            const triggerDecodedData = [
                 proxyAddress,
                 TriggerType.AaveStopLossToDebtV2,
                 maxCoverageUsdc,
@@ -149,7 +151,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 hardhatUtils.addresses.WETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, triggerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -381,10 +383,10 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
+                    const txData = {usdcBalance: '0', wethBalance: '0', gasUsed: '0'}
                     const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
                     const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
                     txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
@@ -406,7 +408,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.DAI,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     await expect(tx).to.be.revertedWith('aave-adapter/invalid-coverage-token')
                 })
@@ -420,7 +422,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     await expect(tx).to.be.revertedWith('aave-adapter/coverage-too-high')
                 })
@@ -434,7 +436,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     await expect(tx).to.be.revertedWith('aave-v3-sl/funds-receiver-not-owner')
                 })
@@ -485,7 +487,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -499,11 +501,11 @@ describe('AaveV3StopLossCommandV2', async () => {
             let triggerId: number
 
             before(async () => {
-                const addressProvider = await ethers.getContractAt(
-                    'IPoolAddressesProvider',
+                const addressProvider = (await ethers.getContractAt(
+                    'contracts/interfaces/AAVE/IPoolAddressesProvider.sol:IPoolAddressesProvider',
                     hardhatUtils.addresses.AAVE_V3_ADDRESSES_PROVIDER,
-                )
-                const oracle = await ethers.getContractAt('IPriceOracleGetter', await addressProvider.getPriceOracle())
+                )) as IPoolAddressesProvider
+                const oracle = (await ethers.getContractAt('contracts/interfaces/AAVE/IPriceOracleGetter.sol:IPriceOracleGetter', await addressProvider.getPriceOracle())) as IPriceOracleGetter
                 // price 8 decimals - base unit - USD
                 const price = await oracle.getAssetPrice(hardhatUtils.addresses.WETH)
                 const userData = await aavePool.getUserAccountData(proxyAddress)
@@ -612,10 +614,10 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
+                    const txData = {usdcBalance: '0', wethBalance: '0', gasUsed: '0'}
                     const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
                     const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
                     txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
@@ -673,7 +675,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')

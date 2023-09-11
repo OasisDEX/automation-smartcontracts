@@ -1,5 +1,5 @@
-import hre, { ethers } from 'hardhat'
-import { BigNumber as EthersBN, Signer, utils } from 'ethers'
+import hre, {ethers} from 'hardhat'
+import { BigNumber as EthersBN, Signer } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
@@ -10,20 +10,21 @@ import {
     IAccountGuard,
     AccountFactoryLike,
     SparkAdapter,
-    DPMAdapter,
+    DPMAdapter, IPoolAddressesProvider, IPriceOracleGetter, IERC20,
 } from '../typechain'
-import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
-import { deploySystem } from '../scripts/common/deploy-system'
+import {getEvents, HardhatUtils, getSwap} from '../scripts/common'
+import {deploySystem} from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
-import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
-import { expect } from 'chai'
+import {setBalance} from '@nomicfoundation/hardhat-network-helpers'
+import {CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType} from '@oasisdex/automation'
+import {expect} from 'chai'
+import {WstETHABI} from "./abis";
 
 describe('SparkStopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
-    const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
+    const maxCoverageDai = hre.ethers.utils.parseUnits('10', 18)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
     let proxyAddress: string
@@ -38,6 +39,7 @@ describe('SparkStopLossCommandV2', async () => {
     let spark_pa: SparkProxyActions
     let sparkAdapter: SparkAdapter
     let dpmAdapter: DPMAdapter
+    let wstETH: IERC20
 
     let account: IAccountImplementation
     let ltv: EthersBN
@@ -52,7 +54,7 @@ describe('SparkStopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
+        const system = await deploySystem({utils: hardhatUtils, addCommands: true, logDebug: true})
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
@@ -61,7 +63,10 @@ describe('SparkStopLossCommandV2', async () => {
 
         randomWalletAddress = ethers.Wallet.createRandom().address
 
-        sparkPool = await hre.ethers.getContractAt('IPool', hardhatUtils.addresses.SPARK_V3_POOL)
+        sparkPool = (await hre.ethers.getContractAt(
+            'contracts/interfaces/Spark/IPool.sol:IPool',
+            hardhatUtils.addresses.SPARK_V3_POOL,
+        )) as IPool
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
         sparkStopLoss = system.sparkStopLossCommand!
@@ -105,24 +110,37 @@ describe('SparkStopLossCommandV2', async () => {
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
         await guard.connect(guardDeployer).setWhitelist(sparkStopLoss.address, true)
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
-        // TODO: take multiply poistion from mainnet
-        // 1. deposit 1 eth of collateral
+
+        // TODO: take multiply position from mainnet
+        const signer = receiver
+        await hardhatUtils.setTokenBalance(
+            await signer.getAddress(),
+            hardhatUtils.addresses.WSTETH,
+            hre.ethers.utils.parseEther('1000'),
+        )
+        wstETH = new hre.ethers.Contract(hardhatUtils.addresses.WSTETH, WstETHABI, hre.ethers.provider) as IERC20;
+
+        const amountToDeposit = EthersBN.from(3).mul(EthersBN.from(10).pow(18))
+
+        const tx = await wstETH.connect(receiver).approve(proxyAddress, amountToDeposit);
+        await tx.wait();
+
         const encodedOpenData = spark_pa.interface.encodeFunctionData('openPosition', [
-            hardhatUtils.addresses.WETH,
-            EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+            hardhatUtils.addresses.WSTETH,
+            amountToDeposit,
         ])
         await (
             await account.connect(receiver).execute(spark_pa.address, encodedOpenData, {
-                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+                value: 0,
                 gasLimit: 3000000,
             })
         ).wait()
 
-        // 2. draw 500 USDC debt
+        const amountToDraw = EthersBN.from(1).mul(EthersBN.from(10).pow(18))
         const encodedDrawDebtData = spark_pa.interface.encodeFunctionData('drawDebt', [
-            hardhatUtils.addresses.USDC,
+            hardhatUtils.addresses.WETH,
             proxyAddress,
-            EthersBN.from(4000).mul(EthersBN.from(10).pow(6)),
+            amountToDraw,
         ])
 
         await (
@@ -144,11 +162,12 @@ describe('SparkStopLossCommandV2', async () => {
             const triggerDecodedData = [
                 proxyAddress,
                 TriggerType.SparkStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
+
             const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, triggerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -165,15 +184,17 @@ describe('SparkStopLossCommandV2', async () => {
         it('should add the trigger with continuous set to false', async () => {
             const userData = await sparkPool.getUserAccountData(proxyAddress)
             const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
-            const trigerDecodedData = [
+
+            const triggerDecodedData = [
                 proxyAddress,
                 TriggerType.SparkStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
+
+            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, triggerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -181,7 +202,7 @@ describe('SparkStopLossCommandV2', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.SparkStopLossToCollateralV2],
+                [TriggerType.SparkStopLossToDebtV2],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -196,9 +217,9 @@ describe('SparkStopLossCommandV2', async () => {
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.SparkStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
@@ -221,7 +242,7 @@ describe('SparkStopLossCommandV2', async () => {
                 .getCoverage(
                     triggerData,
                     await notOwner.getAddress(),
-                    hardhatUtils.addresses.USDC,
+                    hardhatUtils.addresses.DAI,
                     hardhatUtils.hre.ethers.utils.parseUnits('9', 6),
                 )
             await expect(tx2).to.be.revertedWith('spark-adapter/only-bot')
@@ -232,9 +253,9 @@ describe('SparkStopLossCommandV2', async () => {
             const trigerDecodedData = [
                 proxyAddress,
                 TriggerType.SparkStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
             const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
@@ -273,7 +294,7 @@ describe('SparkStopLossCommandV2', async () => {
                 const userData = await sparkPool.getUserAccountData(proxyAddress)
                 ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
-                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWETH_TOKEN)
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWSTETH_TOKEN)
                 const aTokenBalance = await aToken.balanceOf(proxyAddress)
 
                 const amountInWei = aTokenBalance
@@ -282,8 +303,8 @@ describe('SparkStopLossCommandV2', async () => {
                 const slippage = EthersBN.from(100)
 
                 const data = await getSwap(
+                    hardhatUtils.addresses.WSTETH,
                     hardhatUtils.addresses.WETH,
-                    hardhatUtils.addresses.USDC,
                     receiverAddress,
                     new BigNumber(aTokenBalance.toString()),
                     new BigNumber(slippage.mul(100).div(feeBase).toString()),
@@ -296,12 +317,11 @@ describe('SparkStopLossCommandV2', async () => {
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH,
-                    toAsset: hardhatUtils.addresses.USDC,
+                    fromAsset: hardhatUtils.addresses.WSTETH,
+                    toAsset: hardhatUtils.addresses.WETH,
                     amount: amountInWei,
                     receiveAtLeast: EthersBN.from(
                         data.toTokenAmount
-                            .shiftedBy(data.toToken.decimals)
                             .times(0.999)
                             .integerValue(BigNumber.ROUND_DOWN)
                             .toString(),
@@ -311,14 +331,14 @@ describe('SparkStopLossCommandV2', async () => {
                     collectFeeInFromToken: false,
                 }
                 const sparkData = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
                 const sparkDataNotOwner = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: randomWalletAddress,
                 }
@@ -335,17 +355,17 @@ describe('SparkStopLossCommandV2', async () => {
 
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDecodedData = [
+                    const triggerDecodedData = [
                         proxyAddress,
                         TriggerType.SparkStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        maxCoverageDai,
                         hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.WSTETH,
                         ltv.sub(2),
                     ]
                     const triggerEncodedData = encodeTriggerDataByType(
                         CommandContractType.SparkStopLossCommandV2,
-                        trigerDecodedData,
+                        triggerDecodedData,
                     )
                     triggerData = triggerEncodedData
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -354,7 +374,7 @@ describe('SparkStopLossCommandV2', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.SparkStopLossToCollateralV2],
+                        [TriggerType.SparkStopLossToDebtV2],
                     ])
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
@@ -371,28 +391,28 @@ describe('SparkStopLossCommandV2', async () => {
                 })
 
                 it('should execute trigger - with coverage below the limit', async () => {
-                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const balanceBefore = await wstETH.balanceOf(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
                         sparkStopLoss.address,
                         triggerId,
-                        ethers.utils.parseUnits('9', 6),
+                        ethers.utils.parseUnits('1', 18),
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.WETH,
+                        {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
-                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
-                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
-                    txData.wethBalance = returnedEth.toString()
+                    const txData = {wethBalance: '0', wstEthBalance: '0', gasUsed: '0'}
+                    const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
+                    const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
+                    txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
+                    txData.wstEthBalance = returnedWstEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await sparkPool.getUserAccountData(proxyAddress)
                     // TODO check a token
-                    expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
+                    expect(+txData.wethBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralBase).to.be.eq(0)
                     expect(userData.totalDebtBase).to.be.eq(0)
                 })
@@ -406,7 +426,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.DAI,
-                        { gasLimit: 3000000 },
+                        {gasLimit: 3000000},
                     )
                     await expect(tx).to.be.revertedWith('spark-adapter/invalid-coverage-token')
                 })
@@ -416,11 +436,11 @@ describe('SparkStopLossCommandV2', async () => {
                         triggerData,
                         sparkStopLoss.address,
                         triggerId,
-                        ethers.utils.parseUnits('11', 6),
+                        ethers.utils.parseUnits('11', 18),
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.WETH,
+                        {gasLimit: 3000000},
                     )
                     await expect(tx).to.be.revertedWith('spark-adapter/coverage-too-high')
                 })
@@ -433,10 +453,10 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.WETH,
+                        {gasLimit: 3000000},
                     )
-                    await expect(tx).to.be.revertedWith('spark-v3-sl/funds-receiver-not-owner')
+                    await expect(tx).to.be.revertedWith('spark-sl/funds-receiver-not-owner')
                 })
             })
             describe('when Trigger is above current LTV', async () => {
@@ -444,8 +464,8 @@ describe('SparkStopLossCommandV2', async () => {
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.SparkStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        maxCoverageDai,
+                        hardhatUtils.addresses.DAI,
                         hardhatUtils.addresses.WETH,
                         ltv.add(10),
                     ]
@@ -484,8 +504,8 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.WETH,
+                        {gasLimit: 3000000},
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -499,17 +519,20 @@ describe('SparkStopLossCommandV2', async () => {
             let triggerId: number
 
             before(async () => {
-                const addressProvider = await ethers.getContractAt(
-                    'IPoolAddressesProvider',
+                const addressProvider = (await ethers.getContractAt(
+                    'contracts/interfaces/Spark/IPoolAddressesProvider.sol:IPoolAddressesProvider',
                     hardhatUtils.addresses.SPARK_V3_ADDRESSES_PROVIDER,
-                )
-                const oracle = await ethers.getContractAt('IPriceOracleGetter', await addressProvider.getPriceOracle())
+                )) as IPoolAddressesProvider
+                const oracle = (await ethers.getContractAt(
+                    'contracts/interfaces/Spark/IPriceOracleGetter.sol:IPriceOracleGetter',
+                    await addressProvider.getPriceOracle(),
+                )) as IPriceOracleGetter
+
                 // price 8 decimals - base unit - USD
-                const price = await oracle.getAssetPrice(hardhatUtils.addresses.WETH)
+                const price = await oracle.getAssetPrice(hardhatUtils.addresses.WSTETH)
                 const userData = await sparkPool.getUserAccountData(proxyAddress)
                 ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
-
-                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWETH_TOKEN)
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWSTETH_TOKEN)
                 const aDecimals = await aToken.decimals()
 
                 const scale = EthersBN.from(10).pow(aDecimals)
@@ -525,8 +548,8 @@ describe('SparkStopLossCommandV2', async () => {
                 const amountToSwap = collTokenInclFeeAndSlippage
 
                 const data = await getSwap(
+                    hardhatUtils.addresses.WSTETH,
                     hardhatUtils.addresses.WETH,
-                    hardhatUtils.addresses.USDC,
                     receiverAddress,
                     new BigNumber(amountToSwap.toString()),
                     new BigNumber(slippage.mul(100).div(feeBase).toString()),
@@ -534,17 +557,16 @@ describe('SparkStopLossCommandV2', async () => {
 
                 await hardhatUtils.setTokenBalance(
                     spark_pa.address,
-                    hardhatUtils.addresses.WETH,
+                    hardhatUtils.addresses.WSTETH,
                     hre.ethers.utils.parseEther('10'),
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH,
-                    toAsset: hardhatUtils.addresses.USDC,
+                    fromAsset: hardhatUtils.addresses.WSTETH,
+                    toAsset: hardhatUtils.addresses.WETH,
                     amount: amountToSwap,
                     receiveAtLeast: EthersBN.from(
                         data.toTokenAmount
-                            .shiftedBy(data.toToken.decimals)
                             .times(0.999)
                             .integerValue(BigNumber.ROUND_DOWN)
                             .toString(),
@@ -554,8 +576,8 @@ describe('SparkStopLossCommandV2', async () => {
                     collectFeeInFromToken: false,
                 }
                 const sparkData = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
@@ -571,9 +593,9 @@ describe('SparkStopLossCommandV2', async () => {
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.SparkStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        maxCoverageDai,
                         hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.WSTETH,
                         ltv.sub(2),
                     ]
                     triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
@@ -602,7 +624,7 @@ describe('SparkStopLossCommandV2', async () => {
                 })
 
                 it('should execute trigger', async () => {
-                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const balanceBefore = await wstETH.balanceOf(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
@@ -611,19 +633,20 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.WETH,
+                        {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
-                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
-                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
-                    txData.wethBalance = returnedEth.toString()
+
+                    const txData = {wethBalance: '0', wstEthBalance: '0',  gasUsed: '0'}
+                    const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
+                    const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
+                    txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
+                    txData.wstEthBalance = returnedWstEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await sparkPool.getUserAccountData(proxyAddress)
                     // TODO check a token
-                    expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
+                    expect(+txData.wstEthBalance).to.be.greaterThan(+'98721300000000000')
                     expect(userData.totalCollateralBase).to.be.eq(0)
                     expect(userData.totalDebtBase).to.be.eq(0)
                 })
@@ -633,8 +656,8 @@ describe('SparkStopLossCommandV2', async () => {
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.SparkStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        maxCoverageDai,
+                        hardhatUtils.addresses.DAI,
                         hardhatUtils.addresses.WETH,
                         ltv.add(2),
                     ]
@@ -672,8 +695,8 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
+                        hardhatUtils.addresses.DAI,
+                        {gasLimit: 3000000},
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
