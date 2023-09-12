@@ -10,6 +10,7 @@ import {
     getExecuteAdapterNameHash,
     getExternalNameHash,
     HardhatUtils,
+    ONE_INCH_V4_ROUTER,
 } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
@@ -79,8 +80,7 @@ async function main() {
 
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3StopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        utils.addresses.AAVE_V3_POOL,
-        apa.address,
+        ONE_INCH_V4_ROUTER,
     ])) as AaveV3StopLossCommandV2
 
     const stopLossCommand = await tx.deployed()

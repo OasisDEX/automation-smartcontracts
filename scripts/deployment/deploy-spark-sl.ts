@@ -8,6 +8,7 @@ import {
     getExecuteAdapterNameHash,
     getExternalNameHash,
     HardhatUtils,
+    ONE_INCH_V4_ROUTER,
 } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
@@ -52,15 +53,21 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    // throw new Error("stop here")
-
     system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
         utils.addresses.WETH,
         utils.addresses.SPARK_V3_POOL,
     ])) as SparkProxyActions
 
+    // const sparkProxyActionsAddress = "0x53546083A3C8841e0813C6800e19F7E736585D31"
+    // system.sparkProxyActions = (await hre.ethers.getContractAt(
+    //     'SparkProxyActions',
+    //     sparkProxyActionsAddress,
+    // )) as SparkProxyActions
+
     const spa = await system.sparkProxyActions.deployed()
 
+    // NOTE: Service Registry additions are disabled for now
+    // Because SR is registry is owned by gnosis wallet
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
@@ -77,15 +84,22 @@ async function main() {
 
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('SparkStopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        utils.addresses.SPARK_V3_POOL,
-        spa.address,
+        ONE_INCH_V4_ROUTER,
     ])) as SparkStopLossCommandV2
 
+    // const sparkStopLossCommandV2Address = "0xc49e905346bC68BdfB46ED1E46E0804ffDC4458a"
+    // const tx = (await hre.ethers.getContractAt(
+    //     'SparkStopLossCommandV2',
+    //     sparkStopLossCommandV2Address,
+    // )) as SparkStopLossCommandV2
+
     const stopLossCommand = await tx.deployed()
-    // TODO change 10 when the command is in common
+
     const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
     const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
 
+    console.log('commandHashDebtSL', commandHashDebtSL)
+    console.log('commandHashCollSL', commandHashCollSL)
     ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
     ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
 
@@ -103,6 +117,21 @@ async function main() {
 
     console.log(`SparkStopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
     console.log(`SparkProxyActions Deployed: ${spa!.address}`)
+
+    if (network === 'mainnet' || network === 'goerli') {
+        console.log(`Waiting for 60 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 60000))
+
+        await hre.run('verify:verify', {
+            address: spa.address,
+            constructorArguments: [utils.addresses.WETH, utils.addresses.SPARK_V3_POOL],
+        })
+
+        await hre.run('verify:verify', {
+            address: stopLossCommand.address,
+            constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
+        })
+    }
 }
 
 main().catch(error => {
