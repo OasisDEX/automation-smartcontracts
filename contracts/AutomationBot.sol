@@ -85,7 +85,7 @@ contract AutomationBot is IAutomationBot, ReentrancyGuard {
     ) public view returns (address) {
         require(commandAddress != address(0), "bot/unknown-trigger-type");
         bytes32 adapterHash = isExecute
-            ? keccak256(abi.encode("AdapterExecute", commandAddress))
+            ? keccak256(abi.encode("AdapterExecuteAdapterExecute", commandAddress))
             : keccak256(abi.encode("Adapter", commandAddress));
         address service = serviceRegistry.getServiceAddress(adapterHash);
         return service;
