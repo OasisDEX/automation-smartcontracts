@@ -74,6 +74,18 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
         IServiceRegistry _serviceRegistry,
         address exchange_
     ) BaseBalancerFlashLoanCommand(_serviceRegistry, exchange_) {
+        require(
+            serviceRegistry.getRegisteredService(SPARK_LENDING_POOL) != address(0),
+            "spark-sl/lending-pool-not-registered"
+        );
+        require(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT) != address(0),
+            "spark-sl/bot-not-registered"
+        );
+        require(
+            serviceRegistry.getRegisteredService(WETH) != address(0),
+            "spark-sl/weth-not-registered"
+        );
         lendingPool = IPool(serviceRegistry.getRegisteredService(SPARK_LENDING_POOL));
         weth = serviceRegistry.getRegisteredService(WETH);
         bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
