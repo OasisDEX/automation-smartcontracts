@@ -58,7 +58,6 @@ async function main() {
         utils.addresses.SPARK_V3_POOL,
     ])) as SparkProxyActions
 
-
     // const sparkProxyActionsAddress = "0x53546083A3C8841e0813C6800e19F7E736585D31"
     // system.sparkProxyActions = (await hre.ethers.getContractAt(
     //     'SparkProxyActions',
@@ -73,11 +72,11 @@ async function main() {
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
 
-    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+    const ensureCorrectAdapter = async (commandAddress: string, adapter: string, isExecute = false) => {
         if (!isExecute) {
-            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+            await ensureServiceRegistryEntry(getAdapterNameHash(commandAddress), adapter)
         } else {
-            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(commandAddress), adapter)
         }
     }
 

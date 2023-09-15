@@ -68,11 +68,11 @@ async function main() {
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
 
-    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
+    const ensureCorrectAdapter = async (commandAddress: string, adapter: string, isExecute = false) => {
         if (!isExecute) {
-            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
+            await ensureServiceRegistryEntry(getAdapterNameHash(commandAddress), adapter)
         } else {
-            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
+            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(commandAddress), adapter)
         }
     }
 
