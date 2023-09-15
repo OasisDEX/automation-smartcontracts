@@ -161,7 +161,7 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
             (StopLossTriggerData)
         );
         require(
-            stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 114,
+            stopLossTriggerData.triggerType == 115 || stopLossTriggerData.triggerType == 116,
             "spark-sl/invalid-trigger-type"
         );
         trustedCaller = stopLossTriggerData.positionAddress;
@@ -183,7 +183,7 @@ contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 4 &&
-            (stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 114);
+            (stopLossTriggerData.triggerType == 115 || stopLossTriggerData.triggerType == 116);
     }
 
     function closePosition(SwapData calldata swapData, SparkData memory sparkData) external {

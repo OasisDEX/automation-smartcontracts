@@ -53,10 +53,10 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
 
-    system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
-        utils.addresses.WETH,
-        utils.addresses.SPARK_V3_POOL,
-    ])) as SparkProxyActions
+    // system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
+    //     utils.addresses.WETH,
+    //     utils.addresses.SPARK_V3_POOL,
+    // ])) as SparkProxyActions
 
     // const sparkProxyActionsAddress = "0x53546083A3C8841e0813C6800e19F7E736585D31"
     // system.sparkProxyActions = (await hre.ethers.getContractAt(
@@ -64,7 +64,7 @@ async function main() {
     //     sparkProxyActionsAddress,
     // )) as SparkProxyActions
 
-    const spa = await system.sparkProxyActions.deployed()
+    // const spa = await system.sparkProxyActions.deployed()
 
     // NOTE: Service Registry additions are disabled for now
     // Because SR is registry is owned by gnosis wallet
@@ -80,7 +80,7 @@ async function main() {
         }
     }
 
-    console.log('Deployed SparkProxyActions: ' + spa.address)
+    // console.log('Deployed SparkProxyActions: ' + spa.address)
 
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('SparkStopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
@@ -94,6 +94,12 @@ async function main() {
     // )) as SparkStopLossCommandV2
 
     const stopLossCommand = await tx.deployed()
+    await hre.run('verify:verify', {
+        address: stopLossCommand.address,
+        constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
+    })
+
+    throw new Error('stop here')
 
     const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
     const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
