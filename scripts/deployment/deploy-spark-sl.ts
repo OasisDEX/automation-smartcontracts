@@ -99,13 +99,13 @@ async function main() {
         constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
     })
 
-    throw new Error('stop here')
-
-    const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
-    const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
+    const commandHashCollSL = getCommandHash(115)
+    const commandHashDebtSL = getCommandHash(116)
 
     console.log('commandHashDebtSL', commandHashDebtSL)
     console.log('commandHashCollSL', commandHashCollSL)
+
+    throw new Error('stop here')
     ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
     ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
 
