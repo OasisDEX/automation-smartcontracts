@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { IAccountGuard, ServiceRegistry, SparkProxyActions, SparkStopLossCommandV2 } from '../../typechain'
+import { IAccountGuard, ServiceRegistry, SparkStopLossCommandV2 } from '../../typechain'
 import {
     getAdapterNameHash,
     getCommandHash,
@@ -99,8 +99,8 @@ async function main() {
         constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
     })
 
-    const commandHashCollSL = getCommandHash(115)
-    const commandHashDebtSL = getCommandHash(116)
+    const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
+    const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
 
     console.log('commandHashDebtSL', commandHashDebtSL)
     console.log('commandHashCollSL', commandHashCollSL)
