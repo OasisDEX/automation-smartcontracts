@@ -48,6 +48,15 @@ async function main() {
         )) as AaveV3StopLossCommandV2
     }
 
+    if (
+        !system.dpmAdapter ||
+        !system.aaveAdapter ||
+        system.dpmAdapter.address === hre.ethers.constants.AddressZero ||
+        system.aaveAdapter.address === hre.ethers.constants.AddressZero
+    ) {
+        throw new Error('Missing adapters')
+    }
+
     const aaveStopLossToCollateralV2hash = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
     const aaveStopLossToDebtV2hash = getCommandHash(TriggerType.SparkStopLossToDebtV2)
     const aaveStopLossAdapterHash = getAdapterNameHash(stopLossCommand.address)
@@ -71,14 +80,14 @@ async function main() {
         ...getSafePartialTransactionData(
             system,
             SafeTxType.addNamedService,
-            system.dpmAdapter!.address,
+            system.dpmAdapter.address,
             aaveStopLossAdapterHash,
             'aaveStopLossAdapter',
         ),
         ...getSafePartialTransactionData(
             system,
             SafeTxType.addNamedService,
-            system.aaveAdapter!.address,
+            system.aaveAdapter.address,
             aaveStopLossExecuteAdapterHash,
             'aaveStopLossExecuteAdapter',
         ),
