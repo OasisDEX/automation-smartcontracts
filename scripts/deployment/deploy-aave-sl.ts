@@ -102,7 +102,8 @@ async function main() {
     console.log("Guard's whitelist submitted for update")
 }
 
-main().catch(error => {
-    console.error(error)
-    process.exitCode = 1
-})
+main()
+    .catch(error => {
+        console.error(error)
+    })
+    .finally(() => process.exit())
