@@ -26,11 +26,6 @@ export class HardhatUtils {
     }
 
     public async getDefaultSystem(): Promise<DeployedSystem> {
-        const serviceRegistry = await this.hre.ethers.getContractAt(
-            'ServiceRegistry',
-            this.addresses.AUTOMATION_SERVICE_REGISTRY,
-        )
-
         return {
             serviceRegistry: await this.hre.ethers.getContractAt(
                 'ServiceRegistry',
@@ -67,18 +62,13 @@ export class HardhatUtils {
                 'MakerBasicSellCommandV2',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
-            aaveAdapter: await this.hre.ethers.getContractAt(
-                'AAVEAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
-            ),
-            dpmAdapter: await this.hre.ethers.getContractAt(
-                'DPMAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
-            ),
+            aaveAdapter: await this.hre.ethers.getContractAt('AAVEAdapter', this.addresses.AUTOMATION_AAVE_ADAPTER),
+            dpmAdapter: await this.hre.ethers.getContractAt('DPMAdapter', this.addresses.AUTOMATION_DPM_ADAPTER),
             aaveProxyActions: await this.hre.ethers.getContractAt(
                 'AaveV3ProxyActions',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
+                this.addresses.AUTOMATION_AAVE_PROXY_ACTIONS,
             ),
+            dpmGuard: await this.hre.ethers.getContractAt('IAccountGuard', this.addresses.DPM_GUARD),
         }
     }
 

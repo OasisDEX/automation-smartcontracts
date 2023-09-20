@@ -6,6 +6,8 @@ interface IAccountGuard {
 
     function setWhitelist(address target, bool status) external;
 
+    function setWhitelistSend(address target, bool status) external;
+
     function canCall(address proxy, address operator) external view returns (bool);
 
     function permit(address caller, address target, bool allowance) external;

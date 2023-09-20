@@ -1,49 +1,14 @@
 import { TriggerType } from '@oasisdex/automation'
-import { constants } from 'ethers'
 import hre from 'hardhat'
-import { AaveV3StopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
+import { AaveV3ProxyActions__factory, AaveV3StopLossCommandV2, AaveV3StopLossCommandV2__factory } from '../../typechain'
 import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
-import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
-import {
-    getAdapterNameHash,
-    getCommandHash,
-    getExecuteAdapterNameHash,
-    getExternalNameHash,
-    HardhatUtils,
-} from '../common'
+import { getAdapterNameHash, getCommandHash, getExecuteAdapterNameHash, HardhatUtils, Network } from '../common'
+import { SafeTxType, addRegistryEntryMultisig, getSafePartialTransactionData } from '../common/safe'
+import chalk from 'chalk'
 
-const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
-    return async (hash: string, address: string): Promise<void> => {
-        if (utils.hre.network.name === 'local') {
-            const newSigner = await utils.impersonate('0x85f9b7408afE6CEb5E46223451f5d4b832B522dc')
-            serviceRegistry = serviceRegistry.connect(newSigner)
+// TODO:move to env
 
-            const delay = await serviceRegistry.requiredDelay()
-            if (delay.toNumber() > 0) {
-                await serviceRegistry.changeRequiredDelay(0)
-                await utils.forwardTime(delay.toNumber() + 1)
-                await serviceRegistry.changeRequiredDelay(0)
-            }
-        }
-
-        if (address === constants.AddressZero) {
-            console.log(`WARNING: attempted to add zero address to ServiceRegistry. Hash: ${hash}. Skipping...`)
-            return
-        }
-
-        const existingAddress = await serviceRegistry.getServiceAddress(hash)
-        const gasSettings = await utils.getGasSettings()
-        if (existingAddress === constants.AddressZero) {
-            await (await serviceRegistry.addNamedService(hash, address, gasSettings)).wait()
-        } else if (overwrite.includes(hash)) {
-            await (await serviceRegistry.updateNamedService(hash, address, gasSettings)).wait()
-        } else {
-            console.log(
-                `WARNING: attempted to change service registry entry, but overwrite is not allowed. Hash: ${hash}. Address: ${address}, existing: ${existingAddress}`,
-            )
-        }
-    }
-}
+const MULTISIG_DRY_RUN = true
 
 async function main() {
     const utils = new HardhatUtils(hre) // the hardhat network is coalesced to mainnet
@@ -53,59 +18,92 @@ async function main() {
     console.log(`Network: ${network}`)
 
     const system = await utils.getDefaultSystem()
+    const safeTxData = []
 
-    console.log('Deploying AaveV3ProxyActions')
+    if (utils.addresses.AUTOMATION_AAVE_PROXY_ACTIONS === hre.ethers.constants.AddressZero) {
+        console.log(chalk.dim('Deploying AaveV3ProxyActions'))
 
-    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3ProxyActions'), [
-        utils.addresses.WETH,
-        utils.addresses.AAVE_V3_POOL,
-    ])) as AaveV3ProxyActions
+        system.aaveProxyActions = await utils.deployContract<AaveV3ProxyActions__factory, AaveV3ProxyActions>(
+            hre.ethers.getContractFactory('AaveV3ProxyActions'),
+            [utils.addresses.WETH, utils.addresses.AAVE_V3_POOL],
+        )
+        const apa = await system.aaveProxyActions.deployed()
+        safeTxData.push(...getSafePartialTransactionData(system, SafeTxType.setWhitelist, apa.address))
+        console.log(chalk.dim('Deployed AaveV3ProxyActions: ' + apa.address))
+    }
+    let stopLossCommand: AaveV3StopLossCommandV2
+    if (utils.addresses.AUTOMATION_AAVE_STOPLOSS_COMMAND === hre.ethers.constants.AddressZero) {
+        console.log(chalk.dim('Deploying AaveV3StopLossCommandV2'))
 
-    const apa = await system.aaveProxyActions.deployed()
-
-    const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
-
-    await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
-
-    const ensureCorrectAdapter = async (address: string, adapter: string, isExecute = false) => {
-        if (!isExecute) {
-            await ensureServiceRegistryEntry(getAdapterNameHash(address), adapter)
-        } else {
-            await ensureServiceRegistryEntry(getExecuteAdapterNameHash(address), adapter)
-        }
+        const tx = await utils.deployContract<AaveV3StopLossCommandV2__factory, AaveV3StopLossCommandV2>(
+            hre.ethers.getContractFactory('AaveV3StopLossCommandV2'),
+            [utils.addresses.AUTOMATION_SERVICE_REGISTRY, utils.addresses.SWAP],
+        )
+        stopLossCommand = await tx.deployed()
+        console.log(chalk.dim('Deployed AaveV3StopLossCommandV2' + stopLossCommand.address))
+    } else {
+        stopLossCommand = (await hre.ethers.getContractAt(
+            'AaveV3StopLossCommandV2',
+            utils.addresses.AUTOMATION_AAVE_STOPLOSS_COMMAND,
+        )) as AaveV3StopLossCommandV2
     }
 
-    console.log('Deployed AaveV3ProxyActions: ' + apa.address)
-
-    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3StopLossCommandV2'), [
-        utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        utils.addresses.AAVE_V3_POOL,
-        apa.address,
-    ])) as AaveV3StopLossCommandV2
-
-    const stopLossCommand = await tx.deployed()
-    // TODO change 10 when the command is in common
-    const commandHash = getCommandHash(10)
-
-    ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
-
-    await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
-    await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
-
-    if (utils.hre.network.name === 'local') {
-        const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
-        const owner = await guard.owner()
-        const guardDeployer = await utils.impersonate(owner)
-        await guard.connect(guardDeployer).setWhitelist(apa.address, true)
-        await guard.connect(guardDeployer).setWhitelist(stopLossCommand.address, true)
-        console.log("Guard's whitelist updated")
+    if (
+        !system.dpmAdapter ||
+        !system.aaveAdapter ||
+        system.dpmAdapter.address === hre.ethers.constants.AddressZero ||
+        system.aaveAdapter.address === hre.ethers.constants.AddressZero
+    ) {
+        throw new Error('Missing adapters')
     }
 
-    console.log(`AaveV3StopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
-    console.log(`AaveV3ProxyActions Deployed: ${apa!.address}`)
+    const aaveStopLossToCollateralV2hash = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
+    const aaveStopLossToDebtV2hash = getCommandHash(TriggerType.SparkStopLossToDebtV2)
+    const aaveStopLossAdapterHash = getAdapterNameHash(stopLossCommand.address)
+    const aaveStopLossExecuteAdapterHash = getExecuteAdapterNameHash(stopLossCommand.address)
+
+    safeTxData.push(
+        ...getSafePartialTransactionData(
+            system,
+            SafeTxType.addNamedService,
+            stopLossCommand.address,
+            aaveStopLossToCollateralV2hash,
+            TriggerType.SparkStopLossToCollateralV2.toString(),
+        ),
+        ...getSafePartialTransactionData(
+            system,
+            SafeTxType.addNamedService,
+            stopLossCommand.address,
+            aaveStopLossToDebtV2hash,
+            TriggerType.SparkStopLossToDebtV2.toString(),
+        ),
+        ...getSafePartialTransactionData(
+            system,
+            SafeTxType.addNamedService,
+            system.dpmAdapter.address,
+            aaveStopLossAdapterHash,
+            'aaveStopLossAdapter',
+        ),
+        ...getSafePartialTransactionData(
+            system,
+            SafeTxType.addNamedService,
+            system.aaveAdapter.address,
+            aaveStopLossExecuteAdapterHash,
+            'aaveStopLossExecuteAdapter',
+        ),
+        ...getSafePartialTransactionData(system, SafeTxType.setWhitelist, stopLossCommand.address),
+    )
+    if (MULTISIG_DRY_RUN) {
+        console.log(safeTxData)
+    } else {
+        await addRegistryEntryMultisig(safeTxData, hre.network.name as Network)
+    }
+
+    console.log("Guard's whitelist submitted for update")
 }
 
-main().catch(error => {
-    console.error(error)
-    process.exitCode = 1
-})
+main()
+    .catch(error => {
+        console.error(error)
+    })
+    .finally(() => process.exit())
