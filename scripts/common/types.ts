@@ -29,6 +29,7 @@ export enum AutomationServiceName {
     UNISWAP_FACTORY = 'UNISWAP_FACTORY',
     DPM_ADAPTER = 'DPM_ADAPTER',
     AAVE_ADAPTER = 'AAVE_ADAPTER',
+    DPM_GUARD = 'DPM_GUARD',
 }
 
 export interface OneInchQuoteResponse {

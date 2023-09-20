@@ -15,6 +15,7 @@ import {
     MakerAutoTakeProfitCommandV2,
     AaveV3ProxyActions,
     AaveV3StopLossCommandV2,
+    IAccountGuard,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -47,6 +48,7 @@ export interface DeployedSystem {
     aaveAdapter?: AAVEAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveV3ProxyActions
+    dpmGuard?: IAccountGuard
 }
 
 export interface DeploySystemArgs {
