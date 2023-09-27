@@ -1,18 +1,5 @@
-import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
-import { BigNumber } from 'bignumber.js'
-import { Signer, BigNumber as EthersBN } from 'ethers'
+import { Signer } from 'ethers'
 import { types } from 'hardhat/config'
-import {
-    coalesceNetwork,
-    encodeTriggerData,
-    getEvents,
-    getStartBlocksFor,
-    HardhatUtils,
-    Network,
-    bignumberToTopic,
-    isLocalNetwork,
-    getCommandAddress,
-} from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 
 interface OverrideArgs extends BaseTaskArgs {

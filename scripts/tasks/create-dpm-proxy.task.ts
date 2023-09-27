@@ -1,4 +1,4 @@
-import { Signer, BigNumber as EthersBN } from 'ethers'
+import { Signer } from 'ethers'
 import { coalesceNetwork, getEvents, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'

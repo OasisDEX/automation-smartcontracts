@@ -1,16 +1,13 @@
-import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
 import { AaveV3StopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
 import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
-import { DummyAaveWithdrawCommand } from '../../typechain/DummyAaveWithdrawCommand'
 import {
     getAdapterNameHash,
     getCommandHash,
     getExecuteAdapterNameHash,
     getExternalNameHash,
     HardhatUtils,
-    ONE_INCH_V4_ROUTER,
 } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
@@ -54,7 +51,7 @@ async function main() {
     console.log(`Network: ${network}`)
 
     const system = await utils.getDefaultSystem()
-
+    const addresses = await utils.addresses
     console.log('Deploying AaveV3ProxyActions')
 
     system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3ProxyActions'), [
@@ -80,7 +77,7 @@ async function main() {
 
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3StopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        ONE_INCH_V4_ROUTER,
+        addresses.SWAP,
     ])) as AaveV3StopLossCommandV2
 
     const stopLossCommand = await tx.deployed()

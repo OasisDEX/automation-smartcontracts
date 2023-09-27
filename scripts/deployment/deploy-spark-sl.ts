@@ -1,7 +1,7 @@
 import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { IAccountGuard, ServiceRegistry, SparkStopLossCommandV2 } from '../../typechain'
+import { IAccountGuard, ServiceRegistry, SparkProxyActions, SparkStopLossCommandV2 } from '../../typechain'
 import {
     getAdapterNameHash,
     getCommandHash,
@@ -52,19 +52,14 @@ async function main() {
     console.log(`Network: ${network}`)
 
     const system = await utils.getDefaultSystem()
+    const addresses = await utils.addresses
 
-    // system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
-    //     utils.addresses.WETH,
-    //     utils.addresses.SPARK_V3_POOL,
-    // ])) as SparkProxyActions
+    system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
+        utils.addresses.WETH,
+        utils.addresses.SPARK_V3_POOL,
+    ])) as SparkProxyActions
 
-    // const sparkProxyActionsAddress = "0x53546083A3C8841e0813C6800e19F7E736585D31"
-    // system.sparkProxyActions = (await hre.ethers.getContractAt(
-    //     'SparkProxyActions',
-    //     sparkProxyActionsAddress,
-    // )) as SparkProxyActions
-
-    // const spa = await system.sparkProxyActions.deployed()
+    const spa = await system.sparkProxyActions.deployed()
 
     // NOTE: Service Registry additions are disabled for now
     // Because SR is registry is owned by gnosis wallet
@@ -80,23 +75,15 @@ async function main() {
         }
     }
 
-    // console.log('Deployed SparkProxyActions: ' + spa.address)
-
     const tx = (await utils.deployContract(hre.ethers.getContractFactory('SparkStopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
-        ONE_INCH_V4_ROUTER,
+        addresses.SWAP,
     ])) as SparkStopLossCommandV2
-
-    // const sparkStopLossCommandV2Address = "0xc49e905346bC68BdfB46ED1E46E0804ffDC4458a"
-    // const tx = (await hre.ethers.getContractAt(
-    //     'SparkStopLossCommandV2',
-    //     sparkStopLossCommandV2Address,
-    // )) as SparkStopLossCommandV2
 
     const stopLossCommand = await tx.deployed()
     await hre.run('verify:verify', {
         address: stopLossCommand.address,
-        constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
+        constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, utils.addresses.SWAP],
     })
 
     const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
@@ -105,9 +92,8 @@ async function main() {
     console.log('commandHashDebtSL', commandHashDebtSL)
     console.log('commandHashCollSL', commandHashCollSL)
 
-    throw new Error('stop here')
-    ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
-    ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
+    await ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
+    await ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
 
     await ensureCorrectAdapter(stopLossCommand.address, system.sparkAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
@@ -125,8 +111,8 @@ async function main() {
     console.log(`SparkProxyActions Deployed: ${spa!.address}`)
 
     if (network === 'mainnet' || network === 'goerli') {
-        console.log(`Waiting for 60 seconds...`)
-        await new Promise(resolve => setTimeout(resolve, 60000))
+        console.log(`Waiting for 30 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 30000))
 
         await hre.run('verify:verify', {
             address: spa.address,

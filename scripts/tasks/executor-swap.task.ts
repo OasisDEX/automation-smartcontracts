@@ -1,7 +1,7 @@
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { task } from 'hardhat/config'
-import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network, getSwap } from '../common'
+import { coalesceNetwork, HardhatUtils, isLocalNetwork, Network } from '../common'
 import { params } from './params'
 
 interface ExecutorSwapArgs {

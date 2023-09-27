@@ -45,7 +45,7 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
                 value: EthersBN.from(10).pow(18),
             })
         }
-        /* 
+
         const removeTriggerGroupData = bot.interface.encodeFunctionData('removeTriggers', [
             args.triggers.map(item => item.toString()),
             args.allowance,
@@ -72,5 +72,5 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
             .filter(event => event.address == bot.address)
             .map(item => item.args.triggerId.toNumber())
 
-        console.log([`Trigger group was succesfully removed`, `Trigger ids: ${triggerIds}`].concat(info).join('\n')) */
+        console.log([`Trigger group was succesfully removed`, `Trigger ids: ${triggerIds}`].concat(info).join('\n'))
     })
