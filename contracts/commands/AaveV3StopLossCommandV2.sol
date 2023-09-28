@@ -161,7 +161,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)

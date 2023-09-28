@@ -150,7 +150,7 @@ describe('SparkStopLossCommandV2', async () => {
         ).wait()
     })
 
-    describe.only('isTriggerDataValid', () => {
+    describe('isTriggerDataValid', () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
             const userData = await sparkPool.getUserAccountData(proxyAddress)
             // Calculate the loan-to-value (LTV) ratio for Spark

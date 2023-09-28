@@ -2,7 +2,7 @@ import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'
 import { types } from 'hardhat/config'
 
-import { coalesceNetwork, getEvents, HardhatUtils, Network, isLocalNetwork } from '../common'
+import { coalesceNetwork, HardhatUtils, Network, isLocalNetwork } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
@@ -23,7 +23,7 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
         )
         const hardhatUtils = new HardhatUtils(hre, args.forked)
 
-        const bot = await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
+        /*const bot = */ await hre.ethers.getContractAt('AutomationBot', hardhatUtils.addresses.AUTOMATION_BOT)
 
         let signer: Signer = hre.ethers.provider.getSigner(0)
 
@@ -46,6 +46,7 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
             })
         }
 
+        /*
         const removeTriggerGroupData = bot.interface.encodeFunctionData('removeTriggers', [
             args.triggers.map(item => item.toString()),
             args.allowance,
@@ -73,4 +74,5 @@ createTask<RemoveTriggerGroupArgs>('remove-triggers', 'Removes group of triggers
             .map(item => item.args.triggerId.toNumber())
 
         console.log([`Trigger group was succesfully removed`, `Trigger ids: ${triggerIds}`].concat(info).join('\n'))
+        */
     })
