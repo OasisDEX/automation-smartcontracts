@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { BigNumber } from 'bignumber.js'
 import { Signer, BigNumber as EthersBN } from 'ethers'

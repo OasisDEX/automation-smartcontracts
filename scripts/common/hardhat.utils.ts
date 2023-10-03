@@ -67,6 +67,10 @@ export class HardhatUtils {
                 'MakerBasicSellCommandV2',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
+            sparkAdapter: await this.hre.ethers.getContractAt(
+                'SparkAdapter',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.SPARK_ADAPTER),
+            ),
             aaveAdapter: await this.hre.ethers.getContractAt(
                 'AAVEAdapter',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
@@ -78,6 +82,10 @@ export class HardhatUtils {
             aaveProxyActions: await this.hre.ethers.getContractAt(
                 'AaveV3ProxyActions',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
+            ),
+            sparkProxyActions: await this.hre.ethers.getContractAt(
+                'SparkProxyActions',
+                await serviceRegistry.getRegisteredService(AutomationServiceName.SPARK_PROXY_ACTIONS),
             ),
         }
     }
@@ -302,6 +310,7 @@ export class HardhatUtils {
         }
 
         const { suggestBaseFee } = await this.getGasPrice()
+
         const maxPriorityFeePerGas = new BigNumber(2).shiftedBy(9).toFixed(0)
         const maxFeePerGas = new BigNumber(suggestBaseFee).shiftedBy(9).plus(maxPriorityFeePerGas).toFixed(0)
         return {
@@ -323,6 +332,7 @@ export class HardhatUtils {
                 apikey: process.env.ETHERSCAN_API_KEY,
             },
         })
+
         this._cache.set('gasprice', data.result, 10)
         return data.result
     }

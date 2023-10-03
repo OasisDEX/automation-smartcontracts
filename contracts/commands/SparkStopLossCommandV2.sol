@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// AaveStoplLossCommand.sol
+/// SparkStopLossCommandV2.sol
 
 // Copyright (C) 2023 Oazo Apps Limited
 
@@ -20,16 +20,17 @@
 pragma solidity ^0.8.0;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { IFlashLoanRecipient } from "../interfaces/Balancer/IFlashLoanRecipient.sol";
-import { IPool } from "../interfaces/AAVE/IPool.sol";
+import { IPool } from "../interfaces/Spark/IPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SwapData } from "./../libs/EarnSwapData.sol";
 import { ISwap } from "./../interfaces/ISwap.sol";
+// Spark and Aave DataTypes are the same
 import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { BaseBalancerFlashLoanCommand } from "./BaseBalancerFlashLoanCommand.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 
-struct AaveData {
+struct SparkData {
     address collateralTokenAddress;
     address debtTokenAddress;
     address borrower;
@@ -52,28 +53,40 @@ struct FlCalldata {
     bytes userData;
 }
 
-interface AaveStopLoss {
-    function closePosition(SwapData calldata swapData, AaveData memory aaveData) external;
+interface SparkStopLoss {
+    function closePosition(SwapData calldata swapData, SparkData memory sparkData) external;
 
     function trustedCaller() external returns (address);
 
     function self() external returns (address);
 }
 
-contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
+contract SparkStopLossCommandV2 is BaseBalancerFlashLoanCommand {
     address public immutable weth;
     address public immutable bot;
     IPool public immutable lendingPool;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
-    string private constant AAVE_V3_LENDING_POOL = "AAVE_V3_LENDING_POOL";
+    string private constant SPARK_LENDING_POOL = "SPARK_LENDING_POOL";
     string private constant WETH = "WETH";
 
     constructor(
         IServiceRegistry _serviceRegistry,
         address exchange_
     ) BaseBalancerFlashLoanCommand(_serviceRegistry, exchange_) {
-        lendingPool = IPool(serviceRegistry.getRegisteredService(AAVE_V3_LENDING_POOL));
+        require(
+            serviceRegistry.getRegisteredService(SPARK_LENDING_POOL) != address(0),
+            "spark-sl/lending-pool-not-registered"
+        );
+        require(
+            serviceRegistry.getRegisteredService(AUTOMATION_BOT) != address(0),
+            "spark-sl/bot-not-registered"
+        );
+        require(
+            serviceRegistry.getRegisteredService(WETH) != address(0),
+            "spark-sl/weth-not-registered"
+        );
+        lendingPool = IPool(serviceRegistry.getRegisteredService(SPARK_LENDING_POOL));
         weth = serviceRegistry.getRegisteredService(WETH);
         bot = serviceRegistry.getRegisteredService(AUTOMATION_BOT);
     }
@@ -90,12 +103,12 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
     }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
-        require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
+        require(triggerType == expectedTriggerType, "base-spark-fl-command/type-not-supported");
     }
 
     function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == expectedSelector, "base-aave-fl-command/invalid-selector");
+        require(selector == expectedSelector, "base-spark-fl-command/invalid-selector");
     }
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
@@ -103,13 +116,13 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             triggerData,
             (StopLossTriggerData)
         );
-        require(receiveExpected == false, "base-aave-fl-command/contract-not-empty");
+        require(receiveExpected == false, "base-spark-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
                 IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
                 (stopLossTriggerData.collateralToken != weth ||
                     (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
-            "base-aave-fl-command/contract-not-empty"
+            "base-spark-fl-command/contract-not-empty"
         );
         (uint256 totalCollateralBase, uint256 totalDebtBase, , , , ) = lendingPool
             .getUserAccountData(stopLossTriggerData.positionAddress);
@@ -141,18 +154,18 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        require(bot == msg.sender, "aave-v3-sl/caller-not-bot");
+        require(bot == msg.sender, "spark-sl/caller-not-bot");
 
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)
         );
         require(
-            stopLossTriggerData.triggerType == 111 || stopLossTriggerData.triggerType == 112,
-            "aave-v3-sl/invalid-trigger-type"
+            stopLossTriggerData.triggerType == 117 || stopLossTriggerData.triggerType == 118,
+            "spark-sl/invalid-trigger-type"
         );
         trustedCaller = stopLossTriggerData.positionAddress;
-        validateSelector(AaveStopLoss.closePosition.selector, executionData);
+        validateSelector(SparkStopLoss.closePosition.selector, executionData);
         IAccountImplementation(stopLossTriggerData.positionAddress).execute(self, executionData);
 
         trustedCaller = address(0);
@@ -161,7 +174,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external pure override returns (bool) {
+    ) external view override returns (bool) {
         StopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (StopLossTriggerData)
@@ -170,31 +183,31 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 4 &&
-            (stopLossTriggerData.triggerType == 111 || stopLossTriggerData.triggerType == 112);
+            (stopLossTriggerData.triggerType == 117 || stopLossTriggerData.triggerType == 118);
     }
 
-    function closePosition(SwapData calldata swapData, AaveData memory aaveData) external {
+    function closePosition(SwapData calldata swapData, SparkData memory sparkData) external {
         require(
-            AaveStopLoss(self).trustedCaller() == address(this),
-            "aave-v3-sl/caller-not-allowed"
+            SparkStopLoss(self).trustedCaller() == address(this),
+            "spark-sl/caller-not-allowed"
         );
         require(
-            IAccountImplementation(address(this)).owner() == aaveData.fundsReceiver,
-            "aave-v3-sl/funds-receiver-not-owner"
+            IAccountImplementation(address(this)).owner() == sparkData.fundsReceiver,
+            "spark-sl/funds-receiver-not-owner"
         );
-        require(self == msg.sender, "aave-v3-sl/msg-sender-is-not-sl");
+        require(self == msg.sender, "spark-sl/msg-sender-is-not-sl");
 
         DataTypes.ReserveData memory collReserveData = lendingPool.getReserveData(
-            aaveData.collateralTokenAddress
+            sparkData.collateralTokenAddress
         );
         DataTypes.ReserveData memory debtReserveData = lendingPool.getReserveData(
-            aaveData.debtTokenAddress
+            sparkData.debtTokenAddress
         );
         uint256 totalToRepay = IERC20(debtReserveData.variableDebtTokenAddress).balanceOf(
-            aaveData.borrower
+            sparkData.borrower
         );
         uint256 totalCollateral = IERC20(collReserveData.aTokenAddress).balanceOf(
-            aaveData.borrower
+            sparkData.borrower
         );
         IERC20(collReserveData.aTokenAddress).approve(self, totalCollateral);
 
@@ -202,7 +215,7 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             FlCalldata memory flCalldata;
 
             IERC20[] memory debtTokens = new IERC20[](1);
-            debtTokens[0] = IERC20(aaveData.debtTokenAddress);
+            debtTokens[0] = IERC20(sparkData.debtTokenAddress);
             uint256[] memory amounts = new uint256[](1);
             amounts[0] = totalToRepay;
 
@@ -211,10 +224,10 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
             flCalldata.amounts = amounts;
             flCalldata.userData = abi.encode(
                 collReserveData.aTokenAddress,
-                aaveData.collateralTokenAddress,
+                sparkData.collateralTokenAddress,
                 swap,
-                aaveData.borrower,
-                aaveData.fundsReceiver,
+                sparkData.borrower,
+                sparkData.fundsReceiver,
                 swapData
             );
             balancerVault.flashLoan(
@@ -224,9 +237,9 @@ contract AaveV3StopLossCommandV2 is BaseBalancerFlashLoanCommand {
                 flCalldata.userData
             );
         }
-        IERC20(aaveData.debtTokenAddress).transfer(
-            aaveData.fundsReceiver,
-            IERC20(aaveData.debtTokenAddress).balanceOf(aaveData.borrower)
+        IERC20(sparkData.debtTokenAddress).transfer(
+            sparkData.fundsReceiver,
+            IERC20(sparkData.debtTokenAddress).balanceOf(sparkData.borrower)
         );
     }
 

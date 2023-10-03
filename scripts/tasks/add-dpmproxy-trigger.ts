@@ -1,10 +1,9 @@
 import { CommandContractType, TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { getDefinitionForCommandType } from '@oasisdex/automation/lib/src/mapping'
 import BigNumber from 'bignumber.js'
-import { utils as EthUtils, BigNumber as EthersBN } from 'ethers'
-import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
+import { utils as EthUtils } from 'ethers'
 import { IAccountImplementation } from '../../typechain/IAccountImplementation'
-import { coalesceNetwork, getEvents, HardhatUtils, Network } from '../common'
+import { coalesceNetwork, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 

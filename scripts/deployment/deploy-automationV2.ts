@@ -8,13 +8,7 @@ import {
     IAccountGuard,
     ServiceRegistry,
 } from '../../typechain'
-import {
-    AutomationServiceName,
-    getAdapterNameHash,
-    getExecuteAdapterNameHash,
-    getServiceNameHash,
-    HardhatUtils,
-} from '../common'
+import { AutomationServiceName, getServiceNameHash, HardhatUtils } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
     return async (hash: string, address: string): Promise<void> => {

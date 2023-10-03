@@ -1,8 +1,8 @@
 import BigNumber from 'bignumber.js'
-import { Signer, BigNumber as EthersBN } from 'ethers'
+import { BigNumber as EthersBN } from 'ethers'
 import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
 import { IAccountImplementation } from '../../typechain/IAccountImplementation'
-import { coalesceNetwork, getEvents, HardhatUtils, Network } from '../common'
+import { coalesceNetwork, HardhatUtils, Network } from '../common'
 import { BaseTaskArgs, createTask } from './base.task'
 import { params } from './params'
 
@@ -52,7 +52,7 @@ createTask<CreateDPMArgs>('open-aave-position', 'Opens AAve position')
         ).wait()
 
         console.log('openPosition', creationReceipt)
-        /*
+
         const creationReceipt2 = await (
             await account.execute(aave_pa.address, encodedDrawDebtData, {
                 value: EthersBN.from(args.eth.toString()).mul(EthersBN.from(10).pow(18)),
@@ -61,7 +61,7 @@ createTask<CreateDPMArgs>('open-aave-position', 'Opens AAve position')
         ).wait()
 
         console.log('drawDebt', creationReceipt2)
-*/
+
         const info = [`TODO`]
 
         if (args.dryrun) {

@@ -45,7 +45,7 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
     address public immutable self;
     address public immutable exchange;
 
-    bool public reciveExpected;
+    bool public receiveExpected;
 
     struct FlData {
         address initiator;
@@ -64,12 +64,12 @@ abstract contract BaseAAveFlashLoanCommand is ICommand, IFlashLoanReceiver, Reen
         self = address(this);
     }
 
-    function expectRecive() internal {
-        reciveExpected = true;
+    function expectReceive() internal {
+        receiveExpected = true;
     }
 
     function ethReceived() internal {
-        reciveExpected = false;
+        receiveExpected = false;
     }
 
     function executeOperation(

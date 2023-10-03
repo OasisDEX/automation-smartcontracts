@@ -1,16 +1,16 @@
 import hre, {ethers} from 'hardhat'
-import {BigNumber as EthersBN, Signer, utils} from 'ethers'
+import { BigNumber as EthersBN, Signer } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
     IAccountImplementation,
-    AaveV3ProxyActions,
-    AaveV3StopLossCommandV2,
+    SparkProxyActions,
+    SparkStopLossCommandV2,
     IPool,
     IAccountGuard,
     AccountFactoryLike,
-    AAVEAdapter,
-    DPMAdapter, IPoolAddressesProvider, IPriceOracleGetter,
+    SparkAdapter,
+    DPMAdapter, IPoolAddressesProvider, IPriceOracleGetter, IERC20,
 } from '../typechain'
 import {getEvents, HardhatUtils, getSwap} from '../scripts/common'
 import {deploySystem} from '../scripts/common/deploy-system'
@@ -19,11 +19,12 @@ import BigNumber from 'bignumber.js'
 import {setBalance} from '@nomicfoundation/hardhat-network-helpers'
 import {CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType} from '@oasisdex/automation'
 import {expect} from 'chai'
+import {WstETHABI} from "./abis";
 
-describe('AaveV3StopLossCommandV2', async () => {
+describe('SparkStopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
-    const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
+    const maxCoverageDai = hre.ethers.utils.parseUnits('10', 18)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
     let proxyAddress: string
@@ -33,11 +34,12 @@ describe('AaveV3StopLossCommandV2', async () => {
     let randomWalletAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveV3StopLossCommandV2
-    let aavePool: IPool
-    let aave_pa: AaveV3ProxyActions
-    let aaveAdapter: AAVEAdapter
+    let sparkStopLoss: SparkStopLossCommandV2
+    let sparkPool: IPool
+    let spark_pa: SparkProxyActions
+    let sparkAdapter: SparkAdapter
     let dpmAdapter: DPMAdapter
+    let wstETH: IERC20
 
     let account: IAccountImplementation
     let ltv: EthersBN
@@ -52,7 +54,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({utils: hardhatUtils, addCommands: true})
+        const system = await deploySystem({utils: hardhatUtils, addCommands: true, logDebug: true})
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
@@ -61,14 +63,14 @@ describe('AaveV3StopLossCommandV2', async () => {
 
         randomWalletAddress = ethers.Wallet.createRandom().address
 
-        aavePool = (await hre.ethers.getContractAt(
-            'contracts/interfaces/AAVE/IPool.sol:IPool',
-            hardhatUtils.addresses.AAVE_V3_POOL,
+        sparkPool = (await hre.ethers.getContractAt(
+            'contracts/interfaces/Spark/IPool.sol:IPool',
+            hardhatUtils.addresses.SPARK_V3_POOL,
         )) as IPool
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
-        aaveStopLoss = system.aaveStoplLossCommand!
-        aave_pa = system.aaveProxyActions as AaveV3ProxyActions
+        sparkStopLoss = system.sparkStopLossCommand!
+        spark_pa = system.sparkProxyActions as SparkProxyActions
         const factory = (await hre.ethers.getContractAt(
             'AccountFactoryLike',
             hardhatUtils.addresses.DPM_FACTORY,
@@ -88,47 +90,61 @@ describe('AaveV3StopLossCommandV2', async () => {
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         proxyAddress = AccountCreatedEvent.args.proxy.toString()
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
-        aaveAdapter = system.aaveAdapter!
+        sparkAdapter = system.sparkAdapter!
         dpmAdapter = system.dpmAdapter!
         const addresses = {
-            aaveStopLoss: aaveStopLoss.address,
+            sparkStopLoss: sparkStopLoss.address,
             receiverAddress,
             proxyAddress,
             bot: automationBotInstance.address,
             automationExecutor: automationExecutorInstance.address,
             userAccount: account.address,
             serviceRegistry: system.serviceRegistry.address,
-            aave_pa: aave_pa.address,
-            aaveAdapter: aaveAdapter.address,
+            spark_pa: spark_pa.address,
+            sparkAdapter: sparkAdapter.address,
         }
         console.table(addresses)
 
         // WHITELISTING
-        await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
+        await guard.connect(guardDeployer).setWhitelist(spark_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
-        await guard.connect(guardDeployer).setWhitelist(aaveStopLoss.address, true)
+        await guard.connect(guardDeployer).setWhitelist(sparkStopLoss.address, true)
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
-        // TODO: take multiply poistion from mainnet
-        // 1. deposit 1 eth of collateral
-        const encodedOpenData = aave_pa.interface.encodeFunctionData('openPosition', [
-            hardhatUtils.addresses.WETH,
-            EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+
+        // TODO: take multiply position from mainnet
+        const signer = receiver
+        await hardhatUtils.setTokenBalance(
+            await signer.getAddress(),
+            hardhatUtils.addresses.WSTETH,
+            hre.ethers.utils.parseEther('1000'),
+        )
+        wstETH = new hre.ethers.Contract(hardhatUtils.addresses.WSTETH, WstETHABI, hre.ethers.provider) as IERC20;
+
+        const amountToDeposit = EthersBN.from(3).mul(EthersBN.from(10).pow(18))
+
+        const tx = await wstETH.connect(receiver).approve(proxyAddress, amountToDeposit);
+        await tx.wait();
+
+        const encodedOpenData = spark_pa.interface.encodeFunctionData('openPosition', [
+            hardhatUtils.addresses.WSTETH,
+            amountToDeposit,
         ])
         await (
-            await account.connect(receiver).execute(aave_pa.address, encodedOpenData, {
-                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+            await account.connect(receiver).execute(spark_pa.address, encodedOpenData, {
+                value: 0,
                 gasLimit: 3000000,
             })
         ).wait()
 
-        const encodedDrawDebtData = aave_pa.interface.encodeFunctionData('drawDebt', [
-            hardhatUtils.addresses.USDC,
+        const amountToDraw = EthersBN.from(1).mul(EthersBN.from(10).pow(18))
+        const encodedDrawDebtData = spark_pa.interface.encodeFunctionData('drawDebt', [
+            hardhatUtils.addresses.WETH,
             proxyAddress,
-            EthersBN.from(500).mul(EthersBN.from(10).pow(6)),
+            amountToDraw,
         ])
 
         await (
-            await account.connect(receiver).execute(aave_pa.address, encodedDrawDebtData, {
+            await account.connect(receiver).execute(spark_pa.address, encodedDrawDebtData, {
                 gasLimit: 3000000,
             })
         ).wait()
@@ -136,8 +152,8 @@ describe('AaveV3StopLossCommandV2', async () => {
 
     describe('isTriggerDataValid', () => {
         it('should fail while adding the trigger with continuous set to true', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
-            // Calculate the loan-to-value (LTV) ratio for Aave V3
+            const userData = await sparkPool.getUserAccountData(proxyAddress)
+            // Calculate the loan-to-value (LTV) ratio for Spark
             // LTV is the ratio of the total debt to the total collateral, expressed as a percentage
             // The result is multiplied by 10000 to preserve precision
             // eg 0.67 (67%) LTV is stored as 6700
@@ -145,13 +161,14 @@ describe('AaveV3StopLossCommandV2', async () => {
 
             const triggerDecodedData = [
                 proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                TriggerType.SparkStopLossToDebtV2,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, triggerDecodedData)
+
+            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, triggerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -159,23 +176,25 @@ describe('AaveV3StopLossCommandV2', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
+                [TriggerType.SparkStopLossToCollateralV2],
             ])
             const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
         })
         it('should add the trigger with continuous set to false', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const userData = await sparkPool.getUserAccountData(proxyAddress)
             const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
-            const trigerDecodedData = [
+
+            const triggerDecodedData = [
                 proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                TriggerType.SparkStopLossToDebtV2,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+
+            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, triggerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -183,7 +202,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
+                [TriggerType.SparkStopLossToDebtV2],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -192,18 +211,18 @@ describe('AaveV3StopLossCommandV2', async () => {
         })
     })
     describe('protocol specific adapters', async () => {
-        it('should add the trigger - disallow calling getCoverage in AAVEAdapter', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
+        it('should add the trigger - disallow calling getCoverage in SparkAdapter', async () => {
+            const userData = await sparkPool.getUserAccountData(proxyAddress)
             const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
             const trigerDecodedData = [
                 proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                TriggerType.SparkStopLossToDebtV2,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
 
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
@@ -211,42 +230,42 @@ describe('AaveV3StopLossCommandV2', async () => {
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
+                [TriggerType.SparkStopLossToCollateralV2],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
             const events = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
             expect(events.length).to.be.equal(1)
 
-            const tx2 = aaveAdapter
+            const tx2 = sparkAdapter
                 .connect(notOwner)
                 .getCoverage(
                     triggerData,
                     await notOwner.getAddress(),
-                    hardhatUtils.addresses.USDC,
+                    hardhatUtils.addresses.DAI,
                     hardhatUtils.hre.ethers.utils.parseUnits('9', 6),
                 )
-            await expect(tx2).to.be.revertedWith('aave-adapter/only-bot')
+            await expect(tx2).to.be.revertedWith('spark-adapter/only-bot')
         })
         it('should add the trigger - disallow calling permit in DPMAdapter', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
+            const userData = await sparkPool.getUserAccountData(proxyAddress)
             const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
             const trigerDecodedData = [
                 proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
+                TriggerType.SparkStopLossToDebtV2,
+                maxCoverageDai,
                 hardhatUtils.addresses.WETH,
+                hardhatUtils.addresses.WSTETH,
                 ltv.sub(2),
             ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+            const triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
             const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                 TriggerGroupType.SingleTrigger,
                 [false],
                 [0],
                 [triggerData],
                 ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
+                [TriggerType.SparkStopLossToCollateralV2],
             ])
             const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
             const txRes = await tx.wait()
@@ -272,10 +291,10 @@ describe('AaveV3StopLossCommandV2', async () => {
             let triggerId: number
 
             before(async () => {
-                const userData = await aavePool.getUserAccountData(proxyAddress)
+                const userData = await sparkPool.getUserAccountData(proxyAddress)
                 ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
 
-                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWSTETH_TOKEN)
                 const aTokenBalance = await aToken.balanceOf(proxyAddress)
 
                 const amountInWei = aTokenBalance
@@ -284,26 +303,25 @@ describe('AaveV3StopLossCommandV2', async () => {
                 const slippage = EthersBN.from(100)
 
                 const data = await getSwap(
+                    hardhatUtils.addresses.WSTETH,
                     hardhatUtils.addresses.WETH,
-                    hardhatUtils.addresses.USDC,
                     receiverAddress,
                     new BigNumber(aTokenBalance.toString()),
                     new BigNumber(slippage.mul(100).div(feeBase).toString()),
                 )
 
                 await hardhatUtils.setTokenBalance(
-                    aave_pa.address,
+                    spark_pa.address,
                     hardhatUtils.addresses.WETH,
                     hre.ethers.utils.parseEther('10'),
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH,
-                    toAsset: hardhatUtils.addresses.USDC,
+                    fromAsset: hardhatUtils.addresses.WSTETH,
+                    toAsset: hardhatUtils.addresses.WETH,
                     amount: amountInWei,
                     receiveAtLeast: EthersBN.from(
                         data.toTokenAmount
-                            .shiftedBy(data.toToken.decimals)
                             .times(0.999)
                             .integerValue(BigNumber.ROUND_DOWN)
                             .toString(),
@@ -312,42 +330,42 @@ describe('AaveV3StopLossCommandV2', async () => {
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
                 }
-                const aaveData = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                const sparkData = {
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
-                const aaveDataNotOwner = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                const sparkDataNotOwner = {
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: randomWalletAddress,
                 }
 
-                encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
+                encodedClosePositionData = sparkStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
-                    aaveData,
+                    sparkData,
                 ])
-                encodedClosePositionNotOwnerData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
+                encodedClosePositionNotOwnerData = sparkStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
-                    aaveDataNotOwner,
+                    sparkDataNotOwner,
                 ])
             })
 
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDecodedData = [
+                    const triggerDecodedData = [
                         proxyAddress,
-                        TriggerType.AaveStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        TriggerType.SparkStopLossToDebtV2,
+                        maxCoverageDai,
                         hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.WSTETH,
                         ltv.sub(2),
                     ]
                     const triggerEncodedData = encodeTriggerDataByType(
-                        CommandContractType.AaveStopLossCommandV2,
-                        trigerDecodedData,
+                        CommandContractType.SparkStopLossCommandV2,
+                        triggerDecodedData,
                     )
                     triggerData = triggerEncodedData
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
@@ -356,7 +374,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AaveStopLossToCollateralV2],
+                        [TriggerType.SparkStopLossToDebtV2],
                     ])
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
@@ -373,28 +391,28 @@ describe('AaveV3StopLossCommandV2', async () => {
                 })
 
                 it('should execute trigger - with coverage below the limit', async () => {
-                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const balanceBefore = await wstETH.balanceOf(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
-                        ethers.utils.parseUnits('9', 6),
+                        ethers.utils.parseUnits('1', 18),
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = {usdcBalance: '0', wethBalance: '0', gasUsed: '0'}
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
-                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
-                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
-                    txData.wethBalance = returnedEth.toString()
+                    const txData = {wethBalance: '0', wstEthBalance: '0', gasUsed: '0'}
+                    const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
+                    const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
+                    txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
+                    txData.wstEthBalance = returnedWstEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
-                    const userData = await aavePool.getUserAccountData(proxyAddress)
+                    const userData = await sparkPool.getUserAccountData(proxyAddress)
                     // TODO check a token
-                    expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
+                    expect(+txData.wethBalance).to.be.greaterThan(+'127000000')
                     expect(userData.totalCollateralBase).to.be.eq(0)
                     expect(userData.totalDebtBase).to.be.eq(0)
                 })
@@ -402,7 +420,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
                         ethers.utils.parseUnits('9', 6),
                         '0',
@@ -410,48 +428,48 @@ describe('AaveV3StopLossCommandV2', async () => {
                         hardhatUtils.addresses.DAI,
                         {gasLimit: 3000000},
                     )
-                    await expect(tx).to.be.revertedWith('aave-adapter/invalid-coverage-token')
+                    await expect(tx).to.be.revertedWith('spark-adapter/invalid-coverage-token')
                 })
                 it('should NOT execute trigger - due to coverage too high', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
-                        ethers.utils.parseUnits('11', 6),
+                        ethers.utils.parseUnits('11', 18),
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         {gasLimit: 3000000},
                     )
-                    await expect(tx).to.be.revertedWith('aave-adapter/coverage-too-high')
+                    await expect(tx).to.be.revertedWith('spark-adapter/coverage-too-high')
                 })
                 it('should NOT execute trigger if funds receiver is not the owner', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionNotOwnerData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         {gasLimit: 3000000},
                     )
-                    await expect(tx).to.be.revertedWith('aave-v3-sl/funds-receiver-not-owner')
+                    await expect(tx).to.be.revertedWith('spark-sl/funds-receiver-not-owner')
                 })
             })
             describe('when Trigger is above current LTV', async () => {
                 before(async () => {
                     const trigerDecodedData = [
                         proxyAddress,
-                        TriggerType.AaveStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        TriggerType.SparkStopLossToDebtV2,
+                        maxCoverageDai,
+                        hardhatUtils.addresses.DAI,
                         hardhatUtils.addresses.WETH,
                         ltv.add(10),
                     ]
-                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -459,7 +477,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AaveStopLossToCollateralV2],
+                        [TriggerType.SparkStopLossToCollateralV2],
                     ])
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -481,12 +499,12 @@ describe('AaveV3StopLossCommandV2', async () => {
                         encodedClosePositionData,
 
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         {gasLimit: 3000000},
                     )
 
@@ -502,16 +520,19 @@ describe('AaveV3StopLossCommandV2', async () => {
 
             before(async () => {
                 const addressProvider = (await ethers.getContractAt(
-                    'contracts/interfaces/AAVE/IPoolAddressesProvider.sol:IPoolAddressesProvider',
-                    hardhatUtils.addresses.AAVE_V3_ADDRESSES_PROVIDER,
+                    'contracts/interfaces/Spark/IPoolAddressesProvider.sol:IPoolAddressesProvider',
+                    hardhatUtils.addresses.SPARK_V3_ADDRESSES_PROVIDER,
                 )) as IPoolAddressesProvider
-                const oracle = (await ethers.getContractAt('contracts/interfaces/AAVE/IPriceOracleGetter.sol:IPriceOracleGetter', await addressProvider.getPriceOracle())) as IPriceOracleGetter
-                // price 8 decimals - base unit - USD
-                const price = await oracle.getAssetPrice(hardhatUtils.addresses.WETH)
-                const userData = await aavePool.getUserAccountData(proxyAddress)
-                ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
+                const oracle = (await ethers.getContractAt(
+                    'contracts/interfaces/Spark/IPriceOracleGetter.sol:IPriceOracleGetter',
+                    await addressProvider.getPriceOracle(),
+                )) as IPriceOracleGetter
 
-                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.AAVE_V3_AWETH_TOKEN)
+                // price 8 decimals - base unit - USD
+                const price = await oracle.getAssetPrice(hardhatUtils.addresses.WSTETH)
+                const userData = await sparkPool.getUserAccountData(proxyAddress)
+                ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
+                const aToken = await ethers.getContractAt('ERC20', hardhatUtils.addresses.SPARK_V3_AWSTETH_TOKEN)
                 const aDecimals = await aToken.decimals()
 
                 const scale = EthersBN.from(10).pow(aDecimals)
@@ -527,26 +548,25 @@ describe('AaveV3StopLossCommandV2', async () => {
                 const amountToSwap = collTokenInclFeeAndSlippage
 
                 const data = await getSwap(
+                    hardhatUtils.addresses.WSTETH,
                     hardhatUtils.addresses.WETH,
-                    hardhatUtils.addresses.USDC,
                     receiverAddress,
                     new BigNumber(amountToSwap.toString()),
                     new BigNumber(slippage.mul(100).div(feeBase).toString()),
                 )
 
                 await hardhatUtils.setTokenBalance(
-                    aave_pa.address,
-                    hardhatUtils.addresses.WETH,
+                    spark_pa.address,
+                    hardhatUtils.addresses.WSTETH,
                     hre.ethers.utils.parseEther('10'),
                 )
 
                 const exchangeData = {
-                    fromAsset: hardhatUtils.addresses.WETH,
-                    toAsset: hardhatUtils.addresses.USDC,
+                    fromAsset: hardhatUtils.addresses.WSTETH,
+                    toAsset: hardhatUtils.addresses.WETH,
                     amount: amountToSwap,
                     receiveAtLeast: EthersBN.from(
                         data.toTokenAmount
-                            .shiftedBy(data.toToken.decimals)
                             .times(0.999)
                             .integerValue(BigNumber.ROUND_DOWN)
                             .toString(),
@@ -555,16 +575,16 @@ describe('AaveV3StopLossCommandV2', async () => {
                     withData: data.tx.data,
                     collectFeeInFromToken: false,
                 }
-                const aaveData = {
-                    debtTokenAddress: hardhatUtils.addresses.USDC,
-                    collateralTokenAddress: hardhatUtils.addresses.WETH,
+                const sparkData = {
+                    debtTokenAddress: hardhatUtils.addresses.WETH,
+                    collateralTokenAddress: hardhatUtils.addresses.WSTETH,
                     borrower: proxyAddress,
                     fundsReceiver: receiverAddress,
                 }
 
-                encodedClosePositionData = aaveStopLoss.interface.encodeFunctionData('closePosition', [
+                encodedClosePositionData = sparkStopLoss.interface.encodeFunctionData('closePosition', [
                     exchangeData,
-                    aaveData,
+                    sparkData,
                 ])
             })
 
@@ -572,13 +592,13 @@ describe('AaveV3StopLossCommandV2', async () => {
                 before(async () => {
                     const trigerDecodedData = [
                         proxyAddress,
-                        TriggerType.AaveStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        TriggerType.SparkStopLossToDebtV2,
+                        maxCoverageDai,
                         hardhatUtils.addresses.WETH,
+                        hardhatUtils.addresses.WSTETH,
                         ltv.sub(2),
                     ]
-                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -586,7 +606,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AaveStopLossToCollateralV2],
+                        [TriggerType.SparkStopLossToCollateralV2],
                     ])
                     // add trigger
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -604,28 +624,29 @@ describe('AaveV3StopLossCommandV2', async () => {
                 })
 
                 it('should execute trigger', async () => {
-                    const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    const balanceBefore = await wstETH.balanceOf(receiverAddress)
                     const tx = await automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
                         {gasLimit: 3000000},
                     )
                     const txRes = await tx.wait()
-                    const txData = {usdcBalance: '0', wethBalance: '0', gasUsed: '0'}
-                    const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
-                    const returnedEth = (await ethers.provider.getBalance(receiverAddress)).sub(balanceBefore)
-                    txData.usdcBalance = (await usdc.balanceOf(receiverAddress)).toString()
-                    txData.wethBalance = returnedEth.toString()
+
+                    const txData = {wethBalance: '0', wstEthBalance: '0',  gasUsed: '0'}
+                    const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
+                    const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
+                    txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
+                    txData.wstEthBalance = returnedWstEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
-                    const userData = await aavePool.getUserAccountData(proxyAddress)
+                    const userData = await sparkPool.getUserAccountData(proxyAddress)
                     // TODO check a token
-                    expect(+txData.wethBalance).to.be.greaterThan(+'98721300000000000')
+                    expect(+txData.wstEthBalance).to.be.greaterThan(+'98721300000000000')
                     expect(userData.totalCollateralBase).to.be.eq(0)
                     expect(userData.totalDebtBase).to.be.eq(0)
                 })
@@ -634,13 +655,13 @@ describe('AaveV3StopLossCommandV2', async () => {
                 before(async () => {
                     const trigerDecodedData = [
                         proxyAddress,
-                        TriggerType.AaveStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
+                        TriggerType.SparkStopLossToDebtV2,
+                        maxCoverageDai,
+                        hardhatUtils.addresses.DAI,
                         hardhatUtils.addresses.WETH,
                         ltv.add(2),
                     ]
-                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
+                    triggerData = encodeTriggerDataByType(CommandContractType.SparkStopLossCommandV2, trigerDecodedData)
 
                     const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
                         TriggerGroupType.SingleTrigger,
@@ -648,7 +669,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                         [0],
                         [triggerData],
                         ['0x'],
-                        [TriggerType.AaveStopLossToCollateralV2],
+                        [TriggerType.SparkStopLossToCollateralV2],
                     ])
 
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
@@ -669,12 +690,12 @@ describe('AaveV3StopLossCommandV2', async () => {
                     const tx = automationExecutorInstance.execute(
                         encodedClosePositionData,
                         triggerData,
-                        aaveStopLoss.address,
+                        sparkStopLoss.address,
                         triggerId,
                         '0',
                         '0',
                         178000,
-                        hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.DAI,
                         {gasLimit: 3000000},
                     )
 

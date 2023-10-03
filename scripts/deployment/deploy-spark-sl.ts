@@ -1,13 +1,14 @@
+import { TriggerType } from '@oasisdex/automation'
 import { constants } from 'ethers'
 import hre from 'hardhat'
-import { AaveV3StopLossCommandV2, IAccountGuard, ServiceRegistry } from '../../typechain'
-import { AaveV3ProxyActions } from '../../typechain/AaveV3ProxyActions'
+import { IAccountGuard, ServiceRegistry, SparkProxyActions, SparkStopLossCommandV2 } from '../../typechain'
 import {
     getAdapterNameHash,
     getCommandHash,
     getExecuteAdapterNameHash,
     getExternalNameHash,
     HardhatUtils,
+    ONE_INCH_V4_ROUTER,
 } from '../common'
 
 const createServiceRegistry = (utils: HardhatUtils, serviceRegistry: ServiceRegistry, overwrite: string[] = []) => {
@@ -52,15 +53,16 @@ async function main() {
 
     const system = await utils.getDefaultSystem()
     const addresses = await utils.addresses
-    console.log('Deploying AaveV3ProxyActions')
 
-    system.aaveProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3ProxyActions'), [
+    system.sparkProxyActions = (await utils.deployContract(hre.ethers.getContractFactory('SparkProxyActions'), [
         utils.addresses.WETH,
-        utils.addresses.AAVE_V3_POOL,
-    ])) as AaveV3ProxyActions
+        utils.addresses.SPARK_V3_POOL,
+    ])) as SparkProxyActions
 
-    const apa = await system.aaveProxyActions.deployed()
+    const spa = await system.sparkProxyActions.deployed()
 
+    // NOTE: Service Registry additions are disabled for now
+    // Because SR is registry is owned by gnosis wallet
     const ensureServiceRegistryEntry = createServiceRegistry(utils, system.serviceRegistry, [])
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), utils.addresses.WETH)
@@ -73,33 +75,55 @@ async function main() {
         }
     }
 
-    console.log('Deployed AaveV3ProxyActions: ' + apa.address)
-
-    const tx = (await utils.deployContract(hre.ethers.getContractFactory('AaveV3StopLossCommandV2'), [
+    const tx = (await utils.deployContract(hre.ethers.getContractFactory('SparkStopLossCommandV2'), [
         utils.addresses.AUTOMATION_SERVICE_REGISTRY,
         addresses.SWAP,
-    ])) as AaveV3StopLossCommandV2
+    ])) as SparkStopLossCommandV2
 
     const stopLossCommand = await tx.deployed()
-    // TODO change 10 when the command is in common
-    const commandHash = getCommandHash(10)
+    await hre.run('verify:verify', {
+        address: stopLossCommand.address,
+        constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, utils.addresses.SWAP],
+    })
 
-    ensureServiceRegistryEntry(commandHash, stopLossCommand.address)
+    const commandHashCollSL = getCommandHash(TriggerType.SparkStopLossToDebtV2)
+    const commandHashDebtSL = getCommandHash(TriggerType.SparkStopLossToCollateralV2)
 
-    await ensureCorrectAdapter(stopLossCommand.address, system.aaveAdapter!.address, true)
+    console.log('commandHashDebtSL', commandHashDebtSL)
+    console.log('commandHashCollSL', commandHashCollSL)
+
+    await ensureServiceRegistryEntry(commandHashDebtSL, stopLossCommand.address)
+    await ensureServiceRegistryEntry(commandHashCollSL, stopLossCommand.address)
+
+    await ensureCorrectAdapter(stopLossCommand.address, system.sparkAdapter!.address, true)
     await ensureCorrectAdapter(stopLossCommand.address, system.dpmAdapter!.address, false)
 
     if (utils.hre.network.name === 'local') {
         const guard = (await hre.ethers.getContractAt('IAccountGuard', utils.addresses.DPM_GUARD)) as IAccountGuard
         const owner = await guard.owner()
         const guardDeployer = await utils.impersonate(owner)
-        await guard.connect(guardDeployer).setWhitelist(apa.address, true)
+        await guard.connect(guardDeployer).setWhitelist(spa.address, true)
         await guard.connect(guardDeployer).setWhitelist(stopLossCommand.address, true)
         console.log("Guard's whitelist updated")
     }
 
-    console.log(`AaveV3StopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
-    console.log(`AaveV3ProxyActions Deployed: ${apa!.address}`)
+    console.log(`SparkStopLossCommandV2 Deployed: ${stopLossCommand!.address}`)
+    console.log(`SparkProxyActions Deployed: ${spa!.address}`)
+
+    if (network === 'mainnet' || network === 'goerli') {
+        console.log(`Waiting for 30 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 30000))
+
+        await hre.run('verify:verify', {
+            address: spa.address,
+            constructorArguments: [utils.addresses.WETH, utils.addresses.SPARK_V3_POOL],
+        })
+
+        await hre.run('verify:verify', {
+            address: stopLossCommand.address,
+            constructorArguments: [utils.addresses.AUTOMATION_SERVICE_REGISTRY, ONE_INCH_V4_ROUTER],
+        })
+    }
 }
 
 main().catch(error => {

@@ -15,6 +15,9 @@ import {
     MakerAutoTakeProfitCommandV2,
     AaveV3ProxyActions,
     AaveV3StopLossCommandV2,
+    SparkProxyActions,
+    SparkStopLossCommandV2,
+    SparkAdapter,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -40,13 +43,16 @@ export interface DeployedSystem {
     closeCommand?: MakerStopLossCommandV2
     autoTakeProfitCommand?: MakerAutoTakeProfitCommandV2
     aaveStoplLossCommand?: AaveV3StopLossCommandV2
+    sparkStopLossCommand?: SparkStopLossCommandV2
     basicBuy?: MakerBasicBuyCommandV2
     basicSell?: MakerBasicSellCommandV2
     makerSecurityAdapter?: MakerSecurityAdapter
     makerExecutableAdapter?: MakerExecutableAdapter
     aaveAdapter?: AAVEAdapter
+    sparkAdapter?: SparkAdapter
     dpmAdapter?: DPMAdapter
     aaveProxyActions?: AaveV3ProxyActions
+    sparkProxyActions?: SparkProxyActions
 }
 
 export interface DeploySystemArgs {
@@ -91,6 +97,7 @@ export async function deploySystem({
     let BasicSellInstance: MakerBasicSellCommandV2 | undefined
     let AutoTakeProfitInstance: MakerAutoTakeProfitCommandV2 | undefined
     let AaveStoplLossInstance: AaveV3StopLossCommandV2 | undefined
+    let SparkStopLossInstance: SparkStopLossCommandV2 | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -120,10 +127,21 @@ export async function deploySystem({
         [addresses.WETH, addresses.AAVE_V3_POOL],
     )
 
+    const SparkProxyActionsInstance: SparkProxyActions = await utils.deployContract(
+        ethers.getContractFactory('SparkProxyActions'),
+        [addresses.WETH, addresses.SPARK_V3_POOL],
+    )
+
     if (logDebug) console.log('Adding AAVE_PROXY_ACTIONS to ServiceRegistry....')
     await ServiceRegistryInstance.addNamedService(
         await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.AAVE_PROXY_ACTIONS),
         AaveProxyActionsInstance.address,
+    )
+
+    if (logDebug) console.log('Adding SPARK_PROXY_ACTIONS to ServiceRegistry....')
+    await ServiceRegistryInstance.addNamedService(
+        await ServiceRegistryInstance.getServiceNameHash(AutomationServiceName.SPARK_PROXY_ACTIONS),
+        SparkProxyActionsInstance.address,
     )
 
     if (logDebug) console.log('Deploying McdUtils....')
@@ -176,6 +194,7 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveProxyActions: AaveProxyActionsInstance,
+        sparkStopLossCommand: SparkStopLossInstance,
     }
 
     await configureRegistryEntries(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -191,7 +210,9 @@ export async function deploySystem({
     const AAVEAdapterInstance: AAVEAdapter = await utils.deployContract(ethers.getContractFactory('AAVEAdapter'), [
         ServiceRegistryInstance.address,
     ])
-
+    const SparkAdapterInstance: SparkAdapter = await utils.deployContract(ethers.getContractFactory('SparkAdapter'), [
+        ServiceRegistryInstance.address,
+    ])
     const DPMAdapterInstance: DPMAdapter = await utils.deployContract(ethers.getContractFactory('DPMAdapter'), [
         ServiceRegistryInstance.address,
         addresses.DPM_GUARD,
@@ -223,6 +244,11 @@ export async function deploySystem({
             ServiceRegistryInstance.address,
             addresses.SWAP,
         ])) as AaveV3StopLossCommandV2
+
+        SparkStopLossInstance = (await utils.deployContract(ethers.getContractFactory('SparkStopLossCommandV2'), [
+            ServiceRegistryInstance.address,
+            addresses.SWAP,
+        ])) as SparkStopLossCommandV2
         system = {
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
@@ -237,8 +263,11 @@ export async function deploySystem({
             basicSell: BasicSellInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
+            sparkStopLossCommand: SparkStopLossInstance,
             aaveProxyActions: AaveProxyActionsInstance,
+            sparkProxyActions: SparkProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
+            sparkAdapter: SparkAdapterInstance,
             dpmAdapter: DPMAdapterInstance,
         }
         await configureRegistryCommands(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -257,8 +286,11 @@ export async function deploySystem({
             basicSell: BasicSellInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
+            sparkStopLossCommand: SparkStopLossInstance,
             aaveProxyActions: AaveProxyActionsInstance,
+            sparkProxyActions: SparkProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
+            sparkAdapter: SparkAdapterInstance,
             dpmAdapter: DPMAdapterInstance,
         }
         await configureRegistryAdapters(utils, system, addresses as AddressRegistry, [], logDebug)
@@ -272,16 +304,20 @@ export async function deploySystem({
         console.log(`AutomationExecutor deployed to: ${AutomationExecutorInstance.address}`)
         console.log(`MCDView deployed to: ${McdViewInstance.address}`)
         console.log(`AaveV3ProxyActions deployed to: ${AaveProxyActionsInstance.address}`)
+        console.log(`SparkProxyActions deployed to: ${SparkProxyActionsInstance.address}`)
         console.log(`MCDUtils deployed to: ${McdUtilsInstance.address}`)
+
         if (addCommands) {
             console.log(`MakerStopLossCommandV2 deployed to: ${CloseCommandInstance!.address}`)
             console.log(`MakerBasicBuyCommandV2 deployed to: ${BasicBuyInstance!.address}`)
             console.log(`MakerBasicSellCommandV2 deployed to: ${BasicSellInstance!.address}`)
             console.log(`MakerAutoTakeProfitCommandV2 deployed to: ${AutoTakeProfitInstance!.address}`)
             console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
+            console.log(`SparkStopLossCommandV2 deployed to: ${SparkStopLossInstance!.address}`)
             console.log(`MakerSecurityAdapter deployed to: ${MakerSecurityAdapterInstance!.address}`)
             console.log(`MakerExecutableAdapter deployed to: ${MakerExecutableAdapterInstance!.address}`)
             console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
+            console.log(`SparkAdapter deployed to: ${SparkAdapterInstance!.address}`)
             console.log(`DPMAdapter deployed to: ${DPMAdapterInstance!.address}`)
         }
     }
@@ -442,11 +478,25 @@ export async function configureRegistryCommands(
             system.aaveStoplLossCommand.address,
         )
         await ensureServiceRegistryEntry(
-            getCommandHash(TriggerType.MakerAutoTakeProfitToDaiV2),
+            getCommandHash(TriggerType.AaveStopLossToDebtV2),
             system.aaveStoplLossCommand.address,
         )
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
+    }
+
+    if (system.sparkStopLossCommand && system.sparkStopLossCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding SPARK_STOP_LOSS command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.SparkStopLossToDebtV2),
+            system.sparkStopLossCommand.address,
+        )
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.SparkStopLossToCollateralV2),
+            system.sparkStopLossCommand.address,
+        )
+        await ensureCorrectAdapter(system.sparkStopLossCommand.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.sparkStopLossCommand.address, system.sparkAdapter!.address, true)
     }
 }
 
@@ -461,6 +511,7 @@ export async function configureRegistryEntries(
 
     await ensureServiceRegistryEntry(getExternalNameHash('WETH'), addresses.WETH)
     await ensureServiceRegistryEntry(getExternalNameHash('AAVE_V3_LENDING_POOL'), addresses.AAVE_V3_POOL)
+    await ensureServiceRegistryEntry(getExternalNameHash('SPARK_LENDING_POOL'), addresses.SPARK_V3_POOL)
     await ensureServiceRegistryEntry(getExternalNameHash('BALANCER_VAULT'), addresses.BALANCER_VAULT)
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
