@@ -1,17 +1,32 @@
 import axios from 'axios'
 import BigNumber from 'bignumber.js'
 import { OneInchQuoteResponse, OneInchSwapResponse } from './types'
+// TODO: create config.ts with all env variables and import it where needed
+import * as dotenv from 'dotenv'
 import { one } from './utils'
+dotenv.config()
 
-const API_ENDPOINT = `https://oasis.api.enterprise.1inch.exchange/v4.0/1`
+const ONE_INCH_API_ENDPOINT = process.env.ONE_INCH_API_ENDPOINT
+if (!ONE_INCH_API_ENDPOINT) {
+    throw new Error('ONE_INCH_API_ENDPOINT environment variable is not set')
+}
+
+const ONE_INCH_API_KEY = process.env.ONE_INCH_API_KEY
+if (!ONE_INCH_API_KEY) {
+    throw new Error('ONE_INCH_API_KEY environment variable is not set')
+}
+
 const ONE_INCH_PROTOCOLS = ['UNISWAP_V3', 'PMM4', 'UNISWAP_V2', 'SUSHI', 'CURVE', 'PSM']
 
 export async function getQuote(daiAddress: string, collateralAddress: string, amount: BigNumber) {
-    const { data } = await axios.get<OneInchQuoteResponse>(`${API_ENDPOINT}/quote`, {
+    const { data } = await axios.get<OneInchQuoteResponse>(`${ONE_INCH_API_ENDPOINT}/quote`, {
         params: {
             fromTokenAddress: collateralAddress,
             toTokenAddress: daiAddress,
             amount: amount.toFixed(0),
+        },
+        headers: {
+            'auth-key': ONE_INCH_API_KEY || '',
         },
     })
     const collateralAmount = new BigNumber(data.fromTokenAmount).shiftedBy(-data.fromToken.decimals)
@@ -40,8 +55,11 @@ export async function getSwap(
 
     if (debug) console.log('One inch params', params)
 
-    const { data } = await axios.get<OneInchSwapResponse>(`${API_ENDPOINT}/swap`, {
+    const { data } = await axios.get<OneInchSwapResponse>(`${ONE_INCH_API_ENDPOINT}/swap`, {
         params,
+        headers: {
+            'auth-key': ONE_INCH_API_KEY || '',
+        },
     })
 
     if (debug) console.log('One inch payload', data)
@@ -57,6 +75,7 @@ export async function getSwap(
         toToken: data.toToken,
     }
 }
+
 export function formatOneInchSwapUrl(
     fromToken: string,
     toToken: string,
@@ -66,11 +85,14 @@ export function formatOneInchSwapUrl(
     protocols: string[] = ONE_INCH_PROTOCOLS,
 ) {
     const protocolsParam = !protocols?.length ? '' : `&protocols=${protocols.join(',')}`
-    return `https://oasis.api.enterprise.1inch.exchange/v4.0/1/swap?fromTokenAddress=${fromToken.toLowerCase()}&toTokenAddress=${toToken}&amount=${amount}&fromAddress=${recepient}&slippage=${slippage}${protocolsParam}&disableEstimate=true&allowPartialFill=false`
+    return `${ONE_INCH_API_ENDPOINT}/swap?fromTokenAddress=${fromToken.toLowerCase()}&toTokenAddress=${toToken}&amount=${amount}&fromAddress=${recepient}&slippage=${slippage}${protocolsParam}&disableEstimate=true&allowPartialFill=false`
 }
-
 export async function exchangeTokens(url: string): Promise<OneInchSwapResponse> {
-    const response = await axios.get(url)
+    const response = await axios.get(url, {
+        headers: {
+            'auth-key': ONE_INCH_API_KEY || '',
+        },
+    })
 
     if (!(response.status === 200 && response.statusText === 'OK')) {
         throw new Error(`Error performing 1inch swap request ${url}: ${await response.data}`)

@@ -18,28 +18,28 @@ import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
-import { Position, strategies, ADDRESSES } from '@oasisdex/oasis-actions'
-
+import { Position, strategies } from '@oasisdex/dma-library'
+import { ADDRESSES, Network } from '@oasisdex/addresses'
 const mainnetAddresses = {
-    DAI: ADDRESSES.main.DAI,
-    ETH: ADDRESSES.main.ETH,
-    WETH: ADDRESSES.main.WETH,
-    STETH: ADDRESSES.main.STETH,
-    WSTETH: ADDRESSES.main.WSTETH,
-    WBTC: ADDRESSES.main.WBTC,
-    USDC: ADDRESSES.main.USDC,
-    feeRecipient: ADDRESSES.main.feeRecipient,
-    chainlinkEthUsdPriceFeed: ADDRESSES.main.chainlinkEthUsdPriceFeed,
+    DAI: ADDRESSES['mainnet'].common.DAI,
+    ETH: ADDRESSES['mainnet'].common.ETH,
+    WETH: ADDRESSES['mainnet'].common.WETH,
+    STETH: ADDRESSES['mainnet'].common.STETH,
+    WSTETH: ADDRESSES['mainnet'].common.WSTETH,
+    WBTC: ADDRESSES['mainnet'].common.WBTC,
+    USDC: ADDRESSES['mainnet'].common.USDC,
+    feeRecipient: ADDRESSES['mainnet'].common.FeeRecipient,
+    chainlinkEthUsdPriceFeed: ADDRESSES['mainnet'].common.ChainlinkPriceOracle_ETHUSD,
     aave: {
         v2: {
-            priceOracle: ADDRESSES.main.aave.v2.PriceOracle,
-            lendingPool: ADDRESSES.main.aave.v2.LendingPool,
-            protocolDataProvider: ADDRESSES.main.aave.v2.ProtocolDataProvider,
+            priceOracle: ADDRESSES['mainnet'].aave.v2.Oracle,
+            lendingPool: ADDRESSES['mainnet'].aave.v2.LendingPool,
+            protocolDataProvider: ADDRESSES['mainnet'].aave.v2.PoolDataProvider,
         },
         v3: {
-            aaveOracle: ADDRESSES.main.aave.v3.AaveOracle,
-            pool: ADDRESSES.main.aave.v3.Pool,
-            aaveProtocolDataProvider: ADDRESSES.main.aave.v3.AaveProtocolDataProvider,
+            aaveOracle: ADDRESSES['mainnet'].aave.v3.Oracle,
+            pool: ADDRESSES['mainnet'].aave.v3.LendingPool,
+            aaveProtocolDataProvider: ADDRESSES['mainnet'].aave.v3.PoolDataProvider,
         },
     },
 }
@@ -62,18 +62,21 @@ describe.only('AaveStoplLossCommand', async () => {
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
+        console.log('asfdsdddddsdfsdfsdf')
         await hre.network.provider.request({
             method: 'hardhat_reset',
             params: [
                 {
                     forking: {
                         jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                        blockNumber: 17873565,
                     },
                 },
             ],
         })
+        console.log('asfdsdddddsdfsdfsdf')
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-
+        console.log('asfdsdddddsdfsdfsdf')
         receiver = hre.ethers.provider.getSigner(1)
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
@@ -270,10 +273,12 @@ describe.only('AaveStoplLossCommand', async () => {
                 const position = new Position(
                     {
                         amount: new BigNumber(vTokenBalance.toString()),
+                        precision: 6,
                         symbol: 'USDC',
                     },
                     {
                         amount: new BigNumber(aTokenBalance.toString()),
+                        precision: 18,
                         symbol: 'WETH',
                     },
                     one,
@@ -285,17 +290,23 @@ describe.only('AaveStoplLossCommand', async () => {
                 )
 
                 const addresses = {
-                    ...mainnetAddresses,
-                    priceOracle: mainnetAddresses.aave.v2.priceOracle,
+                    tokens: {
+                        USDC: mainnetAddresses.USDC,
+                        WETH: mainnetAddresses.WETH,
+                        DAI: mainnetAddresses.DAI,
+                        ETH: mainnetAddresses.ETH,
+                    },
+                    oracle: mainnetAddresses.aave.v2.priceOracle,
                     lendingPool: mainnetAddresses.aave.v2.lendingPool,
-                    protocolDataProvider: mainnetAddresses.aave.v2.protocolDataProvider,
-                    operationExecutor: '0xc1cd3654ab3b37e0bc26bafb5ae4c096892d0b0c',
+                    poolDataProvider: mainnetAddresses.aave.v2.protocolDataProvider,
+                    operationExecutor: '0xcA71C36D26f515AD0cce1D806B231CBC1185CdfC',
+                    chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
                 }
 
-                const positionTransitionData = await strategies.aave.v2.close(
+                const positionTransitionData = await strategies.aave.multiply.v2.close(
                     {
                         slippage: new BigNumber(0.25),
-                        collateralAmountLockedInProtocolInWei: new BigNumber(aTokenBalance.toString()),
+                        // collateralAmount: new BigNumber(aTokenBalance.toString()),
                         debtToken: { symbol: 'USDC', precision: 6 },
                         collateralToken: {
                             symbol: 'WETH',
@@ -309,6 +320,8 @@ describe.only('AaveStoplLossCommand', async () => {
                         getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
                         proxy: proxyAddress,
                         user: receiverAddress,
+                        network: Network.MAINNET,
+                        positionType: 'Multiply',
                     },
                 )
 
