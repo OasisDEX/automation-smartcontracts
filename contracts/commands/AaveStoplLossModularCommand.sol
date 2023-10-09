@@ -170,7 +170,7 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 8 &&
-            (stopLossTriggerData.triggerType == 13 || stopLossTriggerData.triggerType == 12);
+            (stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 112);
     }
 
     function validateOperationName(bytes calldata _data, bytes32 operationName) public pure {
