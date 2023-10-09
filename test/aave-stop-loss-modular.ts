@@ -18,7 +18,7 @@ import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType } from '@oasisdex/automation'
 import { expect } from 'chai'
-import { Position, strategies } from '@oasisdex/dma-library'
+import { strategies, views } from '@oasisdex/dma-library'
 import { ADDRESSES, Network } from '@oasisdex/addresses'
 const mainnetAddresses = {
     DAI: ADDRESSES['mainnet'].common.DAI,
@@ -62,7 +62,6 @@ describe.only('AaveStoplLossCommand', async () => {
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
-        console.log('asfdsdddddsdfsdfsdf')
         await hre.network.provider.request({
             method: 'hardhat_reset',
             params: [
@@ -74,9 +73,7 @@ describe.only('AaveStoplLossCommand', async () => {
                 },
             ],
         })
-        console.log('asfdsdddddsdfsdfsdf')
         const system = await deploySystem({ utils: hardhatUtils, addCommands: true })
-        console.log('asfdsdddddsdfsdfsdf')
         receiver = hre.ethers.provider.getSigner(1)
         receiverAddress = await receiver.getAddress()
         setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
@@ -268,26 +265,6 @@ describe.only('AaveStoplLossCommand', async () => {
                     borrower: proxyAddress,
                     fundsReceiver: randomWalletAddress,
                 }
-                const beforeCloseUserAccountData: any = await aavePool.getUserAccountData(proxyAddress)
-
-                const position = new Position(
-                    {
-                        amount: new BigNumber(vTokenBalance.toString()),
-                        precision: 6,
-                        symbol: 'USDC',
-                    },
-                    {
-                        amount: new BigNumber(aTokenBalance.toString()),
-                        precision: 18,
-                        symbol: 'WETH',
-                    },
-                    one,
-                    {
-                        dustLimit: new BigNumber(0),
-                        maxLoanToValue: new BigNumber(beforeCloseUserAccountData.ltv.toString()).plus(one),
-                        liquidationThreshold: zero,
-                    },
-                )
 
                 const addresses = {
                     tokens: {
@@ -302,11 +279,22 @@ describe.only('AaveStoplLossCommand', async () => {
                     operationExecutor: '0xcA71C36D26f515AD0cce1D806B231CBC1185CdfC',
                     chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
                 }
-
+                const currentPosition = await views.aave.v2(
+                    {
+                        proxy: proxyAddress,
+                        debtToken: { symbol: 'USDC', precision: 6 },
+                        collateralToken: {
+                            symbol: 'WETH',
+                        },
+                    },
+                    {
+                        addresses,
+                        provider: ethers.provider,
+                    },
+                )
                 const positionTransitionData = await strategies.aave.multiply.v2.close(
                     {
                         slippage: new BigNumber(0.25),
-                        // collateralAmount: new BigNumber(aTokenBalance.toString()),
                         debtToken: { symbol: 'USDC', precision: 6 },
                         collateralToken: {
                             symbol: 'WETH',
@@ -316,11 +304,11 @@ describe.only('AaveStoplLossCommand', async () => {
                         isDPMProxy: true,
                         addresses,
                         provider: ethers.provider,
-                        currentPosition: position,
+                        currentPosition,
                         getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
                         proxy: proxyAddress,
                         user: receiverAddress,
-                        network: Network.MAINNET,
+                        network: 'mainnet' as Network,
                         positionType: 'Multiply',
                     },
                 )
