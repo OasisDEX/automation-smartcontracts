@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 interface IVerifier {
-    
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
@@ -11,4 +10,6 @@ interface IVerifier {
     function isExecutionCorrect(bytes memory triggerData) external view returns (bool);
 
     function isExecutionLegal(bytes memory triggerData) external view returns (bool);
+
+    function isTriggerTypeValid(uint16 triggerType) external pure returns (bool);
 }

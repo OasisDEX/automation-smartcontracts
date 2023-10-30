@@ -75,21 +75,30 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
         self = address(this);
     }
 
-    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
-        require(triggerType == expectedTriggerType, "trigger/type-not-supported");
-    }
-
+    /**
+     * @dev Validates the function selector of the execution data.
+     * @param expectedSelector The expected function selector.
+     * @param executionData The execution data containing the function selector.
+     * @dev Throws if the function selector is not equal to the expected selector.
+     */
     function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
         require(selector == expectedSelector, "trigger/invalid-selector");
     }
 
+    /**
+     * @notice Executes the trigger
+     * @param executionData Execution data from the Automation Worker
+     * @param triggerData  Encoded trigger data struct
+     */
     function execute(
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
         require(bot == msg.sender, "modern-trigger/caller-not-bot");
         ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
+        IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+        verifier.isTriggerTypeValid(modernTriggerData.triggerType);
         ModernTriggerExecutor(self).validateoperationHash(
             executionData,
             modernTriggerData.operationHash
@@ -101,9 +110,15 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
         );
     }
 
+    /**
+     * @notice Returns the correctness of the vault state post execution of the command.
+     * @param triggerData Encoded trigger data struct
+     * @return Correctness of the trigger execution
+     */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
         IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+
         address[] memory tokens = new address[](2);
         tokens[0] = modernTriggerData.quoteToken;
         tokens[1] = modernTriggerData.collateralToken;
@@ -112,6 +127,11 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
         return verifier.isExecutionCorrect(triggerData);
     }
 
+    /**
+     * @notice Checks the validity of the trigger data when the trigger is created
+     * @param triggerData  Encoded trigger data struct
+     * @return Correctness of the trigger data
+     */
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
@@ -121,12 +141,22 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
         return verifier.isTriggerDataValid(continuous, triggerData);
     }
 
+    /**
+     * @notice Checks the validity of the trigger data when the trigger is executed
+     * @param triggerData  Encoded trigger data struct
+     * @return Correctness of the trigger data during execution
+     */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
         ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
         IVerifier verifier = getVerifier(modernTriggerData.triggerType);
         return verifier.isExecutionLegal(triggerData);
     }
 
+    /**
+     * @dev Validates the operation hash by decoding the input data and comparing it with the provided operation hash.
+     * @param _data The operation executor execution data containing the operation hash.
+     * @param operationHash The expected operation hash stored in trigger data.
+     */
     function validateoperationHash(bytes calldata _data, bytes32 operationHash) public pure {
         (, string memory decodedoperationHash) = abi.decode(_data[4:], (Call[], string));
         require(
@@ -135,6 +165,12 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
         );
     }
 
+    /**
+     * @dev Checks if the contract is empty for the given tokens.
+     * @param tokens An array of token addresses to check.
+     * @dev Throws an error if any of the tokens have a non-zero balance in the contract.
+     *      In case of weth it also checks the ETH balance of the contract itself.
+     */
     function checkIfContractEmpty(address[] memory tokens) public view {
         for (uint256 i = 0; i < tokens.length; i++) {
             require(

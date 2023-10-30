@@ -38,12 +38,20 @@ contract AAVEStopLossVerifier is IVerifier {
     address public immutable weth;
     ILendingPool public immutable lendingPool;
     IServiceRegistry public immutable serviceRegistry;
+    uint16 public constant TRIGGER_TYPE = 112;
+    uint16 public constant TRIGGER_TYPE_2 = 113;
 
     constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
         weth = _serviceRegistry.getRegisteredService(WETH);
-
         lendingPool = _lendingPool;
         serviceRegistry = _serviceRegistry;
+    }
+
+    function validateTriggerType(
+        uint16 triggerType,
+        uint16 expectedTriggerType
+    ) public pure returns (bool) {
+        return triggerType == expectedTriggerType;
     }
 
     function isTriggerDataValid(
@@ -57,7 +65,12 @@ contract AAVEStopLossVerifier is IVerifier {
         return
             !continuous &&
             stopLossTriggerData.slLevel < 10 ** 8 &&
-            (stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 112);
+            (isTriggerTypeValid(stopLossTriggerData.triggerType));
+    }
+
+    function isTriggerTypeValid(uint16 triggerType) public pure override returns (bool) {
+        return (validateTriggerType(triggerType, TRIGGER_TYPE) ||
+            validateTriggerType(triggerType, TRIGGER_TYPE_2));
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
