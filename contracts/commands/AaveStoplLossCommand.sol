@@ -17,7 +17,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity 0.8.13;
+pragma solidity 0.8.19;
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { IFlashLoanRecipient } from "../interfaces/Balancer/IFlashLoanRecipient.sol";

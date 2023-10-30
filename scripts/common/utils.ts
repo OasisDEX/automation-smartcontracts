@@ -24,7 +24,14 @@ export function getServiceNameHash(service: AutomationServiceName) {
 export function getAdapterNameHash(command: string) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['Adapter', command]))
 }
-
+export function getVerifierHash(triggerType: TriggerType) {
+    console.log('triggerType', triggerType)
+    console.log(
+        'verifier hash',
+        utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Verifier', triggerType])),
+    )
+    return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'uint256'], ['Verifier', triggerType]))
+}
 export function getExecuteAdapterNameHash(command: string) {
     return utils.keccak256(utils.defaultAbiCoder.encode(['string', 'address'], ['AdapterExecute', command]))
 }

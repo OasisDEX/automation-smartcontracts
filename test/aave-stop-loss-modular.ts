@@ -334,14 +334,18 @@ describe.only('AaveStoplLossCommand', async () => {
 
             describe('when Trigger is below current LTV', async () => {
                 before(async () => {
-                    const trigerDataTypes = ['address', 'uint16', 'bytes32', 'address', 'address', 'uint256']
+                    const trigerDataTypes = ['address', 'uint16', 'bytes32', 'address', 'address', 'bytes32', 'uint256']
                     const opName = utils.solidityKeccak256(['string'], ['CloseAAVEPosition_3'])
+                    // we add the version of the library at the trigger creation time to avoid the need to update the trigger
+                    // should we instead keep track of opName/opHash mapping to specific vaersion in an immutable way?
+                    const version = utils.solidityKeccak256(['string'], ['1.0.3'])
                     const trigerDecodedData = [
                         proxyAddress,
                         TriggerType.AaveStopLossToDebtV2,
                         opName,
-                        hardhatUtils.addresses.WETH,
                         hardhatUtils.addresses.USDC,
+                        hardhatUtils.addresses.WETH,
+                        version,
                         ltv.sub(2),
                     ]
                     triggerData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)

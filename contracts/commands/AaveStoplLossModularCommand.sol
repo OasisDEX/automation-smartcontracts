@@ -17,9 +17,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-pragma solidity 0.8.13;
+pragma solidity 0.8.19;
 
 import { ICommand } from "../interfaces/ICommand.sol";
+import { IVerifier } from "../interfaces/IVerifier.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
@@ -34,28 +35,17 @@ import { IOperationExecutor, Call } from "../interfaces/Oasis/IOperationExecutor
 
 struct AaveData {
     address collateralTokenAddress;
-    address debtTokenAddress;
+    address quoteTokenAddress;
     address borrower;
     address payable fundsReceiver;
 }
 
-struct StopLossTriggerData {
+struct ModernTriggerData {
     address positionAddress;
     uint16 triggerType;
-    bytes32 operationName;
+    bytes32 operationHash;
+    address quoteToken;
     address collateralToken;
-    address debtToken;
-    uint256 slLevel;
-}
-
-struct CloseData {
-    address receiverAddress;
-    address[] assets;
-    uint256[] amounts;
-    uint256[] modes;
-    address onBehalfOf;
-    bytes params;
-    uint16 referralCode;
 }
 
 interface AaveStopLossModular {
@@ -67,117 +57,92 @@ interface AaveStopLossModular {
 }
 
 contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
-    address public immutable weth;
     address public immutable bot;
     address public immutable self;
+    address public immutable weth;
     address public immutable operationExecutor;
-    ILendingPool public immutable lendingPool;
+    IServiceRegistry public immutable serviceRegistry;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
     string private constant WETH = "WETH";
+    string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
 
     address public trustedCaller;
-    bool public reciveExpected;
 
-    constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
-        weth = _serviceRegistry.getRegisteredService(WETH);
+    function getVerifier(uint16 triggerType) public view returns (IVerifier verifier) {
+        bytes32 validatorHash = keccak256(abi.encode("Verifier", triggerType));
+        verifier = IVerifier(serviceRegistry.getServiceAddress(validatorHash));
+    }
+
+    constructor(IServiceRegistry _serviceRegistry) {
         bot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT);
-        operationExecutor = _serviceRegistry.getRegisteredService("OPERATION_EXECUTOR");
-        lendingPool = _lendingPool;
+        operationExecutor = _serviceRegistry.getRegisteredService(OPERATION_EXECUTOR);
+        weth = _serviceRegistry.getRegisteredService(WETH);
+        serviceRegistry = _serviceRegistry;
         self = address(this);
     }
 
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) public pure {
-        require(triggerType == expectedTriggerType, "base-aave-fl-command/type-not-supported");
+        require(triggerType == expectedTriggerType, "trigger/type-not-supported");
     }
 
     function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
-        require(selector == expectedSelector, "base-aave-fl-command/invalid-selector");
-    }
-
-    function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        StopLossTriggerData memory stopLossTriggerData = abi.decode(
-            triggerData,
-            (StopLossTriggerData)
-        );
-        require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
-        require(
-            IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
-                IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
-                (stopLossTriggerData.collateralToken != weth ||
-                    (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
-            "base-aave-fl-command/contract-not-empty"
-        );
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
-            stopLossTriggerData.positionAddress
-        );
-
-        return !(totalCollateralETH > 0 && totalDebtETH > 0);
-    }
-
-    function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        StopLossTriggerData memory stopLossTriggerData = abi.decode(
-            triggerData,
-            (StopLossTriggerData)
-        );
-
-        (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
-            stopLossTriggerData.positionAddress
-        );
-
-        if (totalDebtETH == 0) return false;
-
-        uint256 ltv = (10 ** 8 * totalDebtETH) / totalCollateralETH;
-        bool vaultHasDebt = totalDebtETH != 0;
-        return vaultHasDebt && ltv >= stopLossTriggerData.slLevel;
+        require(selector == expectedSelector, "trigger/invalid-selector");
     }
 
     function execute(
         bytes calldata executionData,
         bytes memory triggerData
     ) external override nonReentrant {
-        require(bot == msg.sender, "aaveSl/caller-not-bot");
+        require(bot == msg.sender, "modern-trigger/caller-not-bot");
 
-        StopLossTriggerData memory stopLossTriggerData = abi.decode(
-            triggerData,
-            (StopLossTriggerData)
-        );
-
-        AaveStoplLossModularCommand(self).validateOperationName(
+        ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
+        AaveStoplLossModularCommand(self).validateoperationHash(
             executionData,
-            stopLossTriggerData.operationName
+            modernTriggerData.operationHash
         );
-        trustedCaller = stopLossTriggerData.positionAddress;
         validateSelector(IOperationExecutor.executeOp.selector, executionData);
-        IAccountImplementation(stopLossTriggerData.positionAddress).execute(
+        IAccountImplementation(modernTriggerData.positionAddress).execute(
             operationExecutor,
             executionData
         );
+    }
 
-        trustedCaller = address(0);
+    function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
+        ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
+        require(
+            IERC20(modernTriggerData.collateralToken).balanceOf(self) == 0 &&
+                IERC20(modernTriggerData.quoteToken).balanceOf(self) == 0 &&
+                (modernTriggerData.collateralToken != weth ||
+                    (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
+            "trigger/contract-not-empty"
+        );
+
+        IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+        return verifier.isExecutionCorrect(triggerData);
     }
 
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external pure override returns (bool) {
-        StopLossTriggerData memory stopLossTriggerData = abi.decode(
-            triggerData,
-            (StopLossTriggerData)
-        );
-
-        return
-            !continuous &&
-            stopLossTriggerData.slLevel < 10 ** 8 &&
-            (stopLossTriggerData.triggerType == 113 || stopLossTriggerData.triggerType == 112);
+    ) external view override returns (bool) {
+        ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
+        IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+        return verifier.isTriggerDataValid(continuous, triggerData);
     }
 
-    function validateOperationName(bytes calldata _data, bytes32 operationName) public pure {
-        (, string memory decodedOperationName) = abi.decode(_data[4:], (Call[], string));
+    function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
+        ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
+        IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+        return verifier.isExecutionLegal(triggerData);
+    }
+
+    function validateoperationHash(bytes calldata _data, bytes32 operationHash) public pure {
+        (, string memory decodedoperationHash) = abi.decode(_data[4:], (Call[], string));
         require(
-            keccak256(abi.encodePacked(decodedOperationName)) == operationName,
-            "aaveSl/invalid-operation-name"
+            keccak256(abi.encodePacked(decodedoperationHash)) == operationHash,
+            "modern-trigger/invalid-operation-name"
         );
     }
 }

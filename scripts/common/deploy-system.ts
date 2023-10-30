@@ -16,6 +16,7 @@ import {
     AaveProxyActions,
     AaveStoplLossCommand,
     AaveStoplLossModularCommand,
+    AAVEStopLossVerifier,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -29,6 +30,7 @@ import {
     getAdapterNameHash,
     getExecuteAdapterNameHash,
     getExternalNameHash,
+    getVerifierHash,
 } from './utils'
 
 export interface DeployedSystem {
@@ -43,6 +45,7 @@ export interface DeployedSystem {
     autoTakeProfitCommand?: AutoTakeProfitCommand
     aaveStoplLossCommand?: AaveStoplLossCommand
     aaveStoplLossModularCommand?: AaveStoplLossModularCommand
+    aaveStopLossVerifier?: AAVEStopLossVerifier
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
     makerAdapter?: MakerAdapter
@@ -94,6 +97,7 @@ export async function deploySystem({
     let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
     let AaveStoplLossInstance: AaveStoplLossCommand | undefined
     let AaveStoplLossModularInstance: AaveStoplLossModularCommand | undefined
+    let AaveStopLossVerifierInstance: AAVEStopLossVerifier | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -185,6 +189,7 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+        aaveStopLossVerifier: AaveStopLossVerifierInstance,
         aaveProxyActions: AaveProxyActionsInstance,
     }
 
@@ -231,8 +236,12 @@ export async function deploySystem({
         ])) as AaveStoplLossCommand
         AaveStoplLossModularInstance = (await utils.deployContract(
             ethers.getContractFactory('AaveStoplLossModularCommand'),
-            [ServiceRegistryInstance.address, addresses.AAVE_POOL],
+            [ServiceRegistryInstance.address],
         )) as AaveStoplLossModularCommand
+        AaveStopLossVerifierInstance = (await utils.deployContract(ethers.getContractFactory('AAVEStopLossVerifier'), [
+            ServiceRegistryInstance.address,
+            addresses.AAVE_POOL,
+        ])) as AAVEStopLossVerifier
         system = {
             serviceRegistry: ServiceRegistryInstance,
             mcdUtils: McdUtilsInstance,
@@ -248,6 +257,7 @@ export async function deploySystem({
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
             aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+            aaveStopLossVerifier: AaveStopLossVerifierInstance,
             aaveProxyActions: AaveProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
             dpmAdapter: DPMAdapterInstance,
@@ -269,6 +279,7 @@ export async function deploySystem({
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
             aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+            aaveStopLossVerifier: AaveStopLossVerifierInstance,
             aaveProxyActions: AaveProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
             dpmAdapter: DPMAdapterInstance,
@@ -348,6 +359,15 @@ export async function configureRegistryAdapters(
     }
     if (system.aaveStoplLossModularCommand && system.aaveStoplLossModularCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS_MODULAR command to ServiceRegistry....')
+        await ensureServiceRegistryEntry(
+            getVerifierHash(TriggerType.AaveStopLossToCollateralV2),
+            system.aaveStopLossVerifier!.address,
+        )
+        await ensureServiceRegistryEntry(
+            getVerifierHash(TriggerType.AaveStopLossToDebtV2),
+            system.aaveStopLossVerifier!.address,
+        )
+        console.log('verifier address', system.aaveStopLossVerifier!.address)
         await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.aaveAdapter!.address, true)
     }
@@ -472,8 +492,18 @@ export async function configureRegistryCommands(
             getCommandHash(TriggerType.AaveStopLossToDebtV2),
             system.aaveStoplLossModularCommand.address,
         )
+        // @ts-ignore
+        await ensureServiceRegistryEntry(getCommandHash(113), system.aaveStoplLossModularCommand.address)
         await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.aaveAdapter!.address, true)
+        await ensureServiceRegistryEntry(
+            getVerifierHash(TriggerType.AaveStopLossToCollateralV2),
+            system.aaveStopLossVerifier!.address,
+        )
+        await ensureServiceRegistryEntry(
+            getVerifierHash(TriggerType.AaveStopLossToDebtV2),
+            system.aaveStopLossVerifier!.address,
+        )
     }
 }
 
