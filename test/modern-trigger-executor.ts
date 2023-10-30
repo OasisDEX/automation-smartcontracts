@@ -5,11 +5,10 @@ import {
     AutomationExecutor,
     IAccountImplementation,
     AaveProxyActions,
-    AaveStoplLossCommand,
+    ModernTriggerExecutor,
     ILendingPool,
     IAccountGuard,
     AccountFactoryLike,
-    ModernTriggerExecutor,
 } from '../typechain'
 import { getEvents, HardhatUtils, getOneInchCall } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
@@ -44,7 +43,7 @@ const mainnetAddresses = {
     },
 }
 
-describe.only('AaveStoplLossCommand', async () => {
+describe.only('ModernTriggerExecutor', async () => {
     const hardhatUtils = new HardhatUtils(hre)
     let automationBotInstance: AutomationBot
     let automationExecutorInstance: AutomationExecutor
@@ -53,8 +52,8 @@ describe.only('AaveStoplLossCommand', async () => {
     let receiverAddress: string
     let snapshotId: string
     let snapshotIdTop: string
-    let aaveStopLoss: AaveStoplLossCommand
-    let aaveStopLossModular: ModernTriggerExecutor
+    let aaveStopLoss: ModernTriggerExecutor
+    let modernTriggerExecutor: ModernTriggerExecutor
     let aavePool: ILendingPool
     let aave_pa: AaveProxyActions
 
@@ -80,8 +79,8 @@ describe.only('AaveStoplLossCommand', async () => {
         aavePool = await hre.ethers.getContractAt('ILendingPool', hardhatUtils.addresses.AAVE_POOL)
         automationBotInstance = system.automationBot
         automationExecutorInstance = system.automationExecutor
-        aaveStopLoss = system.aaveStoplLossCommand!
-        aaveStopLossModular = system.modernTriggerExecutor!
+
+        modernTriggerExecutor = system.modernTriggerExecutor!
         aave_pa = system.aaveProxyActions as AaveProxyActions
         const factory = (await hre.ethers.getContractAt(
             'AccountFactoryLike',
@@ -102,21 +101,11 @@ describe.only('AaveStoplLossCommand', async () => {
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         proxyAddress = AccountCreatedEvent.args.proxy.toString()
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
-        const addresses = {
-            aaveStopLoss: aaveStopLoss.address,
-            receiverAddress,
-            proxyAddress,
-            bot: automationBotInstance.address,
-            automationExecutor: automationExecutorInstance.address,
-            userAccount: account.address,
-        }
-        console.table(addresses)
 
         // WHITELISTING
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
         await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
-        await guard.connect(guardDeployer).setWhitelist(aaveStopLoss.address, true)
-        await guard.connect(guardDeployer).setWhitelist(aaveStopLossModular.address, true)
+        await guard.connect(guardDeployer).setWhitelist(modernTriggerExecutor.address, true)
         await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
         // TODO: take multiply poistion from mainnet
         // 1. deposit 1 eth of collateral
@@ -142,7 +131,7 @@ describe.only('AaveStoplLossCommand', async () => {
         ).wait()
     })
 
-    describe('execute', async () => {
+    describe('execute aave stoploss', async () => {
         beforeEach(async () => {
             snapshotIdTop = await hre.ethers.provider.send('evm_snapshot', [])
         })
@@ -245,7 +234,7 @@ describe.only('AaveStoplLossCommand', async () => {
                         ['0x'],
                         [TriggerType.AaveStopLossToDebtV2],
                     ])
-                    await aaveStopLossModular.isTriggerDataValid(false, triggerData)
+                    await modernTriggerExecutor.isTriggerDataValid(false, triggerData)
                     const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
@@ -270,7 +259,7 @@ describe.only('AaveStoplLossCommand', async () => {
                     const tx = await automationExecutorInstance.execute(
                         encodedCloseLib,
                         triggerData,
-                        aaveStopLossModular.address,
+                        modernTriggerExecutor.address,
                         triggerId,
                         '0',
                         '0',
