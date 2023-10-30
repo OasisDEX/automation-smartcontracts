@@ -22,14 +22,13 @@ import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { IVerifier } from "../interfaces/IVerifier.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {console} from "hardhat/console.sol";
+
 struct AaveStopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
     bytes32 operationHash;
     address quoteToken;
     address collateralToken;
-    bytes32 libraryVersion;
     uint256 slLevel;
 }
 
@@ -50,8 +49,7 @@ contract AAVEStopLossVerifier is IVerifier {
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData
-    ) external view override returns (bool) {
-        console.log("isTriggerDataValid");
+    ) external pure override returns (bool) {
         AaveStopLossTriggerData memory stopLossTriggerData = abi.decode(
             triggerData,
             (AaveStopLossTriggerData)
@@ -84,7 +82,6 @@ contract AAVEStopLossVerifier is IVerifier {
             triggerData,
             (AaveStopLossTriggerData)
         );
-        
 
         (uint256 totalCollateralETH, uint256 totalDebtETH, , , , ) = lendingPool.getUserAccountData(
             stopLossTriggerData.positionAddress

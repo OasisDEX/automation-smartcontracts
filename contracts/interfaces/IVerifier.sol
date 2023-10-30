@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 interface IVerifier {
+    
     function isTriggerDataValid(
         bool continuous,
         bytes memory triggerData

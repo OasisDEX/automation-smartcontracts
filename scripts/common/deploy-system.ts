@@ -15,7 +15,7 @@ import {
     AutoTakeProfitCommand,
     AaveProxyActions,
     AaveStoplLossCommand,
-    AaveStoplLossModularCommand,
+    ModernTriggerExecutor,
     AAVEStopLossVerifier,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
@@ -44,7 +44,7 @@ export interface DeployedSystem {
     closeCommand?: CloseCommand
     autoTakeProfitCommand?: AutoTakeProfitCommand
     aaveStoplLossCommand?: AaveStoplLossCommand
-    aaveStoplLossModularCommand?: AaveStoplLossModularCommand
+    modernTriggerExecutor?: ModernTriggerExecutor
     aaveStopLossVerifier?: AAVEStopLossVerifier
     basicBuy?: BasicBuyCommand
     basicSell?: BasicSellCommand
@@ -96,7 +96,7 @@ export async function deploySystem({
     let BasicSellInstance: BasicSellCommand | undefined
     let AutoTakeProfitInstance: AutoTakeProfitCommand | undefined
     let AaveStoplLossInstance: AaveStoplLossCommand | undefined
-    let AaveStoplLossModularInstance: AaveStoplLossModularCommand | undefined
+    let AaveStoplLossModularInstance: ModernTriggerExecutor | undefined
     let AaveStopLossVerifierInstance: AAVEStopLossVerifier | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
@@ -188,7 +188,7 @@ export async function deploySystem({
         automationBotStorage: AutomationBotStorageInstance,
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
-        aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+        modernTriggerExecutor: AaveStoplLossModularInstance,
         aaveStopLossVerifier: AaveStopLossVerifierInstance,
         aaveProxyActions: AaveProxyActionsInstance,
     }
@@ -234,10 +234,9 @@ export async function deploySystem({
             addresses.AAVE_POOL,
             addresses.SWAP,
         ])) as AaveStoplLossCommand
-        AaveStoplLossModularInstance = (await utils.deployContract(
-            ethers.getContractFactory('AaveStoplLossModularCommand'),
-            [ServiceRegistryInstance.address],
-        )) as AaveStoplLossModularCommand
+        AaveStoplLossModularInstance = (await utils.deployContract(ethers.getContractFactory('ModernTriggerExecutor'), [
+            ServiceRegistryInstance.address,
+        ])) as ModernTriggerExecutor
         AaveStopLossVerifierInstance = (await utils.deployContract(ethers.getContractFactory('AAVEStopLossVerifier'), [
             ServiceRegistryInstance.address,
             addresses.AAVE_POOL,
@@ -256,7 +255,7 @@ export async function deploySystem({
             automationBotStorage: AutomationBotStorageInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
-            aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+            modernTriggerExecutor: AaveStoplLossModularInstance,
             aaveStopLossVerifier: AaveStopLossVerifierInstance,
             aaveProxyActions: AaveProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
@@ -278,7 +277,7 @@ export async function deploySystem({
             automationBotStorage: AutomationBotStorageInstance,
             autoTakeProfitCommand: AutoTakeProfitInstance,
             aaveStoplLossCommand: AaveStoplLossInstance,
-            aaveStoplLossModularCommand: AaveStoplLossModularInstance,
+            modernTriggerExecutor: AaveStoplLossModularInstance,
             aaveStopLossVerifier: AaveStopLossVerifierInstance,
             aaveProxyActions: AaveProxyActionsInstance,
             aaveAdapter: AAVEAdapterInstance,
@@ -303,7 +302,7 @@ export async function deploySystem({
             console.log(`BasicSellCommand deployed to: ${BasicSellInstance!.address}`)
             console.log(`AutoTakeProfitCommand deployed to: ${AutoTakeProfitInstance!.address}`)
             console.log(`AaveStoplLossCommanddeployed to: ${AaveStoplLossInstance!.address}`)
-            console.log(`AaveStoplLossModularCommand deployed to: ${AaveStoplLossModularInstance!.address}`)
+            console.log(`ModernTriggerExecutor deployed to: ${AaveStoplLossModularInstance!.address}`)
             console.log(`MakerAdapter deployed to: ${MakerAdapterInstance!.address}`)
             console.log(`AAVEAdapter deployed to: ${AAVEAdapterInstance!.address}`)
             console.log(`DPMAdapter deployed to: ${DPMAdapterInstance!.address}`)
@@ -357,7 +356,7 @@ export async function configureRegistryAdapters(
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
-    if (system.aaveStoplLossModularCommand && system.aaveStoplLossModularCommand.address !== constants.AddressZero) {
+    if (system.modernTriggerExecutor && system.modernTriggerExecutor.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS_MODULAR command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
             getVerifierHash(TriggerType.AaveStopLossToCollateralV2),
@@ -368,8 +367,8 @@ export async function configureRegistryAdapters(
             system.aaveStopLossVerifier!.address,
         )
         console.log('verifier address', system.aaveStopLossVerifier!.address)
-        await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.dpmAdapter!.address)
-        await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.aaveAdapter!.address, true)
+        await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.aaveAdapter!.address, true)
     }
 }
 
@@ -482,20 +481,20 @@ export async function configureRegistryCommands(
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
 
-    if (system.aaveStoplLossModularCommand && system.aaveStoplLossModularCommand.address !== constants.AddressZero) {
+    if (system.modernTriggerExecutor && system.modernTriggerExecutor.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding AAVE_STOP_LOSS_MODULAR command to ServiceRegistry....')
         await ensureServiceRegistryEntry(
             getCommandHash(TriggerType.AaveStopLossToCollateralV2),
-            system.aaveStoplLossModularCommand.address,
+            system.modernTriggerExecutor.address,
         )
         await ensureServiceRegistryEntry(
             getCommandHash(TriggerType.AaveStopLossToDebtV2),
-            system.aaveStoplLossModularCommand.address,
+            system.modernTriggerExecutor.address,
         )
         // @ts-ignore
-        await ensureServiceRegistryEntry(getCommandHash(113), system.aaveStoplLossModularCommand.address)
-        await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.dpmAdapter!.address)
-        await ensureCorrectAdapter(system.aaveStoplLossModularCommand.address, system.aaveAdapter!.address, true)
+        await ensureServiceRegistryEntry(getCommandHash(113), system.modernTriggerExecutor.address)
+        await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.aaveAdapter!.address, true)
         await ensureServiceRegistryEntry(
             getVerifierHash(TriggerType.AaveStopLossToCollateralV2),
             system.aaveStopLossVerifier!.address,

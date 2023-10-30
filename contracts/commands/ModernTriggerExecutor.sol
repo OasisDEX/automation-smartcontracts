@@ -22,41 +22,22 @@ pragma solidity 0.8.19;
 import { ICommand } from "../interfaces/ICommand.sol";
 import { IVerifier } from "../interfaces/IVerifier.sol";
 import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
-import { ILendingPool } from "../interfaces/AAVE/ILendingPool.sol";
 import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { SwapData } from "./../libs/EarnSwapData.sol";
-import { ISwap } from "./../interfaces/ISwap.sol";
-import { DataTypes } from "../libs/AAVEDataTypes.sol";
-import { BaseAAveFlashLoanCommand } from "./BaseAAveFlashLoanCommand.sol";
-import { IWETH } from "../interfaces/IWETH.sol";
-import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IOperationExecutor, Call } from "../interfaces/Oasis/IOperationExecutor.sol";
 
-struct AaveData {
-    address collateralTokenAddress;
-    address quoteTokenAddress;
-    address borrower;
-    address payable fundsReceiver;
-}
+import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 struct ModernTriggerData {
     address positionAddress;
     uint16 triggerType;
     bytes32 operationHash;
+    // @BackToTheCode @robercano should we use a struct for this? or just 2 addresses? what if we want to have more tokens?
     address quoteToken;
     address collateralToken;
 }
 
-interface AaveStopLossModular {
-    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external;
-
-    function trustedCaller() external returns (address);
-
-    function self() external returns (address);
-}
-
-contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
+contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
     address public immutable bot;
     address public immutable self;
     address public immutable weth;
@@ -75,9 +56,21 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
     }
 
     constructor(IServiceRegistry _serviceRegistry) {
+        if (address(_serviceRegistry) == address(0)) {
+            revert("modern-trigger/service-registry-not-registered");
+        }
         bot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT);
+        if (bot == address(0)) {
+            revert("modern-trigger/bot-not-registered");
+        }
         operationExecutor = _serviceRegistry.getRegisteredService(OPERATION_EXECUTOR);
+        if (operationExecutor == address(0)) {
+            revert("modern-trigger/operation-executor-not-registered");
+        }
         weth = _serviceRegistry.getRegisteredService(WETH);
+        if (weth == address(0)) {
+            revert("modern-trigger/weth-not-registered");
+        }
         serviceRegistry = _serviceRegistry;
         self = address(this);
     }
@@ -96,9 +89,8 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
         bytes memory triggerData
     ) external override nonReentrant {
         require(bot == msg.sender, "modern-trigger/caller-not-bot");
-
         ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
-        AaveStoplLossModularCommand(self).validateoperationHash(
+        ModernTriggerExecutor(self).validateoperationHash(
             executionData,
             modernTriggerData.operationHash
         );
@@ -111,15 +103,12 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
 
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
         ModernTriggerData memory modernTriggerData = abi.decode(triggerData, (ModernTriggerData));
-        require(
-            IERC20(modernTriggerData.collateralToken).balanceOf(self) == 0 &&
-                IERC20(modernTriggerData.quoteToken).balanceOf(self) == 0 &&
-                (modernTriggerData.collateralToken != weth ||
-                    (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
-            "trigger/contract-not-empty"
-        );
-
         IVerifier verifier = getVerifier(modernTriggerData.triggerType);
+        address[] memory tokens = new address[](2);
+        tokens[0] = modernTriggerData.quoteToken;
+        tokens[1] = modernTriggerData.collateralToken;
+
+        checkIfContractEmpty(tokens);
         return verifier.isExecutionCorrect(triggerData);
     }
 
@@ -144,5 +133,15 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
             keccak256(abi.encodePacked(decodedoperationHash)) == operationHash,
             "modern-trigger/invalid-operation-name"
         );
+    }
+
+    function checkIfContractEmpty(address[] memory tokens) public view {
+        for (uint256 i = 0; i < tokens.length; i++) {
+            require(
+                (IERC20(tokens[i]).balanceOf(self) == 0) &&
+                    (tokens[i] != weth || (IERC20(weth).balanceOf(self) == 0 && self.balance == 0)),
+                "trigger/contract-not-empty"
+            );
+        }
     }
 }
