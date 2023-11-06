@@ -32,13 +32,6 @@ import { IWETH } from "../interfaces/IWETH.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IOperationExecutor, Call } from "../interfaces/Oasis/IOperationExecutor.sol";
 
-struct AaveData {
-    address collateralTokenAddress;
-    address debtTokenAddress;
-    address borrower;
-    address payable fundsReceiver;
-}
-
 struct StopLossTriggerData {
     address positionAddress;
     uint16 triggerType;
@@ -58,14 +51,6 @@ struct CloseData {
     uint16 referralCode;
 }
 
-interface AaveStopLossModular {
-    function closePosition(SwapData calldata exchangeData, AaveData memory aaveData) external;
-
-    function trustedCaller() external returns (address);
-
-    function self() external returns (address);
-}
-
 contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
     address public immutable weth;
     address public immutable bot;
@@ -75,9 +60,6 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
     string private constant WETH = "WETH";
-
-    address public trustedCaller;
-    bool public reciveExpected;
 
     constructor(IServiceRegistry _serviceRegistry, ILendingPool _lendingPool) {
         weth = _serviceRegistry.getRegisteredService(WETH);
@@ -101,7 +83,6 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
             triggerData,
             (StopLossTriggerData)
         );
-        require(reciveExpected == false, "base-aave-fl-command/contract-not-empty");
         require(
             IERC20(stopLossTriggerData.collateralToken).balanceOf(self) == 0 &&
                 IERC20(stopLossTriggerData.debtToken).balanceOf(self) == 0 &&
@@ -148,14 +129,11 @@ contract AaveStoplLossModularCommand is ReentrancyGuard, ICommand {
             executionData,
             stopLossTriggerData.operationName
         );
-        trustedCaller = stopLossTriggerData.positionAddress;
         validateSelector(IOperationExecutor.executeOp.selector, executionData);
         IAccountImplementation(stopLossTriggerData.positionAddress).execute(
             operationExecutor,
             executionData
         );
-
-        trustedCaller = address(0);
     }
 
     function isTriggerDataValid(
