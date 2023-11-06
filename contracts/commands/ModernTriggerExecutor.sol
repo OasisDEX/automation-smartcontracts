@@ -48,8 +48,6 @@ contract ModernTriggerExecutor is ReentrancyGuard, ICommand {
     string private constant WETH = "WETH";
     string private constant OPERATION_EXECUTOR = "OPERATION_EXECUTOR";
 
-    address public trustedCaller;
-
     function getVerifier(uint16 triggerType) public view returns (IVerifier verifier) {
         bytes32 validatorHash = keccak256(abi.encode("Verifier", triggerType));
         verifier = IVerifier(serviceRegistry.getServiceAddress(validatorHash));

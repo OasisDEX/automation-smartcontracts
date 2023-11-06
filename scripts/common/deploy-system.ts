@@ -491,8 +491,7 @@ export async function configureRegistryCommands(
             getCommandHash(TriggerType.AaveStopLossToDebtV2),
             system.modernTriggerExecutor.address,
         )
-        // @ts-ignore
-        await ensureServiceRegistryEntry(getCommandHash(113), system.modernTriggerExecutor.address)
+        await ensureServiceRegistryEntry(getCommandHash(113 as TriggerType), system.modernTriggerExecutor.address)
         await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.modernTriggerExecutor.address, system.aaveAdapter!.address, true)
         await ensureServiceRegistryEntry(
