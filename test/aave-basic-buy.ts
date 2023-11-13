@@ -26,10 +26,10 @@ const mainnetAddresses = {
     tokens: {
         ...mainnet[SystemKeys.COMMON],
     },
-    operationExecutor: mainnet[SystemKeys.MPA]['core'].OperationExecutor,
-    oracle: mainnet[SystemKeys.AAVE]['v3'].Oracle,
-    lendingPool: mainnet[SystemKeys.AAVE]['v3'].LendingPool,
-    poolDataProvider: mainnet[SystemKeys.AAVE]['v3'].PoolDataProvider,
+    operationExecutor: mainnet[SystemKeys.MPA]["core"].OperationExecutor,
+    oracle: mainnet[SystemKeys.AAVE]["v3"].Oracle,
+    lendingPool: mainnet[SystemKeys.AAVE]["v3"].LendingPool,
+    poolDataProvider: mainnet[SystemKeys.AAVE]["v3"].PoolDataProvider,
     chainlinkEthUsdPriceFeed: mainnet[SystemKeys.COMMON].ChainlinkPriceOracle_ETHUSD,
 }
 
@@ -56,63 +56,72 @@ describe.only('AaveV3SBasicBuyV2', async () => {
     let account: IAccountImplementation
     let ltv: EthersBN
     before(async () => {
-        // const system = await deploySystem({ utils: hardhatUtils, addCommands: true, logDebug: true })
+        await hre.network.provider.request({
+            method: 'hardhat_reset',
+            params: [
+                {
+                    forking: {
+                        jsonRpcUrl: hre.config.networks.hardhat.forking?.url,
+                    },
+                },
+            ],
+        })
+        const system = await deploySystem({ utils: hardhatUtils, addCommands: true, logDebug: true })
 
-        receiver = hre.ethers.provider.getSigner(0)
-
+        receiver = hre.ethers.provider.getSigner(1)
+        notOwner = hre.ethers.provider.getSigner(5)
         receiverAddress = await receiver.getAddress()
-        // setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
-        console.log('receiverAddress', receiverAddress)
+        setBalance(receiverAddress, EthersBN.from(1000).mul(EthersBN.from(10).pow(18)))
+
         randomWalletAddress = ethers.Wallet.createRandom().address
-        console.log('randomWalletAddress', randomWalletAddress)
+
         aavePool = (await hre.ethers.getContractAt(
             'contracts/interfaces/AAVE/IPool.sol:IPool',
             hardhatUtils.addresses.AAVE_V3_POOL,
         )) as IPool
-        // automationBotInstance = system.automationBot
-        // automationExecutorInstance = system.automationExecutor
-        // aaveBasicBuyCommand = system.aaveBasicBuyCommand!
-        // aave_pa = system.aaveProxyActions as AaveV3ProxyActions
+        automationBotInstance = system.automationBot
+        automationExecutorInstance = system.automationExecutor
+        aaveBasicBuyCommand = system.aaveBasicBuyCommand!
+        aave_pa = system.aaveProxyActions as AaveV3ProxyActions
         const factory = (await hre.ethers.getContractAt(
             'AccountFactoryLike',
             hardhatUtils.addresses.DPM_FACTORY,
         )) as AccountFactoryLike
+        const guard = (await hre.ethers.getContractAt(
+            'IAccountGuard',
+            hardhatUtils.addresses.DPM_GUARD,
+        )) as IAccountGuard
 
-        // const guard = (await hre.ethers.getContractAt(
-        //     'IAccountGuard',
-        //     hardhatUtils.addresses.DPM_GUARD,
-        // )) as IAccountGuard
-
-        // const guardDeployerAddress = await guard.owner()
-        // const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
+        const guardDeployerAddress = await guard.owner()
+        const guardDeployer = await hardhatUtils.impersonate(guardDeployerAddress)
 
         const factoryReceipt = await (
             await factory.connect(receiver).functions['createAccount(address)'](receiverAddress)
         ).wait()
-        console.log(factoryReceipt)
+
         const [AccountCreatedEvent] = getEvents(factoryReceipt, factory.interface.getEvent('AccountCreated'))
         proxyAddress = AccountCreatedEvent.args.proxy.toString()
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
-        // aaveAdapter = system.aaveAdapter!
-        // dpmAdapter = system.dpmAdapter!
+        aaveAdapter = system.aaveAdapter!
+        dpmAdapter = system.dpmAdapter!
         const addresses = {
-            // aaveBasicBuyCommand: aaveBasicBuyCommand.address,
+            aaveBasicBuyCommand: aaveBasicBuyCommand.address,
             receiverAddress,
             proxyAddress,
-            // bot: automationBotInstance.address,
-            // automationExecutor: automationExecutorInstance.address,
-            userAccount: receiverAddress,
-            serviceRegistry: '0x9b4Ae7b164d195df9C4Da5d08Be88b2848b2EaDA',
-            // aave_pa: aave_pa.address,
-            // aaveAdapter: aaveAdapter.address,
+            bot: automationBotInstance.address,
+            automationExecutor: automationExecutorInstance.address,
+            userAccount: account.address,
+            serviceRegistry: system.serviceRegistry.address,
+            aave_pa: aave_pa.address,
+            aaveAdapter: aaveAdapter.address,
         }
         console.table(addresses)
 
         // WHITELISTING
-        // await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
-        // await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
-        // await guard.connect(guardDeployer).setWhitelist(aaveBasicBuyCommand.address, true)
-        // await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
+        await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
+        await guard.connect(guardDeployer).setWhitelist(automationBotInstance.address, true)
+        await guard.connect(guardDeployer).setWhitelist(aaveBasicBuyCommand.address, true)
+        await guard.connect(receiver).permit(automationExecutorInstance.address, proxyAddress, true)
 
         const dmaAddresses = {
             tokens: mainnetAddresses.tokens,
@@ -158,7 +167,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
 
         await (
             await account.connect(receiver).execute(operationExecutor.address, encodedOpenPositionData, {
-                gasLimit: 5000000,
+                gasLimit: 3000000,
                 value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
             })
         ).wait()
