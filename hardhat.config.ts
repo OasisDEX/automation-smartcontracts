@@ -57,10 +57,6 @@ const config: HardhatUserConfig = {
             timeout: 100000,
         },
         hardhat: {
-            forking: {
-                url: process.env.ALCHEMY_NODE!,
-                blockNumber: parseInt(blockNumber),
-            },
             chainId: 2137,
             mining: {
                 auto: true,
