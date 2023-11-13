@@ -12,14 +12,14 @@ import {
     DPMAdapter,
     AaveV3BasicBuyCommandV2,
 } from '../typechain'
-import { getEvents, HardhatUtils, getSwap, getOneInchCall } from '../scripts/common'
+import { getEvents, HardhatUtils, getOneInchCall } from '../scripts/common'
 import { deploySystem } from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
-import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
+import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
-import { OPERATION_NAMES, RISK_RATIO_CTOR_TYPE, RiskRatio, strategies, views } from '@oasisdex/dma-library'
+import { OPERATION_NAMES, RiskRatio, strategies, views } from '@oasisdex/dma-library'
 import { ADDRESSES, Network } from '@oasisdex/addresses'
 
 const mainnetAddresses = {
@@ -186,64 +186,6 @@ describe.only('AaveV3SBasicBuyV2', async () => {
         ).wait()
     })
 
-    describe.skip('isTriggerDataValid', () => {
-        it('should fail while adding the trigger with continuous set to true', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
-            // Calculate the loan-to-value (LTV) ratio for Aave V3
-            // LTV is the ratio of the total debt to the total collateral, expressed as a percentage
-            // The result is multiplied by 10000 to preserve precision
-            // eg 0.67 (67%) LTV is stored as 6700
-            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
-
-            const triggerDecodedData = [
-                proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
-                hardhatUtils.addresses.WETH,
-                ltv.sub(2),
-            ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, triggerDecodedData)
-
-            const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
-                TriggerGroupType.SingleTrigger,
-                [true],
-                [0],
-                [triggerData],
-                ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
-            ])
-            const tx = account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.revertedWith('bot/invalid-trigger-data')
-        })
-        it('should add the trigger with continuous set to false', async () => {
-            const userData = await aavePool.getUserAccountData(proxyAddress)
-            const ltv = userData.totalDebtBase.mul(10000).div(userData.totalCollateralBase)
-            const trigerDecodedData = [
-                proxyAddress,
-                TriggerType.AaveStopLossToDebtV2,
-                maxCoverageUsdc,
-                hardhatUtils.addresses.USDC,
-                hardhatUtils.addresses.WETH,
-                ltv.sub(2),
-            ]
-            const triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
-
-            const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
-                TriggerGroupType.SingleTrigger,
-                [false],
-                [0],
-                [triggerData],
-                ['0x'],
-                [TriggerType.AaveStopLossToCollateralV2],
-            ])
-            const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-            const txRes = await tx.wait()
-            const events = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
-            expect(events.length).to.be.equal(1)
-        })
-    })
-
     describe('execute', async () => {
         beforeEach(async () => {
             snapshotIdTop = await hre.ethers.provider.send('evm_snapshot', [])
@@ -252,7 +194,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
         afterEach(async () => {
             await hre.ethers.provider.send('evm_revert', [snapshotIdTop])
         })
-        describe('closeToDebtToken operation', async () => {
+        describe('bb operation', async () => {
             let encodedClosePositionData: string
             let encodedClosePositionNotOwnerData: string
             let triggerData: string
@@ -445,58 +387,6 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                         { gasLimit: 3000000 },
                     )
                     await expect(tx).to.be.revertedWith('aave-v3-sl/funds-receiver-not-owner')
-                })
-            })
-            describe.skip('when Trigger is above current LTV', async () => {
-                before(async () => {
-                    const trigerDecodedData = [
-                        proxyAddress,
-                        TriggerType.AaveStopLossToDebtV2,
-                        maxCoverageUsdc,
-                        hardhatUtils.addresses.USDC,
-                        hardhatUtils.addresses.WETH,
-                        ltv.add(10),
-                    ]
-                    triggerData = encodeTriggerDataByType(CommandContractType.AaveStopLossCommandV2, trigerDecodedData)
-
-                    const dataToSupply = automationBotInstance.interface.encodeFunctionData('addTriggers', [
-                        TriggerGroupType.SingleTrigger,
-                        [false],
-                        [0],
-                        [triggerData],
-                        ['0x'],
-                        [TriggerType.AaveStopLossToCollateralV2],
-                    ])
-
-                    const tx = await account.connect(receiver).execute(automationBotInstance.address, dataToSupply)
-                    const txRes = await tx.wait()
-                    const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
-                    triggerId = event.args.triggerId.toNumber()
-                })
-
-                beforeEach(async () => {
-                    snapshotId = await hre.ethers.provider.send('evm_snapshot', [])
-                })
-
-                afterEach(async () => {
-                    await hre.ethers.provider.send('evm_revert', [snapshotId])
-                })
-
-                it('should NOT execute trigger', async () => {
-                    const tx = automationExecutorInstance.execute(
-                        encodedClosePositionData,
-
-                        triggerData,
-                        aaveBasicBuyCommand.address,
-                        triggerId,
-                        '0',
-                        '0',
-                        178000,
-                        hardhatUtils.addresses.USDC,
-                        { gasLimit: 3000000 },
-                    )
-
-                    await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
                 })
             })
         })
