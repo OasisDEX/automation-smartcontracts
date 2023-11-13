@@ -13,7 +13,10 @@ import { setCode } from '@nomicfoundation/hardhat-network-helpers'
 export class HardhatUtils {
     private readonly _cache = new NodeCache()
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
+    constructor(
+        public readonly hre: HardhatRuntimeEnvironment,
+        public readonly forked?: Network,
+    ) {
         this.addresses = getAddressesFor(this.forked || this.hre.network.name)
     }
 

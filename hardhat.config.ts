@@ -1,12 +1,14 @@
 import * as dotenv from 'dotenv'
 import { HardhatUserConfig } from 'hardhat/config'
-import '@nomiclabs/hardhat-etherscan'
-import '@nomiclabs/hardhat-waffle'
+// TODO: fix this
+// import '@nomiclabs/hardhat-etherscan'
 import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
 import 'hardhat-tracer'
 import * as tdly from '@tenderly/hardhat-tenderly'
+import '@nomicfoundation/hardhat-toolbox'
+import '@nomiclabs/hardhat-ethers'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
@@ -88,6 +90,12 @@ const config: HardhatUserConfig = {
     tenderly: {
         project: process.env.TENDERLY_PROJECT!,
         username: process.env.TENDERLY_USERNAME!,
+    },
+    typechain: {
+        outDir: 'typechain',
+        target: 'ethers-v5',
+        alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+        dontOverrideCompile: false, // defaults to false
     },
 }
 

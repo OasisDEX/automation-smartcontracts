@@ -1,5 +1,4 @@
-import { ContractReceipt } from '@ethersproject/contracts'
-import { BytesLike, utils, Contract } from 'ethers'
+import { BytesLike, utils, Contract, ContractReceipt } from 'ethers'
 import { BigNumber } from 'bignumber.js'
 import { AutomationServiceName, Network } from './types'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'

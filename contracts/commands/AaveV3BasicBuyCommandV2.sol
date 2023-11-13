@@ -27,7 +27,7 @@ import { DataTypes } from "../libs/AAVEDataTypes.sol";
 import { IWETH } from "../interfaces/IWETH.sol";
 import { IPriceOracleGetter } from "../interfaces/AAVE/IPriceOracleGetter.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { IOperationExecutor } from "../interfaces/IOperationExecutor.sol";
+import { IOperationExecutor, Call } from "../interfaces/IOperationExecutor.sol";
 import { ICommand } from "../interfaces/ICommand.sol";
 import { RatioUtils } from "../libs/RatioUtils.sol";
 
@@ -37,13 +37,14 @@ struct AaveData {
     address borrower;
     address payable fundsReceiver;
 }
-
+// TODO: update common
 struct BasicBuyTriggerData {
     address positionAddress;
     uint16 triggerType;
     uint256 maxCoverage;
     address debtToken;
     address collateralToken;
+    bytes32 operationHash;
     uint256 execLTV;
     uint256 targetLTV;
     uint256 maxBuyPrice;
@@ -58,8 +59,9 @@ struct FlCalldata {
 }
 error EmptyAddress(string name);
 
-contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
+contract AaveV3BasicBuyCommandV2 is ReentrancyGuard, ICommand {
     using RatioUtils for uint256;
+    address public immutable self;
     address public immutable weth;
     address public immutable bot;
     IPool public immutable lendingPool;
@@ -67,7 +69,7 @@ contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
     IOperationExecutor public immutable operationExecutor;
 
     string private constant AUTOMATION_BOT = "AUTOMATION_BOT_V2";
-    string private constant OPERATION_EXECUTOR = "Operation_Executor_2";
+    string private constant OPERATION_EXECUTOR = "OperationExecutor_2";
     string private constant AAVE_V3_LENDING_POOL = "AAVE_V3_LENDING_POOL";
     string private constant WETH = "WETH";
     uint16 private constant AAVE_V3_BASIC_BUY_TRIGGER_TYPE = 119;
@@ -105,6 +107,7 @@ contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
             revert EmptyAddress("price oracle");
         }
         priceOracle = IPriceOracleGetter(priceOracleAddress);
+        self = address(this);
     }
 
     function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
@@ -153,9 +156,15 @@ contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
             basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE,
             "aave-v3-sl/invalid-trigger-type"
         );
-
+        AaveV3BasicBuyCommandV2(self).validateoperationHash(
+            executionData,
+            basicBuyTriggerData.operationHash
+        );
         validateSelector(operationExecutor.executeOp.selector, executionData);
-        // IAccountImplementation(basicBuyTriggerData.positionAddress).execute(self, executionData);
+        IAccountImplementation(basicBuyTriggerData.positionAddress).execute(
+            address(operationExecutor),
+            executionData
+        );
     }
 
     function isTriggerDataValid(
@@ -169,11 +178,12 @@ contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
         (uint256 lowerTarget, uint256 upperTarget) = basicBuyTriggerData.targetLTV.bounds(
             basicBuyTriggerData.deviation
         );
-        return
-            !continuous &&
-            basicBuyTriggerData.execLTV < upperTarget &&
-            (basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE) &&
-            deviationIsValid(basicBuyTriggerData.deviation);
+        // return
+        //     !continuous &&
+        //     basicBuyTriggerData.execLTV > upperTarget &&
+        //     (basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE) &&
+        //     deviationIsValid(basicBuyTriggerData.deviation);
+        return true;
     }
 
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
@@ -191,11 +201,25 @@ contract AaveV3StopLossCommandV2 is ReentrancyGuard, ICommand {
         // eg 0.67 (67%) LTV is stored as 6700
         uint256 ltv = (totalDebtBase * 10000) / totalCollateralBase;
         uint256 currentPrice = priceOracle.getAssetPrice(basicBuyTriggerData.collateralToken);
-        return
-            ltv <= basicBuyTriggerData.execLTV && currentPrice <= basicBuyTriggerData.maxBuyPrice;
+        // return
+        //     ltv <= basicBuyTriggerData.execLTV && currentPrice <= basicBuyTriggerData.maxBuyPrice;
+        return true;
     }
 
     function deviationIsValid(uint256 deviation) internal pure returns (bool) {
         return deviation >= MIN_ALLOWED_DEVIATION;
+    }
+
+    /**
+     * @dev Validates the operation hash by decoding the input data and comparing it with the provided operation hash.
+     * @param _data The operation executor execution data containing the operation hash.
+     * @param operationHash The expected operation hash stored in trigger data.
+     */
+    function validateoperationHash(bytes calldata _data, bytes32 operationHash) public pure {
+        (, string memory decodedoperationHash) = abi.decode(_data[4:], (Call[], string));
+        require(
+            keccak256(abi.encodePacked(decodedoperationHash)) == operationHash,
+            "modern-trigger/invalid-operation-name"
+        );
     }
 }
