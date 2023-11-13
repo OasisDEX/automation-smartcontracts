@@ -137,7 +137,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                 slippage: new BigNumber(0.25),
                 debtToken: { symbol: 'USDC', precision: 6 },
                 collateralToken: {
-                    symbol: 'WETH',
+                    symbol: 'ETH',
                     precision: 18,
                 },
                 multiple: new RiskRatio(new BigNumber(0.73), RiskRatio.TYPE.LTV),
@@ -171,6 +171,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                 value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
             })
         ).wait()
+        console.log('position opened')
     })
 
     describe('execute', async () => {
