@@ -151,15 +151,16 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                 debtToken: { symbol: 'USDC', precision: 6 },
                 collateralToken: {
                     symbol: 'WETH',
+                    precision: 18,
                 },
-                multiple: new RiskRatio(new BigNumber(0.5), RiskRatio.TYPE.LTV),
+                multiple: new RiskRatio(new BigNumber(0.73), RiskRatio.TYPE.LTV),
                 depositedByUser: {
                     collateralInWei: new BigNumber(3).times(new BigNumber(10).pow(18)),
                 },
             },
             {
                 isDPMProxy: true,
-                provider: ethers.provider,
+                provider: hre.ethers.provider,
                 addresses: dmaAddresses,
                 getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
                 proxy: account.address,
@@ -180,6 +181,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
         await (
             await account.connect(receiver).execute(operationExecutor.address, encodedOpenPositionData, {
                 gasLimit: 3000000,
+                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
             })
         ).wait()
     })
