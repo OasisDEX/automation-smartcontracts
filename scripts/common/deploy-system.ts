@@ -19,6 +19,7 @@ import {
     SparkStopLossCommandV2,
     SparkAdapter,
     AaveV3BasicBuyCommandV2,
+    AaveV3BasicSellCommandV2,
 } from '../../typechain'
 import { AAVEAdapter } from '../../typechain/AAVEAdapter'
 import { DPMAdapter } from '../../typechain/DPMAdapter'
@@ -45,6 +46,7 @@ export interface DeployedSystem {
     autoTakeProfitCommand?: MakerAutoTakeProfitCommandV2
     aaveStoplLossCommand?: AaveV3StopLossCommandV2
     aaveBasicBuyCommand?: AaveV3BasicBuyCommandV2
+    aaveBasicSellCommand?: AaveV3BasicSellCommandV2
     sparkStopLossCommand?: SparkStopLossCommandV2
     basicBuy?: MakerBasicBuyCommandV2
     basicSell?: MakerBasicSellCommandV2
@@ -101,6 +103,7 @@ export async function deploySystem({
     let AaveStoplLossInstance: AaveV3StopLossCommandV2 | undefined
     let SparkStopLossInstance: SparkStopLossCommandV2 | undefined
     let AaveBasicBuyInstance: AaveV3BasicBuyCommandV2 | undefined
+    let AaveBasicSellInstance: AaveV3BasicSellCommandV2 | undefined
 
     const delay = utils.hre.network.name === Network.MAINNET ? 1800 : 0
 
@@ -197,6 +200,7 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveBasicBuyCommand: AaveBasicBuyInstance,
+        aaveBasicSellCommand: AaveBasicSellInstance,
         aaveProxyActions: AaveProxyActionsInstance,
         sparkStopLossCommand: SparkStopLossInstance,
     }
@@ -255,6 +259,11 @@ export async function deploySystem({
             ServiceRegistryInstance.address,
         ])) as AaveV3BasicBuyCommandV2
 
+        if (logDebug) console.log('Deploying AaveBasicSellCommandV2....')
+        AaveBasicSellInstance = (await utils.deployContract(ethers.getContractFactory('AaveV3BasicSellCommandV2'), [
+            ServiceRegistryInstance.address,
+        ])) as AaveV3BasicSellCommandV2
+
         if (logDebug) console.log('Deploying SparkStopLossCommandV2....')
         SparkStopLossInstance = (await utils.deployContract(ethers.getContractFactory('SparkStopLossCommandV2'), [
             ServiceRegistryInstance.address,
@@ -276,6 +285,7 @@ export async function deploySystem({
         autoTakeProfitCommand: AutoTakeProfitInstance,
         aaveStoplLossCommand: AaveStoplLossInstance,
         aaveBasicBuyCommand: AaveBasicBuyInstance,
+        aaveBasicSellCommand: AaveBasicSellInstance,
         sparkStopLossCommand: SparkStopLossInstance,
         aaveProxyActions: AaveProxyActionsInstance,
         sparkProxyActions: SparkProxyActionsInstance,
@@ -306,6 +316,7 @@ export async function deploySystem({
             console.log(`MakerAutoTakeProfitCommandV2 deployed to: ${AutoTakeProfitInstance!.address}`)
             console.log(`AaveStoplLossCommandV2 deployed to: ${AaveStoplLossInstance!.address}`)
             console.log(`AaveBasicBuyCommandV2 deployed to: ${AaveBasicBuyInstance!.address}`)
+            console.log(`AaveBasicSellCommandV2 deployed to: ${AaveBasicSellInstance!.address}`)
             console.log(`SparkStopLossCommandV2 deployed to: ${SparkStopLossInstance!.address}`)
             console.log(`MakerSecurityAdapter deployed to: ${MakerSecurityAdapterInstance!.address}`)
             console.log(`MakerExecutableAdapter deployed to: ${MakerExecutableAdapterInstance!.address}`)
@@ -366,6 +377,11 @@ export async function configureRegistryAdapters(
         if (logDebug) console.log('Adding AAVE_BASIC_BUY command to ServiceRegistry....')
         await ensureCorrectAdapter(system.aaveBasicBuyCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveBasicBuyCommand.address, system.aaveAdapter!.address, true)
+    }
+    if (system.aaveBasicSellCommand && system.aaveBasicSellCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AAVE_BASIC_Sell command to ServiceRegistry....')
+        await ensureCorrectAdapter(system.aaveBasicSellCommand.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.aaveBasicSellCommand.address, system.aaveAdapter!.address, true)
     }
 }
 
@@ -483,11 +499,24 @@ export async function configureRegistryCommands(
         await ensureCorrectAdapter(system.aaveStoplLossCommand.address, system.aaveAdapter!.address, true)
     }
     if (system.aaveBasicBuyCommand && system.aaveBasicBuyCommand.address !== constants.AddressZero) {
-        if (logDebug) console.log('Adding AAVE_STOP_LOSS command to ServiceRegistry....')
+        if (logDebug) console.log('Adding AAVE_BASIC_BUY command to ServiceRegistry....')
         console.log('Adding AAVE_BASIC_BUY command to ServiceRegistry....', getCommandHash(TriggerType.AaveBasicBuyV2))
         await ensureServiceRegistryEntry(getCommandHash(TriggerType.AaveBasicBuyV2), system.aaveBasicBuyCommand.address)
         await ensureCorrectAdapter(system.aaveBasicBuyCommand.address, system.dpmAdapter!.address)
         await ensureCorrectAdapter(system.aaveBasicBuyCommand.address, system.aaveAdapter!.address, true)
+    }
+    if (system.aaveBasicSellCommand && system.aaveBasicSellCommand.address !== constants.AddressZero) {
+        if (logDebug) console.log('Adding AAVE_BASIC_SELL command to ServiceRegistry....')
+        console.log(
+            'Adding AAVE_BASIC_SELL command to ServiceRegistry....',
+            getCommandHash(TriggerType.AaveBasicSellV2),
+        )
+        await ensureServiceRegistryEntry(
+            getCommandHash(TriggerType.AaveBasicSellV2),
+            system.aaveBasicSellCommand.address,
+        )
+        await ensureCorrectAdapter(system.aaveBasicSellCommand.address, system.dpmAdapter!.address)
+        await ensureCorrectAdapter(system.aaveBasicSellCommand.address, system.aaveAdapter!.address, true)
     }
     if (system.sparkStopLossCommand && system.sparkStopLossCommand.address !== constants.AddressZero) {
         if (logDebug) console.log('Adding SPARK_STOP_LOSS command to ServiceRegistry....')
@@ -518,6 +547,10 @@ export async function configureRegistryEntries(
     await ensureServiceRegistryEntry(getExternalNameHash('SPARK_LENDING_POOL'), addresses.SPARK_V3_POOL)
     await ensureServiceRegistryEntry(getExternalNameHash('BALANCER_VAULT'), addresses.BALANCER_VAULT)
     await ensureServiceRegistryEntry(getExternalNameHash('OperationExecutor_2'), addresses.OPERATION_EXECUTOR_2)
+    await ensureServiceRegistryEntry(
+        getExternalNameHash('AAVE_V3_LENDING_POOL_ADDRESSES_PROVIDER'),
+        addresses.AAVE_V3_ADDRESSES_PROVIDER,
+    )
 
     if (logDebug) console.log('Adding CDP_MANAGER to ServiceRegistry....')
     await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.CDP_MANAGER), addresses.CDP_MANAGER)

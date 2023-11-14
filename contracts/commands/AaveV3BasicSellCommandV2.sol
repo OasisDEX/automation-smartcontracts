@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/// AaveV3BasicBuyCommandV2.sol
+/// AaveV3BasicSellCommandV2.sol
 
 // Copyright (C) 2023 Oazo Apps Limited
 
@@ -28,26 +28,21 @@ import { IAccountImplementation } from "../interfaces/IAccountImplementation.sol
 import { IOperationExecutor, Call } from "../interfaces/IOperationExecutor.sol";
 import { BaseDMACommand, ICommand } from "./BaseDMACommand.sol";
 
-struct BasicBuyTriggerData {
+struct BasicSellTriggerData {
     address positionAddress;
     uint16 triggerType;
     uint256 maxCoverage;
     address debtToken;
     address collateralToken;
     bytes32 operationHash;
-    uint256 executionLTV;
+    uint256 execLTV;
     uint256 targetLTV;
-    uint256 maxBuyPrice;
+    uint256 minSellPrice;
     uint64 deviation;
     uint32 maxBaseFeeInGwei;
 }
 
-/**
- * @title AaveV3BasicBuyCommandV2
- * @dev Aave V3 Basic Buy - at execution time, it will call the operation executor to execut Adjust Up operation to increase the positions multiple.
- * It also includes ReentrancyGuard to prevent reentrancy attacks.
- */
-contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
+contract AaveV3BasicSellCommandV2 is BaseDMACommand {
     using RatioUtils for uint256;
 
     IPool public immutable lendingPool;
@@ -56,7 +51,7 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
     string private constant AAVE_V3_LENDING_POOL = "AAVE_V3_LENDING_POOL";
     string private constant AAVE_V3_LENDING_POOL_ADDRESSES_PROVIDER =
         "AAVE_V3_LENDING_POOL_ADDRESSES_PROVIDER";
-    uint16 private constant AAVE_V3_BASIC_BUY_TRIGGER_TYPE = 119;
+    uint16 private constant AAVE_V3_BASIC_SELL_TRIGGER_TYPE = 120;
 
     constructor(IServiceRegistry _serviceRegistry) BaseDMACommand(_serviceRegistry) {
         address lendingPoolAddress = _serviceRegistry.getRegisteredService(AAVE_V3_LENDING_POOL);
@@ -87,21 +82,21 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionCorrect(bytes memory triggerData) external view override returns (bool) {
-        BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
+        BasicSellTriggerData memory basicSellTriggerData = abi.decode(
             triggerData,
-            (BasicBuyTriggerData)
+            (BasicSellTriggerData)
         );
 
         (uint256 totalCollateralBase, uint256 totalDebtBase, , , , ) = lendingPool
-            .getUserAccountData(basicBuyTriggerData.positionAddress);
+            .getUserAccountData(basicSellTriggerData.positionAddress);
 
         uint256 ltv = (totalDebtBase * 10000) / totalCollateralBase;
 
-        (uint256 lowerBoundTarget, uint256 upperBoundTarget) = basicBuyTriggerData.targetLTV.bounds(
-            basicBuyTriggerData.deviation
-        );
+        (uint256 lowerBoundTarget, uint256 upperBoundTarget) = basicSellTriggerData
+            .targetLTV
+            .bounds(basicSellTriggerData.deviation);
 
-        return ltv <= upperBoundTarget && lowerBoundTarget <= ltv;
+        return ltv >= lowerBoundTarget && ltv <= upperBoundTarget;
     }
 
     /**
@@ -114,17 +109,17 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         if (bot != msg.sender) {
             revert CallerNotAutomationBot(msg.sender);
         }
-        BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
+        BasicSellTriggerData memory basicSellTriggerData = abi.decode(
             triggerData,
-            (BasicBuyTriggerData)
+            (BasicSellTriggerData)
         );
-        validateTriggerType(basicBuyTriggerData.triggerType, AAVE_V3_BASIC_BUY_TRIGGER_TYPE);
-        AaveV3BasicBuyCommandV2(self).validateoperationHash(
+        validateTriggerType(basicSellTriggerData.triggerType, AAVE_V3_BASIC_SELL_TRIGGER_TYPE);
+        AaveV3BasicSellCommandV2(self).validateoperationHash(
             executionData,
-            basicBuyTriggerData.operationHash
+            basicSellTriggerData.operationHash
         );
         validateSelector(operationExecutor.executeOp.selector, executionData);
-        IAccountImplementation(basicBuyTriggerData.positionAddress).execute(
+        IAccountImplementation(basicSellTriggerData.positionAddress).execute(
             address(operationExecutor),
             executionData
         );
@@ -137,28 +132,25 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         bool omitted,
         bytes memory triggerData
     ) external view override returns (bool) {
-        BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
+        BasicSellTriggerData memory basicSellTriggerData = abi.decode(
             triggerData,
-            (BasicBuyTriggerData)
+            (BasicSellTriggerData)
         );
-
         (, , , , uint256 maxLtv, ) = lendingPool.getUserAccountData(
-            basicBuyTriggerData.positionAddress
+            basicSellTriggerData.positionAddress
+        );
+        (, uint256 upperBoundTarget) = basicSellTriggerData.targetLTV.bounds(
+            basicSellTriggerData.deviation
         );
 
-        // calcualte +-0.5% deviation bounds from the target LTV
-        (uint256 lowerBoundTarget, uint256 upperBoundTarget) = basicBuyTriggerData.targetLTV.bounds(
-            basicBuyTriggerData.deviation
-        );
-
-        // assure that the execution LTV is lower than the lower target, so it wont execute again
-        bool a = basicBuyTriggerData.executionLTV < lowerBoundTarget;
+        // assure that the execution LTV is higher or equal than the upper bound target, so it wont execute again
+        bool a = basicSellTriggerData.execLTV >= upperBoundTarget;
         // assure that the trigger type is the correct one
-        bool b = basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE;
-        // assure that the upper bound of target LTV is lower than the max LTV, it would revert on execution
-        bool c = upperBoundTarget < maxLtv;
-        // assure that the deviation is valid ( above minimal allowed deviation)
-        bool d = deviationIsValid(basicBuyTriggerData.deviation);
+        bool b = basicSellTriggerData.triggerType == AAVE_V3_BASIC_SELL_TRIGGER_TYPE;
+        // assure the execution LTV is lower than max LTV
+        bool c = basicSellTriggerData.execLTV < maxLtv;
+        // assure that the deviation is valid ( above minimal allowe deviation)
+        bool d = deviationIsValid(basicSellTriggerData.deviation);
         return a && b && c && d;
     }
 
@@ -166,52 +158,47 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
      *  @inheritdoc ICommand
      */
     function isExecutionLegal(bytes memory triggerData) external view override returns (bool) {
-        BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
+        BasicSellTriggerData memory basicSellTriggerData = abi.decode(
             triggerData,
-            (BasicBuyTriggerData)
+            (BasicSellTriggerData)
         );
         /* 
         totalCollateralBase - total collateral of the user, in market’s base currency
         totalDebtBase - total debt of the user, in market’s base currency
         maxLtv - maximum Loan To Value of the user - weighted average of max ltv of collateral reserves */
         (uint256 totalCollateralBase, uint256 totalDebtBase, , , uint256 maxLtv, ) = lendingPool
-            .getUserAccountData(basicBuyTriggerData.positionAddress);
+            .getUserAccountData(basicSellTriggerData.positionAddress);
 
         /* Calculate the loan-to-value (LTV) ratio for Aave V3
          LTV is the ratio of the total debt to the total collateral, expressed as a percentage
          The result is multiplied by 10000 to preserve precision
          eg 0.67 (67%) LTV is stored as 6700 */
         uint256 ltv = (totalDebtBase * 10000) / totalCollateralBase;
-        uint256 currentPrice = priceOracle.getAssetPrice(basicBuyTriggerData.collateralToken);
-
-        (, uint256 upperBoundTarget) = basicBuyTriggerData.targetLTV.bounds(
-            basicBuyTriggerData.deviation
-        );
+        uint256 currentPrice = priceOracle.getAssetPrice(basicSellTriggerData.collateralToken);
 
         // LTV has to be below or equal the execution LTV set by the user to execute
-        bool a = ltv <= basicBuyTriggerData.executionLTV;
+        bool a = ltv >= basicSellTriggerData.execLTV;
 
-        // oracle price has to be below the maxBuyPrice set by the user
-        bool b = currentPrice <= basicBuyTriggerData.maxBuyPrice;
+        // oracle price has to be above the minSellPirce set by the user
+        bool b = currentPrice >= basicSellTriggerData.minSellPrice;
 
         // blocks base fee has to be below the limit set by the user (maxBaseFeeInGwei)
-        bool c = baseFeeIsValid(basicBuyTriggerData.maxBaseFeeInGwei);
+        bool c = baseFeeIsValid(basicSellTriggerData.maxBaseFeeInGwei);
 
-        // upper bound of target LTV after execution has to be below the max LTV
-        // it is checked again as maxLtv might have changed since the trigger was created
-        bool d = upperBoundTarget < maxLtv;
+        // is execution LTV lower than max LTV - we revert early if that's not true
+        bool d = basicSellTriggerData.execLTV < maxLtv;
 
         return a && b && c && d;
     }
 
     function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
-        BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
+        BasicSellTriggerData memory basicSellTriggerData = abi.decode(
             triggerData,
-            (BasicBuyTriggerData)
+            (BasicSellTriggerData)
         );
         if (!this.isTriggerDataValid(false, triggerData)) {
             return 0;
         }
-        return basicBuyTriggerData.triggerType;
+        return basicSellTriggerData.triggerType;
     }
 }

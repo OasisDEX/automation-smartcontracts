@@ -19,17 +19,27 @@ import BigNumber from 'bignumber.js'
 import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
 import { TriggerGroupType, TriggerType } from '@oasisdex/automation'
 import { expect } from 'chai'
-import { OPERATION_NAMES, RiskRatio, strategies, views } from '@oasisdex/dma-library'
-import { ADDRESSES, Network, SystemKeys, MpaKeys, AaveKeys } from '@oasisdex/addresses'
+import { AaveLikeStrategyAddresses, OPERATION_NAMES, RiskRatio, strategies, views } from '@oasisdex/dma-library'
+import { ADDRESSES, Network, SystemKeys } from '@oasisdex/addresses'
+import { config as dotenvConfig } from 'dotenv'
+import chalk from 'chalk'
+dotenvConfig()
+
+const config = {
+    debug: process.env.DEBUG === 'true',
+}
+
+// replace default log with log that is enable wjen config flag ins enabled
+const debug = config.debug ? console.debug : () => {}
 const { mainnet } = ADDRESSES
 const mainnetAddresses = {
     tokens: {
         ...mainnet[SystemKeys.COMMON],
     },
-    operationExecutor: mainnet[SystemKeys.MPA]["core"].OperationExecutor,
-    oracle: mainnet[SystemKeys.AAVE]["v3"].Oracle,
-    lendingPool: mainnet[SystemKeys.AAVE]["v3"].LendingPool,
-    poolDataProvider: mainnet[SystemKeys.AAVE]["v3"].PoolDataProvider,
+    operationExecutor: mainnet[SystemKeys.MPA]['core'].OperationExecutor,
+    oracle: mainnet[SystemKeys.AAVE]['v3'].Oracle,
+    lendingPool: mainnet[SystemKeys.AAVE]['v3'].LendingPool,
+    poolDataProvider: mainnet[SystemKeys.AAVE]['v3'].PoolDataProvider,
     chainlinkEthUsdPriceFeed: mainnet[SystemKeys.COMMON].ChainlinkPriceOracle_ETHUSD,
 }
 
@@ -55,6 +65,14 @@ describe.only('AaveV3SBasicBuyV2', async () => {
 
     let account: IAccountImplementation
     let ltv: EthersBN
+
+    // tokens: mainnetAddresses.tokens,
+    // oracle: mainnetAddresses.oracle,
+    // lendingPool: mainnetAddresses.lendingPool,
+    // poolDataProvider: mainnetAddresses.poolDataProvider,
+    // operationExecutor: hardhatUtils.addresses.OPERATION_EXECUTOR_2,
+    // chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
+    let addresses: AaveLikeStrategyAddresses
     before(async () => {
         await hre.network.provider.request({
             method: 'hardhat_reset',
@@ -66,7 +84,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true, logDebug: true })
+        const system = await deploySystem({ utils: hardhatUtils, addCommands: true, logDebug: false })
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
@@ -104,7 +122,8 @@ describe.only('AaveV3SBasicBuyV2', async () => {
         account = (await hre.ethers.getContractAt('IAccountImplementation', proxyAddress)) as IAccountImplementation
         aaveAdapter = system.aaveAdapter!
         dpmAdapter = system.dpmAdapter!
-        const addresses = {
+
+        console.table({
             aaveBasicBuyCommand: aaveBasicBuyCommand.address,
             receiverAddress,
             proxyAddress,
@@ -114,8 +133,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
             serviceRegistry: system.serviceRegistry.address,
             aave_pa: aave_pa.address,
             aaveAdapter: aaveAdapter.address,
-        }
-        console.table(addresses)
+        })
 
         // WHITELISTING
         await guard.connect(guardDeployer).setWhitelist(aave_pa.address, true)
@@ -131,18 +149,29 @@ describe.only('AaveV3SBasicBuyV2', async () => {
             operationExecutor: hardhatUtils.addresses.OPERATION_EXECUTOR_2,
             chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
         }
-
+        const targetOpenLtv = new BigNumber(0.6)
+        const openEthAmount = new BigNumber(5)
+        const collateralInWei = openEthAmount.times(new BigNumber(10).pow(18))
+        console.log(chalk.blue('collateralInWei', collateralInWei.toString()))
+        addresses = {
+            tokens: mainnetAddresses.tokens,
+            oracle: mainnetAddresses.oracle,
+            lendingPool: mainnetAddresses.lendingPool,
+            poolDataProvider: mainnetAddresses.poolDataProvider,
+            operationExecutor: hardhatUtils.addresses.OPERATION_EXECUTOR_2,
+            chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
+        }
         const positionTransitionData = await strategies.aave.multiply.v3.open(
             {
-                slippage: new BigNumber(0.25),
+                slippage: new BigNumber(0.001),
                 debtToken: { symbol: 'USDC', precision: 6 },
                 collateralToken: {
                     symbol: 'ETH',
                     precision: 18,
                 },
-                multiple: new RiskRatio(new BigNumber(0.73), RiskRatio.TYPE.LTV),
+                multiple: new RiskRatio(targetOpenLtv, RiskRatio.TYPE.LTV),
                 depositedByUser: {
-                    collateralInWei: new BigNumber(3).times(new BigNumber(10).pow(18)),
+                    collateralInWei: collateralInWei,
                 },
             },
             {
@@ -156,6 +185,9 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                 positionType: 'Multiply',
             },
         )
+        console.log(chalk.blue('open ltv target', new BigNumber(0.6).toString()))
+        console.log(chalk.green('open eth amount', openEthAmount.toString()))
+
         const operationExecutor = await hre.ethers.getContractAt(
             'IOperationExecutor',
             hardhatUtils.addresses.OPERATION_EXECUTOR_2,
@@ -164,14 +196,31 @@ describe.only('AaveV3SBasicBuyV2', async () => {
             positionTransitionData.transaction.calls,
             positionTransitionData.transaction.operationName,
         ])
-
+        debug('OPENING POSITION')
+        const value = EthersBN.from(openEthAmount.toString()).mul(EthersBN.from(10).pow(18))
+        console.log(chalk.blue('value', value.toString()))
         await (
             await account.connect(receiver).execute(operationExecutor.address, encodedOpenPositionData, {
                 gasLimit: 3000000,
-                value: EthersBN.from(3).mul(EthersBN.from(10).pow(18)),
+                value: value,
             })
         ).wait()
-        console.log('position opened')
+        debug('POSITION OPENED')
+        const currentPosition = await views.aave.v3(
+            {
+                proxy: proxyAddress,
+                debtToken: { symbol: 'USDC', precision: 6 },
+                collateralToken: {
+                    symbol: 'WETH',
+                },
+            },
+            {
+                addresses,
+                provider: ethers.provider,
+            },
+        )
+
+        console.log(chalk.green('ltv after OPEN', currentPosition.riskRatio.loanToValue.toString()))
     })
 
     describe('execute', async () => {
@@ -196,58 +245,6 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                     hardhatUtils.addresses.WETH,
                     hre.ethers.utils.parseEther('10'),
                 )
-                const addresses = {
-                    tokens: mainnetAddresses.tokens,
-                    oracle: mainnetAddresses.oracle,
-                    lendingPool: mainnetAddresses.lendingPool,
-                    poolDataProvider: mainnetAddresses.poolDataProvider,
-                    operationExecutor: hardhatUtils.addresses.OPERATION_EXECUTOR_2,
-                    chainlinkEthUsdPriceFeed: mainnetAddresses.chainlinkEthUsdPriceFeed,
-                }
-                const currentPosition = await views.aave.v3(
-                    {
-                        proxy: proxyAddress,
-                        debtToken: { symbol: 'USDC', precision: 6 },
-                        collateralToken: {
-                            symbol: 'WETH',
-                        },
-                    },
-                    {
-                        addresses,
-                        provider: ethers.provider,
-                    },
-                )
-                console.log(ltv.toString())
-                const positionTransitionData = await strategies.aave.multiply.v3.adjust(
-                    {
-                        slippage: new BigNumber(0.25),
-                        debtToken: { symbol: 'USDC', precision: 6 },
-                        collateralToken: {
-                            symbol: 'WETH',
-                        },
-                        multiple: new RiskRatio(new BigNumber(0.5), RiskRatio.TYPE.LTV),
-                    },
-                    {
-                        isDPMProxy: true,
-                        addresses,
-                        provider: ethers.provider,
-                        currentPosition,
-                        getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
-                        proxy: proxyAddress,
-                        user: receiverAddress,
-                        network: 'mainnet' as Network,
-                        positionType: 'Multiply',
-                    },
-                )
-
-                const operationExecutor = await hre.ethers.getContractAt(
-                    'IOperationExecutor',
-                    hardhatUtils.addresses.OPERATION_EXECUTOR_2,
-                )
-                encodedClosePositionData = operationExecutor.interface.encodeFunctionData('executeOp', [
-                    positionTransitionData.transaction.calls,
-                    positionTransitionData.transaction.operationName,
-                ])
             })
 
             describe('when Trigger is below current LTV', async () => {
@@ -266,6 +263,7 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                         'uint32', // maxBaseFeeInGwei
                     ]
                     const opName = utils.solidityKeccak256(['string'], [OPERATION_NAMES.aave.v3.ADJUST_RISK_UP])
+                    const targetLtv = 8000
                     const trigerDecodedData = [
                         proxyAddress, // positionAddress
                         TriggerType.AaveBasicBuyV2, // triggerType
@@ -273,11 +271,11 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                         hardhatUtils.addresses.USDC, // debtToken
                         hardhatUtils.addresses.WETH, // collateralToken
                         opName, // opName hash
-                        ltv.sub(2), // execCollRatio
-                        ltv.sub(2), // targetCollRatio
-                        '0', // maxBuyPrice
-                        '0', // deviation
-                        '0', // maxBaseFeeInGwei
+                        ltv.add(2), // execCollRatio
+                        targetLtv, // targetCollRatio
+                        '306158000000', // maxBuyPrice in chainlink precision
+                        '50', // deviation
+                        '300', // maxBaseFeeInGwei
                     ]
                     const triggerEncodedData = utils.defaultAbiCoder.encode(trigerDataTypes, trigerDecodedData)
                     triggerData = triggerEncodedData
@@ -293,6 +291,55 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                     const txRes = await tx.wait()
                     const [event] = getEvents(txRes, automationBotInstance.interface.getEvent('TriggerAdded'))
                     triggerId = event.args.triggerId.toNumber()
+
+                    const currentPosition = await views.aave.v3(
+                        {
+                            proxy: proxyAddress,
+                            debtToken: { symbol: 'USDC', precision: 6 },
+                            collateralToken: {
+                                symbol: 'WETH',
+                            },
+                        },
+                        {
+                            addresses,
+                            provider: ethers.provider,
+                        },
+                    )
+                    const targetLtvDma = new BigNumber(0.8)
+
+                    console.log(chalk.green('ltv before execution', currentPosition.riskRatio.loanToValue.toString()))
+                    console.log(chalk.blue('ltv target', targetLtvDma.toString()))
+
+                    const positionTransitionData = await strategies.aave.multiply.v3.adjust(
+                        {
+                            slippage: new BigNumber(0.001),
+                            debtToken: { symbol: 'USDC', precision: 6 },
+                            collateralToken: {
+                                symbol: 'WETH',
+                            },
+                            multiple: new RiskRatio(targetLtvDma, RiskRatio.TYPE.LTV),
+                        },
+                        {
+                            isDPMProxy: true,
+                            addresses,
+                            provider: ethers.provider,
+                            currentPosition,
+                            getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
+                            proxy: proxyAddress,
+                            user: receiverAddress,
+                            network: 'mainnet' as Network,
+                            positionType: 'Multiply',
+                        },
+                    )
+
+                    const operationExecutor = await hre.ethers.getContractAt(
+                        'IOperationExecutor',
+                        hardhatUtils.addresses.OPERATION_EXECUTOR_2,
+                    )
+                    encodedClosePositionData = operationExecutor.interface.encodeFunctionData('executeOp', [
+                        positionTransitionData.transaction.calls,
+                        positionTransitionData.transaction.operationName,
+                    ])
                 })
 
                 beforeEach(async () => {
@@ -305,17 +352,19 @@ describe.only('AaveV3SBasicBuyV2', async () => {
 
                 it.only('should execute trigger - with coverage below the limit', async () => {
                     const balanceBefore = await ethers.provider.getBalance(receiverAddress)
+                    debug('ADJUSTING POSITION')
                     const tx = await automationExecutorInstance.execute(
-                        encodedClosePositionData,
-                        triggerData,
-                        aaveBasicBuyCommand.address,
-                        triggerId,
-                        ethers.utils.parseUnits('9', 6),
-                        '0',
-                        178000,
-                        hardhatUtils.addresses.USDC,
+                        encodedClosePositionData, // executionData
+                        triggerData, // triggerData
+                        aaveBasicBuyCommand.address, // commandAddress
+                        triggerId, // triggerId
+                        ethers.utils.parseUnits('0', 6), // txCoverage
+                        '0', // minerBribe
+                        178000, // gasRefund
+                        hardhatUtils.addresses.USDC, // coverageToken
                         { gasLimit: 3000000 },
                     )
+                    debug('POSITION ADJUSTED')
                     const txRes = await tx.wait()
                     const txData = { usdcBalance: '0', wethBalance: '0', gasUsed: '0' }
                     const usdc = await ethers.getContractAt('ERC20', hardhatUtils.addresses.USDC)
@@ -324,8 +373,25 @@ describe.only('AaveV3SBasicBuyV2', async () => {
                     txData.wethBalance = returnedEth.toString()
                     txData.gasUsed = txRes.gasUsed.toString()
                     const userData = await aavePool.getUserAccountData(proxyAddress)
+
+                    const currentPosition = await views.aave.v3(
+                        {
+                            proxy: proxyAddress,
+                            debtToken: { symbol: 'USDC', precision: 6 },
+                            collateralToken: {
+                                symbol: 'WETH',
+                            },
+                        },
+                        {
+                            addresses,
+                            provider: ethers.provider,
+                        },
+                    )
+
+                    console.log(chalk.red('ltv after execution', currentPosition.riskRatio.loanToValue.toString()))
+
                     // TODO check a token
-                    expect(+txData.usdcBalance).to.be.greaterThan(+'127000000')
+                    expect(currentPosition.riskRatio.loanToValue.toString()).to.be.equal('0.8')
                     expect(userData.totalCollateralBase).to.be.eq(0)
                     expect(userData.totalDebtBase).to.be.eq(0)
                 })
