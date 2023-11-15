@@ -1,4 +1,4 @@
-import hre, {ethers} from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import { BigNumber as EthersBN, Signer } from 'ethers'
 import {
     AutomationBot,
@@ -10,16 +10,19 @@ import {
     IAccountGuard,
     AccountFactoryLike,
     SparkAdapter,
-    DPMAdapter, IPoolAddressesProvider, IPriceOracleGetter, IERC20,
+    DPMAdapter,
+    IPoolAddressesProvider,
+    IPriceOracleGetter,
+    IERC20,
 } from '../typechain'
-import {getEvents, HardhatUtils, getSwap} from '../scripts/common'
-import {deploySystem} from '../scripts/common/deploy-system'
+import { getEvents, HardhatUtils, getSwap } from '../scripts/common'
+import { deploySystem } from '../scripts/common/deploy-system'
 
 import BigNumber from 'bignumber.js'
-import {setBalance} from '@nomicfoundation/hardhat-network-helpers'
-import {CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType} from '@oasisdex/automation'
-import {expect} from 'chai'
-import {WstETHABI} from "./abis";
+import { setBalance } from '@nomicfoundation/hardhat-network-helpers'
+import { CommandContractType, TriggerGroupType, TriggerType, encodeTriggerDataByType } from '@oasisdex/automation'
+import { expect } from 'chai'
+import { WstETHABI } from './abis'
 
 describe('SparkStopLossCommandV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
@@ -54,7 +57,12 @@ describe('SparkStopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({utils: hardhatUtils, addCommands: true, logDebug: true})
+        const system = await deploySystem({
+            utils: hardhatUtils,
+            addCommands: true,
+            logDebug: true,
+            addAaveCommands: true,
+        })
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)
@@ -118,12 +126,12 @@ describe('SparkStopLossCommandV2', async () => {
             hardhatUtils.addresses.WSTETH,
             hre.ethers.utils.parseEther('1000'),
         )
-        wstETH = new hre.ethers.Contract(hardhatUtils.addresses.WSTETH, WstETHABI, hre.ethers.provider) as IERC20;
+        wstETH = new hre.ethers.Contract(hardhatUtils.addresses.WSTETH, WstETHABI, hre.ethers.provider) as IERC20
 
         const amountToDeposit = EthersBN.from(3).mul(EthersBN.from(10).pow(18))
 
-        const tx = await wstETH.connect(receiver).approve(proxyAddress, amountToDeposit);
-        await tx.wait();
+        const tx = await wstETH.connect(receiver).approve(proxyAddress, amountToDeposit)
+        await tx.wait()
 
         const encodedOpenData = spark_pa.interface.encodeFunctionData('openPosition', [
             hardhatUtils.addresses.WSTETH,
@@ -321,10 +329,7 @@ describe('SparkStopLossCommandV2', async () => {
                     toAsset: hardhatUtils.addresses.WETH,
                     amount: amountInWei,
                     receiveAtLeast: EthersBN.from(
-                        data.toTokenAmount
-                            .times(0.999)
-                            .integerValue(BigNumber.ROUND_DOWN)
-                            .toString(),
+                        data.toTokenAmount.times(0.999).integerValue(BigNumber.ROUND_DOWN).toString(),
                     ),
                     fee: fee,
                     withData: data.tx.data,
@@ -401,10 +406,10 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.WETH,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
                     const txRes = await tx.wait()
-                    const txData = {wethBalance: '0', wstEthBalance: '0', gasUsed: '0'}
+                    const txData = { wethBalance: '0', wstEthBalance: '0', gasUsed: '0' }
                     const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
                     const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
                     txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
@@ -426,7 +431,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.DAI,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
                     await expect(tx).to.be.revertedWith('spark-adapter/invalid-coverage-token')
                 })
@@ -440,7 +445,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.WETH,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
                     await expect(tx).to.be.revertedWith('spark-adapter/coverage-too-high')
                 })
@@ -454,7 +459,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.WETH,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
                     await expect(tx).to.be.revertedWith('spark-sl/funds-receiver-not-owner')
                 })
@@ -505,7 +510,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.WETH,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')
@@ -566,10 +571,7 @@ describe('SparkStopLossCommandV2', async () => {
                     toAsset: hardhatUtils.addresses.WETH,
                     amount: amountToSwap,
                     receiveAtLeast: EthersBN.from(
-                        data.toTokenAmount
-                            .times(0.999)
-                            .integerValue(BigNumber.ROUND_DOWN)
-                            .toString(),
+                        data.toTokenAmount.times(0.999).integerValue(BigNumber.ROUND_DOWN).toString(),
                     ),
                     fee: fee,
                     withData: data.tx.data,
@@ -634,11 +636,11 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.WETH,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
                     const txRes = await tx.wait()
 
-                    const txData = {wethBalance: '0', wstEthBalance: '0',  gasUsed: '0'}
+                    const txData = { wethBalance: '0', wstEthBalance: '0', gasUsed: '0' }
                     const weth = await ethers.getContractAt('ERC20', hardhatUtils.addresses.WETH)
                     const returnedWstEth = (await wstETH.balanceOf(receiverAddress)).sub(balanceBefore)
                     txData.wethBalance = (await weth.balanceOf(receiverAddress)).toString()
@@ -696,7 +698,7 @@ describe('SparkStopLossCommandV2', async () => {
                         '0',
                         178000,
                         hardhatUtils.addresses.DAI,
-                        {gasLimit: 3000000},
+                        { gasLimit: 3000000 },
                     )
 
                     await expect(tx).to.be.revertedWith('bot/trigger-execution-illegal')

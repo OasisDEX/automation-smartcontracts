@@ -8,8 +8,13 @@ import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { AutomationServiceName, EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
-import { isLocalNetwork } from './utils'
+import { getEvents, isLocalNetwork } from './utils'
 import { setCode } from '@nomicfoundation/hardhat-network-helpers'
+
+// /**
+//  * Utility class for interacting with Hardhat and Ethereum smart contracts.
+//  * @class
+//  */
 export class HardhatUtils {
     private readonly _cache = new NodeCache()
     public readonly addresses
@@ -101,6 +106,10 @@ export class HardhatUtils {
         const deployment = await factory.deploy(...params, await this.getGasSettings())
         return (await deployment.deployed()) as C
     }
+    public async getContract<F extends ethers.Contract>(name: string, address: string): Promise<F> {
+        const contract = await this.hre.ethers.getContractAt(name, address)
+        return contract as F
+    }
 
     public mpaServiceRegistry() {
         return {
@@ -123,6 +132,21 @@ export class HardhatUtils {
         }
 
         return await this.hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
+    }
+
+    /**
+     * Gets or creates a DPM account for the given address.
+     * @param address The address for which to get or create a DPM account.
+     * @param signer An optional signer to use for the contract interaction.
+     * @returns A Promise that resolves to an IAccountImplementation contract instance.
+     */
+    public async getOrCreateDpmAccount(address: string, signer?: Signer) {
+        const dpmFactory = await this.hre.ethers.getContractAt('AccountFactoryLike', this.addresses.DPM_FACTORY)
+        const tx = await dpmFactory.functions['createAccount(address)'](address)
+        const factoryReceipt = await tx.wait()
+        const [AccountCreatedEvent] = getEvents(factoryReceipt, dpmFactory.interface.getEvent('AccountCreated'))
+        const proxyAddress = AccountCreatedEvent.args.proxy.toString()
+        return await this.hre.ethers.getContractAt('IAccountImplementation', proxyAddress, signer)
     }
 
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {

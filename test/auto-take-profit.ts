@@ -60,8 +60,9 @@ describe('AutoTakeProfitCommmand', async () => {
 
         DAIInstance = await hre.ethers.getContractAt('IERC20', hardhatUtils.addresses.DAI)
         MPAInstance = await hre.ethers.getContractAt('MPALike', hardhatUtils.addresses.MULTIPLY_PROXY_ACTIONS)
-
-        const system = await deploySystem({ utils, addCommands: true })
+        console.log('deploying system')
+        const system = await deploySystem({ utils, addCommands: true, logDebug: true })
+        console.log('system deployed')
         AutomationBotInstance = system.automationBot
         AutomationExecutorInstance = system.automationExecutor
         AutoTakeProfitCommandInstance = system.autoTakeProfitCommand as MakerAutoTakeProfitCommandV2
