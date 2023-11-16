@@ -61,7 +61,7 @@ describe('SparkStopLossCommandV2', async () => {
             utils: hardhatUtils,
             addCommands: true,
             logDebug: true,
-            addAaveCommands: true,
+            addAaveLikeCommands: true,
         })
 
         receiver = hre.ethers.provider.getSigner(1)

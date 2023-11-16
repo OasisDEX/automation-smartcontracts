@@ -1,5 +1,5 @@
 import hre, { ethers } from 'hardhat'
-import { BigNumber as EthersBN, Signer, utils } from 'ethers'
+import { BigNumber as EthersBN, Signer } from 'ethers'
 import {
     AutomationBot,
     AutomationExecutor,
@@ -54,7 +54,7 @@ describe('AaveV3StopLossCommandV2', async () => {
                 },
             ],
         })
-        const system = await deploySystem({ utils: hardhatUtils, addCommands: true, addAaveCommands: true })
+        const system = await deploySystem({ utils: hardhatUtils, addCommands: true, addAaveLikeCommands: true })
 
         receiver = hre.ethers.provider.getSigner(1)
         notOwner = hre.ethers.provider.getSigner(5)

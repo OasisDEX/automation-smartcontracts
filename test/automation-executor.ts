@@ -219,6 +219,7 @@ describe('AutomationExecutor', async () => {
                 0,
                 15000,
                 dai.address,
+                { gasLimit: 3500000 },
             )
             await expect(tx).not.to.be.reverted
         })

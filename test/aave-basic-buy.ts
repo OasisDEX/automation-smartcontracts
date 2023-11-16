@@ -21,6 +21,34 @@ import { config as dotenvConfig } from 'dotenv'
 
 dotenvConfig()
 
+const HIGH_MAX_BUY_PRICE = '1000000000000000000000000000000000000000000000'
+const LOW_MAX_BUY_PRICE = '0'
+
+enum MaxBuyPrice {
+    HIGH = HIGH_MAX_BUY_PRICE,
+    LOW = LOW_MAX_BUY_PRICE,
+}
+
+type ValuesOf<T> = T[keyof T]
+type AaveV2OperationsNames = ValuesOf<(typeof OPERATION_NAMES)['aave']['v2']>
+type AaveV3OperationsNames = ValuesOf<(typeof OPERATION_NAMES)['aave']['v3']>
+type MakerOperationsNames = ValuesOf<(typeof OPERATION_NAMES)['maker']>
+type AjnaOperationsNames = ValuesOf<(typeof OPERATION_NAMES)['ajna']>
+type SparkOperationsNames = ValuesOf<(typeof OPERATION_NAMES)['spark']>
+type CommonOperationsNames = ValuesOf<(typeof OPERATION_NAMES)['common']>
+type OperationNames =
+    | CommonOperationsNames
+    | AaveV2OperationsNames
+    | AaveV3OperationsNames
+    | MakerOperationsNames
+    | AjnaOperationsNames
+    | SparkOperationsNames
+
+const triggerTypeToOperationNameMap: Partial<Record<TriggerType, OperationNames>> = {
+    [TriggerType.AaveBasicBuyV2]: OPERATION_NAMES.aave.v3.ADJUST_RISK_UP,
+    [TriggerType.AaveBasicSellV2]: OPERATION_NAMES.aave.v3.ADJUST_RISK_DOWN,
+}
+
 type PositionDetails = {
     debtToken: { symbol: AaveLikeTokens; precision: number }
     collateralToken: { symbol: AaveLikeTokens; precision: number }
@@ -29,7 +57,13 @@ type PositionDetails = {
     slippage?: BigNumber
     isEth?: boolean
 }
-
+type TriggerDetails = {
+    executionLtv: number
+    targetLtv: number
+    continuous: boolean
+    triggerType: TriggerType
+    maxBuyPrice: MaxBuyPrice
+}
 const { mainnet } = ADDRESSES
 const mainnetAddresses = {
     tokens: {
@@ -42,7 +76,7 @@ const mainnetAddresses = {
     chainlinkEthUsdPriceFeed: mainnet[SystemKeys.COMMON].ChainlinkPriceOracle_ETHUSD,
 } as AaveLikeStrategyAddresses
 
-describe.only('AaveV3BasicBuyV2', async () => {
+describe('AaveV3BasicBuyV2', async () => {
     const hardhatUtils = new HardhatUtils(hre)
 
     const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
@@ -54,29 +88,35 @@ describe.only('AaveV3BasicBuyV2', async () => {
     let snapshotIdTop: string
 
     let account: IAccountImplementation
-    let system: DeployedSystem
+    let system: NonNullable<DeployedSystem>
+    let positionDetails: PositionDetails
 
-    async function createTriggerForExecution(executionLtv: number, targetLtv: number, continuous: boolean) {
+    async function createTriggerForExecution(triggerDetails: TriggerDetails, positionDetails: PositionDetails) {
+        const debtAddress = mainnetAddresses.tokens[positionDetails.debtToken.symbol]
+        const collateralAddress =
+            positionDetails.collateralToken.symbol === 'ETH'
+                ? mainnetAddresses.tokens.WETH
+                : mainnetAddresses.tokens[positionDetails.collateralToken.symbol]
         const triggerData = encodeTriggerDataByType(CommandContractType.AaveBasicBuyCommandV2, [
             proxyAddress, // positionAddress
-            TriggerType.AaveBasicBuyV2, // triggerType
+            triggerDetails.triggerType, // triggerType
             maxCoverageUsdc, // maxCoverage
-            hardhatUtils.addresses.USDC, // debtToken
-            hardhatUtils.addresses.WETH, // collateralToken
-            utils.solidityKeccak256(['string'], [OPERATION_NAMES.aave.v3.ADJUST_RISK_UP]), // opName hash
-            executionLtv, // execCollRatio
-            targetLtv, // targetCollRatio
-            '906158000000', // maxBuyPrice in chainlink precision
+            debtAddress, // debtToken
+            collateralAddress, // collateralToken
+            utils.solidityKeccak256(['string'], [triggerTypeToOperationNameMap[triggerDetails.triggerType]]), // opName hash
+            triggerDetails.executionLtv, // execCollRatio
+            triggerDetails.targetLtv, // targetCollRatio
+            triggerDetails.maxBuyPrice, // maxBuyPrice in chainlink precision
             '50', // deviation
             '300', // maxBaseFeeInGwei
         ])
         const dataToSupply = system.automationBot.interface.encodeFunctionData('addTriggers', [
             TriggerGroupType.SingleTrigger,
-            [continuous],
+            [triggerDetails.continuous],
             [0],
             [triggerData],
             ['0x'],
-            [TriggerType.AaveBasicBuyV2],
+            [triggerDetails.triggerType],
         ])
         const tx = await account.connect(accountOwner).execute(system.automationBot.address, dataToSupply)
         const txRes = await tx.wait()
@@ -96,7 +136,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
                 },
             ],
         })
-        system = await deploySystem({ utils: hardhatUtils, addCommands: true, addAaveCommands: true })
+        system = await deploySystem({ utils: hardhatUtils, addCommands: true, addAaveLikeCommands: true })
 
         accountOwner = hre.ethers.provider.getSigner(1)
         accountOwnerAddress = await accountOwner.getAddress()
@@ -110,7 +150,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
         proxyAddress = account.address
 
         console.table({
-            aaveBasicBuyCommand: system.aaveBasicBuyCommand.address,
+            aaveBasicBuyCommand: system.aaveBasicBuyCommand!.address,
             accountOwnerAddress,
             proxyAddress,
             bot: system.automationBot.address,
@@ -125,10 +165,10 @@ describe.only('AaveV3BasicBuyV2', async () => {
         // TODO: add whitelist do deploySystem()
         await guard.connect(guardDeployer).setWhitelist(system.aaveProxyActions.address, true)
         await guard.connect(guardDeployer).setWhitelist(system.automationBot.address, true)
-        await guard.connect(guardDeployer).setWhitelist(system.aaveBasicBuyCommand.address, true)
+        await guard.connect(guardDeployer).setWhitelist(system.aaveBasicBuyCommand!.address, true)
         await guard.connect(accountOwner).permit(system.automationExecutor.address, proxyAddress, true)
 
-        const positionDetails = {
+        positionDetails = {
             debtToken: { symbol: 'USDC', precision: 6 },
             collateralToken: {
                 symbol: 'ETH',
@@ -139,7 +179,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
             isEth: true,
         } as const
 
-        await createOrAdjustTestPosition(hardhatUtils, account, accountOwner, positionDetails)
+        await createTestPosition(hardhatUtils, account, accountOwner, positionDetails)
     })
 
     describe('execute', async () => {
@@ -177,7 +217,14 @@ describe.only('AaveV3BasicBuyV2', async () => {
             describe('when executionLtv is above current LTV', async () => {
                 before(async () => {
                     targetLtv = 8000
-                    ;({ triggerId, triggerData } = await createTriggerForExecution(ltv + 2, targetLtv, false))
+                    const triggerDetails = {
+                        executionLtv: ltv + 2,
+                        targetLtv,
+                        continuous: false,
+                        triggerType: TriggerType.AaveBasicBuyV2,
+                        maxBuyPrice: MaxBuyPrice.HIGH,
+                    }
+                    ;({ triggerId, triggerData } = await createTriggerForExecution(triggerDetails, positionDetails))
                 })
 
                 beforeEach(async () => {
@@ -189,52 +236,18 @@ describe.only('AaveV3BasicBuyV2', async () => {
                 })
 
                 it('should execute trigger - with target LTV ', async () => {
-                    const currentPosition = await views.aave.v3(
-                        {
-                            proxy: proxyAddress,
-                            debtToken: { symbol: 'USDC', precision: 6 },
-                            collateralToken: {
-                                symbol: 'WETH',
-                            },
-                        },
-                        {
-                            addresses: mainnetAddresses,
-                            provider: ethers.provider,
-                        },
+                    encodedBasicBuyPositionData = await createExecutionData(
+                        proxyAddress,
+                        targetLtv,
+                        hardhatUtils,
+                        accountOwnerAddress,
+                        positionDetails,
                     )
-                    const targetLtvDma = new BigNumber(targetLtv / 10000)
-                    const positionTransitionData = await strategies.aave.multiply.v3.adjust(
-                        {
-                            slippage: new BigNumber(0.001),
-                            debtToken: { symbol: 'USDC', precision: 6 },
-                            collateralToken: { symbol: 'WETH', precision: 18 },
-                            multiple: new RiskRatio(targetLtvDma, RiskRatio.TYPE.LTV),
-                        },
-                        {
-                            isDPMProxy: true,
-                            addresses: mainnetAddresses,
-                            provider: ethers.provider,
-                            currentPosition,
-                            getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
-                            proxy: proxyAddress,
-                            user: accountOwnerAddress,
-                            network: 'mainnet' as Network,
-                            positionType: 'Multiply',
-                        },
-                    )
-                    const operationExecutor = await hre.ethers.getContractAt(
-                        'IOperationExecutor',
-                        hardhatUtils.addresses.OPERATION_EXECUTOR_2,
-                    )
-                    encodedBasicBuyPositionData = operationExecutor.interface.encodeFunctionData('executeOp', [
-                        positionTransitionData.transaction.calls,
-                        positionTransitionData.transaction.operationName,
-                    ])
 
                     await system.automationExecutor.execute(
                         encodedBasicBuyPositionData, // executionData
                         triggerData, // triggerData
-                        system.aaveBasicBuyCommand.address, // commandAddress
+                        system.aaveBasicBuyCommand!.address, // commandAddress
                         triggerId, // triggerId
                         ethers.utils.parseUnits('0', 6), // txCoverage
                         0, // minerBribe
@@ -256,17 +269,17 @@ describe.only('AaveV3BasicBuyV2', async () => {
                             provider: ethers.provider,
                         },
                     )
-
+                    const expectedTarget = new BigNumber(targetLtv / 10000)
                     expect(postExecutionPosition.riskRatio.loanToValue.toNumber()).to.be.within(
-                        targetLtvDma.minus(0.005).toNumber(),
-                        targetLtvDma.plus(0.005).toNumber(),
+                        expectedTarget.minus(0.005).toNumber(),
+                        expectedTarget.plus(0.005).toNumber(),
                     )
                 })
                 it('clears the trigger if `continuous` is set to false', async () => {
                     const tx = await system.automationExecutor.execute(
                         encodedBasicBuyPositionData, // executionData
                         triggerData, // triggerData
-                        system.aaveBasicBuyCommand.address, // commandAddress
+                        system.aaveBasicBuyCommand!.address, // commandAddress
                         triggerId, // triggerId
                         ethers.utils.parseUnits('0', 6), // txCoverage
                         0, // minerBribe
@@ -292,7 +305,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
                     const tx = system.automationExecutor.execute(
                         encodedBasicBuyPositionData,
                         triggerData,
-                        system.aaveBasicBuyCommand.address,
+                        system.aaveBasicBuyCommand!.address,
                         triggerId,
                         ethers.utils.parseUnits('9', 6),
                         '0',
@@ -306,7 +319,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
                     const tx = system.automationExecutor.execute(
                         encodedBasicBuyPositionData,
                         triggerData,
-                        system.aaveBasicBuyCommand.address,
+                        system.aaveBasicBuyCommand!.address,
                         triggerId,
                         ethers.utils.parseUnits('11', 6),
                         '0',
@@ -320,7 +333,14 @@ describe.only('AaveV3BasicBuyV2', async () => {
             describe('when executionLtv is below current LTV', async () => {
                 before(async () => {
                     targetLtv = 8000
-                    ;({ triggerId, triggerData } = await createTriggerForExecution(ltv - 2, targetLtv, false))
+                    const triggerDetails = {
+                        executionLtv: ltv - 2,
+                        targetLtv,
+                        continuous: false,
+                        triggerType: TriggerType.AaveBasicBuyV2,
+                        maxBuyPrice: MaxBuyPrice.HIGH,
+                    }
+                    ;({ triggerId, triggerData } = await createTriggerForExecution(triggerDetails, positionDetails))
                 })
 
                 beforeEach(async () => {
@@ -377,7 +397,7 @@ describe.only('AaveV3BasicBuyV2', async () => {
                     const tx = system.automationExecutor.execute(
                         encodedBasicBuyPositionData, // executionData
                         triggerData, // triggerData
-                        system.aaveBasicBuyCommand.address, // commandAddress
+                        system.aaveBasicBuyCommand!.address, // commandAddress
                         triggerId, // triggerId
                         ethers.utils.parseUnits('0', 6), // txCoverage
                         0, // minerBribe
@@ -393,7 +413,58 @@ describe.only('AaveV3BasicBuyV2', async () => {
     })
 })
 
-async function createOrAdjustTestPosition(
+async function createExecutionData(
+    proxyAddress: string,
+    targetLtv: number,
+    hardhatUtils: HardhatUtils,
+    accountOwnerAddress: string,
+    positionDetails: PositionDetails,
+    slippage = new BigNumber(0.001),
+) {
+    const collateralSymbol =
+        positionDetails.collateralToken.symbol === 'ETH' ? 'WETH' : positionDetails.collateralToken.symbol
+    const currentPosition = await views.aave.v3(
+        {
+            proxy: proxyAddress,
+            debtToken: positionDetails.debtToken,
+            collateralToken: {
+                symbol: collateralSymbol,
+            },
+        },
+        {
+            addresses: mainnetAddresses,
+            provider: ethers.provider,
+        },
+    )
+    const targetLtvDma = new BigNumber(targetLtv / 10000)
+    const positionTransitionData = await strategies.aave.multiply.v3.adjust(
+        {
+            slippage: slippage,
+            debtToken: positionDetails.debtToken,
+            collateralToken: currentPosition.collateral,
+            multiple: new RiskRatio(targetLtvDma, RiskRatio.TYPE.LTV),
+        },
+        {
+            isDPMProxy: true,
+            addresses: mainnetAddresses,
+            provider: ethers.provider,
+            currentPosition,
+            getSwapData: getOneInchCall(hardhatUtils.addresses.SWAP),
+            proxy: proxyAddress,
+            user: accountOwnerAddress,
+            network: 'mainnet' as Network,
+            positionType: 'Multiply',
+        },
+    )
+    const operationExecutor = await hre.ethers.getContractAt('IOperationExecutor', mainnetAddresses.operationExecutor)
+    const encodedBasicBuyPositionData = operationExecutor.interface.encodeFunctionData('executeOp', [
+        positionTransitionData.transaction.calls,
+        positionTransitionData.transaction.operationName,
+    ])
+    return encodedBasicBuyPositionData
+}
+
+async function createTestPosition(
     hardhatUtils: HardhatUtils,
     account: IAccountImplementation,
     accountOwner: Signer,
