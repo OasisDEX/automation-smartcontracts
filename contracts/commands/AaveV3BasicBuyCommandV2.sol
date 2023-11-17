@@ -152,14 +152,18 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         );
 
         // assure that the execution LTV is lower than the lower target, so it wont execute again
-        bool a = basicBuyTriggerData.executionLTV < lowerBoundTarget;
+        bool executionLtvBelowLowerTarget = basicBuyTriggerData.executionLTV < lowerBoundTarget;
         // assure that the trigger type is the correct one
-        bool b = basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE;
+        bool triggerTypeCorrect = basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE;
         // assure that the upper bound of target LTV is lower than the max LTV, it would revert on execution
-        bool c = upperBoundTarget < maxLtv;
+        bool upperTargetBelowMaxLtv = upperBoundTarget < maxLtv;
         // assure that the deviation is valid ( above minimal allowed deviation)
-        bool d = deviationIsValid(basicBuyTriggerData.deviation);
-        return a && b && c && d;
+        bool deviationValid = deviationIsValid(basicBuyTriggerData.deviation);
+        return
+            executionLtvBelowLowerTarget &&
+            triggerTypeCorrect &&
+            upperTargetBelowMaxLtv &&
+            deviationValid;
     }
 
     /**
@@ -177,6 +181,10 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         (uint256 totalCollateralBase, uint256 totalDebtBase, , , uint256 maxLtv, ) = lendingPool
             .getUserAccountData(basicBuyTriggerData.positionAddress);
 
+        if (totalCollateralBase == 0 || totalDebtBase == 0) {
+            return false;
+        }
+
         /* Calculate the loan-to-value (LTV) ratio for Aave V3
          LTV is the ratio of the total debt to the total collateral, expressed as a percentage
          The result is multiplied by 10000 to preserve precision
@@ -189,19 +197,19 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         );
 
         // LTV has to be below or equal the execution LTV set by the user to execute
-        bool a = ltv <= basicBuyTriggerData.executionLTV;
+        bool ltvBelowExecution = ltv <= basicBuyTriggerData.executionLTV;
 
         // oracle price has to be below the maxBuyPrice set by the user
-        bool b = currentPrice <= basicBuyTriggerData.maxBuyPrice;
+        bool priceBelowMax = currentPrice <= basicBuyTriggerData.maxBuyPrice;
 
         // blocks base fee has to be below the limit set by the user (maxBaseFeeInGwei)
-        bool c = baseFeeIsValid(basicBuyTriggerData.maxBaseFeeInGwei);
+        bool baseFeeValid = baseFeeIsValid(basicBuyTriggerData.maxBaseFeeInGwei);
 
         // upper bound of target LTV after execution has to be below the max LTV
         // it is checked again as maxLtv might have changed since the trigger was created
-        bool d = upperBoundTarget < maxLtv;
+        bool upperTargetBelowMaxLtv = upperBoundTarget < maxLtv;
 
-        return a && b && c && d;
+        return ltvBelowExecution && priceBelowMax && baseFeeValid && upperTargetBelowMaxLtv;
     }
 
     function getTriggerType(bytes calldata triggerData) external view override returns (uint16) {
