@@ -2,7 +2,7 @@
 
 /// BaseDMACommand.sol
 
-// Copyright (C) 2021-2023 Oazo Apps Limited
+// Copyright (C) 2023 Oazo Apps Limited
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as published by
@@ -25,7 +25,13 @@ import { IServiceRegistry } from "../interfaces/IServiceRegistry.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IOperationExecutor, Call } from "../interfaces/IOperationExecutor.sol";
 
+/**
+ * @title BaseDMACommand
+ * @dev Abstract contract that serves as the base for DMA based commands.
+ * It implements common functionality and error handling for DMA commands.
+ */
 abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
+    // Error declarations
     error EmptyAddress(string name);
     error InvalidTriggerType(uint16 triggerType);
     error CallerNotAutomationBot(address caller);
@@ -45,42 +51,73 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
 
     uint256 public constant MIN_ALLOWED_DEVIATION = 50; // corrresponds to 0.5%
 
+    /**
+     * @dev Constructor function.
+     * @param _serviceRegistry The address of the service registry contract.
+     */
     constructor(IServiceRegistry _serviceRegistry) {
+        // Validate service registry address
         if (address(_serviceRegistry) == address(0)) {
             revert EmptyAddress("service registry");
         }
+        // Get the address of the automation bot from the service registry
         bot = _serviceRegistry.getRegisteredService(AUTOMATION_BOT);
+        // Validate automation bot address
         if (bot == address(0)) {
             revert EmptyAddress("bot");
         }
 
+        // Get the address of the operation executor from the service registry
         operationExecutor = IOperationExecutor(
             _serviceRegistry.getRegisteredService(OPERATION_EXECUTOR)
         );
+        // Validate operation executor address
         if (address(operationExecutor) == address(0)) {
             revert EmptyAddress("operation executor");
         }
 
+        // Get the address of the WETH token from the service registry
         weth = _serviceRegistry.getRegisteredService(WETH);
+        // Validate WETH address
         if (weth == address(0)) {
             revert EmptyAddress("weth");
         }
     }
 
+    /**
+     * @dev Checks if the provided deviation is valid.
+     * @param deviation The deviation value to check.
+     * @return A boolean indicating whether the deviation is valid or not.
+     */
     function deviationIsValid(uint256 deviation) internal pure returns (bool) {
         return deviation >= MIN_ALLOWED_DEVIATION;
     }
 
+    /**
+     * @dev Checks if the provided base fee is valid.
+     * @param maxAcceptableBaseFeeInGwei The maximum acceptable base fee in Gwei.
+     * @return A boolean indicating whether the base fee is valid or not.
+     */
     function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) internal view returns (bool) {
         return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
     }
 
+    /**
+     * @dev Validates the trigger type.
+     * @param triggerType The actual trigger type.
+     * @param expectedTriggerType The expected trigger type.
+     */
     function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) internal pure {
         if (triggerType != expectedTriggerType) {
             revert InvalidTriggerType(triggerType);
         }
     }
 
+    /**
+     * @dev Validates the selector.
+     * @param expectedSelector The expected selector.
+     * @param executionData The execution data containing the selector.
+     */
     function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
         if (selector != expectedSelector) {
@@ -89,7 +126,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
     }
 
     /**
-     * @dev Validates the operation hash by decoding the input data and comparing it with the provided operation hash.
+     * @dev Validates the operation hash.
      * @param _data The operation executor execution data containing the operation hash.
      * @param operationHash The expected operation hash stored in trigger data.
      */
