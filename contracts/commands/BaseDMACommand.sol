@@ -124,7 +124,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
         uint16 triggerType,
         uint16 expectedTriggerType
     ) internal pure returns (bool) {
-        return triggerType != expectedTriggerType;
+        return triggerType == expectedTriggerType;
     }
 
     /**
@@ -134,7 +134,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
      */
     function _validateSelector(bytes4 expectedSelector, bytes memory executionData) internal pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
-        if (_isSelectorValid(expectedSelector, selector)) {
+        if (!_isSelectorValid(expectedSelector, selector)) {
             revert InvalidSelector(selector);
         }
     }
@@ -149,7 +149,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
         bytes4 expectedSelector,
         bytes4 selector
     ) internal pure returns (bool) {
-        return selector != expectedSelector;
+        return selector == expectedSelector;
     }
 
     /**
