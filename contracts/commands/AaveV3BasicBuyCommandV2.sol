@@ -29,17 +29,19 @@ import { IOperationExecutor, Call } from "../interfaces/IOperationExecutor.sol";
 import { BaseDMACommand, ICommand } from "./BaseDMACommand.sol";
 
 struct BasicBuyTriggerData {
-    address positionAddress;
-    uint16 triggerType;
-    uint256 maxCoverage;
-    address debtToken;
-    address collateralToken;
-    bytes32 operationHash;
-    uint256 executionLTV;
-    uint256 targetLTV;
-    uint256 maxBuyPrice;
-    uint64 deviation;
-    uint32 maxBaseFeeInGwei;
+    /* start of common V2 TriggerData parameters */
+    address positionAddress; // Address of the position - dpm proxy
+    uint16 triggerType; // Type of trigger
+    uint256 maxCoverage; // Maximum coverage amount - max amount of additional debt taken to cover execution gas fee
+    address debtToken; // Address of the debt token
+    address collateralToken; // Address of the collateral token
+    bytes32 operationHash; // Hash of the operation execution operation TODO
+    /* end of common V2 TriggerData parameters */
+    uint256 executionLTV; // Execution loan-to-value ratio
+    uint256 targetLTV; // Target loan-to-value ratio
+    uint256 maxBuyPrice; // maximum buy price
+    uint64 deviation; // Deviation from target LTV after execution - eg 50 corresponds to 0.5%
+    uint32 maxBaseFeeInGwei; // Maximum base fee in Gwei
 }
 
 /**
@@ -80,7 +82,6 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
             revert EmptyAddress("price oracle");
         }
         priceOracle = IPriceOracleGetter(priceOracleAddress);
-        self = address(this);
     }
 
     /**
@@ -118,12 +119,12 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
             triggerData,
             (BasicBuyTriggerData)
         );
-        validateTriggerType(basicBuyTriggerData.triggerType, AAVE_V3_BASIC_BUY_TRIGGER_TYPE);
+        _validateTriggerType(basicBuyTriggerData.triggerType, AAVE_V3_BASIC_BUY_TRIGGER_TYPE);
         AaveV3BasicBuyCommandV2(self).validateoperationHash(
             executionData,
             basicBuyTriggerData.operationHash
         );
-        validateSelector(operationExecutor.executeOp.selector, executionData);
+        _validateSelector(operationExecutor.executeOp.selector, executionData);
         IAccountImplementation(basicBuyTriggerData.positionAddress).execute(
             address(operationExecutor),
             executionData
@@ -134,7 +135,7 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
      *  @inheritdoc ICommand
      */
     function isTriggerDataValid(
-        bool omitted,
+        bool,
         bytes memory triggerData
     ) external view override returns (bool) {
         BasicBuyTriggerData memory basicBuyTriggerData = abi.decode(
@@ -154,11 +155,14 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         // assure that the execution LTV is lower than the lower target, so it wont execute again
         bool executionLtvBelowLowerTarget = basicBuyTriggerData.executionLTV < lowerBoundTarget;
         // assure that the trigger type is the correct one
-        bool triggerTypeCorrect = basicBuyTriggerData.triggerType == AAVE_V3_BASIC_BUY_TRIGGER_TYPE;
+        bool triggerTypeCorrect = _isTriggerTypeValid(
+            basicBuyTriggerData.triggerType,
+            AAVE_V3_BASIC_BUY_TRIGGER_TYPE
+        );
         // assure that the upper bound of target LTV is lower than the max LTV, it would revert on execution
         bool upperTargetBelowMaxLtv = upperBoundTarget < maxLtv;
         // assure that the deviation is valid ( above minimal allowed deviation)
-        bool deviationValid = deviationIsValid(basicBuyTriggerData.deviation);
+        bool deviationValid = _isDeviationValid(basicBuyTriggerData.deviation);
         return
             executionLtvBelowLowerTarget &&
             triggerTypeCorrect &&
@@ -181,6 +185,8 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         (uint256 totalCollateralBase, uint256 totalDebtBase, , , uint256 maxLtv, ) = lendingPool
             .getUserAccountData(basicBuyTriggerData.positionAddress);
 
+        /* if there is no debt or colalteral we skip the checks - it will happen eg if the user closed
+        the position but havent removed the trigger */
         if (totalCollateralBase == 0 || totalDebtBase == 0) {
             return false;
         }
@@ -203,7 +209,7 @@ contract AaveV3BasicBuyCommandV2 is BaseDMACommand {
         bool priceBelowMax = currentPrice <= basicBuyTriggerData.maxBuyPrice;
 
         // blocks base fee has to be below the limit set by the user (maxBaseFeeInGwei)
-        bool baseFeeValid = baseFeeIsValid(basicBuyTriggerData.maxBaseFeeInGwei);
+        bool baseFeeValid = _isBaseFeeValid(basicBuyTriggerData.maxBaseFeeInGwei);
 
         // upper bound of target LTV after execution has to be below the max LTV
         // it is checked again as maxLtv might have changed since the trigger was created

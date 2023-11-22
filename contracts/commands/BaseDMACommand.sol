@@ -82,6 +82,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
         if (weth == address(0)) {
             revert EmptyAddress("weth");
         }
+        self = address(this);
     }
 
     /**
@@ -89,7 +90,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
      * @param deviation The deviation value to check.
      * @return A boolean indicating whether the deviation is valid or not.
      */
-    function deviationIsValid(uint256 deviation) internal pure returns (bool) {
+    function _isDeviationValid(uint256 deviation) internal pure returns (bool) {
         return deviation >= MIN_ALLOWED_DEVIATION;
     }
 
@@ -98,31 +99,57 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
      * @param maxAcceptableBaseFeeInGwei The maximum acceptable base fee in Gwei.
      * @return A boolean indicating whether the base fee is valid or not.
      */
-    function baseFeeIsValid(uint256 maxAcceptableBaseFeeInGwei) internal view returns (bool) {
-        return block.basefee <= maxAcceptableBaseFeeInGwei * (10 ** 9);
+    function _isBaseFeeValid(uint256 maxAcceptableBaseFeeInGwei) internal view returns (bool) {
+        return block.basefee <= maxAcceptableBaseFeeInGwei * 1 gwei;
     }
 
     /**
-     * @dev Validates the trigger type.
+     * @dev Validates the trigger type. Reverts if that's not the case
      * @param triggerType The actual trigger type.
      * @param expectedTriggerType The expected trigger type.
      */
-    function validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) internal pure {
-        if (triggerType != expectedTriggerType) {
+    function _validateTriggerType(uint16 triggerType, uint16 expectedTriggerType) internal pure {
+        if (!_isTriggerTypeValid(triggerType, expectedTriggerType)) {
             revert InvalidTriggerType(triggerType);
         }
     }
 
     /**
-     * @dev Validates the selector.
+     * @dev Checks if the given trigger type is valid.
+     * @param triggerType The trigger type to check.
+     * @param expectedTriggerType The expected trigger type.
+     * @return A boolean indicating whether the trigger type is valid or not.
+     */
+    function _isTriggerTypeValid(
+        uint16 triggerType,
+        uint16 expectedTriggerType
+    ) internal pure returns (bool) {
+        return triggerType != expectedTriggerType;
+    }
+
+    /**
+     * @dev Validates the selector. Reverts in case it is not.
      * @param expectedSelector The expected selector.
      * @param executionData The execution data containing the selector.
      */
-    function validateSelector(bytes4 expectedSelector, bytes memory executionData) public pure {
+    function _validateSelector(bytes4 expectedSelector, bytes memory executionData) internal pure {
         bytes4 selector = abi.decode(executionData, (bytes4));
-        if (selector != expectedSelector) {
+        if (_isSelectorValid(expectedSelector, selector)) {
             revert InvalidSelector(selector);
         }
+    }
+
+    /**
+     * @dev Checks if the given selector is valid by comparing it with the expected selector.
+     * @param expectedSelector The expected selector.
+     * @param selector The selector to be checked.
+     * @return A boolean indicating whether the selector is valid or not.
+     */
+    function _isSelectorValid(
+        bytes4 expectedSelector,
+        bytes4 selector
+    ) internal pure returns (bool) {
+        return selector != expectedSelector;
     }
 
     /**
