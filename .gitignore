@@ -12,3 +12,4 @@ artifacts
 dist/
 test/workspace.code-workspace
 tenderly.yaml
+yarn-error.log
