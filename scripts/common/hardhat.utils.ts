@@ -45,7 +45,7 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_SERVICE_REGISTRY,
             ),
             mcdUtils: await this.hre.ethers.getContractAt('McdUtils', this.addresses.AUTOMATION_MCD_UTILS),
-            automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
+            automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT_V2),
             makerSecurityAdapter: await this.hre.ethers.getContractAt(
                 'MakerSecurityAdapter',
                 this.addresses.MAKER_SECURITY_ADAPTER,

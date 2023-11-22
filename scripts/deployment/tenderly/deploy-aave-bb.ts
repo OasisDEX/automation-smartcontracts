@@ -14,14 +14,28 @@ import { config } from 'dotenv'
 import chalk from 'chalk'
 import { DeployedSystem } from '../../common/deploy-system'
 import { tenderlySendTransaction, tenderlySetBalance } from '../../common/tenderly.utils'
-
+import { views } from '@oasisdex/dma-library'
+import BigNumber from 'bignumber.js'
+import {
+    MaxBuyPrice,
+    TriggerDetails,
+    createTestPosition,
+    createTriggerForExecution,
+    mainnetAddresses,
+} from '../../common/dma.utils'
 config()
 
 if (!process.env.TENDERLY_NODE) {
     throw new Error('TENDERLY_NODE env var not set')
 }
-
+const maxCoverageUsdc = hre.ethers.utils.parseUnits('10', 6)
 const provider = new providers.JsonRpcProvider(process.env.TENDERLY_NODE)
+const hardhatUtils = new HardhatUtils(hre)
+
+// const triggerTypeToOperationNameMap: Partial<Record<TriggerType, OperationNames>> = {
+//     [TriggerType.AaveBasicBuyV2]: OPERATION_NAMES.aave.v3.ADJUST_RISK_UP,
+//     [TriggerType.AaveBasicSellV2]: OPERATION_NAMES.aave.v3.ADJUST_RISK_DOWN,
+// }
 
 /**
  * Creates a function that adds or updates a service in a ServiceRegistry contract.
@@ -146,6 +160,51 @@ async function main() {
 
     console.log(chalk.green(`AaveBasicBuy Deployed: ${basicBuyCommand!.address}`))
     console.log(chalk.green(`AaveBasicSell Deployed: ${basicSellCommand!.address}`))
+
+    await tenderlySetBalance(deployerAddress, provider)
+    const account = await hardhatUtils.getOrCreateDpmAccount(deployerAddress)
+
+    const positionDetails = {
+        accountAddress: account.address,
+        ownerAddress: deployerAddress,
+        debtToken: { symbol: 'USDC', precision: 6 },
+        collateralToken: {
+            symbol: 'ETH',
+            precision: 18,
+        },
+        amount: new BigNumber(5).times(new BigNumber(10).pow(18)),
+        ltv: new BigNumber(0.6),
+        isEth: true,
+    } as const
+
+    await createTestPosition(positionDetails, hardhatUtils, account, hre.ethers.provider)
+    const currentPosition = await views.aave.v3(
+        {
+            proxy: account.address,
+            debtToken: { symbol: 'USDC', precision: 6 },
+            collateralToken: {
+                symbol: 'WETH',
+            },
+        },
+        {
+            addresses: mainnetAddresses,
+            provider: hre.ethers.provider,
+        },
+    )
+
+    const ltv = Number(currentPosition.riskRatio.loanToValue.times(10000).toFixed(0))
+
+    const targetLtv = 8000
+
+    const triggerDetails: TriggerDetails = {
+        executionLtv: ltv + 2,
+        targetLtv,
+        continuous: false,
+        triggerType: TriggerType.AaveBasicBuyV2,
+        maxBuyPrice: MaxBuyPrice.HIGH,
+        maxCoverage: maxCoverageUsdc,
+    }
+    await createTriggerForExecution(triggerDetails, positionDetails, account, system)
 }
 
 main().catch(error => {

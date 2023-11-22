@@ -35,12 +35,14 @@ export async function tenderlySendTransaction(
     return res
 }
 /**
- * Sets the balance of the specified address to 10 ether using Tenderly.
+ * Sets the balance of the specified address to 1000 ether using Tenderly.
  * @param deployerAddress The address of the deployer whose balance will be set.
  */
 export async function tenderlySetBalance(address: string, provider: providers.JsonRpcProvider) {
+    console.log(chalk.dim(`Setting balance of ${address} to 1000 ETH`))
     await provider.send('tenderly_setBalance', [
         address,
-        ethers.utils.hexValue(ethers.utils.parseUnits('10', 'ether').toHexString()),
+        ethers.utils.hexValue(ethers.utils.parseUnits('1000', 'ether').toHexString()),
     ])
+    console.log(chalk.dim(`Balance of ${address} is now 1000 ETH`))
 }
