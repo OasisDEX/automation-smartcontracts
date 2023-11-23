@@ -157,7 +157,7 @@ abstract contract BaseDMACommand is ReentrancyGuard, ICommand {
      * @param _data The operation executor execution data containing the operation hash.
      * @param operationHash The expected operation hash stored in trigger data.
      */
-    function validateoperationHash(bytes calldata _data, bytes32 operationHash) public pure {
+    function _validateOperationHash(bytes calldata _data, bytes32 operationHash) internal pure {
         (, string memory decodedoperationHash) = abi.decode(_data[4:], (Call[], string));
 
         if (keccak256(abi.encodePacked(decodedoperationHash)) != operationHash) {

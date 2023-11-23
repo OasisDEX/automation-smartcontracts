@@ -121,11 +121,9 @@ contract AaveV3BasicSellCommandV2 is BaseDMACommand {
             triggerData,
             (BasicSellTriggerData)
         );
+
         _validateTriggerType(basicSellTriggerData.triggerType, AAVE_V3_BASIC_SELL_TRIGGER_TYPE);
-        AaveV3BasicSellCommandV2(self).validateoperationHash(
-            executionData,
-            basicSellTriggerData.operationHash
-        );
+        _validateOperationHash(executionData, basicSellTriggerData.operationHash);
         _validateSelector(operationExecutor.executeOp.selector, executionData);
         IAccountImplementation(basicSellTriggerData.positionAddress).execute(
             address(operationExecutor),
