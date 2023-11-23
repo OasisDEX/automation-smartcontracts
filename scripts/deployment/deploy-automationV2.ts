@@ -101,7 +101,10 @@ async function main() {
         utils.addresses.DPM_GUARD,
     ])
 
-    await ensureServiceRegistryEntry(getServiceNameHash(AutomationServiceName.DPM_ADAPTER), DpmAdapterInstance.address)
+    await ensureServiceRegistryEntry(
+        getServiceNameHash(AutomationServiceName.AUTOMATION_DPM_ADAPTER),
+        DpmAdapterInstance.address,
+    )
 
     console.log(`DPMAdapter Deployed: ${DpmAdapterInstance.address}`)
 
@@ -112,7 +115,7 @@ async function main() {
     console.log(`AAVEAdapter Deployed: ${AaveAdapterInstance.address}`)
 
     await ensureServiceRegistryEntry(
-        getServiceNameHash(AutomationServiceName.AAVE_ADAPTER),
+        getServiceNameHash(AutomationServiceName.AUTOMATION_AAVE_ADAPTER),
         AaveAdapterInstance.address,
     )
 

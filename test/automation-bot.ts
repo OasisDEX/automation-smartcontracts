@@ -320,7 +320,7 @@ describe('AutomationBot', async () => {
                 [triggerType],
             ])
             const tx = ownerProxy.connect(owner).execute(AutomationBotInstance.address, dataToSupply)
-            await expect(tx).to.be.revertedWith('')
+            await expect(tx).to.be.reverted
         })
     })
 

@@ -8,12 +8,20 @@ import BigNumber from 'bignumber.js'
 import { coalesceNetwork, ETH_ADDRESS, getAddressesFor } from './addresses'
 import { AutomationServiceName, EtherscanGasPrice, Network } from './types'
 import { DeployedSystem } from './deploy-system'
-import { isLocalNetwork } from './utils'
+import { getEvents, isLocalNetwork } from './utils'
 import { setCode } from '@nomicfoundation/hardhat-network-helpers'
+
+// /**
+//  * Utility class for interacting with Hardhat and Ethereum smart contracts.
+//  * @class
+//  */
 export class HardhatUtils {
     private readonly _cache = new NodeCache()
     public readonly addresses
-    constructor(public readonly hre: HardhatRuntimeEnvironment, public readonly forked?: Network) {
+    constructor(
+        public readonly hre: HardhatRuntimeEnvironment,
+        public readonly forked?: Network,
+    ) {
         this.addresses = getAddressesFor(this.forked || this.hre.network.name)
     }
 
@@ -37,7 +45,7 @@ export class HardhatUtils {
                 this.addresses.AUTOMATION_SERVICE_REGISTRY,
             ),
             mcdUtils: await this.hre.ethers.getContractAt('McdUtils', this.addresses.AUTOMATION_MCD_UTILS),
-            automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT),
+            automationBot: await this.hre.ethers.getContractAt('AutomationBot', this.addresses.AUTOMATION_BOT_V2),
             makerSecurityAdapter: await this.hre.ethers.getContractAt(
                 'MakerSecurityAdapter',
                 this.addresses.MAKER_SECURITY_ADAPTER,
@@ -67,18 +75,9 @@ export class HardhatUtils {
                 'MakerBasicSellCommandV2',
                 this.addresses.AUTOMATION_BASIC_SELL_COMMAND,
             ),
-            sparkAdapter: await this.hre.ethers.getContractAt(
-                'SparkAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.SPARK_ADAPTER),
-            ),
-            aaveAdapter: await this.hre.ethers.getContractAt(
-                'AAVEAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_ADAPTER),
-            ),
-            dpmAdapter: await this.hre.ethers.getContractAt(
-                'DPMAdapter',
-                await serviceRegistry.getRegisteredService(AutomationServiceName.DPM_ADAPTER),
-            ),
+            sparkAdapter: await this.hre.ethers.getContractAt('SparkAdapter', this.addresses.AUTOMATION_SPARK_ADAPTER),
+            aaveAdapter: await this.hre.ethers.getContractAt('AAVEAdapter', this.addresses.AUTOMATION_AAVE_ADAPTER),
+            dpmAdapter: await this.hre.ethers.getContractAt('DPMAdapter', this.addresses.AUTOMATION_DPM_ADAPTER),
             aaveProxyActions: await this.hre.ethers.getContractAt(
                 'AaveV3ProxyActions',
                 await serviceRegistry.getRegisteredService(AutomationServiceName.AAVE_PROXY_ACTIONS),
@@ -97,6 +96,10 @@ export class HardhatUtils {
         const factory = await _factory
         const deployment = await factory.deploy(...params, await this.getGasSettings())
         return (await deployment.deployed()) as C
+    }
+    public async getContract<F extends ethers.Contract>(name: string, address: string): Promise<F> {
+        const contract = await this.hre.ethers.getContractAt(name, address)
+        return contract as F
     }
 
     public mpaServiceRegistry() {
@@ -120,6 +123,21 @@ export class HardhatUtils {
         }
 
         return await this.hre.ethers.getContractAt('DsProxyLike', proxyAddr, signer)
+    }
+
+    /**
+     * Gets or creates a DPM account for the given address.
+     * @param address The address for which to get or create a DPM account.
+     * @param signer An optional signer to use for the contract interaction.
+     * @returns A Promise that resolves to an IAccountImplementation contract instance.
+     */
+    public async getOrCreateDpmAccount(address: string, signer?: Signer) {
+        const dpmFactory = await this.hre.ethers.getContractAt('AccountFactoryLike', this.addresses.DPM_FACTORY)
+        const tx = await dpmFactory.functions['createAccount(address)'](address)
+        const factoryReceipt = await tx.wait()
+        const [AccountCreatedEvent] = getEvents(factoryReceipt, dpmFactory.interface.getEvent('AccountCreated'))
+        const proxyAddress = AccountCreatedEvent.args.proxy.toString()
+        return await this.hre.ethers.getContractAt('IAccountImplementation', proxyAddress, signer)
     }
 
     public async cancelTx(nonce: number, gasPriceInGwei: number, signer: Signer) {

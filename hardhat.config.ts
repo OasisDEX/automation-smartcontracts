@@ -1,12 +1,14 @@
 import * as dotenv from 'dotenv'
 import { HardhatUserConfig } from 'hardhat/config'
-import '@nomiclabs/hardhat-etherscan'
-import '@nomiclabs/hardhat-waffle'
+// TODO: fix this
+// import '@nomiclabs/hardhat-etherscan'
 import '@typechain/hardhat'
 import 'hardhat-gas-reporter'
 import 'solidity-coverage'
 import 'hardhat-tracer'
 import * as tdly from '@tenderly/hardhat-tenderly'
+import '@nomicfoundation/hardhat-toolbox'
+import '@nomiclabs/hardhat-ethers'
 import { HardhatNetworkConfig } from 'hardhat/types'
 
 import './scripts/tasks'
@@ -36,7 +38,7 @@ function createHardhatNetwork(network: string, node: string | undefined, key: st
 
 const config: HardhatUserConfig = {
     solidity: {
-        version: '0.8.13',
+        version: '0.8.22',
         settings: {
             optimizer: {
                 enabled: true,
@@ -45,7 +47,7 @@ const config: HardhatUserConfig = {
         },
     },
     mocha: {
-        timeout: 60000,
+        timeout: 100000,
         grep: '@skip-on-coverage',
         invert: true,
     },
@@ -72,7 +74,12 @@ const config: HardhatUserConfig = {
         ...Object.fromEntries(
             [
                 createHardhatNetwork('mainnet', process.env.ALCHEMY_NODE, process.env.PRIVATE_KEY!, 35000000000),
-                createHardhatNetwork('tenderly', process.env.TENDERLY_NODE, process.env.PRIVATE_KEY!, 35000000000),
+                createHardhatNetwork(
+                    'tenderly',
+                    process.env.TENDERLY_NODE,
+                    process.env.TENDERLY_PRIVATE_KEY!,
+                    35000000000,
+                ),
                 createHardhatNetwork(
                     'goerli',
                     process.env.ALCHEMY_NODE_GOERLI,
@@ -88,6 +95,12 @@ const config: HardhatUserConfig = {
     tenderly: {
         project: process.env.TENDERLY_PROJECT!,
         username: process.env.TENDERLY_USERNAME!,
+    },
+    typechain: {
+        outDir: 'typechain',
+        target: 'ethers-v5',
+        alwaysGenerateOverloads: false, // should overloads with full signatures like deposit(uint256) be generated always, even if there are no overloads?
+        dontOverrideCompile: false, // defaults to false
     },
 }
 

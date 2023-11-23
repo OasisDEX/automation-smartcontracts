@@ -73,7 +73,6 @@ contract AutomationBot is IAutomationBot, ReentrancyGuard {
     // works correctly in any context
     function getCommandAddress(uint256 triggerType) public view returns (address) {
         bytes32 commandHash = keccak256(abi.encode("Command", triggerType));
-
         address commandAddress = serviceRegistry.getServiceAddress(commandHash);
 
         return commandAddress;
